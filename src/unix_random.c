@@ -155,107 +155,107 @@ struct unix_random_source
 
 static const struct unix_random_source random_sources[] =
 {
-  { "/bin/vmstat", "-s", 		WSMALL(30), 1 },
-  { "/usr/bin/vmstat", "-s", 		WSMALL(30), 0 },
-  { "/bin/vmstat", "-c", 		WSMALL(30), 1 },
-  { "/usr/bin/vmstat", "-c", 		WSMALL(30), 0 },
-  { "/usr/bin/pfstat", NULL, 		WSMALL(20), 0 },
-  { "/bin/vmstat", "-i", 		WSMALL(20), 1 },
-  { "/usr/bin/vmstat", "-i", 		WSMALL(20), 0 },
-  { "/usr/ucb/netstat", "-s", 	WLARGE(20), 1 },
-  { "/usr/bin/netstat", "-s", 	WLARGE(20), 1 },
-  { "/usr/sbin/netstat", "-s", 	WLARGE(20), 1 },
-  { "/bin/netstat", "-s", 		WLARGE(20), 1 },
-  { "/usr/etc/netstat", "-s", 	WLARGE(20), 0 },
-  { "/usr/bin/nfsstat", NULL, 	WLARGE(20), 0 },
-  { "/usr/ucb/netstat", "-m", 	WSMALL(10), 1 },
-  { "/usr/bin/netstat", "-m", 	WSMALL(10), 1 },
-  { "/usr/sbin/netstat", "-m", 	WSMALL(10), 1 },
-  { "/bin/netstat", "-m", 		WSMALL(10), 1 },
-  { "/usr/etc/netstat", "-m", 	WSMALL(10), 0 },
-  { "/usr/ucb/netstat", "-in", 	WSMALL(10), 1 },
-  { "/usr/bin/netstat", "-in", 	WSMALL(10), 1 },
-  { "/usr/sbin/netstat", "-in", 	WSMALL(10), 1 },
-  { "/bin/netstat", "-in", 		WSMALL(10), 1 },
-  { "/usr/etc/netstat", "-in", 	WSMALL(10), 0 },
+  { "/bin/vmstat", "-s", 	1, WSMALL(30) },
+  { "/usr/bin/vmstat", "-s", 	0, WSMALL(30) },
+  { "/bin/vmstat", "-c", 	1, WSMALL(30) },
+  { "/usr/bin/vmstat", "-c", 	0, WSMALL(30) },
+  { "/usr/bin/pfstat", NULL, 	0, WSMALL(20) },
+  { "/bin/vmstat", "-i", 	1, WSMALL(20) },
+  { "/usr/bin/vmstat", "-i", 	0, WSMALL(20) },
+  { "/usr/ucb/netstat", "-s", 	1, WLARGE(20) },
+  { "/usr/bin/netstat", "-s", 	1, WLARGE(20) },
+  { "/usr/sbin/netstat", "-s", 	1, WLARGE(20) },
+  { "/bin/netstat", "-s", 	1, WLARGE(20) },
+  { "/usr/etc/netstat", "-s", 	0, WLARGE(20) },
+  { "/usr/bin/nfsstat", NULL, 	0, WLARGE(20) },
+  { "/usr/ucb/netstat", "-m", 	1, WSMALL(10) },
+  { "/usr/bin/netstat", "-m", 	1, WSMALL(10) },
+  { "/usr/sbin/netstat", "-m", 	1, WSMALL(10) },
+  { "/bin/netstat", "-m", 	1, WSMALL(10) },
+  { "/usr/etc/netstat", "-m", 	0, WSMALL(10) },
+  { "/usr/ucb/netstat", "-in", 	1, WSMALL(10) },
+  { "/usr/bin/netstat", "-in", 	1, WSMALL(10) },
+  { "/usr/sbin/netstat", "-in", 1, WSMALL(10) },
+  { "/bin/netstat", "-in", 	1, WSMALL(10) },
+  { "/usr/etc/netstat", "-in", 	0, WSMALL(10) },
 #if 0
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.7.1.0", 	WSMALL(10), 0 }, /* UDP in */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.7.4.0", 	WSMALL(10), 0 }, /* UDP out */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.4.3.0", 	WSMALL(10), 0 }, /* IP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.10.0", 	WSMALL(10), 0 }, /* TCP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.11.0", 	WSMALL(10), 0 }, /* TCP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.13.0", 	WSMALL(10), 0 }, /* TCP ? */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.7.1.0", 0 	WSMALL(10) }, /* UDP in */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.7.4.0", 0	WSMALL(10) }, /* UDP out */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.4.3.0", 0	WSMALL(10) }, /* IP ? */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.10.0", 0	WSMALL(10) }, /* TCP ? */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.11.0", 0	WSMALL(10) }, /* TCP ? */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.13.0", 0	WSMALL(10) }, /* TCP ? */
 #endif
-  { "/usr/bin/mpstat", NULL, 		WLARGE(10), 0 },
-  { "/usr/bin/w", NULL, 		WLARGE(10), 1 },
-  { "/usr/bsd/w", NULL, 		WLARGE(10), 0 },
-  { "/usr/bin/df", NULL, 		WLARGE(10), 1 },
-  { "/bin/df", NULL, 			WLARGE(10), 0 },
-  { "/usr/sbin/portstat", NULL, 	WLARGE(10), 0 },
-  { "/usr/bin/iostat", NULL, 		WLARGE(0), 0 },
-  { "/usr/bin/uptime", NULL, 		WLARGE(0), 1 },
-  { "/usr/bsd/uptime", NULL, 		WLARGE(0), 0 },
-  { "/bin/vmstat", "-f", 		WLARGE(0), 1 },
-  { "/usr/bin/vmstat", "-f", 		WLARGE(0), 0 },
-  { "/bin/vmstat", NULL, 		WLARGE(0), 1 },
-  { "/usr/bin/vmstat", NULL, 		WLARGE(0), 0 },
-  { "/usr/ucb/netstat", "-n", 	WLARGE(5), 1 },
-  { "/usr/bin/netstat", "-n", 	WLARGE(5), 1 },
-  { "/usr/sbin/netstat", "-n", 	WLARGE(5) , 1 },
-  { "/bin/netstat", "-n", 		WLARGE(5) , 1 },
-  { "/usr/etc/netstat", "-n", 	WLARGE(5) , 0 },
+  { "/usr/bin/mpstat", NULL,	0, WLARGE(10) },
+  { "/usr/bin/w", NULL,		1, WLARGE(10) },
+  { "/usr/bsd/w", NULL,		0, WLARGE(10) },
+  { "/usr/bin/df", NULL,	1, WLARGE(10) },
+  { "/bin/df", NULL,		0, WLARGE(10) },
+  { "/usr/sbin/portstat", NULL,	0, WLARGE(10) },
+  { "/usr/bin/iostat", NULL,	0, WLARGE(0) },
+  { "/usr/bin/uptime", NULL,	1, WLARGE(0) },
+  { "/usr/bsd/uptime", NULL,	0, WLARGE(0) },
+  { "/bin/vmstat", "-f",	1, WLARGE(0) },
+  { "/usr/bin/vmstat", "-f",	0, WLARGE(0) },
+  { "/bin/vmstat", NULL,	1, WLARGE(0) },
+  { "/usr/bin/vmstat", NULL,	0, WLARGE(0) },
+  { "/usr/ucb/netstat", "-n",	1, WLARGE(5) },
+  { "/usr/bin/netstat", "-n",	1, WLARGE(5) },
+  { "/usr/sbin/netstat", "-n",	1, WLARGE(5) },
+  { "/bin/netstat", "-n", 	1, WLARGE(5) },
+  { "/usr/etc/netstat", "-n",	0, WLARGE(5) },
 #if defined( __sgi ) || defined( __hpux )
-  { "/bin/ps", "-el", 		WLARGE(3), 1 },
+  { "/bin/ps", "-el", 		1, WLARGE(3) },
 #endif /* __sgi || __hpux */
-  { "/usr/ucb/ps", "aux", 		WLARGE(3), 1 },
-  { "/usr/bin/ps", "aux", 		WLARGE(3), 1 },
-  { "/bin/ps", "aux", 		WLARGE(3), 0 },
-  { "/usr/bin/ipcs", "-a", 		WLARGE(5), 1 },
-  { "/bin/ipcs", "-a", 		WLARGE(5), 0 },
+  { "/usr/ucb/ps", "aux", 	1, WLARGE(3) },
+  { "/usr/bin/ps", "aux", 	1, WLARGE(3) },
+  { "/bin/ps", "aux", 		0, WLARGE(3) },
+  { "/usr/bin/ipcs", "-a", 	1, WLARGE(5) },
+  { "/bin/ipcs", "-a", 		0, WLARGE(5) },
   /* Unreliable source, depends on system usage */
-  { "/etc/pstat", "-p", 		WLARGE(5), 1 },
-  { "/bin/pstat", "-p", 		WLARGE(5), 0 },
-  { "/etc/pstat", "-S", 		WLARGE(2), 1 },
-  { "/bin/pstat", "-S", 		WLARGE(2), 0 },
-  { "/etc/pstat", "-v", 		WLARGE(2), 1 },
-  { "/bin/pstat", "-v", 		WLARGE(2), 0 },
-  { "/etc/pstat", "-x", 		WLARGE(2), 1 },
-  { "/bin/pstat", "-x", 		WLARGE(2), 0 },
-  { "/etc/pstat", "-t", 		WLARGE(1), 1 },
-  { "/bin/pstat", "-t", 		WLARGE(1), 0 },
+  { "/etc/pstat", "-p", 	1, WLARGE(5) },
+  { "/bin/pstat", "-p", 	0, WLARGE(5) },
+  { "/etc/pstat", "-S", 	1, WLARGE(2) },
+  { "/bin/pstat", "-S", 	0, WLARGE(2) },
+  { "/etc/pstat", "-v", 	1, WLARGE(2) },
+  { "/bin/pstat", "-v", 	0, WLARGE(2) },
+  { "/etc/pstat", "-x", 	1, WLARGE(2) },
+  { "/bin/pstat", "-x", 	0, WLARGE(2) },
+  { "/etc/pstat", "-t", 	1, WLARGE(1) },
+  { "/bin/pstat", "-t", 	0, WLARGE(1) },
   /* pstat is your friend */
-  { "/usr/bin/last", "-n 50", 	WLARGE(3), 1 },
+  { "/usr/bin/last", "-n 50", 	1, WLARGE(3) },
 #ifdef __sgi
-  { "/usr/bsd/last", "-50", 		WLARGE(3), 0 },
+  { "/usr/bsd/last", "-50",	0, WLARGE(3) },
 #endif /* __sgi */
 #ifdef __hpux
-  { "/etc/last", "-50", 		WLARGE(3), 0 },
+  { "/etc/last", "-50", 	0, WLARGE(3) },
 #endif /* __hpux */
-  { "/usr/bsd/last", "-n 50", 	WLARGE(3), 0 },
-  { "/usr/local/bin/lsof", "-lnwP", 	WLARGE(3), 0 },
+  { "/usr/bsd/last", "-n 50", 	0, WLARGE(3) },
+  { "/usr/local/bin/lsof", "-lnwP", 0, WLARGE(3) },
   /* Output is very system and version-dependent */
 #if 0
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.5.1.0", 	WLARGE(1), 0 }, /* ICMP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.5.3.0", 	WLARGE(1), 0 }, /* ICMP ? */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.5.1.0", 0, WLARGE(1) }, /* ICMP ? */
+  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.5.3.0", 0, WLARGE(1) }, /* ICMP ? */
 #endif
-  { "/etc/arp", "-a", 		WLARGE(1), 1 },
-  { "/usr/etc/arp", "-a", 		WLARGE(1), 1 },
-  { "/usr/bin/arp", "-a", 		WLARGE(1), 1 },
-  { "/usr/sbin/arp", "-a", 		WLARGE(1), 0 },
-  { "/usr/sbin/ripquery", "-nw 1 127.0.0.1", 	WLARGE(1 ), 0 },
-  { "/bin/lpstat", "-t", 		WLARGE(1), 1 },
-  { "/usr/bin/lpstat", "-t", 		WLARGE(1), 1 },
-  { "/usr/ucb/lpstat", "-t", 		WLARGE(1), 0 },
+  { "/etc/arp", "-a",		1, WLARGE(1) },
+  { "/usr/etc/arp", "-a",	1, WLARGE(1) },
+  { "/usr/bin/arp", "-a",	1, WLARGE(1) },
+  { "/usr/sbin/arp", "-a",	0, WLARGE(1) },
+  { "/usr/sbin/ripquery", "-nw 1 127.0.0.1", 0, WLARGE(1) },
+  { "/bin/lpstat", "-t",	1, WLARGE(1) },
+  { "/usr/bin/lpstat", "-t",	1, WLARGE(1) },
+  { "/usr/ucb/lpstat", "-t",	0, WLARGE(1) },
 #if 0
-  { "/usr/bin/tcpdump", "-c 5 -efvvx",WLARGE(10), 0 },
+  { "/usr/bin/tcpdump", "-c 5 -efvvx", 0, WLARGE(10) },
   /* This is very environment-dependant.  If
      network traffic is low, it'll probably time
      out before delivering 5 packets, which is OK
      because it'll probably be fixed stuff like
      ARP anyway */
-  { "/usr/sbin/advfsstat", "-b usr_domain", 	WLARGE(0), 0 },
-  { "/usr/sbin/advfsstat", "-l 2 usr_domain", 	WLARGE(5), 0 },
-  { "/usr/sbin/advfsstat", "-p usr_domain", 	WLARGE(0), 0 },
+  { "/usr/sbin/advfsstat", "-b usr_domain", 	0, WLARGE(0) },
+  { "/usr/sbin/advfsstat", "-l 2 usr_domain", 	0, WLARGE(5) },
+  { "/usr/sbin/advfsstat", "-p usr_domain", 	0, WLARGE(0) },
   /* This is a complex and screwball program.  Some
      systems have things like rX_dmn, x = integer,
      for RAID systems, but the statistics are
@@ -265,9 +265,9 @@ static const struct unix_random_source random_sources[] =
      unpredictable, however they give an indication of the sort of sources
      you can use (for example the finger might be more useful on a
      firewalled internal network) */
-  { "/usr/bin/finger", "@ml.media.mit.edu", 	WLARGE(9), 0 },
-  { "/usr/local/bin/wget", "-O - http://lavarand.sgi.com/block.html", 	WLARGE(9 ), 0 },
-  { "/bin/cat", "/usr/spool/mqueue/syslog", 	WLARGE(9), 0 },
+  { "/usr/bin/finger", "@ml.media.mit.edu", 	0, WLARGE(9) },
+  { "/usr/local/bin/wget", "-O - http://lavarand.sgi.com/block.html", 0, WLARGE(9) },
+  { "/bin/cat", "/usr/spool/mqueue/syslog", 	0, WLARGE(9) },
 #endif /* 0 */
   { NULL, NULL, 0, 0 }
 };
