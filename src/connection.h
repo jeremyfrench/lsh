@@ -84,6 +84,11 @@
 
        ; Cleanup
        (resources object resource_list)
+
+       ; Connected peer
+       ; FIXME: Perhaps this should be a sockaddr or some other object
+       ; that facilitates reverse lookups?
+       (peer object address_info);
        
        ; Receiving
        (rec_max_packet simple UINT32)
