@@ -105,8 +105,6 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
      (vars
        (algorithms object algorithms_options)
 
-       (random object randomness_with_poll)
-
        (signature_algorithms object alist)
        (home . "const char *")
        
@@ -138,16 +136,16 @@ make_options(struct io_backend *backend,
 	     int *exit_code)
 {
   NEW(lsh_options, self);
-  init_client_options(&self->super, backend, handler, exit_code);
+  init_client_options(&self->super, backend,
+		      make_default_random(NULL, handler),
+		      handler, exit_code);
 
   self->algorithms
     = make_algorithms_options(all_symmetric_algorithms());
 
-  self->random = make_default_random(NULL, handler);
-  
   self->home = getenv("HOME");
   
-  self->signature_algorithms = all_signature_algorithms(&self->random->super);
+  self->signature_algorithms = all_signature_algorithms(&self->super.random->super);
 
   self->sloppy = 0;
   self->capture = NULL;
@@ -713,7 +711,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_SRP_RING1_SHA1_LOCAL,
-			&make_srp_client(make_srp1(&self->random->super),
+			&make_srp_client(make_srp1(&self->super.random->super),
 					 self->super.tty,
 					 ssh_format("%lz", self->super.user))
 			->super);
@@ -724,7 +722,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			&make_dh_client(make_dh1(&self->random->super))
+			&make_dh_client(make_dh1(&self->super.random->super))
 			->super);
 	    }
 	}
@@ -804,7 +802,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       
       /* Start background poll */
-      RANDOM_POLL_BACKGROUND(self->random->poller);
+      RANDOM_POLL_BACKGROUND(self->super.random->poller);
       
       break;
       
@@ -961,10 +959,10 @@ int main(int argc, char **argv)
 	make_handshake_info(CONNECTION_CLIENT,
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
-			    &options->random->super,
+			    &options->super.random->super,
 			    options->algorithms->algorithms,
 			    NULL),
-	make_simple_kexinit(&options->random->super,
+	make_simple_kexinit(&options->super.random->super,
 			    options->kex_algorithms,
 			    options->algorithms->hostkey_algorithms,
 			    options->algorithms->crypto_algorithms,
