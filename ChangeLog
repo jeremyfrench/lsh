@@ -1,3 +1,12 @@
+2001-06-26  Niels Möller  <nisse@ehand.com>
+
+	* src/client_escape.c (NEWLINE): New macro.
+	(do_escape_handler): Reset state to GOT_NONE appropriately.
+
+	* src/client.c (client_argp_parser): Added empty statement after
+	label. 
+	(make_client_session): Bind ^Z to suspend.
+
 2001-06-24  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/xalloc.h (CHECK_TYPE) [DEBUG_ALLOC]: Added parentheses.
