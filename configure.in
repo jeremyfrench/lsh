@@ -9,6 +9,8 @@ AM_INIT_AUTOMAKE(lsh, 1.1.9)
 AM_CONFIG_HEADER(config.h)
 
 AC_DEFINE_UNQUOTED(PREFIX, "`echo $prefix | sed "s@^NONE@$ac_default_prefix@"`")
+
+dnl NOTE: The definition below is broken.
 AC_DEFINE_UNQUOTED(SBINDIR, "`echo $sbindir | sed "s@^NONE@$prefix/sbin@" | sed "s@^NONE@$ac_default_prefix@"`")
 
 dnl This macro turns of a the Makefile.in: Makefile.am dependencies, unless
@@ -41,16 +43,16 @@ CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
 dnl Check options
 AC_ARG_ENABLE(debug_alloc,
-  [--disable-debug-alloc    Disable memory allocation sanity checks],,
-  [enable_debug_alloc=yes])
+  [--enable-debug-alloc    Enable memory allocation sanity checks],,
+  [enable_debug_alloc=no])
   
 if test x$enable_debug_alloc = xyes ; then
   AC_DEFINE(DEBUG_ALLOC)
 fi
 
 AC_ARG_ENABLE(debug_trace,
-  [--disable-debug-trace    Disable tracing support],,
-  [enable_debug_trace=yes])
+  [--enable-debug-trace    Enable tracing support],,
+  [enable_debug_trace=no])
 
 if test x$enable_debug_trace = xyes ; then
   AC_DEFINE(DEBUG_TRACE)
@@ -375,13 +377,10 @@ fi
 AC_SUBST(KRB_LIBS)
 AC_SUBST(KRB_PROGRAM)
 
-echo "enable_gcov = $enable_gcov"
-echo "CFLAGS = $CFLAGS"
 if test "x$enable_gcov" = "xyes"; then
   CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
   AC_DEFINE(WITH_GCOV)
 fi
-echo "CFLAGS = $CFLAGS"
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
