@@ -441,29 +441,29 @@
 (define (make-output constants)
   ;; OP and ARGS are C expressons
   (define (apply-generic op args)
-    (werror "(apply-generic ~S)\n" (cons op args))
+    ;; (werror "(apply-generic ~S)\n" (cons op args))
     (if (null? args) op
 	(apply-generic (list "A(" op ", " (car args) ")")
 		       (cdr args))))
   ;; INFO is the (value [n]) associated with a constant,
   ;; and ARGS is a list of C expressions
   (define (apply-constant info args)
-    (werror "apply-constant : ~S\n" info)
-    (werror "          args : ~S\n" args)
+    ;; (werror "apply-constant : ~S\n" info)
+    ;; (werror "          args : ~S\n" args)
     (let ((calls (cdr info)))
       (if (null? calls)
 	(apply-generic (car info) args)
 	(let ((n (min (length calls) (length args))))
-	  (werror "n: ~S\n" n)
+	  ;; (werror "n: ~S\n" n)
 	  (apply-generic (list (nth info n)
 			       "(" (implode (list-prefix args n) ", ") ")")
 			 (list-tail args n))))))
   (define (lookup-global v)
     (cond ((assq v constants) => cdr)
 	  (else (error "make_class: undefined global" v))))
-
+  
   (define (output-expression expr)
-    (werror "output-expression ~S\n" expr)
+    ;; (werror "output-expression ~S\n" expr)
     (if (atom? expr)
 	(car (lookup-global expr))
 	(let ((op (application-op expr))
@@ -474,75 +474,93 @@
   output-expression)
 
 (define (process-expr attributes)
-  (werror "foo\n")
+  (define (declare-params params)
+    (implode (map (lambda (var)
+		    (type->declaration (var-type var)
+				       (var-name var))))
+	     ", "))
+  (define (params->alist)
+    (map (lambda (var)
+	   (let ((name (var-name name)))
+	     (list name name)))))
+  
+  ;; (werror "foo\n")
   (let ((name (get 'name attributes cadr))
 	(globals (or (get 'globals attributes cdr) '()))
+	(params (get 'params attributes cdr))
 	(expr (get 'expr attributes cadr)))
     (werror "Processing expression ~S\n" name)
-    (list "struct lsh_object *" name "(void)\n{\n"
-	  "#define A GABA_APPLY\n"
-	  "#define I GABA_VALUE_I\n"
-	  "#define K GABA_VALUE_K\n"
-	  "#define K1 GABA_APPLY_K_1\n"
-	  "#define S GABA_VALUE_S\n"
-	  "#define S1 GABA_APPLY_S_1\n"
-	  "#define S2 GABA_APPLY_S_2\n"
-	  "#define B GABA_VALUE_B\n"
-	  "#define B1 GABA_APPLY_B_1\n"
-	  "#define B2 GABA_APPLY_B_2\n"
-	  "#define C GABA_VALUE_C\n"
-	  "#define C1 GABA_APPLY_C_1\n"
-	  "#define C2 GABA_APPLY_C_2\n"
-	  "#define Sp GABA_VALUE_Sp\n"
-	  "#define Sp1 GABA_APPLY_Sp_1\n"
-	  "#define Sp2 GABA_APPLY_Sp_2\n"
-	  "#define Sp3 GABA_APPLY_Sp_3\n"
-	  "#define Bp GABA_VALUE_Bp\n"
-	  "#define Bp1 GABA_APPLY_Bp_1\n"
-	  "#define Bp2 GABA_APPLY_Bp_2\n"
-	  "#define Bp3 GABA_APPLY_Bp_3\n"
-	  "#define Cp GABA_VALUE_Cp\n"
-	  "#define Cp1 GABA_APPLY_Cp_1\n"
-	  "#define Cp2 GABA_APPLY_Cp_2\n"
-	  "#define Cp3 GABA_APPLY_Cp_3\n"
-	  "  return\n    "
-	  ((make-output (append '( (I I)
-				   (K K K1)
-				   (S S S1 S2)
-				   (B B B1 B2)
-				   (C C C1 C2)
-				   (S* Sp Sp1 Sp2 Sp3)
-				   (B* Bp Bp1 Bp2 Bp3)
-				   (C* Cp Cp1 Cp2 Cp3))
-				globals))
-	   (translate expr))
-	  ";\n"
-	  "#undef A\n"
-	  "#undef I\n" 
-	  "#undef K\n"
-	  "#undef K1\n"
-	  "#undef S\n"
-	  "#undef S1\n"
-	  "#undef S2\n"
-	  "#undef B\n"
-	  "#undef B1\n"
-	  "#undef B2\n"
-	  "#undef C\n"
-	  "#undef C1\n"
-	  "#undef C2\n"
-	  "#undef Sp\n"
-	  "#undef Sp1\n"
-	  "#undef Sp2\n"
-	  "#undef Sp3\n"
-	  "#undef Bp\n"
-	  "#undef Bp1\n"
-	  "#undef Bp2\n"
-	  "#undef Bp3\n"
-	  "#undef Cp\n"
-	  "#undef Cp1\n"
-	  "#undef Cp2\n"
-	  "#undef Cp3\n"
-	  "}\n")))
+    (let ((translated (translate expr)))
+      (werror "Compiled to ~S\n" translated)
+      (list "struct lsh_object *" name "("
+	    (if params (declare-params params) "void")
+	    ")\n{\n"
+	    "#define A GABA_APPLY\n"
+	    "#define I GABA_VALUE_I\n"
+	    "#define K GABA_VALUE_K\n"
+	    "#define K1 GABA_APPLY_K_1\n"
+	    "#define S GABA_VALUE_S\n"
+	    "#define S1 GABA_APPLY_S_1\n"
+	    "#define S2 GABA_APPLY_S_2\n"
+	    "#define B GABA_VALUE_B\n"
+	    "#define B1 GABA_APPLY_B_1\n"
+	    "#define B2 GABA_APPLY_B_2\n"
+	    "#define C GABA_VALUE_C\n"
+	    "#define C1 GABA_APPLY_C_1\n"
+	    "#define C2 GABA_APPLY_C_2\n"
+	    "#define Sp GABA_VALUE_Sp\n"
+	    "#define Sp1 GABA_APPLY_Sp_1\n"
+	    "#define Sp2 GABA_APPLY_Sp_2\n"
+	    "#define Sp3 GABA_APPLY_Sp_3\n"
+	    "#define Bp GABA_VALUE_Bp\n"
+	    "#define Bp1 GABA_APPLY_Bp_1\n"
+	    "#define Bp2 GABA_APPLY_Bp_2\n"
+	    "#define Bp3 GABA_APPLY_Bp_3\n"
+	    "#define Cp GABA_VALUE_Cp\n"
+	    "#define Cp1 GABA_APPLY_Cp_1\n"
+	    "#define Cp2 GABA_APPLY_Cp_2\n"
+	    "#define Cp3 GABA_APPLY_Cp_3\n"
+	    "  return\n    "
+	    ((make-output (append '( (I I)
+				     (K K K1)
+				     (S S S1 S2)
+				     (B B B1 B2)
+				     (C C C1 C2)
+				     (S* Sp Sp1 Sp2 Sp3)
+				     (B* Bp Bp1 Bp2 Bp3)
+				     (C* Cp Cp1 Cp2 Cp3))
+				  globals
+				  (if params
+				      (params->alist params)
+				      '())))
+	     translated)
+	    ";\n"
+	    "#undef A\n"
+	    "#undef I\n" 
+	    "#undef K\n"
+	    "#undef K1\n"
+	    "#undef S\n"
+	    "#undef S1\n"
+	    "#undef S2\n"
+	    "#undef B\n"
+	    "#undef B1\n"
+	    "#undef B2\n"
+	    "#undef C\n"
+	    "#undef C1\n"
+	    "#undef C2\n"
+	    "#undef Sp\n"
+	    "#undef Sp1\n"
+	    "#undef Sp2\n"
+	    "#undef Sp3\n"
+	    "#undef Bp\n"
+	    "#undef Bp1\n"
+	    "#undef Bp2\n"
+	    "#undef Bp3\n"
+	    "#undef Cp\n"
+	    "#undef Cp1\n"
+	    "#undef Cp2\n"
+	    "#undef Cp3\n"
+	    "}\n"))))
 
 (define (process-input exp)
   (let ((type (car exp))
