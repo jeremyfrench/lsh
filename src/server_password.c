@@ -47,9 +47,9 @@
 #include <shadow.h>
 #endif
 
-#include "server_password.c.x"
+/* #include "server_password.c.x" */
 
-/* NOTE: Calls functions using the *disgusting* convention of returning
+/* NOTE: Calls functions using the disgusting convention of returning
  * pointers to static buffers. */
 struct unix_user *lookup_user(struct lsh_string *name, int free)
 {
@@ -77,7 +77,9 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
   res->name = name;
   
 #if HAVE_GETSPNAM
-  if (passwd->pw_passwd && !strcmp(passwd->pw_passwd, "x"))
+  /* FIXME: What's the most portable way to test for shadow passwords?
+   * A single character in the passwd field should cover most variants. */
+  if (passwd->pw_passwd && (strlen(passwd->pw_passwd) == 1))
   {
     struct spwd *shadowpwd;
     
@@ -131,6 +133,7 @@ int verify_password(struct unix_user *user,
   return 1;
 }
 
+#if 0
 /* GABA:
    (class
      (name unix_authentication)
@@ -140,27 +143,28 @@ int verify_password(struct unix_user *user,
        ; Services allowed. Maps names to struct unix_service.
        (services object alist)))
 */
-     
-static int do_authenticate(struct userauth *c,
+#endif
+
+static int do_authenticate(struct userauth *ignored UNUSED,
 			   struct lsh_string *username,
-			   int requested_service,
 			   struct simple_buffer *args,
-			   struct ssh_service **result)
+			   struct lsh_object **result)
 {
-  CAST(unix_authentication, closure, c);
   struct lsh_string *password = NULL;
-  struct unix_service *service;
+  /* struct unix_service *service; */
   int change_passwd;
-  
+
+#if 0
   if (!( (service = ALIST_GET(closure->services, requested_service))))
     {
       lsh_string_free(username);
       return LSH_AUTH_FAILED;
     }
-
+#endif
+  
   username = utf8_to_local(username, 1, 1);
   if (!username)
-    return 0;
+    return LSH_FAIL | LSH_DIE;
 
   if (parse_boolean(args, &change_passwd))
     {
@@ -174,14 +178,13 @@ static int do_authenticate(struct userauth *c,
 	   && parse_eod(args))
 	{
 	  struct unix_user *user;
-	  int access;
 
 	  password = utf8_to_local(password, 1, 1);
 
 	  if (!password)
 	    {
 	      lsh_string_free(username);
-	      return LSH_AUTH_FAILED;
+	      return LSH_FAIL | LSH_DIE;
 	    }
        
 	  user = lookup_user(username, 1);
@@ -192,29 +195,32 @@ static int do_authenticate(struct userauth *c,
 	      return LSH_AUTH_FAILED;
 	    }
 
-	  access = verify_password(user, password, 1);
-
-	  if (access)
+	  if (verify_password(user, password, 1))
 	    {
-	      *result = LOGIN(service, user);
+	      *result = &user->super;
 	      return LSH_OK | LSH_GOON;
 	    }
 	  else
 	    {
-	      /* FIXME: Free user struct */
+	      KILL(user);
 	      return LSH_AUTH_FAILED;
 	    }
 	}
     }
-
+  
   /* Request was invalid */
   lsh_string_free(username);
 
   if (password)
     lsh_string_free(password);
+  
   return LSH_FAIL | LSH_DIE;
 }
-  
+
+struct userauth unix_userauth =
+{ STATIC_HEADER, do_authenticate };
+
+#if 0
 struct userauth *make_unix_userauth(struct alist *services)
 {
   NEW(unix_authentication, closure);
@@ -227,6 +233,7 @@ struct userauth *make_unix_userauth(struct alist *services)
 
   return &closure->super;
 }
+#endif
 
 int change_uid(struct unix_user *user)
 {

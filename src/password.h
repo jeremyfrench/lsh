@@ -63,9 +63,11 @@ struct unix_user *lookup_user(struct lsh_string *name, int free);
 int verify_password(struct unix_user *user,
 		    struct lsh_string *password, int free);
 
+#if 0
 struct userauth *make_password_userauth(void);
+#endif
 
-/* GABA:
+/* ;; GABA:
    (class
      (name unix_service)
      (vars
@@ -74,7 +76,7 @@ struct userauth *make_password_userauth(void);
 
 #define LOGIN(s, u) ((s)->login((s), (u)))
 
-struct userauth *make_unix_userauth(struct alist *services);
+extern struct userauth unix_userauth;
 
 int change_uid(struct unix_user *user);
 int change_dir(struct unix_user *user);

@@ -4,8 +4,8 @@
 
 #include "userauth.h"
 
+#include "connection.h"
 #include "format.h"
-#include "service.h"
 #include "ssh.h"
 #include "xalloc.h"
 
@@ -19,10 +19,11 @@
 /* GABA:
    (class
      (name userauth_service)
-     (super ssh_service)
+     (super command)
      (vars
        (advertised_methods object int_list)
-       (methods object alist)))
+       (methods object alist)
+       (services object alist)))
 */
 
 /* Max number of attempts */
@@ -32,6 +33,10 @@
  * io.c could be used for timeouts, but it's not clear how the timeout
  * handler can close the right connection. */
 
+/* NOTE: Here we assume that services and authentication methods are
+ * orthogonal. I.e. every supported authentication method is accepted
+ * for every supported service. */
+
 /* GABA:
    (class
      (name userauth_handler)
@@ -40,10 +45,17 @@
        ; Attempts left 
        (attempts simple int)
 
+       ; What to do after successful authentication
+       (c object command_continuation)
+       
        ; Methods advertised in failure messages
        (advertised_methods object int_list)
 
-       (methods object alist)))
+       ; Maps authentication methods to userath objects
+       (methods object alist)
+
+       ; Maps services to commands
+       (services object alist)))
 */
 
 struct lsh_string *format_userauth_failure(struct int_list *methods,
@@ -84,22 +96,24 @@ static int do_handle_userauth(struct packet_handler *c,
       && parse_atom(&buffer, &requested_service)
       && parse_atom(&buffer, &method))
     {
-      struct ssh_service *service;
+      struct lsh_object *auth_info = NULL;
+      
       CAST_SUBTYPE(userauth, auth, ALIST_GET(closure->methods, method));
-
+      CAST_SUBTYPE(command, service,
+		   ALIST_GET(closure->services, requested_service));
+      
       lsh_string_free(packet);
       
       closure->attempts--;
 
-      if (!auth)
+      if (!(auth && service))
 	return closure->attempts
 	  ? A_WRITE(connection->write,
 		    format_userauth_failure(closure->advertised_methods,
 					    0))
 	  : LSH_FAIL | LSH_DIE;
 
-      res = AUTHENTICATE(auth, user, requested_service,
-			 &buffer, &service);
+      res = AUTHENTICATE(auth, user, &buffer, &auth_info);
 
       if (LSH_CLOSEDP(res))
 	return res;
@@ -115,18 +129,17 @@ static int do_handle_userauth(struct packet_handler *c,
 	       : LSH_FAIL | LSH_DIE);
 	}
 
-      assert(service);
-
       /* Access granted */
       /* Ignore any further userauth messages. */
       connection->dispatch[SSH_MSG_USERAUTH_REQUEST]
 	= connection->ignore;
+      
       res |= A_WRITE(connection->write, format_userauth_success());
 
       if (LSH_CLOSEDP(res))
 	return res;
       
-      return res | SERVICE_INIT(service, connection);
+      return res | COMMAND_CALL(service, auth_info, closure->c);
     }
 
   /* Invalid request */
@@ -135,32 +148,36 @@ static int do_handle_userauth(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
-static int init_userauth(struct ssh_service *s, /* int name, */
-			 struct ssh_connection *c)
+static int do_userauth(struct command *s, 
+		       struct lsh_object *x,
+		       struct command_continuation *c)
 {
   CAST(userauth_service, self, s);
+  CAST(ssh_connection, connection, x);
   NEW(userauth_handler, auth);
   
   auth->super.handler = do_handle_userauth;
   auth->advertised_methods = self->advertised_methods;
   auth->methods = self->methods;
+  auth->services = self->services;
   auth->attempts = AUTH_ATTEMPTS;
+  auth->c = c;
   
-  c->dispatch[SSH_MSG_USERAUTH_REQUEST] = &auth->super;
+  connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = &auth->super;
 
   return 1;
 }
 
-struct ssh_service *make_userauth_service(struct int_list *advertised_methods,
-					  struct alist *methods)
+struct command *make_userauth_service(struct int_list *advertised_methods,
+				      struct alist *methods,
+				      struct alist *services)
 {
   NEW(userauth_service, self);
 
-  self->super.init = init_userauth;
+  self->super.call = do_userauth;
   self->advertised_methods = advertised_methods;
   self->methods = methods;
+  self->services = services;
   
   return &self->super;
 }
-
-
