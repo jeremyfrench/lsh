@@ -204,15 +204,18 @@ do_send_adjust(struct ssh_channel *s,
 {
   CAST(server_session, session, s);
 
-  assert(session->out->read);
-  /* assert(session->out->handler); */
+  /* FIXME: Perhaps it's better to just check the read pointers, and
+   * not bother with the alive-flags? */
+  if (session->out->super.alive)
+    {
+      assert(session->out->read);
 
-  session->out->want_read = 1;
-
-  if (session->err)
+      session->out->want_read = 1;
+    }
+  
+  if (session->err && session->err->super.alive)
     {
       assert(session->err->read);
-      /* assert(session->err->handler); */
   
       session->err->want_read = 1;
     }
@@ -951,7 +954,7 @@ do_spawn_exec(struct channel_request *c,
 	assert(env_length <= MAX_ENV);
 #undef MAX_ENV
 
-	USER_EXEC(session->user, 3, argv, env_length, env);
+	USER_EXEC(session->user, 0, argv, env_length, env);
 	
 	/* exec failed! */
 	verbose("server_session: exec() failed (errno = %i): %z\n",
