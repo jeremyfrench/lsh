@@ -117,7 +117,10 @@ struct command *make_pty_request(int tty)
   if (!tty_getwinsize(tty, &req->width, &req->height,
 		      &req->width_p, &req->height_p))
     req->width = req->height = req->width_p = req->height_p = 0;
-      
+
+  /* The mode to use, if pty allocation is successful. */
+  CFMAKERAW(&req->ios);
+  
   req->super.format_request = do_format_pty_request;
   req->super.super.call = do_channel_request_command;
   
