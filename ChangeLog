@@ -1,5 +1,16 @@
 2002-05-05  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* configure.ac: Update for automake-1.6.
+	* src/argp/configure.ac: Likewise.
+
+	* src/gateway_channel.c (do_channel_open_forward): Added a FIXME
+	comment. We should install a new exception handler here.
+
+	* configure.ac: Renamed file, used to be configure.in.
+	* src/argp/configure.ac: Likewise.
+
+	* configure.in: Bumped version number to 1.4.
+
 	* doc/lsh.texinfo (Algorithm options): Updated description of the
 	default cipher. We now use AES, not triple-DES.
 
