@@ -100,7 +100,7 @@ do_install_global_request_handler(struct collect_info_2 *info,
   assert(!info->next);
   assert(handler);
   
-  trace("do_install_global_request_handler(%d)\n", self->name);
+  trace("do_install_global_request_handler(%i)\n", self->name);
   
   ALIST_SET(connection->channels->global_requests,
 	    self->name,
@@ -121,7 +121,7 @@ do_install_channel_open_handler(struct collect_info_2 *info,
   assert(!info->next);
   assert(handler);
   
-  trace("do_install_channel_open_handler(%d)\n", self->name);
+  trace("do_install_channel_open_handler(%i)\n", self->name);
 
   ALIST_SET(connection->channels->channel_types,
 	    self->name,
@@ -150,7 +150,7 @@ do_install_fix_global_request_handler(struct command *s,
   CAST(install_global_request_handler, self, s);
   CAST(ssh_connection, connection, x);
 
-  trace("do_install_fix_global_request_handler(%d)\n", self->name);
+  trace("do_install_fix_global_request_handler(%i)\n", self->name);
   
   ALIST_SET(connection->channels->global_requests,
 	    self->name,
@@ -192,7 +192,7 @@ do_install_fix_channel_open_handler(struct command *s,
   CAST(install_channel_open_handler, self, s);
   CAST(ssh_connection, connection, x);
 
-  trace("do_install_fix_channel_open_handler(%d)\n", self->name);
+  trace("do_install_fix_channel_open_handler(%i)\n", self->name);
   
   ALIST_SET(connection->channels->channel_types,
 	    self->name,
