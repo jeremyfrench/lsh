@@ -25,10 +25,16 @@
 
 #include "spki_commands.h"
 
+#include "atoms.h"
+#include "crypto.h"
+#include "format.h"
 #include "queue.h"
+#include "randomness.h"
 #include "sexp_commands.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include <assert.h>
 
 /* Forward declarations */
 struct command_simple spki_add_acl_command;
@@ -49,6 +55,7 @@ struct command_simple spki_add_userkey_command;
 
 #include "spki_commands.c.x"
 
+#define SA(x) sexp_a(ATOM_##x)
 
 /* GABA:
    (class
@@ -61,7 +68,7 @@ struct command_simple spki_add_userkey_command;
 /* Reading of ACL:s
  * ****************/
  
-/* Adds an ACL s-expression to an SPIK-context. Returns the context. */
+/* Adds an ACL s-expression to an SPKI-context. Returns the context. */
 /* ;; GABA:
    (class
      (name spki_add_acl_command_1)
@@ -303,4 +310,109 @@ COMMAND_SIMPLE(spki_read_userkeys_command)
   CAST_SUBTYPE(alist, algorithms, a);
   
   return &make_spki_read_userkeys(algorithms)->super;
+}
+
+
+/* Encryption of private data.
+ * For PKCS#5 (version 2) key derivation, we use
+ *
+ * (password-encrypted LABEL (Xpkcs5v2 hmac-sha1 (salt #...#))
+ *                           ("3des-cbc" (iv #...#) (data #...#)))
+ *
+ * where the X:s will be removed when the format is more stable.
+ *
+ */
+
+/* GABA:
+   (class
+     (name spki_password_encrypt)
+     (super command)
+     (vars
+       (label string)
+       (method object sexp)
+       (algorithm_name . UINT32)
+       (algorithm object crypto_algorithm)
+       (r object randomness)
+       (key string)))
+*/
+
+static void
+do_spki_encrypt(struct command *s,
+		struct lsh_object *a,
+		struct command_continuation *c,
+		struct exception_handler *e UNUSED)
+{
+  CAST(spki_password_encrypt, self, s);
+  CAST_SUBTYPE(sexp, expr, a);
+
+  struct lsh_string *iv = NULL;
+  UINT8 noiv[1] = { 0 };
+  
+  if (self->algorithm->iv_size)
+    {
+      iv = lsh_string_alloc(self->algorithm->iv_size);
+      RANDOM(self->r, iv->length, iv->data);
+    }
+  
+  COMMAND_RETURN(c,
+		 sexp_l(4,
+			SA(PASSWORD_ENCRYPTED),
+			sexp_s(NULL, lsh_string_dup(self->label)),
+			self->method,
+			sexp_l(3,
+			       sexp_a(self->algorithm_name),
+			       sexp_l(2, SA(IV), sexp_s(NULL, iv), -1),
+			       sexp_l(2, SA(DATA),
+				      sexp_s(NULL, crypt_string_pad
+					     (MAKE_ENCRYPT(self->algorithm,
+							   self->key->data, iv ? iv->data : noiv),
+					      SEXP_FORMAT(expr, SEXP_CANONICAL, 0), 1)),
+				      -1),
+			       -1),
+			-1));
+}
+
+/* Consumes the label and password arguments. */
+struct command *
+make_pkcs5_encrypt(struct randomness *r,
+		   struct lsh_string *label,
+		   UINT32 prf_name,
+		   struct mac_algorithm *prf,
+		   UINT32 crypto_name,
+		   struct crypto_algorithm *crypto,
+		   UINT32 salt_length,
+		   struct lsh_string *password,
+		   UINT32 iterations)
+{
+  NEW(spki_password_encrypt, self);
+
+  struct lsh_string *key;
+  struct lsh_string *salt;
+    
+  assert(crypto);
+  assert(prf);
+
+  salt = lsh_string_alloc(salt_length);
+  RANDOM(r, salt->length, salt->data);
+    
+  key = lsh_string_alloc(crypto->key_size);
+
+  pkcs5_derive_key(prf,
+		   password->length, password->data,
+		   salt->length, salt->data,
+		   iterations,
+		   key->length, key->data);
+
+  lsh_string_free(password);
+  
+  self->super.call = do_spki_encrypt;
+  self->r = r;
+  self->label = label;
+  self->method = sexp_l(3, SA(XPKCS5V2), sexp_a(prf_name),
+			sexp_l(2, SA(SALT), sexp_s(NULL, salt), -1), -1);
+  self->algorithm_name = crypto_name;
+  self->algorithm = crypto;
+  self->key = key;
+
+  return &self->super;
 }

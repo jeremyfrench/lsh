@@ -45,4 +45,16 @@ extern struct command_simple spki_read_userkeys_command;
 struct command *
 make_spki_read_userkeys(struct alist *algorithms);
 
+/* Encryption of private data. */
+struct command *
+make_pkcs5_encrypt(struct randomness *r,
+		   struct lsh_string *label,
+		   UINT32 prf_name,
+		   struct mac_algorithm *prf,
+		   UINT32 crypto_name,
+		   struct crypto_algorithm *crypto,
+		   UINT32 salt_length,
+		   struct lsh_string *password,
+		   UINT32 iterations);
+
 #endif /* LSH_SPKI_COMMANDS_H_INCLUDED */
