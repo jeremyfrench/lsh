@@ -88,7 +88,7 @@ static struct lsh_string *sexp_parse_token(struct simple_buffer *buffer)
 
   if (!length)
     {
-      werror("sexp: Invalid token.\n");
+      wwrite("sexp: Invalid token.\n");
       return NULL;
     }
 
@@ -109,7 +109,7 @@ static int sexp_parse_decimal(struct simple_buffer *buffer, UINT32 *value)
   if ((*HERE == '0') && (length != 1))
     {
       /* No leading zeros allowed */
-      werror("sexp: Unexpected leading zeroes\n");
+      wwrite("sexp: Unexpected leading zeroes\n");
       return 0;
     }
   if (length > 8)
@@ -133,7 +133,7 @@ sexp_parse_literal(struct simple_buffer *buffer, UINT32 length)
   
   if (LEFT < length)
     {
-      werror("sexp: Unexpected EOF in literal.\n");
+      wwrite("sexp: Unexpected EOF in literal.\n");
       return NULL;
     }
 
@@ -224,7 +224,7 @@ static int sexp_dequote(struct simple_buffer *buffer)
 
 		if (LEFT < 2)
 		  {
-		    werror("sexp: Unexpected eof in octal escape sequence.\n");
+		    wwrite("sexp: Unexpected eof in octal escape sequence.\n");
 		    return QUOTE_INVALID;
 		  }
 	    	      
@@ -263,7 +263,7 @@ sexp_parse_quoted_length(struct simple_buffer *buffer, UINT32 length)
       if (c < 0)
 	{
 	  if (c == QUOTE_END)
-	    werror("sexp: Quoted string is too short.\n");
+	    wwrite("sexp: Quoted string is too short.\n");
 	  lsh_string_free(res);
 	  return NULL;
 	}
@@ -292,7 +292,7 @@ sexp_parse_quoted(struct simple_buffer *buffer)
       p = memchr(p, '"', (HERE + LEFT) - p);
       if (!p)
 	{
-	  werror("sexp: Unexpected EOF in quoted string.\n");
+	  wwrite("sexp: Unexpected EOF in quoted string.\n");
 	  return NULL;
 	}
       if (p[-1] != '\\')
@@ -341,7 +341,7 @@ static int sexp_dehex(struct simple_buffer *buffer)
 
       if (!LEFT)
 	{
-	  werror("sexp: Unexpected EOF in hex string.\n");
+	  wwrite("sexp: Unexpected EOF in hex string.\n");
 	  return HEX_INVALID;
 	}
 
@@ -379,7 +379,7 @@ sexp_parse_hex_length(struct simple_buffer *buffer, UINT32 length)
       if (c < 0)
 	{
 	  if (c == HEX_END)
-	    werror("sexp: Hex string is too short.\n");
+	    wwrite("sexp: Hex string is too short.\n");
 	  lsh_string_free(res);
 	  return NULL;
 	}
@@ -402,7 +402,7 @@ sexp_parse_hex(struct simple_buffer *buffer)
   if ( (length == LEFT)
        || (HERE[terminator] != '#'))
     {
-      werror("sexp: Unexpected EOF in hex string.\n");
+      wwrite("sexp: Unexpected EOF in hex string.\n");
       return NULL;
     }
 
@@ -516,7 +516,7 @@ sexp_parse_base64_length(struct simple_buffer *buffer,
       if (c < 0)
 	{
 	  if (c == BASE64_END)
-	    werror("sexp: Base string is too short.\n");
+	    wwrite("sexp: Base string is too short.\n");
 	  lsh_string_free(res);
 	  return NULL;
 	}
@@ -540,7 +540,7 @@ sexp_parse_base64(struct simple_buffer *buffer, UINT8 delimiter)
   if ( (length == LEFT)
        || (HERE[terminator] != delimiter))
     {
-      werror("sexp: Unexpected EOF in base64 string.\n");
+      wwrite("sexp: Unexpected EOF in base64 string.\n");
       return NULL;
     }
 
@@ -618,7 +618,7 @@ sexp_parse_string_advanced(struct simple_buffer *buffer)
 	case ':':
 	  return sexp_parse_literal(buffer, length);
 	default:
-	  werror("sexp: Invalid prefixed string.\n");
+	  wwrite("sexp: Invalid prefixed string.\n");
 	  return NULL;
 	}
     }
@@ -765,7 +765,7 @@ static struct sexp *sexp_parse_list_canonical(struct simple_buffer *buffer)
 	}
       parse_list_add(&p, e);
     }
-  werror("sexp: Unexpected EOF (missing ')')\n");
+  wwrite("sexp: Unexpected EOF (missing ')')\n");
   
   parse_list_free(&p);
   return NULL;
@@ -792,7 +792,7 @@ static struct sexp *sexp_parse_list_advanced(struct simple_buffer *buffer)
 
       sexp_skip_space(buffer);
     }
-  werror("sexp: Unexpected EOF (missing ')')\n");
+  wwrite("sexp: Unexpected EOF (missing ')')\n");
   
   parse_list_free(&p);
   return NULL;
@@ -802,7 +802,7 @@ struct sexp *sexp_parse_canonical(struct simple_buffer *buffer)
 {
   if (!LEFT)
     {
-      werror("sexp: Unexpected EOF.\n");
+      wwrite("sexp: Unexpected EOF.\n");
       return NULL;
     }
 
@@ -819,7 +819,7 @@ struct sexp *sexp_parse_canonical(struct simple_buffer *buffer)
     case '[':
       return sexp_parse_display_canonical(buffer);
     default:
-      werror("sexp: Syntax error.\n");
+      wwrite("sexp: Syntax error.\n");
       return NULL;
     }
 }
@@ -848,7 +848,7 @@ struct sexp *sexp_parse_transport(struct simple_buffer *buffer)
 {
   if (!LEFT)
     {
-      werror("sexp: Unexpected EOF.\n");
+      wwrite("sexp: Unexpected EOF.\n");
       return NULL;
     }
 
@@ -865,7 +865,7 @@ struct sexp *sexp_parse_advanced(struct simple_buffer *buffer)
 {
   if (!LEFT)
     {
-      werror("sexp: Unexpected EOF.\n");
+      wwrite("sexp: Unexpected EOF.\n");
       return NULL;
     }
 

@@ -386,7 +386,7 @@ static int do_channel_open(struct packet_handler *c,
       if ( (local_channel_number
 	    = register_channel(closure->super.table, channel)) < 0)
 	{
-	  werror("Could not allocate a channel number for pened channel!\n");
+	  wwrite("Could not allocate a channel number for pened channel!\n");
 	  return A_WRITE(connection->write,
 			 format_open_failure(remote_channel_number,
 					     SSH_OPEN_RESOURCE_SHORTAGE,
@@ -540,7 +540,7 @@ static int do_channel_data(struct packet_handler *c,
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
-	      werror("Ignoring data on channel which is closing\n");
+	      wwrite("Ignoring data on channel which is closing\n");
 	      return LSH_OK | LSH_GOON;
 	    }
 	  else
@@ -550,7 +550,7 @@ static int do_channel_data(struct packet_handler *c,
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
-		  werror("Channel data overflow. Extra data ignored.\n"); 
+		  wwrite("Channel data overflow. Extra data ignored.\n"); 
 		  data->length = channel->rec_window_size;
 		}
 
@@ -623,7 +623,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
-	      werror("Ignoring extended data on channel which is closing\n");
+	      wwrite("Ignoring extended data on channel which is closing\n");
 	      return LSH_OK | LSH_GOON;
 	    }
 	  else
@@ -633,7 +633,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
-		  werror("Channel extended data overflow. "
+		  wwrite("Channel extended data overflow. "
 			 "Extra data ignored.\n");
 		  data->length = channel->rec_window_size;
 		}
@@ -702,7 +702,7 @@ static int do_channel_eof(struct packet_handler *c,
 	  
 	  if (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE))
 	    {
-	      werror("Receiving EOF on channel on closed channel.\n");
+	      wwrite("Receiving EOF on channel on closed channel.\n");
 	      return LSH_FAIL | LSH_DIE;
 	    }
 
@@ -767,7 +767,7 @@ static int do_channel_close(struct packet_handler *c,
 	  
 	  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	    {
-	      werror("Receiving multiple CLOSE on channel.\n");
+	      wwrite("Receiving multiple CLOSE on channel.\n");
 	      return LSH_FAIL | LSH_DIE;
 	    }
 
@@ -775,7 +775,7 @@ static int do_channel_close(struct packet_handler *c,
 	  
 	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_SENT_EOF)))
 	    {
-	      werror("Unexpected channel CLOSE.\n");
+	      wwrite("Unexpected channel CLOSE.\n");
 	    }
 
 	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF))

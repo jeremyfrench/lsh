@@ -209,9 +209,9 @@ static struct read_handler *do_line(struct line_handler **h,
 	}
       else
 	{
-	  werror("Unsupported protocol version: ");
+	  wwrite("Unsupported protocol version: ");
 	  werror_safe(length, line);
-	  werror("\n");
+	  wwrite("\n");
 
 	  /* FIXME: Clean up properly */
 	  KILL(closure);
@@ -276,7 +276,7 @@ static int server_die(struct close_callback *c, int reason)
   
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
-    werror("Connection died.\n");
+    wwrite("Connection died.\n");
 
   KILL_RESOURCE_LIST(closure->connection->resources);
   
@@ -370,7 +370,7 @@ static int do_receive(struct ssh_channel *c,
     case CHANNEL_DATA:
       return A_WRITE(&closure->in->buffer->super, data);
     case CHANNEL_STDERR_DATA:
-      werror("Ignoring unexpected stderr data.\n");
+      wwrite("Ignoring unexpected stderr data.\n");
       lsh_string_free(data);
       return LSH_OK | LSH_GOON;
     default:
@@ -745,14 +745,14 @@ static int do_spawn_shell(struct channel_request *c,
 
 		    if (!session->user->shell)
 		      {
-			werror("No login shell!\n");
+			wwrite("No login shell!\n");
 			exit(EXIT_FAILURE);
 		      }
 
 		    if (getuid() != session->user->uid)
 		      if (!change_uid(session->user))
 			{
-			  werror("Changing uid failed!\n");
+			  wwrite("Changing uid failed!\n");
 			  exit(EXIT_FAILURE);
 			}
 		    
@@ -760,7 +760,7 @@ static int do_spawn_shell(struct channel_request *c,
 		    
 		    if (!change_dir(session->user))
 		      {
-			werror("Could not change to home (or root) directory!\n");
+			wwrite("Could not change to home (or root) directory!\n");
 			exit(EXIT_FAILURE);
 		      }
 
@@ -792,7 +792,7 @@ static int do_spawn_shell(struct channel_request *c,
 		    
 		    if (dup2(in[0], STDIN_FILENO) < 0)
 		      {
-			werror("Can't dup stdin!\n");
+			wwrite("Can't dup stdin!\n");
 			exit(EXIT_FAILURE);
 		      }
 		    close(in[0]);
@@ -800,14 +800,14 @@ static int do_spawn_shell(struct channel_request *c,
 		    
 		    if (dup2(out[1], STDOUT_FILENO) < 0)
 		      {
-			werror("Can't dup stdout!\n");
+			wwrite("Can't dup stdout!\n");
 			exit(EXIT_FAILURE);
 		      }
 		    close(out[0]);
 		    close(out[1]);
 
 		    if ((old_stderr = dup(STDERR_FILENO)) < 0)
-		      werror("Couldn't safe old file_no.\n");
+		      wwrite("Couldn't save old file_no.\n");
 		    io_set_close_on_exec(old_stderr);
 
 		    debug("Child: Duping stderr (bye).\n");

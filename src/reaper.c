@@ -129,7 +129,7 @@ static void reap(struct reaper *r)
       else switch(errno)
 	{
 	case EINTR:
-	  werror("reaper.c: waitpid() returned EINTR.\n");
+	  wwrite("reaper.c: waitpid() returned EINTR.\n");
 	  break;
 	case ECHILD:
 	  /* No more child processes */

@@ -88,7 +88,7 @@ make_des_instance(struct crypto_algorithm *algorithm UNUSED, int mode,
     case -1:
       fatal("Internal error! Bad parity in make_des_instance.\n");
     case -2:
-      werror("Detected weak DES key.\n");
+      wwrite("Detected weak DES key.\n");
       KILL(self);
       return NULL;
     default:

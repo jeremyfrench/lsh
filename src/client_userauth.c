@@ -132,7 +132,7 @@ static int do_userauth_success(struct packet_handler *c,
       && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
       && parse_eod(&buffer))
     {
-      werror("User authentication successful.\n");
+      wwrite("User authentication successful.\n");
 
       lsh_string_free(packet);
       
@@ -175,7 +175,7 @@ static int do_userauth_failure(struct packet_handler *c,
 
       if (partial_success)
 	{ /* Doesn't help us */
-	  werror("Received SSH_MSH_USERAUTH_FAILURE "
+	  wwrite("Received SSH_MSH_USERAUTH_FAILURE "
 		 "indicating partial success.\n");
 	  KILL(methods);
 

@@ -62,7 +62,7 @@ static int do_disconnect(struct packet_handler *closure UNUSED,
       werror_utf8(length, msg);
     }
   else
-    werror("Invalid disconnect message!\n");
+    wwrite("Invalid disconnect message!\n");
   lsh_string_free(packet);
   
   /* FIXME: Mark the file as closed, somehow (probably a variable in

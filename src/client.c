@@ -150,9 +150,9 @@ static struct read_handler *do_line(struct line_handler **h,
 	}
       else
 	{
-	  werror("Unsupported protocol version: ");
+	  wwrite("Unsupported protocol version: ");
 	  werror_safe(length, line);
-	  werror("\n");
+	  wwrite("\n");
 
 	  /* FIXME: Clean up properly */
 	  KILL(closure);
@@ -209,7 +209,7 @@ static int client_close_die(struct close_callback *closure UNUSED,
 {
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
-    werror("Connection died.\n");
+    wwrite("Connection died.\n");
 
   /* FIXME: Return value is not used. */
   return 4711;
@@ -427,7 +427,7 @@ static int do_exit_signal(struct channel_request *c,
       werror("Remote process was killed by %s.\n",
 	     signal ? strsignal(signal) : "an unknown signal");
       if (core)
-	werror("(core dumped remotely)\n");
+	wwrite("(core dumped remotely)\n");
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);

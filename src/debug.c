@@ -117,9 +117,9 @@ static int do_rec_debug(struct packet_handler *self UNUSED,
 
   if (always_display)
     {
-      werror("Received debug: ");
+      wwrite("Received debug: ");
       werror_utf8(length, msg);
-      werror("\n");
+      wwrite("\n");
     }
   else
     {

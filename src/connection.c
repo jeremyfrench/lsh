@@ -47,7 +47,7 @@ static int handle_connection(struct abstract_write *w,
 
   if (!packet->length)
     {
-      werror("connection.c: Received empty packet!\n");
+      wwrite("connection.c: Received empty packet!\n");
       return LSH_FAIL | LSH_DIE;
     }
 
@@ -60,7 +60,7 @@ static int handle_connection(struct abstract_write *w,
     case KEX_STATE_INIT:
       if (msg == SSH_MSG_NEWKEYS)
 	{
-	  werror("Unexpected NEWKEYS message!\n");
+	  wwrite("Unexpected NEWKEYS message!\n");
 	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}
@@ -80,7 +80,7 @@ static int handle_connection(struct abstract_write *w,
       if ( (msg == SSH_MSG_NEWKEYS)
 	   || (msg == SSH_MSG_KEXINIT))
 	{
-	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
+	  wwrite("Unexpected KEXINIT or NEWKEYS message!\n");
 	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}

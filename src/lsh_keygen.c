@@ -46,7 +46,7 @@ static void usage(void) NORETURN;
 
 static void usage(void)
 {
-  werror("Usage: lsh_keygen [-o style] [-l nist-level] [-a dss] [-q] [-d] [-v]\n");
+  wwrite("Usage: lsh_keygen [-o style] [-l nist-level] [-a dss] [-q] [-d] [-v]\n");
   exit(1);
 }
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 
 	  if ( (l<0) || (l > 8))
 	    {
-	      werror("lsh_keygen: nist-level should be in the range 0-8.\n");
+	      wwrite("lsh_keygen: nist-level should be in the range 0-8.\n");
 	      usage();
 	    }
 	  break;
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
       case 'a':
 	if (strcmp(optarg, "dss"))
 	  {
-	    werror("lsh_keygen: Sorry, doesn't support any algorithm but dss.\n");
+	    wwrite("lsh_keygen: Sorry, doesn't support any algorithm but dss.\n");
 	    usage();
 	  }
 	break;
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 	  style = SEXP_INTERNATIONAL;
 	else
 	  {
-	    werror("lsh_keygen: Style must be one of\n"
+	    wwrite("lsh_keygen: Style must be one of\n"
 		   "  'transport', 'canonical', 'advanced' or 'international'\n");
 	    usage();
 	  }
@@ -140,20 +140,20 @@ int main(int argc, char **argv)
   /* Sanity check. */
   if (!mpz_probab_prime_p(public.p, 10))
     {
-      werror("p not a prime!\n");
+      wwrite("p not a prime!\n");
       return 1;
     }
 
   if (!mpz_probab_prime_p(public.q, 10))
     {
-      werror("q not a prime!\n");
+      wwrite("q not a prime!\n");
       return 1;
     }
 
   mpz_fdiv_r(t, public.p, public.q);
   if (mpz_cmp_ui(t, 1))
     {
-      werror("q doesn't divide p-1 !\n");
+      wwrite("q doesn't divide p-1 !\n");
       return 1;
     }
 
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
   
   {
     /* Now, output a private key spki structure. */
-    struct abstract_write *output = make_blocking_write(STDOUT_FILENO);
+    struct abstract_write *output = make_blocking_write(STDOUT_FILENO, 0);
     
     struct lsh_string *key = sexp_format
       (sexp_l(2, sexp_z("private-key"),
