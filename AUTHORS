@@ -25,3 +25,5 @@ Kuchling. Released into the public domain.
 TCPUTILS networking code by Thomas Bellman. Released into the public
 domain.
 
+POLL emulation code (for systems that have slect(), but not poll())
+written by Sean Reifschneider, released for unlimited use.
