@@ -122,6 +122,17 @@ spki_parse_end(struct spki_iterator *i)
     return spki_parse_fail(i);
 }
 
+/* Check the type of an expression, and enter if it the type
+ * matches. */
+enum spki_type
+spki_check_type(struct spki_iterator *i, enum spki_type type)
+{
+  if (i->type != type)
+    return spki_parse_fail(i);
+
+  return spki_parse_type(i);
+}
+
 enum spki_type
 spki_parse_skip(struct spki_iterator *i)
 {
@@ -216,11 +227,9 @@ enum spki_type
 spki_parse_subject(struct spki_acl_db *db, struct spki_iterator *i,
 		   struct spki_principal **principal)
 {
-  /* FIXME: Use spki_check_type() */
-  if (i->type != SPKI_TYPE_SUBJECT)
+  if (!spki_check_type(i, SPKI_TYPE_SUBJECT))
     return spki_parse_fail(i);
 
-  spki_parse_type(i);
   return spki_parse_principal(db, i, principal);
 }
 
@@ -276,10 +285,9 @@ enum spki_type
 spki_parse_valid(struct spki_iterator *i,
 		 struct spki_5_tuple *tuple)
 {
-  assert(i->type == SPKI_TYPE_VALID);
+  if (!spki_check_type(i, SPKI_TYPE_VALID))
+    return spki_parse_fail(i);
   
-  spki_parse_type(i);
-
   if (i->type == SPKI_TYPE_NOT_BEFORE)
     {
       if (spki_parse_date(i, &tuple->not_before))
@@ -307,9 +315,10 @@ enum spki_type
 spki_parse_version(struct spki_iterator *i)
 {
   uint32_t version;
-  assert(i->type == SPKI_TYPE_VERSION);
-  
-  if (spki_parse_uint32(i, &version) && version == 0)
+
+  if (i->type == SPKI_TYPE_VERSION
+      && spki_parse_uint32(i, &version)
+      && version == 0)
     return spki_parse_end(i);
   else
     return spki_parse_fail(i);
@@ -324,9 +333,8 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
    *
    * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
 
-  assert(i->type == SPKI_TYPE_ENTRY);
-
-  spki_parse_type(i);
+  if (!spki_check_type(i, SPKI_TYPE_ENTRY))
+    return spki_parse_fail(i);
   
   /* NOTE: draft-ietf-spki-cert-structure-06.txt has a raw <subj-obj>,
    * but that should be changed. */
@@ -355,9 +363,8 @@ enum spki_type
 spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
 		struct spki_5_tuple *cert)
 {
-  assert(i->type == SPKI_TYPE_CERT);
-  
-  spki_parse_type(i);
+  if (!spki_check_type(i, SPKI_TYPE_CERT))
+    return spki_parse_fail(i);
   
   if (i->type == SPKI_TYPE_VERSION)
     spki_parse_version(i);

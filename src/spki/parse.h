@@ -69,11 +69,8 @@ spki_parse_prevexpr(struct spki_iterator *i,
 enum spki_type
 spki_parse_type(struct spki_iterator *i);
 
-/* FIXME: Implement and make use of this function. */
-#if 0
-int
+enum spki_type
 spki_check_type(struct spki_iterator *i, enum spki_type type);
-#endif
 
 enum spki_type
 spki_parse_end(struct spki_iterator *i);
