@@ -162,7 +162,7 @@ fi
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
     CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
-                 -Wmissing-declarations -Werror"
+                 -Wmissing-declarations"
 fi
 
 AC_OUTPUT(Makefile lib/Makefile include/Makefile)
