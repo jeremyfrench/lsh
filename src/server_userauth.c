@@ -91,32 +91,9 @@ format_userauth_success(void)
        (services object alist)))
 */
 
-/* FIXME: This code doesn't handle authentication methods where the
- * result (continuation or exception) is not invoked immediately.
- * There are two problems:
- *
- * 1. Requests are not necessarily replied to in order. That is bad,
- * but can probably be fixed fairly easily the same way that it is
- * done for GLOBAL_REQUEST messages.
- *
- * 2. Packets that are received after a sucessful USERAUTH_REQUEST
- * message, but before it is processed and replied to, must somehow be
- * queued until we know that the user is authenticated for some
- * service to receive them.
- *
- * I think the right thing to do is to serialize userauth requests
- * completely: if a request can't be replied to immediately, put the
- * entire connection on hold until the reply is ready.
- *
- * This code now uses serialization, using connection_lock and
- * connection_unlock. However, the implementation of serialization
- * is rather stupid. And will crash if a userauth method returns to
- * the main loop while the connection is still locked. */
-
-/* FIXME: I don't think the about is true anymore. Locking should
- * work, packets queued up properly while a connection is locked, etc.
- * This is needed for password userauthentication using a password
- * helper process. */
+/* NOTE: Processing of userauth requests is serialized completely: if
+ * a request can't be replied to immediately, put the entire
+ * connection on hold until the reply is ready. */
 
 /* GABA:
    (class
