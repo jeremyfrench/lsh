@@ -14,10 +14,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
-
 
 #if HAVE_CRYPT_H
 # include <crypt.h>
@@ -344,6 +344,14 @@ make_unix_user(struct lsh_string *name,
 
 /* NOTE: Calls functions using the disgusting convention of returning
  * pointers to static buffers. */
+
+/* This method filters out accounts that are known to be disabled
+ * (i.e. root, or shadow style expiration). However, it may still
+ * return some disabled accounts.
+ *
+ * An account that is disabled in /etc/passwd should have a value for
+ * the login shell that prevents login; replacing the passwd field
+ * only doesn't prevent login using publickey authentication. */
 static struct user *
 do_lookup_user(struct user_db *s,
 	       struct lsh_string *name, int free)
@@ -369,9 +377,35 @@ do_lookup_user(struct user_db *s,
       if (passwd->pw_passwd && (strlen(passwd->pw_passwd) == 1))
 	{
 	  struct spwd *shadowpwd;
-    
+
+	  /* Current day number since January 1, 1970.
+	   *
+	   * FIXME: Which timezone is used in the /etc/shadow file? */
+	  long now = time(NULL) / (3600 * 24);
+	  
 	  if (!(shadowpwd = getspnam(name->data)))
 	    goto fail;
+
+	  /* FIXME: I'm assuming that zero means there's no expiry
+	   * date. */
+	  if (shadowpwd->sp_expire && (now > shadowpwd->sp_expire))
+	    {
+	      werror("Access denied for user '%pS', account expired.\n", name);
+	      goto fail;
+	    }
+	  		     
+	  /* FIXME: I'm assuming that zero means that there is no
+	   * restriction on password age. */
+	  if (shadowpwd->sp_max &&
+	      (now > (shadowpwd->sp_lstchg +  shadowpwd->sp_max)))
+	    {
+	      werror("Access denied for user '%pS', password too old.\n", name);
+	      goto fail;
+	    }
+
+	  /* FIXME: We could look at sp_warn and figure out if it is
+	   * appropriate to send an SSH_MSG_USERAUTH_PASSWD_CHANGEREQ
+	   * message. */
 
 	  crypted = shadowpwd->sp_pwdp;
 	}
