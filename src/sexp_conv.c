@@ -87,7 +87,8 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_argp, 0, NULL, 0 },
+  { &sexp_input_argp, 0, NULL, 0 },
+  { &sexp_output_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -95,13 +96,17 @@ main_argp_children[] =
 static error_t
 main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
 {
+  /* NOTE: No type checking */
+  sexp_argp_state *input = state->input;
+  
   switch(key)
     {
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = state->input;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[0] = input;
+      state->child_inputs[1] = input + 1;
+      state->child_inputs[2] = NULL;
       break;
     }
   return 0;
@@ -122,13 +127,12 @@ main_argp =
 
 int main(int argc, char **argv)
 {
-  int input_format = SEXP_TRANSPORT;
-  sexp_argp_input output_format = SEXP_ADVANCED;
+  sexp_argp_state formats[2] = { SEXP_TRANSPORT, SEXP_ADVANCED };
 
   struct exception_handler *e;
   NEW(io_backend, backend);
 
-  argp_parse(&main_argp, argc, argv, 0, NULL, &output_format);
+  argp_parse(&main_argp, argc, argv, 0, NULL, formats);
 
   init_backend(backend);
 
@@ -139,8 +143,8 @@ int main(int argc, char **argv)
   {
     CAST_SUBTYPE(command, work,
 		 make_sexp_conv(
-		   make_read_sexp_command(input_format, 1),
-		   make_print_sexp_to(output_format,
+		   make_read_sexp_command(formats[0], 1),
+		   make_print_sexp_to(formats[1],
 				      &(io_write(make_io_fd(backend,
 							    STDOUT_FILENO,
 							    e),
