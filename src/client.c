@@ -895,10 +895,11 @@ do_background_process(struct command *s,
 		      struct exception_handler *e UNUSED)
 {
   CAST(background_process_command, self, s);
-
+  pid_t pid;
+  
   trace("do_background_process\n");
   
-  pid_t pid = fork();
+  pid = fork();
   
   switch (pid)
     {
