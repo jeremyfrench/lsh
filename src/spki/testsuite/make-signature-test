@@ -9,7 +9,7 @@ die () {
     exit 1
 }
 
-echo foo | ../tools/spki-make-signature key-1 \
+echo foo | ../tools/spki-make-signature "$srcdir/key-1" \
          | ../../nettle/tools/sexp-conv -s transport > test.in
 
 echo foo | ../tools/spki-check-signature "`cat test.in`" \

@@ -21,7 +21,7 @@ TAG3='(3:tag(1:*6:prefix1:f))'
 
 ../tools/spki-delegate >testhome/.spki/acls \
     --tag="$TAG3" \
-    --subject="`conv <key-1.pub`" \
+    --subject="`conv <"$srcdir/key-1.pub"`" \
     --propagate
 		       
 
@@ -38,9 +38,9 @@ EOF
 
 ../tools/spki-delegate >testhome/.spki/certificates \
     --tag="$TAG1" \
-    --issuer="`conv <key-1.pub`" \
-    --subject="`conv <key-2.pub`" \
-    --key=key-1
+    --issuer="`conv <"$srcdir/key-1.pub"`" \
+    --subject="`conv <"$srcdir/key-2.pub"`" \
+    --key="$srcdir/key-1"
 
 check_sexp testhome/.spki/certificates "Certificates differ" <<EOF
 (sequence (cert (issuer (public-key (rsa-pkcs1-sha1 (n |CijcTD4ZSRQtpqa9
