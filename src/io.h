@@ -87,11 +87,6 @@ enum io_type { IO_PTY = 1 };
        ; User's close callback
        (close_callback object lsh_callback)
 
-       ; This flag is set by the backend if it detects that a
-       ; connection is hanged up. 
-       
-       ;;; (hanged_up . int)
-       
        (want_read . int)
        ; Called if poll indicates that data can be read. 
        (read object io_callback)

@@ -36,7 +36,4 @@ extern struct command_2 gateway_accept;
 struct command *
 make_gateway_setup(struct local_info *local);
 
-extern struct command gateway_setup_command;
-#define GATEWAY_SETUP (&gateway_setup_command.super)
-
 #endif /* GATEWAY_COMMANDS_H_INCLUDED */

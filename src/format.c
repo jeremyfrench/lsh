@@ -261,13 +261,7 @@ end_options:
 
 		/* Decimal not supported. */
 		assert(!decimal);
-#if 0
-		if (decimal)
-		  {
-		    length += format_size_in_decimal(l) + 1;
-		  }
-		else
-#endif
+
 		if (!literal)
 		  length += 4;
 

@@ -416,11 +416,7 @@ do_proxy_offer_service(struct command *s,
   connection->dispatch[SSH_MSG_SERVICE_REQUEST]
     = make_proxy_service_handler(self->services, c, e);
 
-#if 0
   /* currently servers may not ask for services in clients */
-  connection->chain->dispatch[SSH_MSG_SERVICE_REQUEST]
-    = make_proxy_service_request(self->server_services, c, e);
-#endif
 }
 
 struct command *

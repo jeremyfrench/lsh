@@ -279,11 +279,6 @@ lsh_object_free(struct lsh_object *o)
   
   if (o->alloc_method != LSH_ALLOC_HEAP)
     fatal("lsh_object_free: Object not allocated on the heap!\n");
-
-#if 0
-  if (o->isa->free_instance)
-    o->isa->free_instance(o);
-#endif
   
   lsh_free(o);
 }

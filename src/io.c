@@ -440,11 +440,6 @@ do_buffered_read(struct io_callback *s,
 
   assert(fd->want_read);   
 
-#if 0
-  /* If hanged_up is set, pretend that read returned 0 */
-  res = fd->hanged_up ? 0 : read(fd->fd, buffer, self->buffer_size);
-#endif
-
   res = read(fd->fd, buffer, self->buffer_size);
   
   if (res < 0)
