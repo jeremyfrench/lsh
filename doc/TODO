@@ -118,6 +118,13 @@ Have autoconf automatically add -I $prefix/include and -L $prefix/lib ?
 Remaking Makefile.am from subdirectories probably cd:s to the wrong
 place, when building outside of the source tree.
 
+Building outside of the source tree creates machine independent
+automatically generated files in the wrong directory (they should be
+in the source tree).
+
+The definition of SBINDIR is proken, in gets the value
+"${exec_prefix}/sbin".
+
 
 PROTOCOL ISSUES
 
@@ -128,7 +135,7 @@ Implement RSA public-key operations according to
 draft-ietf-secsh-transport-08.txt.
 
 
-USER INTERTFACE ISSUES
+USER INTERFACE ISSUES
 
 Hack do_spki_decrypt() in spki_commands.c to ask again if the provided
 password is incorrect.
@@ -268,3 +275,7 @@ Perhaps change the LOOKUP_VERIFIER method to return an spki_subject?
 
 Make connection_unlock install a callout that calls
 connection_handle_pending(). 
+
+Consider how much we really need to differentiate between
+rsa-pkcs1-sha1 / rsa-pkcs1-md5 and between spki-sign-rsa /
+spki-sign-dss.
