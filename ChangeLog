@@ -1,3 +1,9 @@
+2000-05-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_userauth.c (do_userauth_pk_ok): Moved else across
+	"#endif /* DATAFELLOWS_WORKAROUNDS */" (reported by Sami
+	Lehtinen). 
+
 2000-05-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_user.c (do_fork_process): Check HAVE_UT_NAME and
