@@ -137,7 +137,7 @@ static void do_kill_all(struct resource *s)
   for (n = self->q; n; )
     {
       CAST_SUBTYPE(resource, r, n->resource);
-       struct resource_node *old = n;
+      struct resource_node *old = n;
 
       KILL_RESOURCE(r);
       n = n->next;

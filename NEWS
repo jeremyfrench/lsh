@@ -4,6 +4,8 @@ News for the 0.2.8 release
 	crash when requesting forwarding to a port that doesn't
 	answer.
 
+	Also close ports for local and remote forwarding properly. 
+
 	Updated the proxy code.
  
 News for the 0.2.7 release
