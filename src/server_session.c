@@ -374,19 +374,19 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
       /* -1 means opening deferred to the child */
       in[0] = -1;
       in[1] = pty->master;
-      pty->master = -1;
       
       if ((out[0] = dup(pty->master)) < 0)
         {
           werror("make_pty: duping master pty to stdout failed (errno = %i): %z\n",
                  errno, STRERROR(errno));
 
-          close(in[0]);
-
           return 0;
         }
 
       out[1] = -1;
+
+      /* pty_info no longer owns the pty fd */
+      pty->master = -1;
 
 #if BASH_WORKAROUND
       /* Don't use a separate stderr channel; just dup the
@@ -427,6 +427,9 @@ spawn_process(struct server_session *session,
   int out[2];
   int err[2];
 
+  /* Pipe used for syncronization. */
+  int sync[2];
+  
   if (session->process)
     /* Already spawned a shell or command */
     return -1;
@@ -434,6 +437,11 @@ spawn_process(struct server_session *session,
   /* {in|out|err}[0] is for reading,
    * {in|out|err}[1] for writing. */
 
+  if (!lsh_make_pipe(sync))
+    {
+      werror("spawn_process: Failed to create syncronization pipe.\n");
+      return -1;
+    }
   if (session->pty && !make_pty(session->pty, in, out, err))
     {
       KILL_RESOURCE(&session->pty->super);
@@ -450,7 +458,10 @@ spawn_process(struct server_session *session,
     {
       if (child)
 	{ /* Parent */
+	  char dummy;
+	  int res;
 	  struct ssh_channel *channel = &session->super;
+	  
 	  trace("spawn_process: Parent process\n");
 	    
 	  session->process = child;
@@ -460,6 +471,23 @@ spawn_process(struct server_session *session,
 	  close(out[1]);
 	  close(err[1]);
 
+	  close(sync[1]);
+
+	  /* On Solaris, reading the master side of the pty before the
+	   * child has opened the slave side of it results in EINVAL.
+	   * We can't have that, so we'll wait until the child has
+	   * opened the tty, after which it should close its end of
+	   * the syncronizatino pipe, and our read will return 0.
+	   *
+	   * We need the syncronizatino only if we're actually using a
+	   * pty, but for simplicity, we do it every time. */
+
+	  do
+	    res = read(sync[0], &dummy, 1);
+	  while (res < 0 && errno == EINTR);
+
+	  close(sync[0]);
+	  
 	  {
 	    /* Exception handlers */
 	    struct exception_handler *io_exception_handler
@@ -557,6 +585,11 @@ spawn_process(struct server_session *session,
 		debug("lshd: server.c: Opening slave tty... Ok.\n");
 	    }
 #endif /* WITH_PTY_SUPPORT */
+
+	  /* Now any tty processing is done, so notify our parent by
+	   * closing the syncronization pipe. */
+
+	  close(sync[0]); close(sync[1]);
 	  
 	  /* Close all descriptors but those used for communicationg
 	   * with parent. We rely on the close-on-exec flag for all
@@ -950,6 +983,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	  /* FIXME: Perhaps we can set the window dimensions directly
 	   * on the master pty? */
 	  session->term = term;
+	  session->pty = pty;
 	  REMEMBER_RESOURCE(channel->resources, &pty->super);
 
 	  verbose(" granted.\n");
