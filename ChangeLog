@@ -1,3 +1,13 @@
+2001-11-23  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/sftp-server.c (sftp_process_readdir): Clear errno
+	before calling readdir.
+
+2001-11-22  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/sftp-server.c (sftp_attrib_from_stat): Bugfix, use |,
+	not ||. Noticed by Pontus Sköld.
+
 2001-11-20  Niels Möller  <nisse@ehand.com>
 
 	* src/zlib.c (make_zlib_instance): Check return valus from
