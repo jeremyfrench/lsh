@@ -33,7 +33,6 @@ core
 /Makefile
 /Makefile.am
 /Makefile.in
-/acconfig.h
 /aclocal.m4
 /config.cache
 /config.h
