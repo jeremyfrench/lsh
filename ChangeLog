@@ -1,4 +1,18 @@
+Tue Apr 20 00:00:58 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/resource.c (do_kill_all): Bugfix (use CAST_SUBTYPE rather
+ 	than CAST).
+
+	* src/lsh.c (make_client_connect): Added calls die_on_null and
+ 	init_connection.
+
+	* src/client.c (new_session): Initialize session->write from the
+	connection. 
+
 Mon Apr 19 16:23:22 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c (do_channel_success, do_channel_failure): Bugfix
+ 	(use CAST_SUBTYPE rather than CAST).
 
 	* src/lsh.c: Adapted to the command language.
 

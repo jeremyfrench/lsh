@@ -76,7 +76,7 @@ static void do_kill_all(struct resource_list *self)
 {
   while (!object_queue_is_empty(&self->q))
     {
-      CAST(resource, r, object_queue_remove_head(&self->q));
+      CAST_SUBTYPE(resource, r, object_queue_remove_head(&self->q));
       KILL_RESOURCE(r);
     }
   #if 0
