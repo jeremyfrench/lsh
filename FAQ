@@ -17,8 +17,8 @@ supports RSA and DSA keys. LSH only supports version 2 of the protocol
 with DSA keys because of the RSA patent.
 
 It is illegal in the United States to use RSA without paying for a
-license. The RSA patents expire [EXACT DATE SHOULD GO HERE] September,
-2000. As these expire, LSH will add RSA support.
+license. The RSA patents expire on September 20, 2000. As these expire,
+LSH will add RSA support.
 
 LSH and OpenSSH have been tested together with positive results. LSH
 and OpenSSH use different file formats for storing DSA keys, and a
