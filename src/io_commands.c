@@ -24,8 +24,18 @@
 
 #include "io_commands.h"
 
+#include "command.h"
 #include "connection.h"
 #include "io.h"
+#include "xalloc.h"
+
+#include <assert.h>
+
+#define GABA_DEFINE
+#include "io_commands.h.x"
+#undef GABA_DEFINE
+
+#include "io_commands.c.x"
 
 /* GABA:
    (class
@@ -71,15 +81,14 @@ static int do_listen(struct io_backend *backend,
   if (!tcp_addr(&sin, a->address->length, a->address->data, a->port))
     return COMMAND_RETURN(c, NULL);
 
-  fd = io_listen(self->backend, &sin,
+  fd = io_listen(backend, &sin,
 		 make_listen_command_callback(backend, c));
 
   if (!fd)
     return COMMAND_RETURN(c, NULL);
 
   if (resources)
-    REMEMBER_RESOURCE(connection->resources,
-		      &fd->super.super);
+    REMEMBER_RESOURCE(resources, &fd->super.super);
   
   return LSH_OK | LSH_GOON;
 }
@@ -95,23 +104,23 @@ static int do_listen(struct io_backend *backend,
      (super command)
      (vars
        (backend object io_backend)
-       (connection object connection)))
+       (connection object ssh_connection)))
 */
 
-struct lsh_object *
+static int
 do_listen_connection(struct command *s,
 		     struct lsh_object *x,
 		     struct command_continuation *c)
 {
   CAST(listen_connection, self, s);
   CAST(address_info, address, x);
-  return do_listen(self->backend, self->connection, address, c);
+  return do_listen(self->backend, address, self->connection->resources, c);
 }
 
 struct command *make_listen_connection(struct io_backend *backend,
-				    struct ssh_connection *connection)
+				       struct ssh_connection *connection)
 {
-  NEW(listen_command, self);
+  NEW(listen_connection, self);
   self->backend = backend;
   self->connection = connection;
 
@@ -135,24 +144,24 @@ do_collect_listen_connection(struct collect_info_2 *info,
 /* GABA:
    (class
      (name connect_command_callback)
-     (super fd_connect_callback)
+     (super fd_callback)
      (vars
        (backend object io_backend)
        (c object command_continuation)))
 */
 
-static int do_connect_continue(struct fd_connect_callback *s, int fd)
+static int do_connect_continue(struct fd_callback **s, int fd)
 {
-  CAST(connect_command_callback, self, s);
+  CAST(connect_command_callback, self, *s);
 
   return COMMAND_RETURN(self->c, make_io_fd(self->backend, fd));
 }
 
-static struct fd_connect_callback *
+static struct fd_callback *
 make_connect_command_callback(struct io_backend *backend,
 			      struct command_continuation *c)
 {
-  NEW(listen_command_callback, closure);
+  NEW(connect_command_callback, closure);
   closure->backend = backend;
   closure->c = c;
   closure->super.f = do_connect_continue;
@@ -172,26 +181,54 @@ static int do_connect(struct io_backend *backend,
   if (!tcp_addr(&sin, a->address->length, a->address->data, a->port))
     return COMMAND_RETURN(c, NULL);
 
-  fd = io_connect(self->backend, &sin,
+  fd = io_connect(backend, &sin, NULL,
 		  make_connect_command_callback(backend, c));
 
   if (!fd)
     return COMMAND_RETURN(c, NULL);
 
   if (resources)
-    REMEMBER_RESOURCE(connection->resources,
+    REMEMBER_RESOURCE(resources,
 		      &fd->super.super);
   
   return LSH_OK | LSH_GOON;
 }
 
-
-/* Connect function, taking three arguments:
+/* Simple connect function taking port only as argument. 
  *
- * (connect backend connection address)
+ * (connect address)
  */
+/* GABA:
+   (class
+     (name simple_connect_command)
+     (super command)
+     (vars
+       (backend object io_backend)
+       (resources object resource_list)))
+*/
 
+static int do_simple_connect(struct command *s,
+			     struct lsh_object *a,
+			     struct command_continuation *c)
+{
+  CAST(simple_connect_command, self, s);
+  CAST(address_info, address, a);
 
+  return do_connect(self->backend, address, self->resources, c);
+}
+
+struct command *
+make_simple_connect(struct io_backend *backend,
+		    struct resource_list *resources)
+{
+  NEW(simple_connect_command, self);
+  self->backend = backend;
+  self->resources = resources;
+
+  self->super.call = do_simple_connect;
+
+  return &self->super;
+}
  
 /* ***
  *

@@ -25,7 +25,12 @@
 #ifndef LSH_IO_COMMANDS_H_INCLUDED
 #define LSH_IO_COMMANDS_H_INCLUDED
 
+#include "connection.h"
 #include "io.h"
+
+#define GABA_DECLARE
+#include "io_commands.h.x"
+#undef GABA_DECLARE
 
 /* Returned by listen */
 /* GABA:
@@ -35,5 +40,11 @@
        (fd object io_fd)
        (peer object address_info)))
 */
+
+struct command *make_listen_connection(struct io_backend *backend,
+				       struct ssh_connection *connection);
+
+struct command *make_simple_connect(struct io_backend *backend,
+				    struct resource_list *resources);
 
 #endif /* LSH_IO_COMMANDS_H_INCLUDED */
