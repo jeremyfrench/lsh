@@ -1,4 +1,6 @@
-Consider return values from handlers. A return value has seveal
+ERROR HANDLING
+
+Consider return values from handlers. A return value has several
 components:
 
  x Success/failure indication
@@ -9,3 +11,23 @@ components:
  x Process return value in case the proper action is to exit.
 
 It should be possible to encode all this information into a simple integer.
+
+
+KEYS
+
+Code is needed to generate, store and read dss keys. Preferably in a
+SPKI/s-expression form.
+
+USERS
+
+Functions to lookup users, their passwords and .lsh/authorized_keys.
+
+CHARSETS
+
+Usernames and passwords must be translated from the systems charset
+(default iso-8859-1) to UTF8.
+
+CONFIGURATION
+
+Read configuration files. Better command line options.
+
