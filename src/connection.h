@@ -74,6 +74,7 @@
 
        ; Features or bugs peculiar to the peer
        (peer_flags simple UINT32)
+       (chain object ssh_connection)
 
        ; Cleanup
        (resources object resource_list)
