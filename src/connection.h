@@ -26,6 +26,7 @@
 
 #include "abstract_io.h"
 #include "abstract_compress.h"
+#include "queue.h"
 #include "resource.h"
 #include "randomness.h"
 
@@ -102,8 +103,7 @@ struct ssh_connection;
        (channels object channel_table)
        
        ; Forwarded TCP connections
-       ; FIXME: I don't quite like this name
-       ; (tcp_forwards object forwarded_tcpip)
+       (forwarded_ports object object_queue)
               
        ; Shared handlers 
        (ignore object packet_handler)
