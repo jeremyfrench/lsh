@@ -1057,7 +1057,7 @@ int channel_eof(struct ssh_channel *channel)
   int res ;
   
   channel->flags |= CHANNEL_SENT_EOF;
-  res =  A_WRITE(channel->write, format_channel_eof(channel));
+  res = A_WRITE(channel->write, format_channel_eof(channel));
 
   if (LSH_CLOSEDP(res))
     return res;

@@ -111,7 +111,7 @@ MISC
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
 on sparc-linux, 2.0.33, redhat-5.1, glibc.
 
-Figure out why signal(SIGPIPE, SIG_IGN); in io.c doesn't stop SIGPIPE
-from killing the process.
+Fix shadow passwd support.
 
-
+Don't use stdio for werror and similar functions. The non-blocking
+stderr sometime causes the C library to lose data.
