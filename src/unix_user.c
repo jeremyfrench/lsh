@@ -1135,7 +1135,7 @@ do_lookup_user(struct user_db *s,
       if (!passwd->pw_uid && !self->allow_root)
 	goto fail;
 
-#if HAVE_GETSPNAM
+#if HAVE_GETSPNAM && HAVE_SHADOW_H
       {
       struct spwd *shadowpwd;
 
