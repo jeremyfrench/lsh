@@ -93,6 +93,8 @@ struct lsh_class
 {
   struct lsh_object super;
   struct lsh_class *super_class;
+  char *name;  /* For debugging */
+
   size_t size;
   
   void (*mark_instance)(struct lsh_object *instance,

@@ -357,7 +357,7 @@
 	      ; structures.
 	      (list "&" super "_class")
 	      "0")
-	  ", sizeof(struct " name "),\n  "
+	  ", \"" name "\", sizeof(struct " name "),\n  "
 	  (if mark-function (list "do_" name "_mark") "NULL") ",\n  "
 	  (if free-function (list "do_" name "_free") "NULL") "\n"
 	  "}"))
