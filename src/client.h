@@ -65,7 +65,7 @@ extern struct command client_io;
 struct ssh_channel *make_client_session(struct lsh_fd *in,
 					struct lsh_fd *out,
 					struct lsh_fd *err,
-					UINT32 max_window,
+					UINT32 initial_window,
 					int *exit_status);
 
 struct command *

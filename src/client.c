@@ -430,11 +430,12 @@ struct command client_io =
 { STATIC_HEADER, do_client_io };
 
 
-struct ssh_channel *make_client_session(struct lsh_fd *in,
-					struct lsh_fd *out,
-					struct lsh_fd *err,
-					UINT32 max_window,
-					int *exit_status)
+struct ssh_channel *
+make_client_session(struct lsh_fd *in,
+		    struct lsh_fd *out,
+		    struct lsh_fd *err,
+		    UINT32 initial_window,
+		    int *exit_status)
 {
   NEW(client_session, self);
 
@@ -444,8 +445,7 @@ struct ssh_channel *make_client_session(struct lsh_fd *in,
    * dies, no matter when or how. */
   self->super.close = do_client_session_close;
   
-  self->super.max_window = max_window;
-  self->super.rec_window_size = max_window;
+  self->super.rec_window_size = initial_window;
 
   /* FIXME: Make maximum packet size configurable */
   self->super.rec_max_packet = SSH_MAX_PACKET;
