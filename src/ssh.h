@@ -85,4 +85,11 @@
 
 #define SSH_EXTENDED_DATA_STDERR 1
 
+/* Limits */
+
+/* Default max length of packet payload */
+/* FIXME: When compression is implemented, the 35000 limit
+ * on total packet length must also be considered. */
+#define SSH_MAX_PACKET 0x8000
+
 #endif /* LSH_SSH_H_INCLUDED */
