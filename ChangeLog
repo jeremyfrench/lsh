@@ -1,5 +1,16 @@
 2004-11-18  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lsh-export-key.c (enum output_mode): New enum.
+	(encode_base64_line): New function.
+	(sexp_to_ssh2_key): Alternative output formats, fingerprint and
+	openssh single-line format.
+	(main_options): New options --fingerprint and --openssh.
+	(make_options): Make standard format the default output format.
+	(main_argp_parser): Handle new options.
+
+	* src/spki.c (spki_make_verifier): New third argument for
+	returning the name of the algorithm. Updated callers.
+
 	* misc/xenofarm.sh (oopcfgargs): Disable all add-on liboop
 	adapters. 
 
