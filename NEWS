@@ -1,3 +1,7 @@
+News for the lsh-0.1.3 release
+
+	Local forwarding (-L) works. -R is slightly broken.
+
 News for the lsh-0.1.2 release
 
 	First user visible tcpforwarding (-L option). Not tested
