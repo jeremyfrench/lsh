@@ -62,6 +62,14 @@ make_rsa_algorithm(struct hash_algorithm *hash,
 extern struct rsa_algorithm rsa_md5_algorithm;
 extern struct rsa_algorithm rsa_sha1_algorithm;
 
+/* Non spki keys */
+struct verifier *
+parse_ssh_rsa_public(struct simple_buffer *buffer);
+
+struct verifier *
+make_ssh_rsa_verifier(UINT32 public_length,
+		      const UINT8 *public);
+
 struct sexp *
 rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits);
 
