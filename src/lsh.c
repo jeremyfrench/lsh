@@ -89,8 +89,10 @@ static struct command options2identities;
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
-/* Window size for the session channel */
-#define WINDOW_SIZE (SSH_MAX_PACKET << 3)
+/* Window size for the session channel
+ *
+ * NOTE: Large windows seem to trig a bug in sshd2. */
+#define WINDOW_SIZE 10000
 
 /* GABA:
    (class
