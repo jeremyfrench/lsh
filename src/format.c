@@ -74,7 +74,6 @@ void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...)
   va_end(args);
 }
      
-static int size_in_decimal(UINT32 n);
 static int write_decimal_length(UINT8 *buffer, UINT32 n);
 
 UINT32 ssh_vformat_length(const char *f, va_list args)
@@ -110,28 +109,22 @@ end_options:
 	  if (literal && decimal)
 	    fatal("Internal error!\n");
 	  
-	  switch(*f)
+	  switch(*f++)
 	    {
-	    default:
-	      fatal("ssh_vformat_length: bad format string");
-	      break;
-
 	    case 'c':
 	      (void) va_arg(args, int);
 	      /* Fall through */
 	    case '%':
-	      f++;
 	      length++;
 	      break;
 
 	    case 'i':
 	      (void) va_arg(args, UINT32);
-	      f++;
 	      length += 4;
 	      break;
 #if 0
 	    case 'd':
-	      length += size_in_decimal(va_arg(args, UINT32));
+	      length += format_size_in_decimal(va_arg(args, UINT32));
 	      break;
 #endif
 	    case 's':
@@ -139,12 +132,11 @@ end_options:
 		UINT32 l = va_arg(args, UINT32); /* String length */ 
 		(void) va_arg(args, UINT8 *);    /* data */
 
-		f++;
 
 		length += l;
 
 		if (decimal)
-		  length += size_in_decimal(l) + 1;
+		  length += format_size_in_decimal(l) + 1;
 		else if (!literal)
 		  length += 4;
 
@@ -154,10 +146,9 @@ end_options:
 	      {
 		struct lsh_string *s = va_arg(args, struct lsh_string *);
 		length += s->length;
-		f++;
 		
 		if (decimal)
-		  length += size_in_decimal(s->length) + 1;
+		  length += format_size_in_decimal(s->length) + 1;
 		else if (!literal)
 		  length += 4;
 		
@@ -168,10 +159,8 @@ end_options:
 		unsigned l = strlen(va_arg(args, char*));
 		length += l;
 
-		f++;
-
 		if (decimal)
-		  length += size_in_decimal(l) + 1;
+		  length += format_size_in_decimal(l) + 1;
 		
 		else if (!literal)
 		  length += 4;
@@ -183,10 +172,8 @@ end_options:
 		length += l;
 		(void) va_arg(args, UINT8 **);    /* pointer */
 
-		f++;
-
 		if (decimal)
-		  length += size_in_decimal(l) + 1;
+		  length += format_size_in_decimal(l) + 1;
 		else if (!literal)
 		  length += 4;
 
@@ -203,11 +190,10 @@ end_options:
 		length += l;
 
 		if (decimal)
-		  length += size_in_decimal(l) + 1;
+		  length += format_size_in_decimal(l) + 1;
 		else if (!literal)
 		  length += 4;
 
-		f++;
 		break;
 	      }
 	    case 'A':
@@ -232,7 +218,7 @@ end_options:
 		    
 		if (!literal)
 		  length += 4;
-		f++;
+
 		break;
 	      }
 	    case 'n':
@@ -248,15 +234,17 @@ end_options:
 		  {
 		    fatal("ssh_format: Decimal lengths not supported for %%n\n");
 #if 0
-		    length += size_in_decimal(l) + 1;
+		    length += format_size_in_decimal(l) + 1;
 #endif
 		  }
 		else if (!literal)
 		  length += 4;
 
-		f++;
 		break;
 	      }
+	    default:
+	      fatal("ssh_vformat_length: bad format string");
+	      break;
 	    }
 	}
       else
@@ -302,20 +290,14 @@ end_options:
 	  if (literal && decimal)
 	    fatal("Internal error!\n");
 
-	  switch(*f)
+	  switch(*f++)
 	    {
-	    default:
-	      fatal("ssh_vformat_write: bad format string");
-	      break;
-
 	    case 'c':
 	      *buffer++ = va_arg(args, int);
-	      f++;
 
 	      break;
 	    case '%':
 	      *buffer++ = '%';
-	      f++;
 
 	      break;
 
@@ -324,7 +306,6 @@ end_options:
 		UINT32 i = va_arg(args, UINT32);
 		WRITE_UINT32(buffer, i);
 		buffer += 4;
-		f++;
 
 		break;
 	      }
@@ -345,7 +326,6 @@ end_options:
 
 		memcpy(buffer, data, length);
 		buffer += length;
-		f++;
 
 		break;
 	      }
@@ -367,7 +347,6 @@ end_options:
 
 		if (do_free)
 		  lsh_string_free(s);
-		f++;
 
 		break;
 	      }
@@ -387,7 +366,6 @@ end_options:
 
 		memcpy(buffer, s, length);
 		buffer += length;
-		f++;
 
 		break;
 	      }
@@ -407,7 +385,6 @@ end_options:
 		if (p)
 		  *p = buffer;
 		buffer += length;
-		f++;
 
 		break;
 	      }
@@ -431,7 +408,6 @@ end_options:
 
 		memcpy(buffer, get_atom_name(atom), length);
 		buffer += length;
-		f++;
 
 		break;
 	      }
@@ -469,7 +445,6 @@ end_options:
 		    UINT32 total = buffer - start - 4;
 		    WRITE_UINT32(start, total);
 		  }
-		f++;
 		break;
 	      }
 	    case 'n':
@@ -494,10 +469,12 @@ end_options:
 		if (!literal)
 		  WRITE_UINT32(start, length);
 
-		f++;
-
 		break;
 	      }
+	    default:
+	      fatal("ssh_vformat_write: bad format string");
+	      break;
+	      
 	    }
 	}
       else
@@ -509,7 +486,7 @@ end_options:
   assert(buffer == start + size);
 }
 
-static int size_in_decimal(UINT32 n)
+unsigned format_size_in_decimal(UINT32 n)
 {
   int i;
   int e;
@@ -536,7 +513,7 @@ static int size_in_decimal(UINT32 n)
 
 static int write_decimal_length(UINT8 *buffer, UINT32 n)
 {
-  int length = size_in_decimal(n);
+  int length = format_size_in_decimal(n);
   int i;
   
   for (i = 0; i<length; i++)
