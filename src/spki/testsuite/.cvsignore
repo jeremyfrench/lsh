@@ -3,3 +3,4 @@ Makefile
 Makefile.in
 principal-test
 read-acl-test
+read-cert-test

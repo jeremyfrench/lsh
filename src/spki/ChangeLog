@@ -1,5 +1,29 @@
 2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* testsuite/principal-test.c: Use testutils.h
+	* testsuite/read-acl-test.c: Likewise.
+
+	* testsuite/Makefile.am (TS_PROGS): Added read-cert-test.
+	(LDADD): Added testutils.o.
+
+	* testsuite/testutils.c, testsuite/testutils.h: New files.
+
+	* testsuite/read-cert-test.c: New test case.
+
+	* certificate.c (spki_get_type): Return SPKI_TYPE_END_OF_EXPR at
+	end of expression.
+	(parse_tag, parse_tag_body): Split parse_tag into two functions.
+	(parse_valid): Placeholder for real function.
+	(parse_version): New function.
+	(parse_skip_optional): New function.
+	(spki_cert_parse_body): New function.
+	(spki_cert_parse): New function.
+
+	* process-types: New pseudo-type SPKI_TYPE_END_OF_EXPR.
+
+	* spki-types.in: Added cert, dispaly, issuer, issuer-info,
+	subject-info. 
+
 	* testsuite/Makefile.am (check): Set LD_LIBRARY_PATH when running
 	tests. 
 
