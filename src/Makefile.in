@@ -38,11 +38,12 @@ COMMON_SRCS = alist.c atoms.c bignum.c charset.c connection.c crypto.c \
 	debug.c disconnect.c encrypt.c format.c getopt.c io.c keyexchange.c \
 	packet_ignore.c pad.c parse.c publickey_crypto.c \
 	randomness.c \
-	read_data.c read_line.c read_packet.c \
+	read_data.c read_line.c read_packet.c service.c session.c \
 	unpad.c \
 	werror.c write_buffer.c xalloc.c
 
-CLIENT_SRCS = lsh.c client.c client_keyexchange.c
+CLIENT_SRCS = lsh.c client.c client_keyexchange.c \
+	client_password.c client_userauth.c
 SERVER_SRCS = lshd.c server.c server_keyexchange.c
 
 SRCS = $(COMMON_SRCS) $(CLIENT_SRCS) $(SERVER_SRCS)
