@@ -181,6 +181,8 @@ password is incorrect.
 
 Implement an escape char, like ~ with rsh.
 
+The --interface option to lshd can only handle numeric ip addresses.
+
 
 I/O ISSUES
 
