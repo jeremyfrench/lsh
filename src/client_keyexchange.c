@@ -170,7 +170,7 @@ make_dh_client(struct dh_method *dh)
      (vars
        (dh struct dh_instance)
        (name string)
-       (salt string)
+       ;; (salt string)
        (install object install_keys)))
 */
 
@@ -249,13 +249,17 @@ do_handle_srp_reply(struct packet_handler *s,
 			 ssh_format("SRP password for %lS: ",
 				    self->srp->name), 1);
   if (!passwd)
-    disconnect_kex_failed(connection, "Bye");
-
+    {
+      lsh_string_free(salt);
+      disconnect_kex_failed(connection, "Bye");
+    }
+  
   mpz_init(x);
   srp_hash_password(x, self->srp->dh.method->H,
-		    self->srp->salt, self->srp->name,
+		    salt, self->srp->name,
 		    passwd);
 
+  lsh_string_free(salt);
   lsh_string_free(passwd);
   
   C_WRITE(connection, srp_make_client_proof(&self->srp->dh, x));
@@ -299,7 +303,6 @@ do_init_client_srp(struct keyexchange_algorithm *s,
 
   srp->install = make_install_new_keys(0, algorithms);
   srp->name = self->name;
-  srp->salt = NULL;
   
   /* Send client's message */
   C_WRITE(connection, srp_make_init_msg(&srp->dh, self->name));
