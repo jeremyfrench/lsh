@@ -28,8 +28,9 @@ static int client_initiate(struct fd_callback **c,
 {
   struct client_callback *closure
     = (struct client_callback *) *c;
-  
-  struct ssh_connection *connection = ssh_connection_alloc();
+
+  /* FIXME: Should pass a key exchange handler, not NULL! */
+  struct ssh_connection *connection = make_ssh_connection(NULL);
   connection->raw =
     io_read_write(closure->backend, fd,
 		  make_client_read_line(),
@@ -60,11 +61,6 @@ struct client_line_handler
   struct ssh_connection *connection;
 };
 
-struct abstract_write *make_client_dispatch(struct ssh_connection *c)
-{ /* FIXME: HERE */
-  return make_packet_void();
-}
-
 static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
 				    UINT8 *line)
@@ -81,7 +77,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  struct read_handler *new
 	    = make_read_packet
 	    (make_packet_debug
-	     (make_packet_unpad(make_client_dispatch(closure->connection)),
+	     (make_packet_unpad(&closure->connection->super),
 	      stderr),
 	     closure->connection->max_packet);
 	  
@@ -109,7 +105,7 @@ static struct read_handler *do_line(struct line_handler **h,
 
 	  /* FIXME: Clean up properly */
 	  lsh_free(closure);
-	  *h = 0;
+	  *h = NULL;
 		  
 	  return 0;
 	}

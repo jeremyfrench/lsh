@@ -23,7 +23,8 @@ static int server_initiate(struct fd_callback **c,
 {
   struct server_callback *closure = (struct server_callback *) *c;
   
-  struct ssh_connection *connection = ssh_connection_alloc();
+  /* FIXME: Should pass a key exchange handler, not NULL! */
+  struct ssh_connection *connection = make_ssh_connection(NULL);
   struct abstract_write *write =
     io_read_write(closure->backend, fd,
 		  make_server_read_line(),
@@ -57,7 +58,7 @@ static struct read_handler *do_line(struct line_handler **h,
       if ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
 	{
 	  struct read_handler *new
-	    = make_read_packet(make_packet_debug(make_packet_void(),
+	    = make_read_packet(make_packet_debug(&closure->connection->super,
 						 stderr),
 			       closure->connection->max_packet);
 	  
