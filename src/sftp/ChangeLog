@@ -1,5 +1,19 @@
 2002-02-25  Pontus  <pont@it.uu.se>
 
+	* sftp_bind.c (lsftp_install_lsftp_cb): Return a pointer to the
+	callback instead.
+	(lsftp_do_rm): Adopted for new use of lsftp_install_lsftp_cb.
+	(lsftp_do_get): dito.
+	(lsftp_do_ls): dito.
+	(lsftp_do_chmod): dito.
+	(lsftp_do_mv): dito.
+	(lsftp_do_realpath): dito.
+	(string_comparer): Changed type for arguments from char** to const
+	void*.
+
+	* sftp_bind.h: Changed return type of lsftp_install_lsftp_cb from
+	int to struct lsftp_callback*.
+
 	* sftp_bind.c (lsftp_lsftp_cb_init): Fixed a bug using the same
 	memory both for sftp_cbs and lsftp_cbs, mumble!
 

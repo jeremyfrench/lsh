@@ -752,20 +752,19 @@ int
 lsftp_do_get(const char *local, const char *remote,
 	     const char *command, int cont)
 {
-  int id;
-  int index;
+  int id = -1;
   const char *tmp;
   struct sftp_callback s;
+  struct lsftp_callback* l;
 
-  id = lsftp_install_lsftp_cb( lsftp_handle_get );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_get );
 
-  if( id &&
-      ( id != -1 ) && 
-      ( index != -1 )
-      )
+  if( l ) /* Everything OK? */
     {
       int freeflag = 1;
+
+      id = l->op_id;
+
       tmp = lsftp_qualify_path( remote );
 
       if( !tmp )   /* Problem with qualifying the name? */
@@ -776,9 +775,9 @@ lsftp_do_get(const char *local, const char *remote,
 
       /* Leave informational message */
 
-      lsftp_cbs[index].local = strdup( local ); 
-      lsftp_cbs[index].remote = strdup( tmp ); 
-      lsftp_cbs[index].command = strdup( command );
+      l->local = strdup( local ); 
+      l->remote = strdup( tmp ); 
+      l->command = strdup( command );
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
@@ -906,26 +905,23 @@ lsftp_cb_index(int id)
 }
 
 
-int
+struct lsftp_callback*
 lsftp_install_lsftp_cb(lsftp_callback_func nextfun)
 {
-  int i = -1;
+  int i;
   int id = lsftp_unique_id();
 
-  struct lsftp_callback lcb;
-  
-  i = lsftp_free_lsftp_cb();
+  i = lsftp_free_lsftp_cb();  /* Find an unused callback */
 
-  lsftp_nullcb( &lcb ); /* Nullify callback */
-
-  lcb.nextfun = nextfun;
-  lcb.op_id = id;
-  if( i == -1 )
+  if( i == -1 )  /* No free callback? */
     return 0;
 
-  lsftp_cbs[i] = lcb;
-  
-  return id;
+  lsftp_nullcb( &lsftp_cbs[i] ); /* Nullify callback */
+
+  lsftp_cbs[i].nextfun = nextfun;
+  lsftp_cbs[i].op_id = id;
+
+  return &lsftp_cbs[i];
 }
 
 
@@ -1206,7 +1202,7 @@ int
 lsftp_do_cd(const char *dir)
 {
   const char* real = 0;
-  int id;
+  int id = -1;
 
   if( !dir ) /* dir == NULL? */
     return lsftp_do_cd( "" );  /* Assume we want to go home  */
@@ -1321,8 +1317,8 @@ lsftp_qualify_path(const char *path)
       /* Absolute path, no curpath given ever (or reset) */
       char* s = strdup( path );
 
-      if( !s ) /* FIXME: What to do? */
-	;
+/*       if( !s ) /\* FIXME: What to do? *\/ */
+/* 	; */
 
       return s;
     }
@@ -1353,19 +1349,19 @@ int
 lsftp_do_put(const char *local, const char *remote,
 	     const char *command, int cont)
 {
-  int id;
-  int index;
+  int id = -1;
   const char* tmp;
   struct sftp_callback s;
-
-  id = lsftp_install_lsftp_cb( lsftp_handle_put );
-  index = lsftp_cb_index( id );
-
-  if( id && id != -1 && index != -1)
+  struct lsftp_callback* l;
+  
+  l =  lsftp_install_lsftp_cb( lsftp_handle_put );
+  
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
 
       tmp = lsftp_qualify_path( remote );
+      id = l->op_id;
 
       if( !tmp )   /* Problem with qualifying the name? */
 	{
@@ -1373,9 +1369,9 @@ lsftp_do_put(const char *local, const char *remote,
 	  tmp = remote;
 	}
 
-      lsftp_cbs[index].local = strdup( local ); /* These are not critical, so*/
-      lsftp_cbs[index].remote = strdup( tmp );  /* we ignore if they succeed*/
-      lsftp_cbs[index].command = strdup( command );
+      l->local = strdup( local ); /* These are not critical, so*/
+      l->remote = strdup( tmp );  /* we ignore if they succeed*/
+      l->command = strdup( command );
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
@@ -1421,7 +1417,7 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
 
   /* FIXME: What to return if there are no id:s? */
   int id = 0;
-  int index;
+
   const char *tmp;
   const char **glob;
   const char **orgglob;
@@ -1447,8 +1443,6 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
 	( '/' != dglob[i] )
 	 )
     i--;
-
-/*   printf( "i is %d\n", i ); */
 
   if( i != -1 ) /* Slash found? */
     if( i )        /* Not the first charater? */
@@ -1478,34 +1472,32 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
 	}
     }
 
-/*   printf( "dglob is %s\n", dglob ); */
 
   while( (ptr = *glob++) ) 
     {
-/*       printf( "ptr is %s, fnameg is %s\n", ptr, fnameg ); */
-
-      id = lsftp_install_lsftp_cb( lsftp_handle_ls );
-      index = lsftp_cb_index( id );
+      struct lsftp_callback* l = lsftp_install_lsftp_cb( lsftp_handle_ls );
       
-      if( id && id != -1 && index != -1 ) /* Everything ok? */
+      if( l ) /* Everything ok? */
 	{
 	  tmp = lsftp_qualify_path( ptr );
+
+	  id = l->op_id;
 
 	  /* Leave informational message */
 	  
 	  if( tmp )
-	    lsftp_cbs[index].remote = strdup( tmp ); 
+	    l->remote = strdup( tmp ); 
 	  else
-	    lsftp_cbs[index].remote = 0; 
+	    l->remote = 0; 
 	  
-	  lsftp_cbs[index].command = strdup( command ); 
-	  lsftp_cbs[index].opt1 = all; 
-	  lsftp_cbs[index].opt2 = longlist; 
+	  l->command = strdup( command ); 
+	  l->opt1 = all; 
+	  l->opt2 = longlist; 
 	  
 	  if( fnameg )
-	    lsftp_cbs[index].memory = strdup( fnameg );
+	    l->memory = strdup( fnameg );
 	  else
-	    lsftp_cbs[index].memory = 0;
+	    l->memory = 0;
 
 	  
 	  if( !strlen(tmp) )
@@ -1535,8 +1527,6 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
 	}
     }
 
-/*   printf( "Done with glob results\n" ); */
-
   lsftp_dc_endglob( orgglob );
   
   free( dglob );
@@ -1545,14 +1535,15 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
   return id; 
 }
 
-/* FIXME: Use void ** arguments? */
+
 static int
-string_comparer(char **s1, char **s2)
+string_comparer(const void* s1, const void* s2)
 {
+
 #ifdef HAVE_STRCOLL 
-  return strcoll( *s1,*s2 );
+  return strcoll( *(char**) s1, *(char**) s2 );
 #else
-  return strcmp( *s1, *s2 );
+  return strcmp( *(char**) s1, *(char**) s2 );
 #endif
 }
 
@@ -1571,8 +1562,6 @@ lsftp_handle_ls(struct sftp_callback *s,
   int allocated = 0;
   int allocstepsize = 100;
   int used = 0;
-
-/*    printf( "Entered handle ls\n" ); */
 
   namestrings = malloc( allocstepsize * sizeof( char* ) );
 
@@ -1742,31 +1731,31 @@ lsftp_handle_ls(struct sftp_callback *s,
 	    ) ||                                     /* or... */
 	  !l->memory                                  /* No glob given*/
 	  )
-
-	if( !namestrings ) /* No place to store information in */
-	  {
-	    if( longlist )         /* Long info? */
-	      printf( "%s\n", longname );                /* Print it */
-	    else
-	      {
-		if( (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS ) &&  /* Ehrrm... */
-		    (a->permissions & S_IFDIR )                   /* Directory? */
-		    )
-		  printf( "%s/\n", fname );                /* Print it */
-		else
-		  printf( "%s\n", fname );                /* Print it */
-		
-	      }
-	  }
-	else
-	  { /* Don't print now, do that later */
-	    char* tmp = 0;
-	    
-	    if( (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS ) &&  /* Ehrrm... */
-		(a->permissions & S_IFDIR ) )                   /* Directory? */
-	      tmp = lsftp_concat( fname, "/" ); /* Add a trailing slash for directories */
-	    else
-	      tmp = strdup( fname );
+	{
+	  if( !namestrings ) /* No place to store information in */
+	    {
+	      if( longlist )         /* Long info? */
+		printf( "%s\n", longname );                /* Print it */
+	      else
+		{
+		  if( (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS ) &&  /* Ehrrm... */
+		      (a->permissions & S_IFDIR )                   /* Directory? */
+		      )
+		    printf( "%s/\n", fname );                /* Print it */
+		  else
+		    printf( "%s\n", fname );                /* Print it */
+		  
+		}
+	    }
+	  else
+	    { /* Don't print now, do that later */
+	      char* tmp = 0;
+	      
+	      if( (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS ) &&  /* Ehrrm... */
+		  (a->permissions & S_IFDIR ) )                   /* Directory? */
+		tmp = lsftp_concat( fname, "/" ); /* Add a trailing slash for directories */
+	      else
+		tmp = strdup( fname );
 
 	    /* Nothing to do if concat or strdup failed */
 
@@ -1774,7 +1763,8 @@ lsftp_handle_ls(struct sftp_callback *s,
 	    
 	    if( longlist )
 	      longstrings[used-1] = strdup( longname );
-	  }
+	    }
+	}
 
       free( prefixed_fname );
       sftp_free_string( longname );
@@ -1784,6 +1774,7 @@ lsftp_handle_ls(struct sftp_callback *s,
   
   
   if( namestrings )
+    {
     if( !longlist )
       {
 	/* Start by sorting the argument in the list */
@@ -1853,6 +1844,7 @@ lsftp_handle_ls(struct sftp_callback *s,
 
 	free( string_array );
       }
+    }
   
   free( namestrings );
   free( longstrings );
@@ -1868,23 +1860,23 @@ int
 lsftp_internal_ls(const char *dir, const char *command,
 		  const char*** dirinfop )
 {
-      int id;
-      int index;
+      int id = -1;
       const char* tmp;
       
       struct sftp_callback s;
+      struct lsftp_callback* l;
       
-      id = lsftp_install_lsftp_cb( lsftp_handle_internal_ls );
-      index = lsftp_cb_index( id );
-
-      if( id && id != -1 && index != -1 ) /* Everything ok? */
+      l = lsftp_install_lsftp_cb( lsftp_handle_internal_ls );
+      
+      if( l ) /* Everything ok? */
 	{
 	  tmp = lsftp_qualify_path( dir );
-      
+	  id = l->op_id;
+
 	  /* Leave informational message */
-	  lsftp_cbs[index].remote = strdup( tmp ); 
-	  lsftp_cbs[index].command = strdup( command ); 
-	  lsftp_cbs[index].memory = dirinfop; 
+	  l->remote = strdup( tmp ); 
+	  l->command = strdup( command ); 
+	  l->memory = dirinfop; 
 
 	  if( !strlen(tmp) )
 	    {
@@ -2082,18 +2074,19 @@ lsftp_handle_internal_ls(struct sftp_callback *s,
 int
 lsftp_do_stat(const char *file, struct stat *st )
 {
-  int id;
-  int index;
+  int id = -1;
   
   const char* tmp;
   struct sftp_callback s;
+  struct lsftp_callback* l;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_stat );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_stat );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
+      
+      id = l->op_id;
       tmp = lsftp_qualify_path( file );
       
       if( !tmp )   /* Problem with qualifying the name? */
@@ -2102,7 +2095,7 @@ lsftp_do_stat(const char *file, struct stat *st )
 	  tmp = file;
 	}
       
-      lsftp_cbs[index].st = st; /* Fixup attrib */
+      l->st = st; /* Fixup attrib */
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
@@ -2129,18 +2122,19 @@ lsftp_do_stat(const char *file, struct stat *st )
 int
 lsftp_do_realpath(const char* file, const char **destptr )
 {
-  int id;
-  int index;
+  int id = -1;
   
   const char* tmp;
   struct sftp_callback s;
+  struct lsftp_callback* l;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_realpath );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_realpath );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
+
+      id = l->op_id;
       tmp = lsftp_qualify_path( file ); /* Hrrm, should we qualify here? Probably */
       
       if( !tmp )   /* Problem with qualifying the name? */
@@ -2149,8 +2143,8 @@ lsftp_do_realpath(const char* file, const char **destptr )
 	  tmp = file;
 	}
       
-      lsftp_cbs[index].memory = destptr;
-      lsftp_cbs[index].remote = strdup( file ) ; /* Info */
+      l->memory = destptr;
+      l->remote = strdup( file ) ; /* Info */
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
@@ -2246,19 +2240,20 @@ lsftp_handle_realpath(struct sftp_callback *s,
 int
 lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid, const char *command)
 {
-  int id;
-  int index;
+  int id = -1;
       
   const char* tmp;
   struct sftp_callback s;
   struct sftp_attrib* attrib;
+  struct lsftp_callback* l;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_chall );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_chall );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
+
+      id = l->op_id;
       tmp = lsftp_qualify_path( file );
       
       if( !tmp )   /* Problem with qualifying the name? */
@@ -2272,10 +2267,10 @@ lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid, const char *command)
       if( ! attrib ) /* Malloc failed? FIXME: Report? */
 	return -1;
       
-      lsftp_cbs[index].a = attrib; /* Fixup attrib */
+      l->a = attrib; /* Fixup attrib */
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp );
-      lsftp_cbs[index].command = strdup( command );
+      l->remote = strdup( tmp );
+      l->command = strdup( command );
       
       sftp_clear_attrib( attrib );      
       attrib->flags = SSH_FILEXFER_ATTR_UIDGID; /* We send UID & GID */
@@ -2308,19 +2303,20 @@ lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid, const char *command)
 int
 lsftp_do_chmod(const char *file, mode_t mode, const char *command)
 {
-  int id;
-  int index;
+  int id = -1;
   
   const char* tmp;
   struct sftp_callback s;
   struct sftp_attrib* attrib;
+  struct lsftp_callback* l;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_chall );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_chall );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
+
+      id = l->op_id;
       tmp = lsftp_qualify_path( file );
       
       if( !tmp )   /* Problem with qualifying the name? */
@@ -2334,11 +2330,11 @@ lsftp_do_chmod(const char *file, mode_t mode, const char *command)
       if( ! attrib ) /* Malloc failed? FIXME: Report? */
 	return -1;
       
-      lsftp_cbs[index].a = attrib; /* Fixup attrib */
+      l->a = attrib; /* Fixup attrib */
       
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp ); 
-      lsftp_cbs[index].command = strdup( command ); 
+      l->remote = strdup( tmp ); 
+      l->command = strdup( command ); 
       
       sftp_clear_attrib( attrib );      
       
@@ -2432,21 +2428,22 @@ lsftp_handle_chall(struct sftp_callback *s,
 int
 lsftp_do_mv(const char *src, const char *dst, const char *command )
 {
-  int id;
-  int index;
+  int id = -1;
       
   const char* tmp1;
   const char* tmp2;
 
   struct sftp_callback s;
+  struct lsftp_callback* l;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag1 = 1;
       int freeflag2 = 1;
+
+      id = l->op_id;
 
       tmp1 = lsftp_qualify_path( src );
       tmp2 = lsftp_qualify_path( dst );
@@ -2464,8 +2461,8 @@ lsftp_do_mv(const char *src, const char *dst, const char *command )
 	}
       
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp2 );
-      lsftp_cbs[index].command = strdup( command );
+      l->remote = strdup( tmp2 );
+      l->command = strdup( command );
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
@@ -2497,21 +2494,22 @@ lsftp_do_mv(const char *src, const char *dst, const char *command )
 int
 lsftp_do_ln(const char *link, const char *target, const char *command)
 {
-  int id;
-  int index;
+  int id = -1;
       
   const char* tmp1;
   const char* tmp2;
 
   struct sftp_callback s;
+  struct lsftp_callback* l;
+
+  l = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
-  index = lsftp_cb_index( id );
-  
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag1 = 1;
       int freeflag2 = 1;
+
+      id = l->op_id;
 
       tmp1 = lsftp_qualify_path( link );
       tmp2 = lsftp_qualify_path( target );
@@ -2529,8 +2527,8 @@ lsftp_do_ln(const char *link, const char *target, const char *command)
 	}
       
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp2 );
-      lsftp_cbs[index].command = strdup( command );
+      l->remote = strdup( tmp2 );
+      l->command = strdup( command );
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
@@ -2562,20 +2560,21 @@ lsftp_do_ln(const char *link, const char *target, const char *command)
 int
 lsftp_do_mkdir(const char *dir, int permissions, const char *command)
 {
-  int id;
-  int index;
+  int id = -1;
   int mask = 0777; /* FIXME: Implement remote umask */
 
   const char *tmp;
   struct sftp_callback s;
+  struct lsftp_callback* l;
   struct sftp_attrib* attrib;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
+  
+      id = l->op_id;
       tmp = lsftp_qualify_path( dir );
       
       if( !tmp )   /* Problem with qualifying the name? */
@@ -2585,8 +2584,8 @@ lsftp_do_mkdir(const char *dir, int permissions, const char *command)
 	}
       
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp );
-      lsftp_cbs[index].command = strdup( command );
+      l->remote = strdup( tmp );
+      l->command = strdup( command );
 
       
       attrib = malloc( sizeof( struct sftp_attrib ) );
@@ -2628,18 +2627,20 @@ lsftp_do_mkdir(const char *dir, int permissions, const char *command)
 int
 lsftp_do_rmdir(const char *dir, const char *command)
 {
-  int id;
-  int index;
+  int id = -1;
       
   const char* tmp;
   struct sftp_callback s;
+  struct lsftp_callback* l;
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
-  index = lsftp_cb_index( id );
+  l = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
+      
+      id = l->op_id;
+
       tmp = lsftp_qualify_path( dir );
       
       if( !tmp )   /* Problem with qualifying the name? */
@@ -2649,8 +2650,8 @@ lsftp_do_rmdir(const char *dir, const char *command)
 	}
       
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp );
-      lsftp_cbs[index].command = strdup( command );
+      l->remote = strdup( tmp );
+      l->command = strdup( command );
             
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
@@ -2677,20 +2678,21 @@ lsftp_do_rmdir(const char *dir, const char *command)
 int
 lsftp_do_rm(const char *path, const char *command )
 {
-  int id;
-  int index;
+  int id = -1;
       
   const char* tmp;
   struct sftp_callback s;
+  struct lsftp_callback* l;
+
+  l = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   
-  id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
-  index = lsftp_cb_index( id );
-  
-  if( id && id != -1 && index != -1 ) /* Everything ok? */
+
+  if( l ) /* Everything ok? */
     {
       int freeflag = 1;
       tmp = lsftp_qualify_path( path );
-      
+      id = l->op_id;
+
       if( !tmp )   /* Problem with qualifying the name? */
 	{
 	  freeflag = 0;
@@ -2698,8 +2700,8 @@ lsftp_do_rm(const char *path, const char *command )
 	}
       
       /* Leave informational message */
-      lsftp_cbs[index].remote = strdup( tmp );
-      lsftp_cbs[index].command = strdup( command );
+      l->remote = strdup( tmp );
+      l->command = strdup( command );
             
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
