@@ -90,9 +90,11 @@ DEFINE_COMMAND(options2info)
 /* GABA:
    (expr
      (name make_lshg_connect)
+     (params
+       (actions object object_list))
      (expr
        (lambda (options)
-         ((progn (options2actions options))
+         ((progn actions)
 	  (gateway_init
 	    (connect_local (options2info options)))))))
 */
@@ -323,7 +325,7 @@ main(int argc, char **argv, const char** envp)
 
   {
     CAST_SUBTYPE(command, lshg_connect,
-		 make_lshg_connect());
+		 make_lshg_connect(queue_to_list(&options->super.actions)));
 
     COMMAND_CALL(lshg_connect, options, &discard_continuation,
 		 make_lshg_exception_handler(&default_exception_handler,
