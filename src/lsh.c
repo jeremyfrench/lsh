@@ -37,6 +37,7 @@
 #include "format.h"
 #include "io.h"
 #include "io_commands.h"
+#include "lookup_verifier.h"
 #include "randomness.h"
 #include "service.h"
 #include "ssh.h"
@@ -107,15 +108,18 @@ void usage(void)
        (algorithm object signature_algorithm)))
 */
 
-static struct verifier *do_host_lookup(struct lookup_verifier *c,
-				       struct lsh_string *key)
+static struct verifier *
+do_host_lookup(struct lookup_verifier *c,
+	       struct lsh_string *keyholder UNUSED,	       
+	       struct lsh_string *key)
 {
   CAST(fake_host_db, closure, c);
 
   return MAKE_VERIFIER(closure->algorithm, key->length, key->data);
 }
 
-static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
+static struct lookup_verifier *
+make_fake_host_db(struct signature_algorithm *a)
 {
   NEW(fake_host_db, res);
 
@@ -309,7 +313,7 @@ int main(int argc, char **argv)
   struct keyexchange_algorithm *kex;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
-  struct lookup_verifier *lookup;
+  struct alist *lookup_table; /* Alist of signature-algorithm -> lookup_verifier */
 
   struct command *get_pty = NULL;
   
@@ -333,9 +337,15 @@ int main(int argc, char **argv)
   dh = make_dh1(r);
 
   /* No randomness is needed for verifying signatures */
-  lookup = make_fake_host_db(make_dsa_algorithm(NULL)); 
+  lookup_table = make_alist(1
+#if DATAFELLOWS_WORKAROUNDS
+			    +1,
+			    ATOM_SSH_DSS_KLUDGE, make_fake_host_db(make_dsa_kludge_algorithm(NULL))
+#endif
+			    , ATOM_SSH_DSS, make_fake_host_db(make_dsa_algorithm(NULL)),
+			    -1); 
 
-  kex = make_dh_client(dh, lookup);
+  kex = make_dh_client(dh, lookup_table);
   algorithms = many_algorithms(2, 
 			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			       ATOM_SSH_DSS, make_dsa_algorithm(r),
