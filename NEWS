@@ -1,7 +1,9 @@
 News for the 1.x.y release
 
 	Incompatible change to key format, to comply with the current
-	spki structure draft.
+	spki structure draft. You can use the script lsh-upgrade to
+	copy and convert the information in the old .lsh/known-hosts
+	to the new file .lsh/host-acls.
 
 	Fixed IPv6 bug reported by Simon Kowallik.
 		
