@@ -18,7 +18,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed \
 	       @SRP_PROGRAM@
 
-sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
+sbin_PROGRAMS = lshd lshd-userauth lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp
 noinst_LIBRARIES = liblsh.a
 
