@@ -21,6 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning disconnect.h is obsolete
+
 #ifndef LSH_DISCONNECT_H_INCLUDED
 #define LSH_DISCONNECT_H_INCLUDED
 

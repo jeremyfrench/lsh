@@ -21,6 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning disconnect.c is obsolete
+#if 0
 #include "disconnect.h"
 
 #include "connection.h"
@@ -30,8 +32,9 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct lsh_string *format_disconnect(int code, const char *msg, 
-                                     const char *language)
+struct lsh_string *
+format_disconnect(int code, const char *msg, 
+		  const char *language)
 {
   return ssh_format("%c%i%z%z",
 		    SSH_MSG_DISCONNECT,
@@ -77,3 +80,4 @@ do_disconnect(struct packet_handler *closure UNUSED,
 
 struct packet_handler disconnect_handler =
 { STATIC_HEADER, do_disconnect };
+#endif

@@ -127,8 +127,8 @@ gateway_make_connection(struct listen_value *lv,
 		   BLOCK_SIZE,
 		   make_connection_close_handler(connection))->write_buffer->super;
   
-  connection->write = make_packet_debug(
-			make_gateway_pad(connection->raw),
+  connection->write_packet
+    = make_packet_debug(make_gateway_pad(connection->raw),
 			ssh_format("%lz sent", connection->debug_comment));
 
   init_connection_service(connection);

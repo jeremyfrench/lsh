@@ -28,7 +28,6 @@
 #include "compress.h"
 #include "connection.h"
 #include "debug.h"
-#include "disconnect.h"
 #include "format.h"
 #include "keyexchange.h"
 #include "read_line.h"
