@@ -51,7 +51,7 @@
        (fd object lsh_fd)
 
        (block_size . uint32_t)
-       (buffer space uint8_t)        ; Size is twice the blocksize 
+       (buffer string)        ; Size is twice the blocksize 
        (empty . int)
 
        ; Total amount of data currently in the buffer

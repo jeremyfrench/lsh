@@ -31,6 +31,7 @@
 #include "write_buffer.h"
 
 #include "io.h"
+#include "lsh_string.h"
 #include "xalloc.h"
 #include "werror.h"
 
@@ -45,10 +46,11 @@ do_write(struct abstract_write *w,
 	 struct lsh_string *packet)
 {
   CAST(write_buffer, closure, w);
-
+  uint32_t length = lsh_string_length(packet);
+  
   debug("write_buffer: do_write length = %i\n",
-	packet->length);
-  if (!packet->length)
+	length);
+  if (!length)
     {
       lsh_string_free(packet);
       return;
@@ -71,7 +73,7 @@ do_write(struct abstract_write *w,
   
   closure->empty = 0;
   
-  closure->length += packet->length;
+  closure->length += length;
 
   debug("write_buffer: do_write closure->length = %i\n",
 	closure->length);
@@ -92,8 +94,10 @@ int write_buffer_pre_write(struct write_buffer *buffer)
   
   if (buffer->start > buffer->block_size)
     {
-      /* Copy contents to the start of the buffer */
-      memcpy(buffer->buffer, buffer->buffer + buffer->start, length);
+      /* Copy contents to the start of the buffer. There's no
+	 overlap */
+      lsh_string_write(buffer->buffer, 0, length,
+		       lsh_string_data(buffer->buffer) + buffer->start);
       buffer->start = 0;
       buffer->end = length;
     }
@@ -103,14 +107,22 @@ int write_buffer_pre_write(struct write_buffer *buffer)
       /* Copy more data into buffer */
       if (buffer->partial)
 	{
-	  uint32_t partial_left = buffer->partial->length - buffer->pos;
+	  uint32_t partial_left
+	    = lsh_string_length(buffer->partial) - buffer->pos;
 	  uint32_t buffer_left = 2*buffer->block_size - buffer->end;
 	  if (partial_left <= buffer_left)
 	    {
 	      /* The rest of the partial packet fits in the buffer */
-	      memcpy(buffer->buffer + buffer->end,
-		     buffer->partial->data + buffer->pos,
-		     partial_left);
+	      trace("write_buffer_pre_write: buffer->buffer: length = %i\n"
+		    "  buffer->start: %i, buffer->end: %i\n"
+		    "  partial_left: %i, buffer->pos: %i\n",
+		    lsh_string_length(buffer->buffer),
+		    buffer->start, buffer->end,
+		    partial_left, buffer->pos);
+	      
+	      lsh_string_write(buffer->buffer, buffer->end,
+			       partial_left,
+			       lsh_string_data(buffer->partial) + buffer->pos);
 
 	      buffer->end += partial_left;
 	      length += partial_left;
@@ -120,9 +132,9 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 	    }
 	  else
 	    {
-	      memcpy(buffer->buffer + buffer->end,
-		     buffer->partial->data + buffer->pos,
-		     buffer_left);
+	      lsh_string_write(buffer->buffer, buffer->end,
+			       buffer_left,
+			       lsh_string_data(buffer->partial) + buffer->pos);
 
 	      buffer->end += buffer_left;
 	      length += buffer_left;
@@ -168,7 +180,7 @@ make_write_buffer(struct lsh_fd *fd, uint32_t size)
   
   res->block_size = size;
 
-  res->buffer = lsh_space_alloc(2 * size);
+  res->buffer = lsh_string_alloc(2 * size);
   
   res->empty = 1;
   res->length = 0;
