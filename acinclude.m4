@@ -456,6 +456,36 @@ AH_BOTTOM(
 #endif /* !HAVE_STRSIGNAL */
 ])])
 
+dnl LSH_MAKE_CONDITIONAL(symbol, test)
+AC_DEFUN([LSH_MAKE_CONDITIONAL],
+[if $2 ; then
+  IF_$1=''
+  UNLESS_$1='# '
+else
+  IF_$1='# '
+  UNLESS_$1=''
+fi 
+AC_SUBST(IF_$1)
+AC_SUBST(UNLESS_$1)])
+
+dnl LSH_DEPENDENCY_TRACKING
+
+dnl Defines compiler flags DEP_FLAGS to generate dependency
+dnl information, and DEP_PROCESS that is any shell commands needed for
+dnl massaging the dependency information further. Dependencies are
+dnl generated as a side effect of compilation.
+AC_DEFUN([LSH_DEPENDENCY_TRACKING],
+[if test x$GCC = xyes; then
+  DEP_FLAGS='-MT $[]@ -MT $[]@.d -MD -MP -MF $[]@.d'
+  DEP_PROCESS='true'
+else
+  AC_MSG_WARN([Dependency tracking disabled])
+  DEP_FLAGS=''
+  DEP_PROCESS='true'
+fi 
+AC_SUBST([DEP_FLAGS])
+AC_SUBST([DEP_PROCESS])])
+
 dnl @synopsis AX_CREATE_STDINT_H [( HEADER-TO-GENERATE [, HEADERS-TO-CHECK])]
 dnl
 dnl the "ISO C9X: 7.18 Integer types <stdint.h>" section requires the
