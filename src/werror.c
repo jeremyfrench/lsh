@@ -172,7 +172,10 @@ static void werror_hex(UINT32 n)
     }
 		    
   while (left--)
-    werror_hex_digit((n >> 28) & 0xf);
+    {
+      werror_hex_digit((n >> 28) & 0xf);
+      n <<= 4;
+    }
 }
 
 static void werror_hexdump(UINT32 length, UINT8 *data)
