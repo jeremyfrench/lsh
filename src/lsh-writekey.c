@@ -118,13 +118,12 @@ make_lsh_writekey_options(void)
   self->passphrase = NULL;
   self->iterations = 1500;
 
-  self->crypto_algorithms = many_algorithms(0, -1);
-  self->signature_algorithms
-    = make_alist(3,
-		 ATOM_DSA, make_dsa_algorithm(NULL),
-		 ATOM_RSA_PKCS1_SHA1, &rsa_sha1_algorithm.super,
-		 ATOM_RSA_PKCS1_MD5, &rsa_md5_algorithm.super,
-		 -1);
+  self->crypto_algorithms = all_symmetric_algorithms();
+
+  /* NOTE: We don't need any randomness here, as we won't be signing
+   * anything. */
+  self->signature_algorithms = all_signature_algorithms(NULL);
+
   /* We use this only for salt and iv generation. */
   self->r = make_reasonably_random();
 
