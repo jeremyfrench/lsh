@@ -33,7 +33,8 @@ struct atom_rassoc
   UINT32 length;
 };
 
-struct atom_assoc *gperf_atom (const char *str, unsigned int len);
+const struct atom_assoc *
+gperf_atom (const char *str, unsigned int len);
 
 #include "atoms_gperf.c"
 
@@ -49,7 +50,7 @@ const UINT8 *get_atom_name(int atom)
   
 UINT32 lookup_atom(UINT32 length, UINT8 *name)
 {
-  struct atom_assoc *pair = gperf_atom(name, length);
+  const struct atom_assoc *pair = gperf_atom(name, length);
 
   return pair ? pair->id : 0;
 }
