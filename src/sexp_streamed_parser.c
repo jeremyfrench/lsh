@@ -682,7 +682,7 @@ static int base64_decode(struct base64_state *state, int token)
   if (token == state->terminator)
     {
       /* Check for unused bits */
-      if (state->bits && ((1<<state->bits) & state->buffer))
+      if (state->bits && ( ( (1<<state->bits) - 1) & state->buffer))
 	{
 	  werror("sexp: Base64 terminated with %d leftover bits.\n",
 		 state->bits);
