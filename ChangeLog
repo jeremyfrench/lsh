@@ -1,3 +1,8 @@
+2001-02-08  Niels Möller  <nisse@ehand.com>
+
+	* src/dsa.c (generic_dsa_sign): Commented out debug statement that
+	leaks information about the secret key. 
+
 2001-02-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* Released lsh-1.1.6.
