@@ -27,27 +27,6 @@
 #include "connection.h"
 #include "io.h"
 
-#define GABA_DECLARE
-#include "io_commands.h.x"
-#undef GABA_DECLARE
-
-/* GABA:
-   (class
-     (name io_write_file_info)
-     (vars
-       (name string)
-       (flags . int)
-       (mode . int)
-       (block_size . uint32_t)))
-*/
-
-struct io_write_file_info *
-make_io_write_file_info(struct lsh_string *name, int flags, int mode, uint32_t block_size);
-
-extern struct command io_write_file_command;
-
-#define IO_WRITE_FILE (&io_write_file_command.super)
-
 extern struct command_2 listen_command;
 #define LISTEN (&listen_command.super.super)
 

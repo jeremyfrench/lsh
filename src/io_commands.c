@@ -42,10 +42,6 @@
 #include "xalloc.h"
 
 
-#define GABA_DEFINE
-#include "io_commands.h.x"
-#undef GABA_DEFINE
-
 #if WITH_TCPWRAPPERS
 #include <tcpd.h> 
 
@@ -58,47 +54,6 @@ int deny_severity = LOG_INFO;
 #endif /* WITH_TCPWRAPPERS */
 
 #include "io_commands.c.x"
-
-/* Used only by lsh-writekey */
-
-/* FIXME: Are these still used? */
-/* (write file_info)
- *
- * Opens a file for write, and returns the corresponding write_buffer.
- * */
-
-DEFINE_COMMAND(io_write_file_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST(io_write_file_info, info, a);
-
-  struct lsh_fd *fd = io_write_file(lsh_get_cstring(info->name),
-				    info->flags,
-				    info->mode,
-				    info->block_size,
-				    NULL,
-				    e);
-  if (fd)
-    COMMAND_RETURN(c, fd->write_buffer);
-  else
-    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_WRITE, NULL, errno, NULL));
-}
-
-struct io_write_file_info *
-make_io_write_file_info(struct lsh_string *name,
-			int flags, int mode, uint32_t block_size)
-{
-  NEW(io_write_file_info, self);
-  self->name = name;
-  self->flags = flags;
-  self->mode = mode;
-  self->block_size = block_size;
-
-  return self;
-}
 
 /* (listen callback fd) */
 DEFINE_COMMAND2(listen_command)
