@@ -1,3 +1,37 @@
+2003-04-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/functions.sh (spawn_lshd): Use -HUP, not -9, for
+	killing lshd.
+
+	* src/werror.c (fatal) [WITH_GCOV]: Call fork, so that we can
+	call exit() and also dump core.
+
+	* src/server.c (read_host_key): Fixed string leak.
+
+	* src/io.c (make_connect_callback): Made non-static.
+	(io_connect): Changed interface, to take an io_callback instead of
+	a continuation. The caller has to use make_connect_callback to get
+	the old functionality.
+	(io_connect_local): Adapted to new io_conenct interface, and call
+	make_connect_list_callback. 
+	* src/client_x11.c (channel_open_x11): Likewise.
+	* src/io_commands.c (do_connect): Likewise.
+
+	* src/io.c (connect_list_state): New class.
+	(do_connect_list_kill): New function.
+	(make_connect_list_state): New function.
+	(connect_attempt): New function.
+	(connect_list_callback): New class.
+	(do_connect_list_callback): New function.
+	(make_connect_list_callback): New function.
+	(io_connect_list): New function. 
+
+	* src/io.h (sockaddr_list): Renamed attribute, addr -> address.
+
+	* configure.ac: New option --enable-profiling.
+
+	* src/.gdbinit: New file.
+
 2003-04-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (io_resolv_address): Changed interface, to avoid local
