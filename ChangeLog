@@ -1,3 +1,8 @@
+2003-01-16  Niels Möller  <niels@s3.kth.se>
+
+	* misc/xenofarm.sh: Fixed invocation of dotask, which should take
+	four arguments. 
+
 2003-01-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes: sexp.h.x has disappeared.
