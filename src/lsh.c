@@ -1046,7 +1046,6 @@ int main(int argc, char **argv, const char** envp)
 			  SSH_MAX_PACKET,
 			  options->super.random,
 			  options->algorithms->algorithms,
-			  NULL,
 			  NULL),
       make_simple_kexinit(options->super.random,
 			  options->kex_algorithms,
