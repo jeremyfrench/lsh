@@ -1,3 +1,8 @@
+2000-04-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c (do_window_adjust): Allow CHANNEL_WINDOW_ADJUST
+	when we have received EOF but not CLOSE. Noted by Markus Friedl.
+
 2000-04-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Bumped version to 0.9.4.
