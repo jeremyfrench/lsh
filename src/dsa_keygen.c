@@ -61,7 +61,6 @@ hash(mpz_t x, UINT8 *digest)
 
   sha1_init(&ctx);
   sha1_update(&ctx, SEED_LENGTH, data);
-  sha1_final(&ctx);
   sha1_digest(&ctx, SHA1_DIGEST_SIZE, digest);
 }
 

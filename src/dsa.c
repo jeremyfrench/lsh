@@ -93,7 +93,6 @@ dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
   struct sha1_ctx ctx;
   sha1_init(&ctx);
   sha1_update(&ctx, length, msg);
-  sha1_final(&ctx);
   sha1_digest(&ctx, SHA1_DIGEST_SIZE, digest);
 
   bignum_parse_u(h, SHA1_DIGEST_SIZE, digest);
