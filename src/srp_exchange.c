@@ -134,7 +134,33 @@ srp_hash_password(mpz_t x,
   lsh_string_free(h);
 }
 
-/* dh_instance, name */
+static void
+srp_format_proofs(struct dh_instance *dh,
+		  struct lsh_string **m1,
+		  struct lsh_string **m2)
+{
+  struct mac_instance *hmac
+    = MAKE_MAC(make_hmac_algorithm(dh->method->H),
+	       dh->K->length, dh->K->data);
+  struct lsh_string *s;
+  
+  *m1 = lsh_string_alloc(hmac->hash_size);
+  *m2 = lsh_string_alloc(hmac->hash_size);
+  
+  HASH_UPDATE(hmac,
+	      dh->exchange_hash->length, dh->exchange_hash->data);
+  HASH_DIGEST(hmac, (*m1)->data);
+
+  s = ssh_format("%n%S%S", dh->e, *m1, dh->exchange_hash);
+
+  HASH_UPDATE(hmac, s->length, s->data);
+  HASH_DIGEST(hmac, (*m2)->data);
+
+  lsh_string_free(s);
+  KILL(hmac);
+}
+
+/* dh_instance, name -> packet*/
 struct lsh_string *
 srp_make_init_msg(struct dh_instance *dh, struct lsh_string *name)
 {
@@ -174,7 +200,7 @@ srp_process_init_msg(struct dh_instance *self, struct lsh_string *packet)
     }
 }
 
-/* dh_instance */
+/* dh_instance -> u */
 static UINT32
 srp_select_u(struct dh_instance *dh)
 {
@@ -190,12 +216,13 @@ srp_select_u(struct dh_instance *dh)
   return u;
 }
 
-/* dh_instance, v */
+/* dh_instance, v -> packet */
 struct lsh_string *
 srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
 {
   UINT32 u;
-
+  mpz_t tmp;
+  
   debug("srp_make_reply_msg: v = %xn\n", entry->verifier);
   
   for (;;)
@@ -219,11 +246,17 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
     }
 
   /* Compute (e v^u) ^ b */
-  GROUP_SMALL_POWER(dh->method->G, dh->K, entry->verifier, u);
-  GROUP_COMBINE(dh->method->G, dh->K, dh->e, dh->K);
-  GROUP_POWER(dh->method->G, dh->K, dh->K, dh->secret);
+  mpz_init(tmp);
+  
+  GROUP_SMALL_POWER(dh->method->G, tmp, entry->verifier, u);
+  GROUP_COMBINE(dh->method->G, tmp, dh->e, tmp);
+  GROUP_POWER(dh->method->G, tmp, tmp, dh->secret);
 
-  debug("srp_make_reply_msg: K = %xn\n", dh->K);
+  debug("srp_make_reply_msg: K = %xn\n", tmp);
+
+  dh->K = ssh_format("%ln", tmp);
+
+  mpz_clear(tmp);
   
   /* Update the exchange hash */
   
@@ -271,15 +304,19 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet)
     }
 }
 
-/* x is derived from the password using srp_hash_password */
+/* dh_instance, x -> packet, m2
+ *
+ * x is derived from the password using srp_hash_password */
 struct lsh_string *
 srp_make_client_proof(struct dh_instance *dh,
+		      struct lsh_string **m2,
 		      mpz_t x)
 {
   UINT32 u = srp_select_u(dh);
   mpz_t v;
   mpz_t tmp;
-
+  struct lsh_string *m1;
+  
   assert(u);
   
   mpz_init(v);
@@ -289,13 +326,13 @@ srp_make_client_proof(struct dh_instance *dh,
 
   debug("srp_make_client_proof: v = %xn\n", v);
   
-  if (!GROUP_SUBTRACT(dh->method->G, dh->K, dh->f, v))
+  if (!GROUP_SUBTRACT(dh->method->G, v, dh->f, v))
     {
       mpz_clear(v);
       return NULL;
     }
 
-  debug("srp_make_client_proof: f - v = %xn\n", dh->K);
+  debug("srp_make_client_proof: f - v = %xn\n", v);
   
   mpz_init(tmp);
 
@@ -303,26 +340,18 @@ srp_make_client_proof(struct dh_instance *dh,
   mpz_mul_ui(tmp, x, u);
   mpz_add(tmp, tmp, dh->secret);
 
-  GROUP_POWER(dh->method->G, dh->K, dh->K, tmp);
+  GROUP_POWER(dh->method->G, v, v, tmp);
 
-  debug("srp_make_client_proof: K = %xn\n", dh->K);
+  debug("srp_make_client_proof: K = %xn\n", v);
+  dh->K = ssh_format("%ln", v);
   
   mpz_clear(v);
   mpz_clear(tmp);
 
   dh_hash_digest(dh);
+  srp_format_proofs(dh, &m1, m2);
   
-  return ssh_format("%c%S", SSH_MSG_KEXSRP_PROOF,
-		    dh->exchange_hash);
-}
-
-static struct lsh_string *
-srp_format_m2(struct dh_instance *dh)
-{
-  return hash_string(dh->method->H,
-		     ssh_format("%n%S%n",
-				dh->e, dh->exchange_hash, dh->K),
-		     1);
+  return ssh_format("%c%fS", SSH_MSG_KEXSRP_PROOF, m1);
 }
 
 struct lsh_string *
@@ -332,52 +361,53 @@ srp_process_client_proof(struct dh_instance *dh, struct lsh_string *packet)
   unsigned msg_number;
 
   UINT32 length;
-  const UINT8 *m1;
+  const UINT8 *client_m1;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_PROOF)
-      && parse_string(&buffer, &length, &m1)
+      && parse_string(&buffer, &length, &client_m1)
       && parse_eod(&buffer))
     {
-      if (!lsh_string_eq_l(dh->exchange_hash, length, m1))
+      struct lsh_string *m1;
+      struct lsh_string *m2;
+
+      srp_format_proofs(dh, &m1, &m2);
+      
+      if (!lsh_string_eq_l(m1, length, client_m1))
 	{
 	  werror("SRP failed: Received invalid m1 from client.\n");
+	  lsh_string_free(m1);
+	  lsh_string_free(m2);
+	  
 	  return NULL;
 	}
+      lsh_string_free(m1);
       return ssh_format("%c%fS", SSH_MSG_KEXSRP_PROOF,
-			srp_format_m2(dh));
+			m2);
     }
   return NULL;
 }
 
 int
-srp_process_server_proof(struct dh_instance *dh, struct lsh_string *packet)
+srp_process_server_proof(struct lsh_string *m2,
+			 struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
 
   UINT32 length;
-  const UINT8 *m2;
+  const UINT8 *server_m2;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_PROOF)
-      && parse_string(&buffer, &length, &m2)
+      && parse_string(&buffer, &length, &server_m2)
       && parse_eod(&buffer))
     {
-      struct lsh_string *my_m2 = srp_format_m2(dh);
-      int res = lsh_string_eq_l(my_m2, length, m2);
-      lsh_string_free(my_m2);
-
-      if (!res)
-	{
-	  werror("SRP failed: Received invalid m2 from server.\n");
-	  return 0;
-	}
-      return 1;
+      return lsh_string_eq_l(m2, length, server_m2);
     }
   return 0;
 }

@@ -76,13 +76,15 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet);
 
 struct lsh_string *
 srp_make_client_proof(struct dh_instance *dh,
+		      struct lsh_string **m2,
 		      mpz_t x);
 
 struct lsh_string *
 srp_process_client_proof(struct dh_instance *dh, struct lsh_string *packet);
 
 int
-srp_process_server_proof(struct dh_instance *dh, struct lsh_string *packet);
+srp_process_server_proof(struct lsh_string *m2,
+			 struct lsh_string *packet);
 
 struct dh_method *
 make_srp1(struct randomness *r);
