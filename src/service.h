@@ -27,6 +27,8 @@
 #include "connection.h"
 
 /* Used on both client and server side */
+
+/* The init function only returns 1 on success, 0 on failure. */
 struct ssh_service
 {
   int (init *)(struct ssh_service *self, struct ssh_connection *c);
@@ -36,6 +38,8 @@ struct ssh_service
 
 /* services is an alist mapping names to service objects */
 struct packet_handler *make_service_handler(struct alist *services); 
+
+struct lsh_string *format_service_request(int name);
 
 int request_service(int name, struct ssh_service * service);
 

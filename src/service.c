@@ -22,12 +22,18 @@
  */
 
 #include "service.h"
+#include "format.h"
 
 struct service_handler
 {
   struct packet_handler super;
   struct alist *services;
 };
+
+struct lsh_string *format_service_accept(int name)
+{
+  return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
+}
 
 static int do_service(struct packet_handler *c,
 		      struct ssh_connection *connection,
@@ -51,11 +57,18 @@ static int do_service(struct packet_handler *c,
       struct ssh_service *service;
 
       if (!name
-	  || !(service = ALIST_GET(closure->services, name)))
-	/* FIXME: Send a disconnect message */
-	return LSH_FAIL | LSH_DIE;
-
-      return SERVICE_INIT(service, connection);
+	  || !(service = ALIST_GET(closure->services, name))
+	  || !SERVICE_INIT(service, connection))
+	{
+	  int res
+	    = A_WRITE(c->write,
+		      format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+					"Service not available.\n"));
+	  return (LSH_PROBLEMP(res)
+		  ? LSH_FAIL | LSH_DIE
+		  : LSH_FAIL | LSH_CLOSE);
+	}
+      return A_WRITE(c->write(service_accept(name)));
     }
   return LSH_FAIL | LSH_DIE;
 }
