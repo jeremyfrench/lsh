@@ -24,8 +24,9 @@
  */
 
 #include "unpad.h"
-#include "xalloc.h"
+
 #include "format.h"
+#include "xalloc.h"
 
 static int do_unpad(struct abstract_write **w,
 		    struct lsh_string *packet)
@@ -62,8 +63,9 @@ static int do_unpad(struct abstract_write **w,
 struct abstract_write *
 make_packet_unpad(struct abstract_write *continuation)
 {
-  struct abstract_write_pipe *closure =
-    xalloc(sizeof(struct abstract_write_pipe));
+  struct abstract_write_pipe *closure;
+
+  NEW(closure);
 
   closure->super.write = do_unpad;
   closure->next = continuation;

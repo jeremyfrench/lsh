@@ -25,6 +25,8 @@
 
 #include "zlib.h"
 
+#error zlib.c not working at all
+
 static int do_deflate(struct abstract_write **c,
 		      struct lsh_string *packet)
 {
@@ -45,7 +47,8 @@ static int do_deflate(struct abstract_write **c,
 struct abstract_write *make_packet_zlib(abstract_write *continuation,
 					int level)
 {
-  struct debug_processor *closure = xalloc(sizeof(struct zlib_processor));
+  struct zlib_processor *closure;
+  NEW(closure);
 
   closure->super.super.write = do_deflate;
   closure->c->next = continuation;

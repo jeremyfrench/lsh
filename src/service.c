@@ -81,7 +81,9 @@ static int do_service(struct packet_handler *c,
       
 struct packet_handler *make_service_handler(struct alist *services)
 {
-  struct service_handler *self = xalloc(sizeof(struct service_handler));
+  struct service_handler *self;
+
+  NEW(self);
 
   self->super.handler = do_service;
   self->services = services;
