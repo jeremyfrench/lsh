@@ -403,12 +403,12 @@ make_forward_local_port(struct io_backend *backend,
      (expr
        (lambda (connection)
          (remote_listen (lambda (peer)
-	                  (connect_io ; peer
-			            ;; FIXME: This calls connect too early
-				    ;; Let it take peer as argument
-				    ;; Replacing connection with (K connection peer)
-				    ;; might work, except that it is optimized away.
-			            (connect connection)))
+	                  (connect_io 
+			     ; NOTE: The use of prog1 is needed to
+			     ; delay the connect call until the
+			     ; (otherwise ignored) peer argument is
+			     ; available.  
+			     (connect (prog1 connection peer))))
 	                remote
 			connection))))
 */
