@@ -105,17 +105,60 @@ client_handshake(struct client_ctx *ctx)
 	  && (version == SFTP_VERSION)
 	  && sftp_get_eod(ctx->i));
 }   
-  
-int main(int argc, char **argv)
+
+static void
+do_ls(struct client_ctx *ctx, const char *name)
+{
+}
+
+static void
+do_get(struct client_ctx *ctx, const char *name)
+{
+}
+
+static void
+do_put(struct client_ctx *ctx, const char *name)
+{
+}
+
+static void
+do_stat(struct client_ctx *ctx, const char *name)
+{
+}
+
+int
+main(int argc, char **argv)
 {
   struct client_ctx ctx;
-  if (argc != 2)
-    FATAL("Bad args.");
+  int i;
+  
+  if (argc < 2)
+    FATAL("Too few args.");
 
   fork_server(argv[1], &ctx);
 
   if (!client_handshake(&ctx))
     FATAL("Handshake failed.");
 
+  for (i = 2; i < argc; i += 2)
+    switch (argv[i][0])
+      {
+      case 'l': /* ls */
+	/* Depends on argv[argc] == NULL */
+	do_ls(&ctx, argv[i+1]);
+	break;
+      case 'g': /* get */
+	do_get(&ctx, argv[i+1]);
+	break;
+      case 'p':
+	do_put(&ctx, argv[i+1]);
+	break;
+      case 's':
+	do_stat(&ctx, argv[i+1]);
+	break;
+      default:
+	FATAL("Bad arg");
+      }
+  
   return EXIT_SUCCESS;
 }
