@@ -202,7 +202,7 @@ void init_consuming_read(struct io_consuming_read *self,
 #define FD_LISTEN_CALLBACK(c, fd, a) ((c)->f((c), (fd), (a)))
 
 /* FIXME: Get rid of this class, and store the user callback inside
- * accept from the io_read_callback. */
+ * the io_read_callback. */
 
 /* GABA:
    (class
@@ -218,6 +218,24 @@ void init_consuming_read(struct io_consuming_read *self,
      (super lsh_fd)
      (vars
        (callback object fd_callback)))
+*/
+
+/* GABA:
+   (class
+     (name callback)
+     (vars
+       (f method void)))
+*/
+
+#define CALLBACK(c) ((c)->f(c))
+
+/* GABA:
+   (class
+     (name callout)
+     (vars
+       (next object callout)
+       (action object callback)
+       (when . time_t)))
 */
 
 #if 0
