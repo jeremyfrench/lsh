@@ -152,14 +152,15 @@ do_resolve(struct command *s,
   CAST(resolver_command, self, s);
   CAST(address_info, a, x);
   adns_query q;
+  const char *name = lsh_get_cstring(a->host);;
   
   assert(!a->socket);
 
-  /* FIXME: Check literal address first. */
-
-  assert(NUL_TERMINATED(a->host));
+  /* FIXME: Check literal address first. And fail more gracefully for
+   * names including NUL.*/
+  assert(name);
   adns_submit(self->resolver->adns,
-	      a->host->data,
+	      name,
 	      adns_r_addr,
 	      0, /* adns_queryflags, could use IPv6-related flags */
 	      make_resolver_context(a, c, e),
