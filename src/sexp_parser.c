@@ -174,12 +174,7 @@ sexp_parse_list_canonical(struct simple_buffer *buffer)
       struct sexp *e;
       
       if (*HERE == ')')
-	{
-	  struct object_list *l = queue_to_list(&p);
-	  object_queue_kill(&p);
-
-	  return sexp_v(l);
-	}
+	sexp_v(queue_to_list_and_kill(&p));
 
       e = sexp_parse_canonical(buffer);
       if (!e)
