@@ -1,3 +1,15 @@
+2005-02-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (sbin_PROGRAMS): Added lshd-connection.
+
+	* src/lshd-connection.c: New file.
+
+	* src/lshd-userauth.c: Use the session-id provided by the
+	transport layer. Implemented the rest of publickey authentication.
+
+	* src/lshd.c (lshd_service_request_handler): Pass --session-id
+	option to child process.
+
 2005-02-15  Niels Möller  <niels@s3.kth.se>
 
 	* src/lshd-userauth.c (start_service): New function.
@@ -21,6 +33,24 @@
 
 	* src/lshd.c (lshd_service_handler): Don't free the packet.
 	(lshd_service_request_handler): Send a SERVICE_ACCEPT reply. 
+
+2005-02-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (connection_write_data): Use ssh_write_data. Proper
+	error handling still missing.
+	(lshd_process_service_header): New function and class.
+	(lshd_service_read_handler, make_lshd_service_read_handler): New functions.
+	(lshd_service_request_handler): Setup i/o with service process.
+	(lshd_handshake): Call ssh_read_start.
+
+	* src/lshd.h (class lshd_connection): New attributes: writer,
+	service_reader and service_writer.
+
+	* src/ssh_read.c (ssh_read_set_callback, ssh_read_stop) 
+	(ssh_read_start): New functions, to make it possible to stop and
+	restart reading. Use them through out the code.
+
+	* src/lshd.h, src/lshd_read.c, src/lshd_keyexchange.c: New file.
 
 2005-02-14  Niels Möller  <niels@s3.kth.se>
 
