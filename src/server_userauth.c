@@ -279,10 +279,9 @@ do_handle_userauth(struct packet_handler *c,
  * queued until we know that the user is authenticated for some
  * service to receive them.
  *
- * The latter problems seems a little tricky; perhaps we can keep some
- * state at a higher level where we stop reading on the connection as
- * soon as we have received the first non-userauth packet? But this
- * doesn't mix well with the buffered style read handler. */
+ * I think the right thing to do is to serialize userauth requests
+ * completely: if a request can't be replied to immediately, put the
+ * entire connection on hold until the reply is ready. */
 
 /* GABA:
    (class
@@ -298,7 +297,9 @@ do_userauth_continuation(struct command_continuation *s,
 {
   CAST(userauth_continuation, self, s);
   CAST(delayed_apply, action, value);
-  
+
+  unsigned i;
+
   assert(action);
 
   /* Access granted. */
@@ -306,9 +307,9 @@ do_userauth_continuation(struct command_continuation *s,
   C_WRITE(self->connection, format_userauth_success());
 
   /* Ignore any further userauth messages. */
-  self->connection->dispatch[SSH_MSG_USERAUTH_REQUEST]
-    = self->connection->ignore;
-
+  for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
+    self->connection->dispatch[i] = self->connection->ignore;
+  
   FORCE_APPLY(action, self->super.up, self->super.e); 
 }
 
