@@ -48,9 +48,11 @@ rsync_update_1(unsigned *ap, unsigned *cp,
 /* Updates checksum of a full block. START points to the beginning of the block,
  * END points to new data to be added. HASH points to a hash table.
  *
- * The function returns 1 at a hash-tag hit, in which case FOUND is the number of octets
- * that were processed, or 0 if length characters were proces with no hit.
- */
+ * The function returns the hash node at a hash-tag hit, in which case
+ * FOUND is the number of octets that the hashed region was advanced
+ * (0 < *found <= length).
+ *
+ * Note that the region is always advanced at least one octet. */
 
 struct rsync_node *
 rsync_search(unsigned *ap, unsigned *bp, unsigned block_size,
@@ -60,15 +62,25 @@ rsync_search(unsigned *ap, unsigned *bp, unsigned block_size,
   unsigned a = *ap;
   unsigned b = *bp;
   UINT32 i;
+  struct rsync_node *n;
 
-  for (i = 0; i<length; i++)
+#if 0
+  n = hash[(a ^ b) & 0xffff];
+  if (n)
+    {
+      *found = 0;
+      return n;
+    }
+#endif
+  
+  for (i = 0; i<length; )
     {
       /* Any non-zero CHAR_OFFSET cancels out here. I think. */
-      struct rsync_node *n;
 
       a += end[i] - start[i];
       b += a - block_size * start[i];
 
+      i++;
       n = hash[(a ^ b) & 0xffff];
 
       if (n)
