@@ -26,7 +26,7 @@
 #ifndef LSH_CLIENT_H_INCLUDED
 #define LSH_CLIENT_H_INCLUDED
 
-#include "channel.h"
+#include "channel_commands.h"
 #include "io.h"
 #include "keyexchange.h"
 
@@ -62,9 +62,20 @@ struct connection_startup *make_client_startup(struct io_fd *in,
 
 struct command *make_open_session_command(struct ssh_channel *session);
 
+#if 0
 struct request_info *make_shell_request(struct request_info *next);
 struct request_info *make_pty_request(int fd, int essential, int raw,
 				      struct request_info *next);
+#endif
+
+extern struct channel_request_command request_shell;
+extern struct command client_io;
+
+struct ssh_channel *make_client_session(struct io_fd *in,
+					struct io_fd *out,
+					struct io_fd *err,
+					UINT32 max_window,
+					int *exit_status);
 
 #if 0
 struct lsh_object *make_channel_request(int request, struct lsh_string *args);

@@ -136,7 +136,7 @@ struct command *make_request_service(int service)
   return &closure->super;
 }
 
-/* GABA:
+/* ;; GABA:
    (class
      (name request_info)
      (vars
@@ -192,6 +192,7 @@ static int close_client_session(struct ssh_channel *c)
   return LSH_OK /* | LSH_CHANNEL_PENDING_CLOSE */;
 }  
 
+#if 0
 static int client_session_die(struct ssh_channel *c)
 {
   CAST(client_session, closure, c);
@@ -203,6 +204,7 @@ static int client_session_die(struct ssh_channel *c)
 
   exit(EXIT_FAILURE);
 }
+#endif
 
 /* GABA:
    (class
@@ -352,28 +354,44 @@ static int do_send(struct ssh_channel *c)
 }
 
 /* We have a remote shell */
-static int do_io(struct ssh_channel *channel)
+static int do_client_io(struct command *s UNUSED,
+			struct lsh_object *x,
+			struct command_continuation *c)
+
 {
-  CAST(client_session, closure, channel);
-  
-  channel->receive = do_receive;
-  
-  closure->out->super.close_callback
-    = closure->err->super.close_callback = make_channel_close(channel);
-  
-  closure->in->handler = make_channel_read_data(&closure->super);
-  channel->send = do_send;
+  if (!x)
+    {
+      werror("do_client_io: Starting shell failed.\n");
+      return LSH_CHANNEL_CLOSE | LSH_FAIL;
+    }
+  else
+    {
+      CAST(client_session, session, x);
+      struct ssh_channel *channel = &session->super;
 
-  ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
-	    make_handle_exit_status(closure->exit_status));
-  ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
-	    make_handle_exit_signal(closure->exit_status));
+      channel->receive = do_receive;
+  
+      session->out->super.close_callback
+	= session->err->super.close_callback = make_channel_close(channel);
+  
+      session->in->handler = make_channel_read_data(channel);
+      channel->send = do_send;
 
-  channel->eof = close_client_session;
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
+		make_handle_exit_status(session->exit_status));
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
+		make_handle_exit_signal(session->exit_status));
 
-  return LSH_OK | LSH_CHANNEL_READY_SEND;
+      channel->eof = close_client_session;
+
+      return COMMAND_RETURN(c, channel);
+    }
 }
 
+struct command client_io =
+{ STATIC_HEADER, do_client_io };
+
+#if 0
 static struct request_info *skip_silent_requests(struct request_info *req)
 {
   while (req && !req->want_reply)
@@ -381,8 +399,6 @@ static struct request_info *skip_silent_requests(struct request_info *req)
 
   return req;
 }
-
-#if 0
 
 static int do_channel_success(struct ssh_channel *c);
 static int do_channel_failure(struct ssh_channel *c);
@@ -467,12 +483,11 @@ static int do_open_confirm(struct ssh_channel *c)
 }
 #endif  
 
-static struct ssh_channel *make_client_session(struct io_fd *in,
-					       struct io_fd *out,
-					       struct io_fd *err,
-					       UINT32 max_window,
-					       struct request_info *requests,
-					       int *exit_status)
+struct ssh_channel *make_client_session(struct io_fd *in,
+					struct io_fd *out,
+					struct io_fd *err,
+					UINT32 max_window,
+					int *exit_status)
 {
   NEW(client_session, self);
 
@@ -490,8 +505,6 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
   self->in = in;
   self->out = out;
   self->err = err;
-
-  self->requests = requests;
 
   self->exit_status = exit_status;
   
@@ -600,8 +613,9 @@ struct connection_startup *make_client_startup(struct io_fd *in,
 }
 #endif
 
+#if 0
 /* FIXME: This should probably move to client_pty */
-/* GABA:
+/* ;; GABA:
    (class
      (name pty_request)
      (super request_info)
@@ -681,9 +695,11 @@ struct request_info *make_pty_request(int fd, int essential, int raw,
   return &req->super;
 }
 #endif / !WITH_PTY_SUPPORT */
+#endif
 
+#if 0
 static struct lsh_string *do_shell_format(struct request_info *req,
-					 struct ssh_channel *channel)
+					  struct ssh_channel *channel)
 {
   return format_channel_request(ATOM_SHELL, channel, req->want_reply, "");
 }
@@ -710,5 +726,16 @@ struct request_info *make_shell_request(struct request_info *next)
 
   return req;
 }
+#endif
 
+static struct lsh_string *
+do_format_shell_request(struct channel_request_command *s UNUSED,
+			struct ssh_channel *channel,
+			struct command_continuation **c)
+{
+  return format_channel_request(ATOM_SHELL, channel, !!*c, "");
+}
+
+struct channel_request_command request_shell =
+{ { STATIC_HEADER, do_channel_request_command }, do_format_shell_request };
 
