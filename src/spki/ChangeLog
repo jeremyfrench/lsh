@@ -1,3 +1,8 @@
+2003-02-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* tools/Makefile.am (LDADD): Added getopt.o and getopt1.o
+	(EXTRA_DIST): Added getopt.h.
+
 2003-02-13  Niels Möller  <niels@s3.kth.se>
 
 	* README: Wrote down an SPKI overview and some ideas on how to
