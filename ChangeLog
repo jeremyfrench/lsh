@@ -1,3 +1,13 @@
+2000-09-26  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/dsa_keygen.c (dsa_generate_key): Added lost
+	dsa_find_generator() call, spotted by jps.
+
+2000-09-24  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* contrib/lsh.spec.in (%post): Fixed references to lsh-keygen and
+	lsh-writekey. 
+
 2000-09-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/ssh-conv: Fixed typo (reported by Timshel Knoll). 
