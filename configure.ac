@@ -356,6 +356,8 @@ fi
 
 AC_TYPE_SOCKLEN_T
 
+# Checks for libraries
+
 AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
     [AC_MSG_ERROR(
     [GNU MP not found, or not 3.1 or up, see http://www.swox.com/gmp.])])
@@ -433,6 +435,9 @@ else
   AC_DEFINE_UNQUOTED(XAUTH_PROGRAM, "$XAUTH_PROGRAM", Program used by lshd to handle .Xauthority-files)
 fi
 
+# Move these checks for system libraries earlier, before checks for
+# gmp, liboop etc
+  
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(socket, setsockopt)
@@ -442,6 +447,7 @@ AC_CHECK_LIB(util, openpty)
 # glibc has a nis-library "libnsl", which we don't need. So use
 # AC_SEARCH_LIBS rather than AC_CHECK_LIB.
 AC_SEARCH_LIBS(gethostbyname, nsl)
+AC_SEARCH_LIBS(inet_ntop, nsl)
 
 # This macro is new in autoconf-2.13
 AC_SEARCH_LIBS(syslog, bsd socket inet, [AC_DEFINE(HAVE_SYSLOG)])
