@@ -1,3 +1,9 @@
+2003-01-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/Makefile.am.in (SUBDIRS): Compile in spki subdir.
+
+	* configure.ac: Configure subdir src/spki.
+
 2003-01-02  Niels Möller  <niels@s3.kth.se>
 
 	* src/io.c (lsh_popen): New function.
