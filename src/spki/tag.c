@@ -42,31 +42,307 @@ enum spki_tag_type
     SPKI_TAG_RANGE
   };
 
-static int
-display_equal(struct sexp_iterator *a, struct sexp_iterator *b)
+struct spki_tag
 {
-  assert(a->type == SEXP_ATOM);
-  assert(b->type == SEXP_ATOM);
+  enum spki_tag_type type;
+  unsigned refs;
+};
 
-  if (!a->display && !b->display)
-    return 1;
-  if (!a->display || !b->display)
-    return 0;
+/* Note: We can't use const, due to the refs fields. */
+struct spki_cons
+{
+  struct spki_tag *car;
+  struct spki_cons *cdr;
+};
 
-  return (a->display_length == b->display_length
-	  && !memcmp(a->display, b->display, a->display_length));
+struct spki_string
+{
+  unsigned refs;
+  unsigned length;
+  const uint8_t *data;
+};
+
+static const struct spki_tag
+spki_tag_any = { SPKI_TAG_ANY, 0 };
+
+/* For SPKI_TAG_SET and SPKI_TAG_LIST */
+struct spki_tag_list
+{
+  struct spki_tag super;
+  struct spki_cons *children;
+};
+
+/* For SPKI_TAG_ATOM and SPKI_TAG_PREFIX */
+struct spki_tag_atom
+{
+  struct spki_tag super;
+  struct spki_string *display;
+  struct spki_string *atom;
+};
+
+enum spki_range_type
+  {
+    SPKI_RANGE_TYPE_ALPHA,
+    SPKI_RANGE_TYPE_NUMERIC,
+    SPKI_RANGE_TYPE_TIME,
+    SPKI_RANGE_TYPE_BINARY,
+    SPKI_RANGE_TYPE_DATE,
+    /* Indicates if the upper or lower limit is inclusive. */
+    SPKI_RANGE_GTE = 0x10,
+    SPKI_RANGE_LTE = 0x20
+  };
+
+/* For SPKI_TAG_RANGE */
+struct spki_tag_range
+{
+  struct spki_tag super;
+  enum spki_range_type flags;
+  
+  const struct spki_string *display;
+  const struct spki_string *lower;
+  const struct spki_string *upper;
+};
+
+#define MALLOC(ctx, realloc, size) realloc((ctx), NULL, (size))
+
+/* Cast needed because realloc doesn't like const pointers. */
+#define FREE(ctx, realloc, p) realloc((ctx), (void *) (p), 0)
+
+#define NEW(ctx, realloc, type, var) \
+type *var = MALLOC(ctx, realloc, sizeof(type))
+
+static struct spki_string *
+spki_string_new(void *ctx, nettle_realloc_func *realloc,
+		unsigned length, const uint8_t *data)
+{
+  NEW(ctx, realloc, struct spki_string, s);
+  uint8_t *p;
+  
+  if (!s)
+    return NULL;
+
+  p = MALLOC(ctx, realloc, length);
+  if (!p)
+    {
+      FREE(ctx, realloc, s);
+      return NULL;
+    }
+  
+  memcpy(p, data, length);
+  s->refs = 1;
+  s->length = length;
+  s->data = p;
+
+  return s;
 }
 
-static int
-atom_equal(struct sexp_iterator *a, struct sexp_iterator *b)
+static void
+spki_string_release(void *ctx, nettle_realloc_func *realloc,
+		    struct spki_string *s)
 {
-  assert(a->type == SEXP_ATOM);
-  assert(b->type == SEXP_ATOM);
+  if (!s)
+    return;
 
-  return (a->atom_length == b->atom_length
-	  && display_equal(a,b)
-	  && !memcmp(a->atom, b->atom, a->atom_length));
+  if (--s->refs)
+    return;
+
+  FREE(ctx, realloc, s->data);
+  FREE(ctx, realloc, s);
 }
+
+static struct spki_string *
+spki_string_dup(struct spki_string *s)
+{
+  assert(s);
+  s->refs++;
+  return s;
+}
+
+static void
+spki_tag_init(struct spki_tag *tag,
+	      enum spki_tag_type type)
+{
+  tag->type= type;
+  tag->refs = 1;
+}
+
+static struct spki_tag *
+spki_tag_dup(struct spki_tag *tag)
+{
+  assert(tag);
+  if (tag != &spki_tag_any)
+    tag->refs++;
+  return tag;
+}
+
+/* Consumes the reference to CAR */
+static struct spki_cons *
+spki_cons(void *ctx, nettle_realloc_func *realloc,
+	  struct spki_tag *car, struct spki_cons *cdr)
+{
+  NEW(ctx, realloc, struct spki_cons, c);
+  if (!c)
+    return NULL;
+  c->car = car;
+  c->cdr = cdr;
+
+  return c;
+}
+
+static void
+spki_cons_release(void *ctx, nettle_realloc_func *realloc,
+		  struct spki_cons *c)
+{
+  while (c)
+    {
+      struct spki_cons *cdr = c->cdr;
+      spki_tag_release(ctx, realloc, c->car);
+      FREE(ctx, realloc, c);
+      c = cdr;
+    }
+}
+
+static struct spki_tag *
+spki_tag_atom_alloc(void *ctx, nettle_realloc_func *realloc,
+		    enum spki_tag_type type,
+		    struct sexp_iterator *i)
+{
+  struct spki_string *display;
+  struct spki_string *atom;
+
+  assert(i->type == SEXP_ATOM);
+  assert(i->atom);
+
+  if (i->display)
+    {
+      display = spki_string_new(ctx, realloc,
+				i->display_length, i->display);
+
+      if (!display)
+	return NULL;
+    }
+  else
+    display = NULL;
+  
+  atom = spki_string_new(ctx, realloc,
+			 i->atom_length, i->atom);
+
+  if (!atom)
+    {
+      spki_string_release(ctx, realloc, display);
+      return NULL;
+    }
+  
+  if (!sexp_iterator_next(i))
+    {
+      spki_string_release(ctx, realloc, display);
+      spki_string_release(ctx, realloc, atom);
+      return NULL;
+    }
+  
+  {
+    NEW(ctx, realloc, struct spki_tag_atom, tag);
+    if (!tag)
+      {
+	spki_string_release(ctx, realloc, display);
+	spki_string_release(ctx, realloc, atom);
+	return NULL;
+      }
+
+    spki_tag_init(&tag->super, type);
+    tag->display = display;
+    tag->atom = atom;
+    
+    return &tag->super;
+  }
+}
+
+static struct spki_tag *
+spki_tag_list_alloc(void *ctx, nettle_realloc_func *realloc,
+		    enum spki_tag_type type,
+		    struct spki_cons *children)
+{
+  NEW(ctx, realloc, struct spki_tag_list, tag);
+
+  assert(type == SPKI_TAG_SET || type == SPKI_TAG_LIST);
+  
+  if (tag)
+    {
+      spki_tag_init(&tag->super, type);
+      tag->children = children;
+    }
+
+  return &tag->super;
+}
+
+static struct spki_tag *
+spki_tag_range_alloc(void *ctx, nettle_realloc_func *realloc,
+		     enum spki_range_type flags,
+		     struct spki_string *display,
+		     struct spki_string *lower,
+		     struct spki_string *upper)
+{
+  NEW(ctx, realloc, struct spki_tag_range, tag);
+
+  if (tag)
+    {
+      spki_tag_init(&tag->super, SPKI_TAG_RANGE);
+      tag->flags = flags;
+      tag->display = display;
+      tag->lower = lower;
+      tag->upper = upper;
+    }
+
+  return &tag->super;
+}
+
+void
+spki_tag_release(void *ctx, nettle_realloc_func *realloc,
+		 struct spki_tag *tag)
+{
+  if (!tag || tag == &spki_tag_any)
+    return;
+
+  assert(tag->refs);
+
+  if (--tag->refs)
+    return;
+
+  switch(tag->type)
+    {
+    case SPKI_TAG_ATOM:
+    case SPKI_TAG_PREFIX:
+      {
+	struct spki_tag_atom *self = (struct spki_tag_atom *) tag;
+
+	spki_string_release(ctx, realloc, self->display);
+	spki_string_release(ctx, realloc, self->atom);
+
+	break;
+      }
+    case SPKI_TAG_LIST:
+    case SPKI_TAG_SET:
+      {
+	struct spki_tag_list *self = (struct spki_tag_list *) tag;
+	spki_cons_release(ctx, realloc, self->children);
+
+	break;
+      }
+    case SPKI_TAG_RANGE:
+      {
+	struct spki_tag_range *self = (struct spki_tag_range *) tag;
+	spki_string_release(ctx, realloc, self->lower);
+	spki_string_release(ctx, realloc, self->upper);
+      }
+    default:
+      abort();
+    }
+
+  FREE(ctx, realloc, tag);
+}
+
+
+/* Converting a tag into internal form */
 
 static enum spki_tag_type
 spki_tag_classify(struct sexp_iterator *i)
@@ -83,10 +359,11 @@ spki_tag_classify(struct sexp_iterator *i)
       return SPKI_TAG_ATOM;
       
     case SEXP_LIST:
-      if (!sexp_iterator_enter_list(i))
+      if (!sexp_iterator_enter_list(i)
+	  || i->type != SEXP_ATOM)
 	return 0;
 
-      if (i->type == SEXP_ATOM && !i->display
+      if (!i->display
 	  && i->atom_length == 1 && i->atom[0] == '*')
 	{
 	  enum spki_tag_type type;
@@ -123,15 +400,152 @@ case sizeof("" x) - 1:				\
     }
 }
 
+static struct spki_cons *
+spki_tag_compile_list(void *ctx, nettle_realloc_func *realloc,
+		      struct sexp_iterator *i);
+
+struct spki_tag *
+spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
+		 struct sexp_iterator *i)
+{
+  enum spki_tag_type type = spki_tag_classify(i);
+  
+  switch (type)
+    {
+    default:
+      return NULL;
+
+    case SPKI_TAG_ATOM:
+      return spki_tag_atom_alloc(ctx, realloc,
+				 SPKI_TAG_ATOM, i);
+
+    case SPKI_TAG_SET:
+      /* Empty sets are allowed, but not empty lists. */
+      if (i->type == SEXP_END)
+	return spki_tag_list_alloc(ctx, realloc, SPKI_TAG_SET, NULL);
+
+      /* Fall through */
+    case SPKI_TAG_LIST:
+      {
+	const struct spki_tag *tag;
+	
+	const struct spki_cons *children
+	  = spki_tag_compile_list(ctx, realloc, i);
+
+	if (!children)
+	  return NULL;
+	
+	tag = spki_tag_list_alloc(ctx, realloc, type,
+				  children);
+
+	if (tag)
+	  return tag;
+
+	spki_cons_release(ctx, realloc, children);
+	return NULL;
+      }
+      
+    case SPKI_TAG_ANY:
+      return &spki_tag_any;
+      
+    case SPKI_TAG_PREFIX:
+      {
+	struct spki_tag *tag = spki_tag_atom_alloc(ctx, realloc,
+						   SPKI_TAG_PREFIX,
+						   i);
+	if (!tag)
+	  return NULL;
+
+	if (i->type == SEXP_END && sexp_iterator_exit_list(i))
+	  return tag;
+
+	spki_tag_release(ctx, realloc, tag);
+	return NULL;
+      }
+
+    case SPKI_TAG_RANGE:
+      /* Not yet implemented. */
+      abort();
+    }
+
+}
+
+static struct spki_cons *
+spki_tag_compile_list(void *ctx, nettle_realloc_func *realloc,
+		      struct sexp_iterator *i)
+{
+  struct spki_cons *c = NULL;
+
+  while (i->type != SEXP_END)
+    {
+      struct spki_tag *tag = spki_tag_compile(ctx, realloc, i);
+      struct spki_cons *n;
+      
+      if (!tag)
+	{
+	  spki_cons_release(ctx, realloc, c);
+	  return NULL;
+	}
+      n = spki_cons(ctx, realloc, tag, c);
+      if (!n)
+	{
+	  spki_tag_release(ctx, realloc, tag);
+	  spki_cons_release(ctx, realloc, c);
+	  return NULL;
+	}
+	
+      c = n;
+    }
+
+  if (!sexp_iterator_exit_list(i))
+    {
+      spki_cons_release(ctx, realloc, c);
+      return NULL;
+    }
+  return  c;
+}
+
+
+
+static int
+display_equal(struct sexp_iterator *a, struct sexp_iterator *b)
+{
+  assert(a->type == SEXP_ATOM);
+  assert(b->type == SEXP_ATOM);
+
+  if (!a->display && !b->display)
+    return 1;
+  if (!a->display || !b->display)
+    return 0;
+
+  return (a->display_length == b->display_length
+	  && !memcmp(a->display, b->display, a->display_length));
+}
+
+static int
+atom_equal(struct sexp_iterator *a, struct sexp_iterator *b)
+{
+  assert(a->type == SEXP_ATOM);
+  assert(b->type == SEXP_ATOM);
+
+  return (a->atom_length == b->atom_length
+	  && display_equal(a,b)
+	  && !memcmp(a->atom, b->atom, a->atom_length));
+}
+
 static int
 set_includes(struct sexp_iterator *delegated,
 	     struct sexp_iterator *request)
 {
   /* The request is included if it's including in any of
    * the delegations in the set. */
+  unsigned level = delegated->level;
+
   while (delegated->type != SEXP_END)
     {
       struct sexp_iterator work = *request;
+      unsigned start = delegated->start;
+      
       if (spki_tag_includes(delegated, &work))
 	{
 	  if (!sexp_iterator_exit_list(delegated))
@@ -139,7 +553,20 @@ set_includes(struct sexp_iterator *delegated,
 	  *request = work;
 	  return 1;
 	}
-      if (!sexp_iterator_next(delegated))
+      /* It's a little tricky to recover. When trying to match the
+       * tag, matching may have given up with the iterator pointing
+       * anywhere inside it. We first need to skip out of some lists,
+       * and then make sure that we have made some advance, to cover
+       * the case that the previous sub expression was a string. */
+      /* FIXME: Make some iterator abstraction for this. */
+      assert(delegated->level >= level);
+
+      while (delegated->level > level)
+	if (!sexp_iterator_exit_list(delegated))
+	  abort();
+
+      if (delegated->start == start &&
+	  !sexp_iterator_next(delegated))
 	abort();
     }
   return 0;
@@ -177,8 +604,11 @@ list_includes(struct sexp_iterator *delegated,
  * delegated one. For now, star forms are recognized only in the
  * delegation, not in the request.
  *
- * Compares only the first element on each list, and, on success,
- * advances the corresponding iterator past it. */
+ * Compares only the first element on each list and, on success,
+ * advances the corresponding iterator past it.
+ */
+/* FIXME: It's a problem that both syntax errors and matching failures
+ * are reported in the same way. */
 int
 spki_tag_includes(struct sexp_iterator *delegated,
 		  struct sexp_iterator *request)
@@ -203,7 +633,7 @@ spki_tag_includes(struct sexp_iterator *delegated,
 	&& list_includes(delegated, request);
       
     case SPKI_TAG_ANY:
-      return 1;
+      return sexp_iterator_next(request);
 
     case SPKI_TAG_SET:
       return set_includes(delegated, request);

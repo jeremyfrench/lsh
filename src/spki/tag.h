@@ -27,6 +27,18 @@
 
 struct sexp_iterator;
 
+#include "nettle/realloc.h"
+
+struct spki_tag;
+
+struct spki_tag *
+spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
+		 struct sexp_iterator *i);
+
+void
+spki_tag_release(void *ctx, nettle_realloc_func *realloc,
+		 struct spki_tag *tag);
+
 /* Returns true if the requested authorization is included in the
  * delegated one. For now, star forms are recognized only in the
  * delegation, not in the request. */
