@@ -303,9 +303,8 @@ do_connection(struct command *s,
   CAST(connection_command, self, s);
   CAST(io_fd, fd, x);
   struct lsh_string *version;
-  
-  struct ssh_connection *connection = make_ssh_connection(c);
-
+  struct ssh_connection *connection;
+    
   switch (self->mode)
     {
     case CONNECTION_CLIENT:
@@ -344,6 +343,11 @@ do_connection(struct command *s,
    * connection_exception handler, which takes care of EXC_PROTOCOL
    * exceptions, sends a disconnect message, and then raises an
    * EXC_FINISH_READ exception. */
+  
+  connection = make_ssh_connection
+    (c, make_exc_finish_read_handler(&fd->super,
+				     e, HANDLER_CONTEXT));
+  
   connection_init_io
     (connection, 
      &io_read_write(fd,
@@ -354,8 +358,7 @@ do_connection(struct command *s,
 		    self->block_size,
 		    make_connection_close_handler(connection))
      ->write_buffer->super,
-     self->random,
-     make_exc_finish_read_handler(&fd->super, e, HANDLER_CONTEXT));
+     self->random);
 
   connection->versions[self->mode] = version;
   connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 
