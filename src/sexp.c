@@ -26,6 +26,7 @@
 #include "sexp.h"
 
 #include "format.h"
+#include "queue.h"
 #include "werror.h"
 #include "xalloc.h"
 

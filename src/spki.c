@@ -28,6 +28,7 @@
 #include "atoms.h"
 #include "crypto.h"
 #include "format.h"
+#include "io.h"
 #include "list.h"
 #include "parse.h"
 #include "publickey_crypto.h"

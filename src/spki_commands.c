@@ -25,6 +25,7 @@
 
 #include "spki_commands.h"
 
+#include "queue.h"
 #include "sexp_commands.h"
 #include "werror.h"
 #include "xalloc.h"
