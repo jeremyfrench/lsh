@@ -45,6 +45,8 @@
 
 #if WITH_X11_FORWARD
 
+#define XAUTH_DEBUG_TO_STDERR 0
+
 #define X11_MIN_COOKIE_LENGTH 10
 
 /* GABA:
@@ -68,6 +70,10 @@ do_xauth_exit(struct exit_callback *s, int signaled,
       const struct exception xauth_failed
 	= STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "xauth failed");
       EXCEPTION_RAISE(self->e, &xauth_failed);
+      if (signaled)
+	werror("xauth invocation failed: Signal %d\n", value);
+      else
+	werror("xauth invocation failed: exit code: %d\n", value);
     }
   else
     /* NOTE: Return value is ignored. */
@@ -95,6 +101,9 @@ bad_string(UINT32 length, const UINT8 *data)
 {
   return !!memchr(data, '\0', length);
 }
+
+/* FIXME: Use autoconf */
+#define XAUTH_PROGRAM "/usr/X11R6/bin/xauth"
 
 /* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
 struct server_x11_info *
@@ -138,12 +147,12 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
   if (!tmp)
     tmp = "tmp";
   
-  display = ssh_format("%di:%di", display_number, screen);
+  display = ssh_format(":%di.%di", display_number, screen);
   xauthority = ssh_format("/%lz/.lshd.%lS.Xauthority", tmp, user->name);
 
   {
     struct spawn_info spawn;
-    const char *args[2] = { "-c", "xauth" };
+    const char *args[2] = { "-c", XAUTH_PROGRAM };
     const struct env_value env[1] =
       { {"XAUTHORITY", xauthority } };
 
@@ -152,8 +161,15 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
     int null;
 
     memset(&spawn, 0, sizeof(spawn));
-    
+    /* FIXME: Arrange that stderr data (and perhaps stdout data as
+     * well) is sent as extrended data on the channel. To do that, we
+     * need another channel flag to determine whether or not EOF
+     * should be sent when the number of sources gets down to 0. */
+#if XAUTH_DEBUG_TO_STDERR
+    null = dup(STDERR_FILENO);
+#else
     null = open("/dev/null", O_WRONLY);
+#endif
     if (null < 0)
       goto fail;
 
@@ -191,7 +207,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
 	A_WRITE(&in->write_buffer->super,
 		/* NOTE: We pass arbitrary data to the xauth process,
 		 * if the user so wish. */
-		 ssh_format("add %lS %ls %ls",
+		 ssh_format("add %lS %ls %ls\n",
 			   display,
 			   protocol_length, protocol,
 			   cookie_length, cookie));
