@@ -97,8 +97,8 @@ spawn_lshd () {
     # Wait a little for lshd to start
     for delay in 1 1 1 1 1 5 5 5 20 20 60 60; do
 	if [ -s $PIDFILE ]; then
-	    # And a little more for it to open its port
-	    sleep 5
+	    # And a little more for the pid file to be written properly
+	    sleep 1
 	    echo lshd pid: `cat $PIDFILE`
 	    return
 	fi
