@@ -1,5 +1,7 @@
 2004-02-19  Niels Möller  <niels@s3.kth.se>
 
+	* src/scm/guile-compat.scm: Deleted most of the contents.
+
 	* src/scm/make-char-classes.scm: Deleted obsolete file.
 
 2004-02-18  Niels Möller  <niels@s3.kth.se>
