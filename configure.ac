@@ -252,7 +252,7 @@ else
   AC_PATH_PROGS(SCHEME_PROGRAM, guile scsh,, $PATH)
 fi
 
-if test x$SCHEME_PROGRAM = x ; then
+if test "x$SCHEME_PROGRAM" = x ; then
   AC_MSG_WARN([No scheme implementation found.
 This is fine as long as you don't modify the source files.])
   SCHEME_PROGRAM=false
@@ -266,10 +266,22 @@ AC_SUBST(SCHEME_NAME)
 if test "x$BASH" = x/bin/sh ; then
   unset BASH
 fi
-    
-AC_PATH_PROG(BASH, bash,, $PATH)
-AC_PATH_PROG(GROFF, groff,, $PATH)
-AC_PATH_PROG(M4, m4, m4)
+
+if test "x$BASH" = x; then    
+  AC_PATH_PROG(BASH, bash,, $PATH)
+fi
+AC_ARG_VAR(BASH, bash shell)
+
+if test "x$GROFF" = x; then
+  AC_PATH_PROG(GROFF, groff,, $PATH)
+fi
+AC_ARG_VAR(GROFF, groff)
+
+if test "x$M4" = x; then
+  AC_PATH_PROG(M4, m4, m4)
+fi
+AC_ARG_VAR(M4, M4 macro processor)
+
 
 # Checks for header files.
 AC_HEADER_STDC

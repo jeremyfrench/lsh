@@ -1,3 +1,8 @@
+2002-10-02  Pontus Sköld  <Pontus.Skold@dis.uu.se>
+
+	* configure.ac: Don't AC_PATH_PROG for bash, m4 and groff if
+	given. Made them precious.
+
 2002-10-01  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/run-tests (test_program): Use basename (fix copied
