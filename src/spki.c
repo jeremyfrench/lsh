@@ -530,7 +530,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	
 	if (!password)
 	  {
-	    werror("No password provided for pkcs5v2.");
+	    werror("No password provided for pkcs5v2.\n");
 	    goto fail;
 	  }
 
