@@ -1,3 +1,8 @@
+2002-03-20  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (address_info2sockaddr): Zero-terminate the
+	default_preferences list.
+
 2002-03-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/run-tests (test_program): Test the exit status of
