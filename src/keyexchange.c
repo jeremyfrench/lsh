@@ -100,9 +100,8 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
       || (msg_number != SSH_MSG_KEXINIT) )
     {
       KILL(res);
-      return 0;
+      return NULL;
     }
-
 
   if (!parse_octets(&buffer, 16, res->cookie))
     {
@@ -425,7 +424,7 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
 				  int type,
 				  struct ssh_connection *connection)
 {
-  CAST(mac_algorithm, algorithm, LIST(algorithms)[type]);
+  CAST_SUBTYPE(mac_algorithm, algorithm, LIST(algorithms)[type]);
 
   struct mac_instance *mac;
   struct lsh_string *key;

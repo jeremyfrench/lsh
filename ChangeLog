@@ -1,3 +1,9 @@
+Tue Dec  8 10:29:50 1998    <nisse@puck>
+
+	* crypto.c (do_sha_copy, ): Use the CLONE macro instead of memcpy to
+	copy instances.
+	(do_hmac_copy): -"-
+
 Fri Dec  4 02:30:28 1998    <nisse@puck>
 
 	* (practically every file): Adapted to new gc and object system.
