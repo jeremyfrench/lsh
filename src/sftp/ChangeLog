@@ -1,3 +1,9 @@
+2002-03-14  Pontus  <pont@it.uu.se>
+
+	* configure.ac: Changed version number from 1.0 to 1.0-pre to make
+	sure noone thinks "to highly" of the code. Also removed debug code
+	that shouldn't have been checked in.
+
 2002-02-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* gnu_stuff.c: Include stdlib.h and string.h.
