@@ -8,6 +8,8 @@ issuer
 issuer-info
 md5
 name
+not-after
+not-before
 propagate
 public-key
 sha1
