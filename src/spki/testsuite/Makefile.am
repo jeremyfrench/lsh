@@ -1,6 +1,6 @@
 
 # FIXME: Create a link to nettle directory instead?
-AM_CFLAGS = -O0 -I$(top_srcdir) -I$(top_srcdir)/..
+AM_CPPFLAGS = -O0 -I$(top_srcdir) -I$(top_srcdir)/..
 AM_LDFLAGS = -L../../nettle
 
 TS_PROGS = principal-test date-test read-acl-test read-cert-test
