@@ -444,3 +444,15 @@ Perhaps it would make sense to use a expr_ prefix on all these
 functions.
 
 
+INCLUDE FILES
+
+I try to follow the following rules for how to include files, and in
+which order. lsh header files should include all files they depend on.
+First ANSI C and system files, then other lsh files, and finally any
+.h.x file. Header files never include config.h
+
+.c files should first include config.h (guarded by an #if
+HAVE_CONFIG_H). Next, they should include ANSI C files, system files,
+nettle files, spki files, lsh file defining the interface
+corresponding to the code, other lsh files, and finally any generated
+.h.x and .c.x.
