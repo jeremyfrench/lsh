@@ -124,9 +124,9 @@ main(int argc, char **argv)
   
   parse_options(&o, argc, argv);
 
-  key_length = read_file_by_name(o.key_file, 0, &key);
+  key = read_file_by_name(o.key_file, 0, &key_length);
 
-  if (!key_length)
+  if (!key)
     die("Failed to read key-file `%s'\n", o.key_file);
 
   if (! (spki_transport_iterator_first(&i, key_length, key)
@@ -135,10 +135,11 @@ main(int argc, char **argv)
   
   if (o.digest_mode)
     {
-      unsigned digest_length = read_file(stdin,
-					 ctx.hash_algorithm->digest_size + 1,
-					 &digest);
-       if (digest_length != ctx.hash_algorithm->digest_size)
+      unsigned digest_length;
+      digest = read_file(stdin,
+			 ctx.hash_algorithm->digest_size + 1,
+			 &digest_length);
+      if (!digest || digest_length != ctx.hash_algorithm->digest_size)
 	 die("Unexpected size of input digest.\n");
      }
    else

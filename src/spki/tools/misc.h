@@ -38,11 +38,11 @@ hash_file(const struct nettle_hash *hash, FILE *f);
 
 /* If size is > 0, read at most that many bytes. If size == 0,
  * read until EOF. Allocates the buffer dynamically. */
-unsigned
-read_file(FILE *f, unsigned size, char **buffer);
+char *
+read_file(FILE *f, unsigned size, unsigned *length);
 
-unsigned
-read_file_by_name(const char *name, unsigned size, char **buffer);
+char *
+read_file_by_name(const char *name, unsigned size, unsigned *length);
 
 int
 write_file(FILE *f, unsigned size, const char *buffer);

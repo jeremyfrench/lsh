@@ -170,10 +170,10 @@ process_sequence(struct spki_acl_db *db,
   struct spki_iterator i;
   struct spki_5_tuple_list *res = NULL;
   
-  char *data = NULL;
-  unsigned length = read_file_by_name(file, 0, &data);
+  unsigned length;
+  char *data = read_file_by_name(file, 0, &length);
 
-  if (length
+  if (data
       && spki_transport_iterator_first(&i, length, data))
     {
       unsigned start = i.start;
@@ -261,18 +261,18 @@ main(int argc, char **argv)
     die("spki-delegate: Invalid subject.\n");
 
   if (issuer)
-    sexp_format(&cert_buffer, "%(cert(subject%l)(issuer%l)",
-		subject->key_length, subject->key,
-		issuer->key_length, issuer->key);
+    sexp_format(&cert_buffer, "%(cert(issuer%l)(subject%l)",
+		issuer->key_length, issuer->key,
+		subject->key_length, subject->key);
   else
     sexp_format(&cert_buffer, "%(entry(subject%l)",
 		subject->key_length, subject->key);
   
-  if (!process_tag(&cert_buffer, o.tag))
-    die("spki-delegate: Invalid tag.\n");
-
   if (o.propagate)
     sexp_format(&cert_buffer, "(propagate)");
+
+  if (!process_tag(&cert_buffer, o.tag))
+    die("spki-delegate: Invalid tag.\n");
 
   sexp_format(&cert_buffer, "%)");
   sexp_format(&buffer, "%l",
@@ -289,8 +289,11 @@ main(int argc, char **argv)
 
       if (!o.key)
 	die("Automatic key search not yet implemented.\n");
-      key_length = read_file_by_name(o.key, 0, &key);
 
+      key = read_file_by_name(o.key, 0, &key_length);
+      if (!key)
+	die("Reading key file `%s' failed.\n", o.key);
+	
       if (! (spki_transport_iterator_first(&i, key_length, key)
 	     && spki_sign_init(&ctx, NULL, &i)))
 	die("Invalid private key\n");

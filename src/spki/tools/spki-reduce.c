@@ -108,10 +108,10 @@ process_acls(struct spki_acl_db *db, const char *acls)
   struct spki_iterator i;
   int res;
   
-  char *data = NULL;
-  unsigned length = read_file_by_name(acls, 0, &data);
+  unsigned length;
+  char *data = read_file_by_name(acls, 0, &length);
 
-  res = (length
+  res = (data
 	 && spki_transport_iterator_first(&i, length, data)
 	 && spki_acl_process(db, &i));
 
@@ -127,10 +127,10 @@ process_sequence(struct spki_acl_db *db, const struct spki_principal **subject,
   struct spki_iterator i;
   struct spki_5_tuple_list *res = NULL;
   
-  char *data = NULL;
-  unsigned length = read_file(f, 0, &data);
+  unsigned length;
+  char *data = read_file(f, 0, &length);
 
-  if (length
+  if (data
       && spki_transport_iterator_first(&i, length, data))
     res = spki_parse_sequence(db, &i, subject, NULL, spki_verify);
 

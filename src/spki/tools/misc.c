@@ -73,8 +73,8 @@ hash_file(const struct nettle_hash *hash, FILE *f)
 
 /* If size is > 0, read at most that many bytes. If size == 0,
  * read until EOF. Allocates the buffer dynamically. */
-unsigned
-read_file(FILE *f, unsigned max_size, char **contents)
+char *
+read_file(FILE *f, unsigned max_size, unsigned *length)
 {
   unsigned size;
   unsigned done;
@@ -103,8 +103,8 @@ read_file(FILE *f, unsigned max_size, char **contents)
 	fail:
 	  fclose(f);
 	  free(buffer);
-	  *contents = NULL;
-	  return 0;
+
+	  return NULL;
 	}
 
       buffer = p;
@@ -116,27 +116,27 @@ read_file(FILE *f, unsigned max_size, char **contents)
   
   /* NUL-terminate the data. */
   buffer[done] = '\0';
-  *contents = buffer;
-  
-  return done;
+
+  *length = done;
+  return buffer;
 }
 
 /* If size is > 0, read at most that many bytes. If size == 0,
  * read until EOF. Allocates the buffer dynamically. */
-unsigned
-read_file_by_name(const char *name, unsigned max_size, char **contents)
+char *
+read_file_by_name(const char *name, unsigned max_size, unsigned *length)
 {
-  unsigned done;
+  char *data;
   FILE *f;
     
   f = fopen(name, "rb");
   if (!f)
     return 0;
 
-  done = read_file(f, max_size, contents);
+  data = read_file(f, max_size, length);
   fclose(f);
 
-  return done;
+  return data;
 }
 
 int
