@@ -1,3 +1,7 @@
+2003-01-02  Niels Möller  <niels@s3.kth.se>
+
+	* src/io.c (lsh_popen): New function.
+
 2003-01-02  Pontus Sköld  <pont@soua.net>
 
 	* configure.ac: Check for alarm.
