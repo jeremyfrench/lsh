@@ -40,6 +40,8 @@ AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
 
 AC_CHECK_FUNCS(asprintf)
 
+AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
+
 dnl AC_CHECK_VAR(VAR, INCLUDES)
 AC_DEFUN(AC_CHECK_VAR,
 [ AC_CACHE_CHECK(
@@ -62,5 +64,9 @@ if test x$GCC = xyes ; then
  -Waggregate-return \
  -Wpointer-arith -Wbad-function-cast -Wnested-externs"
 fi
+
+CPPFLAGS="$CPPFLAGS -I$srcdir"
+
+AC_SUBST(LIBOBJS)
 
 AC_OUTPUT(Makefile)
