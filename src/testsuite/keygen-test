@@ -3,5 +3,11 @@
 # Tests the key generation programs
 
 echo Testing lsh_writekey
+echo srcdir = $srcdir
+
+if [ -z "$srcdir" ] ; then
+  srcdir = `pwd`
+fi
+
 rm -f foo foo.pub
-../lsh_writekey foo < key-1.private
+../lsh_writekey foo < $srcdir/key-1.private
