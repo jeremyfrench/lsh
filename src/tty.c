@@ -73,8 +73,8 @@ tty_setwinsize(int fd, const struct terminal_dimensions *dims)
 {
   struct winsize ws;
   
-  ws.ws_row = dims->char_width;
-  ws.ws_col = dims->char_height;
+  ws.ws_row = dims->char_height;
+  ws.ws_col = dims->char_width;
   ws.ws_xpixel = dims->pixel_width;
   ws.ws_ypixel = dims->pixel_height;
   
