@@ -1,5 +1,19 @@
 2000-04-20  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/tcpforward_commands.c: Changed uses of listen_command to
+	listen_callback.
+
+	* src/tcpforward.c (do_tcpip_forward_request_continuation,
+	do_tcpip_forward_request_exc): Moved handling of the failure case
+	to the exception handler.
+
+	* src/io_commands.c (make_simple_listen): Deleted resources argument.
+	(make_remember_continuation): New function. (Currently not used).
+	(do_listen): Generalized, so that it can be used by all of
+	do_simple_listen, do_listen_with_callback and do_listen_with_connection.
+	(listen_with_callback):  Renamed the improperly named listen_connection.
+	(listen_with_connection): New command.
+
 	* src/client_userauth.c (make_banner_handler): Replaced with
 	a static object.
 
