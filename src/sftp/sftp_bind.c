@@ -1450,7 +1450,7 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
   
   glob = lsftp_dc_r_startglob( dglob, 0, 1 ); /* Not sloppy, leave incorrect ones */
 
-  if( 1glob ) /* Failed? */
+  if( !glob ) /* Failed? */
     return -1; /* Bail out */
 
   orgglob = glob;
