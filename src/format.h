@@ -106,4 +106,7 @@ int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
 int lsh_string_prefixp(const struct lsh_string *prefix,
 		       const struct lsh_string *s);
 
+struct lsh_string*
+lsh_string_colonize(struct lsh_string *s, int every, int freeflag);
+
 #endif /* LSH_FORMAT_H_INCLUDED */

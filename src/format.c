@@ -631,3 +631,38 @@ lsh_string_prefixp(const struct lsh_string *prefix,
   return ( (prefix->length <= s->length)
 	   && !memcmp(prefix->data, s->data, prefix->length));
 }
+
+struct lsh_string*
+lsh_string_colonize(struct lsh_string *s, int every, int freeflag)
+{
+  UINT32 i = 0;
+  UINT32 j = 0;
+
+  struct lsh_string *packet;
+  UINT32 length;
+  int colons;
+
+  /* No of colonds depens on length, 0..every => 0, 
+   * every..2*every => 1 */
+
+  colons = s->length ? (s->length - 1) / every : 0;
+  length = s->length + colons;
+
+  packet = lsh_string_alloc(length);
+
+  for (; i<s->length; i++)
+    {
+      assert( j < length ); /* Extra sanity check */
+
+      if (i && !(i%every))  /* Every nth position except at the beginning */
+	packet->data[j++] = ':';
+
+      assert( j < length ); /* Extra sanity check */
+      packet->data[j++] = s->data[i];
+    }
+
+  if (freeflag) /* Throw away the source string? */
+    lsh_string_free( s );
+
+  return packet;
+}
