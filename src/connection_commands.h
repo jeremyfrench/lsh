@@ -24,11 +24,7 @@
 #ifndef LSH_CONNECTION_COMMANDS_H_INCLUDED
 #define LSH_CONNECTION_COMMANDS_H_INCLUDED
 
-#include "alist.h"
 #include "command.h"
-#include "connection.h"
-#include "keyexchange.h"
-#include "ssh1_fallback.h"
 
 #define GABA_DECLARE
 #include "connection_commands.h.x"
@@ -36,39 +32,11 @@
 
 /* GABA:
    (class
-     (name handshake_info)
+     (name connection_command)
+     (super command)
      (vars
-       ; Initial value for the connection flags. Usually
-       ; CONNECTION_SERVER or CONNECTION_CLIENT
-       (flags . UINT32)
-       
-       (block_size . UINT32)
-       (id_comment . "const char *")
-       (debug_comment . "const char *")
-
-       (random object randomness)
-       (algorithms object alist)
-       
-       ;; (init object make_kexinit)
-       
-       ;; Used only on the server
-       (fallback object ssh1_fallback)))
+       (connection object ssh_connection)))
 */
-
-struct handshake_info *
-make_handshake_info(UINT32 flags,
-		    const char *id_comment,
-		    const char *debug_comment,
-		    UINT32 block_size,
-		    struct randomness *r,
-		    struct alist *algorithms,
-		    struct ssh1_fallback *fallback);
-
-extern struct collect_info_1 handshake_command;
-#define CONNECTION_HANDSHAKE (&handshake_command.super.super.super)
-
-struct lsh_callback *
-make_connection_close_handler(struct ssh_connection *c);
 
 extern struct command_simple connection_remember;
 #define CONNECTION_REMEMBER (&connection_remember.super.super)
