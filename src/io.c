@@ -587,7 +587,7 @@ do_consuming_read(struct io_callback *c,
 	}
       else if (res > 0)
 	{
-	  s->length = res;
+	  lsh_string_trunc(s, res);
 	  A_WRITE(self->consumer, s);
 	}
       else
