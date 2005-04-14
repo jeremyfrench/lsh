@@ -378,6 +378,8 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 
 	      hex = ssh_format("%lxS", connection->session_id);
 
+	      /* FIXME: Pass sufficient information so that
+		 $SSH_CLIENT can be set properly. */
 	      execl(program, program, "--session-id", lsh_string_data(hex), NULL);
 
 	      werror("lshd_service_request_handler: exec failed: %e\n", errno);
@@ -576,13 +578,16 @@ open_ports(struct configuration *config, int port_number)
 
   s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0)
-    fatal("socket failed: %e\n", errno);
+    {
+      werror("socket failed: %e\n", errno);
+      return NULL;
+    }
 
   io_set_nonblocking(s);
   io_set_close_on_exec(s);
 
   if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
-    fatal("setsockopt SO_REUSEADDR failed: %e\n", errno);
+    werror("setsockopt SO_REUSEADDR failed: %e\n", errno);
 
   memset(&sin, 0, sizeof(sin));
   sin.sin_family = AF_INET;
@@ -590,11 +595,16 @@ open_ports(struct configuration *config, int port_number)
   sin.sin_port = htons(port_number);
 
   if (bind(s, &sin, sizeof(sin)) < 0)
-    fatal("bind failed: %e\n", errno);
+    {
+      werror("bind failed: %e\n", errno);
+      return NULL;
+    }
 
   if (listen(s, 256) < 0)
-    fatal("listen failed: %e\n", errno);
-
+    {
+      werror("listen failed: %e\n", errno);
+      return NULL;
+    }
   port = make_lshd_port(config, s);
   remember_resource(ports, &port->super);
 
@@ -615,6 +625,12 @@ make_configuration(const char *hostkey)
     { "ssh-userauth", "lshd-userauth", NULL };
 
   self->random = make_system_random();
+
+  if (!self->random)
+    {
+      werror("No randomness generator available.\n");
+      exit(EXIT_FAILURE);
+    }
 
   self->algorithms = all_symmetric_algorithms();
   ALIST_SET(self->algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
@@ -665,9 +681,11 @@ main(int argc UNUSED, char **argv UNUSED)
   argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
 
   global_oop_source = io_init();
- 
-  open_ports(make_configuration("testsuite/key-1.private"),
-	     4711);
+
+  werror("Listening on port 4711\n");
+  if (!open_ports(make_configuration("testsuite/key-1.private"),
+		  4711))
+    return EXIT_FAILURE;
 
   /* Ignore status from child processes */
   signal(SIGCHLD, SIG_IGN);
