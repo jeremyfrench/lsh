@@ -26,8 +26,6 @@
 #endif
 
 #include <errno.h>
-/* FIXME: for snprintf, maybe use a custom snprintf? Bazsi */
-#include <stdio.h>  
 
 #include <fcntl.h>
 #include <grp.h>
@@ -35,10 +33,6 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-
-#if HAVE_PTY_H
-# include <pty.h>  /* openpty() */
-#endif
 
 #if HAVE_STROPTS_H
 # include <stropts.h>  /* isastream() */
@@ -85,174 +79,27 @@ make_pty_info(void)
   return pty;
 }
 
-/* FIXME: Maybe this name should be configurable? */
-#ifndef TTY_GROUP
-#define TTY_GROUP "tty"
-#endif
-#ifndef SYSTEM_GROUP
-#define SYSTEM_GROUP "system"
-#endif
-
-#ifndef ACCESSPERMS
-#define ACCESSPERMS 07777
-#endif
-
-/* Sets the permissions on the slave pty suitably for use by USER.
- * This function is derived from the grantpt function in
- * sysdeps/unix/grantpt.c in glibc-2.1. */
-
-static int
-pty_check_permissions(const char *name, uid_t user)
-{
-  struct stat st;
-  struct group *grp;
-  gid_t tty_gid;
-      
-  if (stat(name, &st) < 0)
-    return 0;
-
-  /* Make sure that the user owns the device. */
-  if ( (st.st_uid != user)
-       && (chown(name, user, st.st_gid) < 0) )
-    return 0;
-
-  /* Points to static area */
-  grp = getgrnam(TTY_GROUP);
-
-  if (!grp)
-    /* On AIX, tty:s have group "system", not "tty" */
-    grp = getgrnam(SYSTEM_GROUP);
-    
-  if (grp)
-    tty_gid = grp->gr_gid;
-  else
-    {
-      /* If no tty group is found, use the server's gid */
-      werror("lshd: server_pty.c: No tty group found.\n");
-      tty_gid = getgid();
-    }
-
-  if ( (st.st_gid != tty_gid)
-       && (chown(name, user, tty_gid) < 0))
-    return 0;
-
-  /* Make sure the permission mode is set to readable and writable
-   * by the owner, and writable by the group. */
-
-  if ( ((st.st_mode & ACCESSPERMS) != (S_IRUSR | S_IWUSR | S_IWGRP))
-       && (chmod(name, S_IRUSR | S_IWUSR | S_IWGRP) < 0) )
-    return 0;
-
-  /* Everything is fine */
-  return 1;
-}
-
-#if HAVE_UNIX98_PTYS
-
-/* Returns the name of the slave tty, as a string with an extra
- * terminating NUL. */
-
-static struct lsh_string *
-pty_grantpt_uid(int master, uid_t user)
-{
-  uid_t me = getuid();
-  if (me == user)
-    {
-      /* Use standard grantpt call */
-      if (grantpt(master) < 0)
-	return NULL;
-
-      return make_string(ptsname(master));
-    }
-  else
-    { /* Set up permissions for user */
-
-      /* Pointer to static area */
-      char *name = ptsname(master);
-      return (pty_check_permissions(name, user)
-	      ? make_string(name)
-	      : NULL);
-    }
-}
-#endif /* HAVE_UNIX98_PTYS */
-
 int
-pty_open_master(struct pty_info *pty,
-		uid_t user
-#if !HAVE_UNIX98_PTYS
-		UNUSED
-#endif
-	     )
+pty_open_master(struct pty_info *pty)
 {
 #if HAVE_UNIX98_PTYS
-  struct lsh_string *name = NULL;
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
       werror("pty_open_master: Opening /dev/ptmx failed %e\n", errno);
       return 0;
     }
   
-  if ((name = pty_grantpt_uid(pty->master, user))
+  if ((grantpt(pty->master) == 0)
       && (unlockpt(pty->master) == 0))
     {
-      pty->tty_name = name;
+      pty->tty_name = make_string(ptsname(pty->master));
       return 1;
     }
 
   close (pty->master); pty->master = -1;
-  
-  if (name)
-    lsh_string_free(name);
-  return 0;
-  
-#elif PTY_BSD_SCHEME
-
-#define PTY_BSD_SCHEME_MASTER "/dev/pty%c%c"
-#define PTY_BSD_SCHEME_SLAVE  "/dev/tty%c%c"
-  char first[] = PTY_BSD_SCHEME_FIRST_CHARS;
-  char second[] = PTY_BSD_SCHEME_SECOND_CHARS;
-  char master[MAX_TTY_NAME];
-  char slave[MAX_TTY_NAME];
-  unsigned int i, j;
-
-  for (i = 0; first[i]; i++)
-    {
-      for (j = 0; second[j]; j++) 
-        {
-	  snprintf(master, sizeof(master),
-		   PTY_BSD_SCHEME_MASTER, first[i], second[j]);
-	  master[sizeof(master) - 1] = 0;
-
-	  pty->master = open(master, O_RDWR | O_NOCTTY);
-	  if (pty->master != -1) 
-	    {
-	      /* master succesfully opened */
-	      snprintf(slave, sizeof(slave),
-		       PTY_BSD_SCHEME_SLAVE, first[i], second[j]);
-	      slave[sizeof(slave) - 1] = 0;
-
-	      /* NOTE: As there is no locking, setting the permissions
-	       * properly does not guarantee that nobody else has the
-	       * pty open, and can snoop the traffic on it. But it
-	       * should be a little better than nothing. */
-
-	      /* FIXME: Should we do something about the master
-	       * permissions as well? */
-	      if (pty_check_permissions(slave, user))
-		{
-		  pty->tty_name = make_string(slave);
-		  return 1;
-		}
-	      close(pty->master); pty->master = -1;
-	      return 0;
-	    }
-        }
-    }
-  return 0;
-  /* FIXME: Figure out if we can use openpty. Probably not, as we're
-   * not running with the right uid. */
-#else /* PTY_BSD_SCHEME */
-  /* No pty:s */
+#else
+  /* FIXME: We can't set up correct permissions since we're not root.
+     We need some trick like pty-creation deamon. */
   return 0;
 #endif
 }
