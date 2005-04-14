@@ -41,6 +41,7 @@
 #include "channel_commands.h"
 #include "environ.h"
 #include "format.h"
+#include "lsh_process.h"
 #include "lsh_string.h"
 #include "read_data.h"
 #include "reaper.h"
@@ -80,6 +81,7 @@
        (term string)
 
        ; Value for the SSH_CLIENT environment variable.
+       ; FIXME: Currently not implemented.
        (client string)
        
        ; Child process's stdio 
@@ -420,13 +422,12 @@ static int make_pty(struct pty_info *pty UNUSED,
 
 static int
 spawn_process(struct server_session *session,
-	      struct lsh_user *user,
 	      /* All information but the fd:s should be filled in
 	       * already */
 	      struct spawn_info *info)
 {
   struct lsh_callback *read_close_callback;
-  
+
   assert(!session->process);
 
   if (session->pty && !make_pty(session->pty,
@@ -440,15 +441,16 @@ spawn_process(struct server_session *session,
   if (!session->pty && !make_pipes(info->in, info->out, info->err))
     return 0;
 
-  session->process = USER_SPAWN(user, info, make_exit_shell(session));
+  /* FIXME: Doesn't do any utmp/wtmp logging */
+  session->process = spawn_shell(info, make_exit_shell(session));
 
   if (!session->process)
     return 0;
-  
+
   /* Close callback for stderr and stdout */
   read_close_callback
     = make_channel_read_close_callback(&session->super);
-  
+
   session->in
     = io_write(make_lsh_fd
 	       (info->in[1], session->pty ? IO_PTY : IO_NORMAL,
@@ -461,7 +463,7 @@ spawn_process(struct server_session *session,
 
   /* Flow control */
   session->in->write_buffer->report = &session->super.super;
-  
+
   /* FIXME: Should we really use the same exception handler,
    * which will close the channel on read errors, or is it
    * better to just send EOF on read errors? */
@@ -474,7 +476,7 @@ spawn_process(struct server_session *session,
 						 HANDLER_CONTEXT)),
 	      make_channel_read_data(&session->super),
 	      read_close_callback);
-  session->err 
+  session->err
     = ( (info->err[0] != -1)
 	? io_read(make_lsh_fd
 		  (info->err[0], IO_NORMAL, "child stderr",
@@ -489,13 +491,13 @@ spawn_process(struct server_session *session,
   session->super.receive = do_receive;
   session->super.send_adjust = do_send_adjust;
   session->super.eof = do_eof;
-	  
-  /* Make sure that the process and it's stdio is
-   * cleaned up if the channel or connection dies. */
+
+  /* Make sure that the process and it's stdio is cleaned up if
+   * the channel or connection dies. */
   remember_resource(session->super.resources, &session->process->super);
 
-  /* FIXME: How to do this properly if in and out may use the
-   * same fd? */
+  /* FIXME: How to do this properly if in and out may use the same
+   * fd? */
   remember_resource(session->super.resources, &session->in->super);
   remember_resource(session->super.resources, &session->out->super);
   if (session->err)
@@ -506,27 +508,20 @@ spawn_process(struct server_session *session,
   session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
 
   channel_start_receive(&session->super, session->initial_window);
-  
+
   return 1;
 }
 
 static void
 init_spawn_info(struct spawn_info *info, struct server_session *session,
-		unsigned argc, const char **argv,
+		const char **argv,
 		unsigned env_length, struct env_value *env)
 {
   unsigned i = 0;
   
   memset(info, 0, sizeof(*info));
-#if 0
-  /* FIXME: lshd needs the peer information from somewhere */
-  info->peer = session->super.connection->peer;
-#else
-  info->peer = NULL;
-#endif
-  info->pty = session->pty;
 
-  info->argc = argc;
+  info->pty = session->pty;
   info->argv = argv;
   
   assert(env_length >= 5);
@@ -543,31 +538,6 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
     {
       env[i].name = ENV_SSH_TTY;
       env[i].value = info->pty->tty_name;
-      i++;
-    }
-
-  if (info->peer)
-    {
-      /* Save string in the session object, so that it can be garbage
-       * collected properly. */
-      assert(!session->client);
-
-#if 0
-      /* FIXME: lshd needs this information from somewhere */
-      if (session->super.connection->local)
-	session->client = ssh_format("%lS %di %di", 
-				      info->peer->ip,
-				      info->peer->port,
-				      session->super.connection->local->port);
-      else
-#endif
-	session->client = ssh_format("%lS %di UNKNOWN", 
-				     info->peer->ip,
-				     info->peer->port
-				     );
-      env[i].name = ENV_SSH_CLIENT;
-      env[i].value = session->client;
-
       i++;
     }
 
@@ -603,7 +573,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   static const struct exception shell_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
 
-  trace("shell_request_handler");
+  trace("shell_request_handler\n");
   if (!parse_eod(args))
     {
       PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
@@ -614,15 +584,13 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
     /* Already spawned a shell or command */
     goto fail;
 
-  init_spawn_info(&spawn, session, 0, NULL, 5, env);
+  init_spawn_info(&spawn, session, NULL, 5, env);
   spawn.login = 1;
 
-#if 0
   /* FIXME: lshd-connection shouldn't need any user information */
-  if (spawn_process(session, channel->connection->user, &spawn))
+  if (spawn_process(session, &spawn))
     COMMAND_RETURN(c, channel);
   else
-#endif
     {
     fail:
       EXCEPTION_RAISE(e, &shell_request_failed);
@@ -661,22 +629,18 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   else
     {
       struct spawn_info spawn;
-      const char *args[2];
+      const char *args[4] = { NULL, "-c", NULL, NULL };
       struct env_value env[5];
 
       struct lsh_string *s = ssh_format("%ls", command_len, command);
+      args[2] = lsh_get_cstring(s);
       
-      init_spawn_info(&spawn, session, 2, args, 5, env);
-      spawn.login = 0;
+      init_spawn_info(&spawn, session, args, 5, env);
+      spawn.login = 0;      
       
-      args[0] = "-c";
-      args[1] = lsh_get_cstring(s);
-
-#if 0
-      if (spawn_process(session, channel->connection->user, &spawn))
+      if (spawn_process(session, &spawn))
 	COMMAND_RETURN(c, channel);
       else
-#endif
 	EXCEPTION_RAISE(e, &exec_request_failed);
 
       lsh_string_free(s);
@@ -751,7 +715,7 @@ do_spawn_subsystem(struct channel_request *s,
   if (!session->process && program)
     {
       struct spawn_info spawn;
-      const char *args[2];
+      const char *args[4] = { NULL, "-c", NULL, NULL };
       struct env_value env[5];
 
       /* Don't use any pty */
@@ -761,18 +725,16 @@ do_spawn_subsystem(struct channel_request *s,
 	  session->pty = NULL;
 	}
 
-      args[0] = "-c"; args[1] = program;
+      args[2] = program;
       
-      init_spawn_info(&spawn, session, 2, args, 5, env);
+      init_spawn_info(&spawn, session, args, 5, env);
       spawn.login = 0;
 
-#if 0
-      if (spawn_process(session, channel->connection->user, &spawn))
+      if (spawn_process(session, &spawn))
 	{
 	  COMMAND_RETURN(c, channel);
 	  return;
 	}
-#endif
     }
   EXCEPTION_RAISE(e, &subsystem_request_failed);
 }
@@ -792,13 +754,13 @@ make_subsystem_handler(const char **subsystems)
 #if WITH_PTY_SUPPORT
 
 /* pty_handler */
-static void
-do_alloc_pty(struct channel_request *c UNUSED,
-	     struct ssh_channel *channel,
-	     struct channel_request_info *info UNUSED,
-	     struct simple_buffer *args,
-	     struct command_continuation *s,
-	     struct exception_handler *e)
+DEFINE_CHANNEL_REQUEST(pty_request_handler)
+     (struct channel_request *c UNUSED,
+      struct ssh_channel *channel,
+      struct channel_request_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *s,
+      struct exception_handler *e)
 {
   struct lsh_string *term = NULL;
 
@@ -822,15 +784,12 @@ do_alloc_pty(struct channel_request *c UNUSED,
       /* The client may only request one tty, and only before
        * starting a process. */
 
-#if 0
       if (session->pty || session->process
-	  || !pty_open_master(pty, channel->connection->user->uid))
-#endif
+	  || !pty_open_master(pty))
 	{
 	  verbose("Pty allocation failed.\n");
 	  EXCEPTION_RAISE(e, &pty_request_failed);
 	}
-#if 0
       else
 	{
 	  /* FIXME: Perhaps we can set the window dimensions directly
@@ -840,12 +799,12 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	  remember_resource(channel->resources, &pty->super);
 
 	  verbose(" ... granted.\n");
+	  debug("pty master fd: %i\n", pty->master);
 	  COMMAND_RETURN(s, channel);
 
 	  /* Success */
 	  return;
 	}
-#endif
     }
   else
     {
@@ -857,10 +816,6 @@ do_alloc_pty(struct channel_request *c UNUSED,
   KILL_RESOURCE(&pty->super);
   KILL(pty);
 }
-
-struct channel_request
-pty_request_handler =
-{ STATIC_HEADER, do_alloc_pty };
 
 static void
 do_window_change_request(struct channel_request *c UNUSED,
@@ -905,13 +860,13 @@ window_change_request_handler =
 
 /* FIXME: We must delay the handling of any shell request until
  * we have responded to the x11-req message. */
-static void
-do_x11_req(struct channel_request *s UNUSED,
-	   struct ssh_channel *channel,
-	   struct channel_request_info *info UNUSED,
-	   struct simple_buffer *args,
-	   struct command_continuation *c,
-	   struct exception_handler *e)
+DEFINE_CHANNEL_REQUEST(x11_request_handler)
+     (struct channel_request *s UNUSED,
+      struct ssh_channel *channel,
+      struct channel_request_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
   static struct exception x11_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "x11-req failed");
@@ -932,27 +887,22 @@ do_x11_req(struct channel_request *s UNUSED,
       && parse_string(args, &cookie_length, &cookie)
       && parse_uint32(args, &screen))
     {
-#if 0
       /* The client may only request one x11-forwarding, and only
        * before starting a process. */
       if (session->x11 || session->process
 	  || !(session->x11 = server_x11_setup(channel,
-					       channel->connection->user,
 					       single,
 					       protocol_length, protocol,
 					       cookie_length, cookie,
 					       screen, c, e)))
-#endif
 	{
 	  verbose("X11 request failed.\n");
 	  EXCEPTION_RAISE(e, &x11_request_failed);
 	}
-#if 0
       else
 	{	  
 	  return;
 	}
-#endif
     }
   else
     {
@@ -960,9 +910,5 @@ do_x11_req(struct channel_request *s UNUSED,
       PROTOCOL_ERROR(e, "Invalid x11 request.");
     }
 }
-
-struct channel_request
-x11_req_handler =
-{ STATIC_HEADER, do_x11_req };
 
 #endif /* WITH_X11_FORWARD */
