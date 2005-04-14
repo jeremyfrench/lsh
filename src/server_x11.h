@@ -40,7 +40,7 @@
 */
 
 struct server_x11_info *
-server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
+server_x11_setup(struct ssh_channel *channel,
 		 int single,
 		 uint32_t protocol_length, const uint8_t *protocol,
 		 uint32_t cookie_length, const uint8_t *cookie,

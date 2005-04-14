@@ -44,9 +44,9 @@
 #include "environ.h"
 #include "format.h"
 #include "lsh_string.h"
+#include "lsh_process.h"
 #include "reaper.h"
 #include "resource.h"
-#include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -166,31 +166,20 @@ DEFINE_COMMAND(open_forwarded_x11)
        ; Name of the local socket
        (name string)
        (display_number . int)
-       ; The user that should own the socket
-       (uid . uid_t)
        ; The corresponding listening fd
        (fd object lsh_fd)))
 */
 
 /* This code is quite paranoid in order to avoid symlink attacks when
- * creating and deleting the socket. Similar paranoia in xlib would be
- * desirable, but not realistic. However, most of this is not needed
- * if the sticky bit is set properly on the /tmp and /tmp/.X11-unix
+ * creating the socket. Similar paranoia in xlib would be desirable,
+ * but not realistic. However, most of this is not needed if the
+ * sticky bit is set properly on the /tmp and /tmp/.X11-unix
  * directories. */
-
-static void
-delete_x11_socket(struct server_x11_socket *self)
-{
-  if (unlink(lsh_get_cstring(self->name)) < 0)
-    werror("Failed to delete x11 socket %S for user %i %e\n",
-	   self->name, self->uid, errno);
-}
 
 static void
 do_kill_x11_socket(struct resource *s)
 {
   CAST(server_x11_socket, self, s);
-  uid_t me = geteuid();
   int old_cd;
 
   if (self->super.alive)
@@ -210,33 +199,15 @@ do_kill_x11_socket(struct resource *s)
       close(self->dir);
       self->dir = -1;
       
-      if (me == self->uid)
-	delete_x11_socket(self);
-      else
-	{
-	  if (seteuid(self->uid) < 0)
-	    {
-	      werror("Couldn't change euid (to %i) for deleting x11 socket.\n",
-		     self->uid);
-	      goto done;
-	    }
-	  assert(geteuid() == self->uid);
+      if (unlink(lsh_get_cstring(self->name)) < 0)
+	werror("Failed to delete x11 socket %S: %e\n",
+	       self->name, errno);
 
-	  delete_x11_socket(self);
-	  
-	  if (seteuid(me) < 0)
-	    /* Shouldn't happen, abort if it ever does. */
-	    fatal("Failed to restore euid after deleting x11 socket.\n");
-
-	  assert(geteuid() == me);
-	}
-
-    done:
       lsh_popd(old_cd, X11_SOCKET_DIR);
     }
 }
 
-/* The processing except the uid change stuff. */
+/* Creates a socket in tmp, accessible only by ourself. */
 static struct server_x11_socket *
 open_x11_socket(struct ssh_channel *channel)
 {
@@ -324,44 +295,6 @@ open_x11_socket(struct ssh_channel *channel)
   }
 }
 
-/* Creates a socket in tmp, accessible only by the right user. */
-static struct server_x11_socket *
-server_x11_listen(struct ssh_channel *channel)
-{
-  struct server_x11_socket *s;
-
-  return NULL;
-  /* FIXME: User handling should not be needed in lshd-connection */
-#if 0
-  uid_t me = geteuid();
-  uid_t user = channel->connection->user->uid;
-  
-  if (me == channel->connection->user->uid)
-    s = open_x11_socket(channel);
-  else
-    {      
-      if (seteuid(user) < 0)
-	{
-	  /* FIXME: We could display the user name here. */
-	  werror("Couldn't change euid (to %i) for creating x11 socket.\n",
-		 user);
-	  return NULL;
-	}
-
-      assert(geteuid() == user);
-      
-      s = open_x11_socket(channel);
-      
-      if (seteuid(me) < 0)
-	/* Shouldn't happen, abort if it ever does. */
-	fatal("Failed to restore euid after deleting x11 socket.\n");
-      
-      assert(geteuid() == me);
-    }
-  return s;
-#endif
-}
-
 /* GABA:
    (class
      (name xauth_exit_callback)
@@ -422,7 +355,7 @@ bad_string(uint32_t length, const uint8_t *data)
 
 /* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
 struct server_x11_info *
-server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
+server_x11_setup(struct ssh_channel *channel,
 		 int single,
 		 uint32_t protocol_length, const uint8_t *protocol,
 		 uint32_t cookie_length, const uint8_t *cookie,
@@ -461,7 +394,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
     }
 
   /* Get a free socket under /tmp/.X11-unix/ */
-  socket = server_x11_listen(channel);
+  socket = open_x11_socket(channel);
   if (!socket)
     return NULL;
 
@@ -470,11 +403,14 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
     tmp = "/tmp";
   
   display = ssh_format(":%di.%di", socket->display_number, screen);
-  xauthority = ssh_format("%lz/.lshd.%lS.Xauthority", tmp, user->name);
+  xauthority = ssh_format("%lz/.lshd.%li.Xauthority", tmp, socket->display_number);
   
   {
     struct spawn_info spawn;
-    const char *args[2] = { "-c", XAUTH_PROGRAM };
+#if SPAWN_INFO_FIRST_ARG != 1
+#error Can not handle SPAWN_INFO_FIRST_ARG != 1
+#endif
+    const char *args[4] = { NULL, "-c", XAUTH_PROGRAM, NULL };
     struct env_value env;
 
     struct lsh_process *process;
@@ -506,15 +442,13 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
     spawn.out[0] = -1; spawn.out[1] = null;
     spawn.err[0] = -1; spawn.err[1] = null;
     
-    spawn.peer = NULL;
     spawn.pty = NULL;
     spawn.login = 0;
-    spawn.argc = 2;
     spawn.argv = args;
     spawn.env_length = 1;
     spawn.env = &env;
 
-    process = USER_SPAWN(user, &spawn, make_xauth_exit_callback(c, e));
+    process = spawn_shell(&spawn, make_xauth_exit_callback(c, e));
     if (process)
       {
 	NEW(server_x11_info, info);
@@ -547,8 +481,6 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
       }
     else
       {
-	close(spawn.in[0]);
-	close(spawn.in[1]);
       fail:
 	lsh_string_free(display);
 	lsh_string_free(xauthority);
