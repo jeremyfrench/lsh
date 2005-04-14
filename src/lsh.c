@@ -389,7 +389,6 @@ read_user_keys(struct lsh_options *options)
 static struct verifier *
 do_lsh_lookup(struct lookup_verifier *c,
 	      int method,
-	      struct lsh_user *keyholder UNUSED,
 	      struct lsh_string *key)
 {
   CAST(lsh_host_db, self, c);

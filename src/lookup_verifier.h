@@ -43,12 +43,9 @@
      (vars
        (lookup method (object verifier)
                       "int method"
-
-		      ; NOTE: The user is only needed on the server side.
-                      "struct lsh_user *user"
 		      "struct lsh_string *key")))
 */
 
-#define LOOKUP_VERIFIER(l, m, kh, key) ((l)->lookup((l), (m), (kh), (key)))
+#define LOOKUP_VERIFIER(l, m, key) ((l)->lookup((l), (m), (key)))
 
 #endif /* LSH_LOOKUP_VERIFIER_H_INCLUDED */

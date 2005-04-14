@@ -84,7 +84,7 @@ do_handle_dh_reply(struct packet_handler *c,
     }
     
   v = LOOKUP_VERIFIER(closure->verifier, closure->hostkey_algorithm,
-		      NULL, server_key);
+		      server_key);
   lsh_string_free(server_key);
 
   if (!v)
