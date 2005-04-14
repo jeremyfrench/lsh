@@ -29,7 +29,6 @@
 #include "interact.h"
 #include "list.h"
 #include "parse.h"
-#include "userauth.h"
 
 /* Client functions */
 struct lsh_string *
