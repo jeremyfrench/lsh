@@ -133,7 +133,4 @@ struct reaper;
 /* resource.h */
 struct resource;
 
-/* userauth.h */
-struct lsh_user;
-
 #endif /* LSH_H_INCLUDED */
