@@ -741,6 +741,8 @@ AH_TEMPLATE([HAVE_UNIX98_PTYS],
 	    [Define if a we have working UNIX98 pty handling])
 if test x$lsh_cv_sys_unix98_ptys = xyes; then
   AC_DEFINE(HAVE_UNIX98_PTYS)
+else
+  AC_MSG_WARN([No support for UNIX98 PTYs. PTY support disabled.])
 fi
 
 LSH_GCC_ATTRIBUTES
