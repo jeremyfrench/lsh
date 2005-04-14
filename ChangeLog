@@ -1,3 +1,57 @@
+2005-04-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_process.c: #if:ed out all utmp/wtmp code, since it
+	can't work without extra privileges.
+	(exec_shell, spawn_shell): New functions, replacing the obsolete
+	USER_SPAWN method.
+	
+	* src/server_x11.c (class server_x11_socket): Deleted uid
+	attribute.
+	(delete_x11_socket): Deleted function, folded into...
+	(do_kill_x11_socket): ... deleted uid-changing code.
+	(server_x11_listen) Deleted function responsible for uid changes.
+	open_x11_socket is sufficient.
+	(server_x11_setup): Deleted user argument. Use the display number
+	instead of the user name when forming the name of the Xauthority
+	file. Use the new function spawn_shell.
+
+	* src/server_session.c (spawn_process): Deleted user argument. Use
+	spawn_shell.
+	(spawn_process): Deleted support for peer.
+	(do_spawn_subsystem, shell_request_handler, exec_request_handler):
+	Updated to new spawn_shell conventions.
+	(pty_request_handler): Updated to new pty_open_master. Use
+	DEFINE_CHANNEL_REQUEST.
+	(x11_request_handler): Updated to new server_x11_setup. Use
+	DEFINE_CHANNEL_REQUEST.
+
+	* src/server_pty.c (pty_check_permissions, pty_grantpt_uid):
+	Deleted functions.
+	(pty_open_master): Deleted pty support for systems lacking UNIX98
+	pty:s. Deleted uid argument.
+
+	* src/reaper.c: Deleted the object-oriented interface.
+	(reaper_global): New global variable.
+	(reaper_init, reaper_handle): New functions.
+
+	* src/reaper.h (class reaper): Deleted.
+
+	* src/lshd.c: Friendlier error messages if initialization fails.
+
+	* src/lshd-connection.c (main): Call reaper_init.
+	(make_connection): Support for pty-req and x11-req.
+
+	* src/client_userauth.h: Don't include userauth.h.
+
+	* src/lookup_verifier.h (LOOKUP_VERIFIER): Deleted argument for
+	the key holder.
+
+	* src/lsh.h (struct lsh_user): Deleted declaration.
+
+	* src/lsh_process.h: New file.
+
+	* configure.ac: Warn if UNIX98 pty:s are unavailable.
+
 2005-02-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (shell_request_handler): Added trace output.
