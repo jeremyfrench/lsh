@@ -36,6 +36,7 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "resource.h"
+#include "reaper.h"
 #include "server_session.h"
 #include "ssh.h"
 #include "ssh_read.h"
@@ -186,9 +187,13 @@ make_connection(void)
 
   self->table = make_channel_table(make_connection_write_handler(self));
 
+  /* FIXME: Always enables X11 */
   ALIST_SET(self->table->channel_types, ATOM_SESSION,
 	    &make_open_session(
-	      make_alist(1, ATOM_SHELL, &shell_request_handler, -1))->super);
+	      make_alist(3,
+			 ATOM_SHELL, &shell_request_handler,
+			 ATOM_PTY_REQ, &pty_request_handler,
+			 ATOM_X11_REQ, &x11_request_handler, -1))->super);
 
   return self;
 }
@@ -220,6 +225,7 @@ main_argp =
 int
 main(int argc, char **argv)
 {
+  struct connection *connection;
   fprintf(stderr, "argc = %d\n", argc);
   {
     int i;
@@ -230,8 +236,8 @@ main(int argc, char **argv)
   argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
 
   global_oop_source = io_init();
+  reaper_init();
 
-  struct connection *connection;
   werror("Started connection service\n");
   
   connection = make_connection();
