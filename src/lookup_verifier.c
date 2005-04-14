@@ -1,4 +1,4 @@
-/* lookup_verifier.h
+/* lookup_verifier.c
  *
  * Lookup signature verifiers of a public key
  *
