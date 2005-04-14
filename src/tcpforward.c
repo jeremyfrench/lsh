@@ -35,8 +35,7 @@
 #include "io_commands.h"
 #include "lsh_string.h"
 #include "ssh.h"
-/* For connection->user->name */
-#include "userauth.h"
+
 #include "werror.h"
 
 
