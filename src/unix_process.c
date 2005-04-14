@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 
@@ -62,12 +63,19 @@
 # include <libutil.h>
 #endif
 
+#include "environ.h"
 #include "format.h"
 #include "lsh_string.h"
+#include "lsh_process.h"
 #include "reaper.h"
-#include "userauth.h"
+#include "server_pty.h"
 #include "werror.h"
 #include "xalloc.h"
+
+/* For lack of a better place */
+#define GABA_DEFINE
+# include "lsh_process.h.x"
+#undef GABA_DEFINE
 
 #include "unix_process.c.x"
 
@@ -162,7 +170,7 @@ do_signal_process(struct lsh_process *s, int signal)
 }
 
 
-static struct lsh_process *
+struct lsh_process *
 make_unix_process(pid_t pid, int signal)
 {
   NEW(unix_process, self);
@@ -177,6 +185,298 @@ make_unix_process(pid_t pid, int signal)
 
   return &self->super;
 }
+
+static void
+safe_close(int fd)
+{
+  if (fd != -1 && close(fd) < 0)
+    werror("close failed %e\n", errno);
+}
+
+static const char *
+format_env_pair(const char *name, struct lsh_string *value)
+{
+  assert(lsh_get_cstring(value));
+  return lsh_get_cstring(ssh_format("%lz=%lS", name, value));
+}
+
+static const char *
+format_env_pair_c(const char *name, const char *value)
+{
+  return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
+}
+
+
+/* Helper functions for the process spawning. */
+int
+exec_shell(struct spawn_info *info)
+{
+  /* Environment consists of SHELL, other inherited values, caller's
+     values, and a terminating NULL. */
+#define INHERIT_ENV 5
+  const char *inherited[INHERIT_ENV] =
+    {
+      ENV_HOME, ENV_USER, ENV_LOGNAME, ENV_TZ, ENV_SSH_CLIENT
+    };
+  const char *shell;
+  
+  unsigned i;
+  unsigned j;
+  const char **envp = alloca(sizeof(char *) * (info->env_length + INHERIT_ENV + 2));
+
+  i = 0;
+  
+  shell = getenv(ENV_SHELL);
+  if (!shell)
+    {
+      werror("exec_shell: No login shell???\n");
+      return 0;
+    }
+
+  envp[i++] = format_env_pair_c(ENV_SHELL, shell);
+  
+  for (j = 1; j < INHERIT_ENV; j++)
+    {
+      const char *name = inherited[j];
+      const char *value = getenv(name);
+      if (value)
+	envp[i++] = format_env_pair_c(name, value);
+    }
+  for (j = 0; j < info->env_length; j++)
+    envp[i++] = format_env_pair(info->env[j].name, info->env[j].value);
+
+  envp[i++] = NULL;
+
+  if (!info->argv)
+    {
+      info->argv = alloca(sizeof(char *) * 2);
+      info->argv[1] = NULL;
+    }
+
+  if (info->login)
+    {
+      /* Fixup argv[0], so that it starts with a dash */
+      const char *p;
+      char *s;
+      size_t length = strlen(shell);
+
+      /* We can't alloca unlimited storage */
+      if (length > 1000)
+	{
+	  werror("exec_shell: shell name far too long.\n");
+	  return 0;
+	}
+      
+      debug("exec_shell: fixing up name of shell...\n");
+      
+      s = alloca(length + 2);
+
+      /* Make sure that the shell's name begins with a -. */
+      p = strrchr (shell, '/');
+      if (!p)
+	p = shell;
+      else
+	p ++;
+
+      s[0] = '-';
+      strncpy (s + 1, p, length + 1);
+      info->argv[0] = s;
+    }
+  else
+    info->argv[0] = shell;
+
+  debug("exec_shell: argv0 = '%z'.\n", info->argv[0]);
+
+  trace("exec_shell: before exec\n");
+  execve(shell, (char **) info->argv, (char**) envp);
+
+  werror("exec_shell: exec of `%z' failed %e\n", shell, errno);
+  return 0;  
+}
+
+static void
+spawn_error(struct spawn_info *info,
+	    const int *sync)
+{
+  safe_close(sync[0]); safe_close(sync[1]);
+  
+  safe_close(info->in[0]);  safe_close(info->in[1]);
+  safe_close(info->out[0]); safe_close(info->out[1]);
+  safe_close(info->err[0]);
+  /* Allow the client's stdout and stderr to be the same fd, e.g.
+   * both /dev/null. */
+  if (info->err[1] != info->out[1])
+    safe_close(info->err[1]);
+}
+
+/* Parent processing */
+static struct lsh_process *
+spawn_parent(struct spawn_info *info,
+	     struct exit_callback *c,
+	     pid_t child,
+	     const int *sync)
+{
+  /* Parent */
+  struct lsh_process *process;
+  char dummy;
+  int res;
+      
+  /* Close the child's fd:s, except ones that are -1 */
+  safe_close(info->in[0]);
+  safe_close(info->out[1]);
+
+  /* Allow the client's stdout and stderr to be the same fd, e.g.
+   * both /dev/null. */
+  if (info->err[1] != info->out[1])
+    safe_close(info->err[1]);
+
+  safe_close(sync[1]);
+
+  /* On Solaris, reading the master side of the pty before the
+   * child has opened the slave side of it results in EINVAL. We
+   * can't have that, so we'll wait until the child has opened the
+   * tty, after which it should close its end of the
+   * syncronization pipe, and our read will return 0.
+   *
+   * We need the syncronization only if we're actually using a
+   * pty, but for simplicity, we do it every time. */
+      
+  do
+    res = read(sync[0], &dummy, 1);
+  while (res < 0 && errno == EINTR);
+
+  safe_close(sync[0]);
+
+  trace("spawn_parent: after sync\n");
+
+  /* FIXME: Doesn't do any utmp/wtmp logging */
+  process = make_unix_process(child, SIGHUP);
+  reaper_handle(child, c);
+
+  trace("spawn_parent: parent after process setup\n");
+
+  return process;
+}
+
+static void
+spawn_child(struct spawn_info *info,
+	    const int *sync)
+{
+  int tty = -1;
+
+  /* We want to be a process group leader */
+  if (setsid() < 0)
+    {
+      werror("setsid failed, already process group leader?\n"
+	     "   %e\n", errno);
+      _exit(EXIT_FAILURE);
+    }
+      
+#if WITH_PTY_SUPPORT
+  if (info->pty)
+    {
+      debug("spawn_child: Opening slave tty...\n");
+      if ( (tty = pty_open_slave(info->pty)) < 0)
+	{
+	  werror("Can't open controlling tty for child!\n");
+	  _exit(EXIT_FAILURE);
+	}
+      else
+	debug("spawn_child: Opening slave tty succeeded.\n");
+    }
+#endif /* WITH_PTY_SUPPORT */
+
+  trace("spawn_child: after pty\n");
+      
+  /* Now any tty processing is done, so notify our parent by
+   * closing the syncronization pipe. */
+      
+  safe_close(sync[0]); safe_close(sync[1]);
+
+#define DUP_FD_OR_TTY(src, dst) dup2((src) >= 0 ? (src) : tty, dst)
+
+  if (DUP_FD_OR_TTY(info->in[0], STDIN_FILENO) < 0)
+    {
+      werror("Can't dup stdin!\n");
+      _exit(EXIT_FAILURE);
+    }
+
+  if (DUP_FD_OR_TTY(info->out[1], STDOUT_FILENO) < 0)
+    {
+      werror("Can't dup stdout!\n");
+      _exit(EXIT_FAILURE);
+    }
+
+  trace("spawn_child: child before stderr dup\n");
+  if (!dup_error_stream())
+    {
+      werror("unix_user.c: Failed to dup old stderr. Bye.\n");
+      set_error_ignore();
+    }
+
+  if (DUP_FD_OR_TTY(info->err[1], STDERR_FILENO) < 0)
+    {
+      werror("Can't dup stderr!\n");
+      _exit(EXIT_FAILURE);
+    }
+#undef DUP_FD_OR_TTY
+      
+  trace("spawn_child: after stderr dup\n");
+
+  /* Close all the fd:s, except ones that are -1 */
+  safe_close(info->in[0]);
+  safe_close(info->in[1]);
+  safe_close(info->out[0]);
+  safe_close(info->out[1]);
+  safe_close(info->err[0]);
+  /* Allow the client's stdout and stderr to be the same fd, e.g.
+   * both /dev/null. */
+  if (info->err[1] != info->out[1])
+    safe_close(info->err[1]);
+
+  safe_close(tty);  
+}
+
+struct lsh_process *
+spawn_shell(struct spawn_info *info,
+	    struct exit_callback *c)
+{
+  /* Pipe used for syncronization. */
+  int sync[2];
+  pid_t child;
+  
+  if (!lsh_make_pipe(sync))
+    {
+      werror("do_spawn: Failed to create syncronization pipe.\n");
+      return NULL;
+    }
+  
+  child = fork();
+  if (child < 0)
+    {
+      werror("spawn_shell: fork failed %e\n", errno);
+      spawn_error(info, sync);
+
+      return NULL;
+    }
+  else if (child)
+    {
+      /* Parent */
+      trace("spawn_shell: parent process\n");
+
+      return spawn_parent(info, c, child, sync);
+    }
+  else
+    { /* Child */
+      spawn_child(info, sync);
+      
+      exec_shell(info);
+      _exit(EXIT_FAILURE);
+    }
+}
+
+/* At the moment, utmp and wtmp can't work at all, due to lack of privileges. */
+#if 0
 
 /* GABA:
    (class
@@ -489,3 +789,4 @@ unix_process_setup(pid_t pid,
 
   return process;
 }
+#endif
