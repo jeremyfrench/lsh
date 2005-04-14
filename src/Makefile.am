@@ -62,9 +62,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
 	rsa.c \
-	server.c server_authorization.c server_keyexchange.c \
-	server_password.c server_publickey.c \
-	server_pty.c server_session.c server_userauth.c \
+	server.c \
+	server_pty.c server_session.c \
 	server_x11.c \
 	service_read.c \
 	sexp.c socks.c \
@@ -73,8 +72,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	string_buffer.c suspend.c \
 	tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c \
-	unix_interact.c unix_process.c unix_random.c unix_user.c \
-	userauth.c \
+	unix_interact.c unix_process.c unix_random.c \
 	werror.c write_buffer.c write_packet.c \
 	xalloc.c xauth.c zlib.c
 
