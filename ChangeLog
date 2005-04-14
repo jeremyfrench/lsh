@@ -1,5 +1,10 @@
 2005-04-14  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/Makefile.am (liblsh_a_SOURCES): Deleted obsolete files
+	server_authorization.c server_keyexchange.c, server_password.c
+	server_publickey.c, server_userauth.c, unix_user.c, and
+	userauth.c.
+
 	* src/unix_process.c: #if:ed out all utmp/wtmp code, since it
 	can't work without extra privileges.
 	(exec_shell, spawn_shell): New functions, replacing the obsolete
