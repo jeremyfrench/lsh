@@ -97,11 +97,11 @@ pty_open_master(struct pty_info *pty)
     }
 
   close (pty->master); pty->master = -1;
-#else
+#endif
+
   /* FIXME: We can't set up correct permissions since we're not root.
      We need some trick like pty-creation deamon. */
   return 0;
-#endif
 }
 
 /* Opens the slave side of the tty, intitializes it, and makes it our
