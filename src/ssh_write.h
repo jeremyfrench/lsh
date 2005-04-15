@@ -44,7 +44,11 @@ init_ssh_write_state(struct ssh_write_state *self);
 struct ssh_write_state *
 make_ssh_write_state(void);
 
-/* Returns 1 on success, 0 on EWOULDBLOCK, and -1 on error */
+/* FIXME: When ssh_write_data returns 0, we should probably stop
+   producing more data, and then we need some mechanism to wake us up
+   when writing is possible again. */
+/* Returns 1 on success, 0 on EWOULDBLOCK, and -1 on error, indicated
+   by errno. */
 int
 ssh_write_data(struct ssh_write_state *self,
 	       oop_source *source, int fd,
