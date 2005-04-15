@@ -164,10 +164,20 @@ static void
 connection_write_data(struct lshd_connection *connection,
 		      struct lsh_string *data)
 {
-  /* FIXME: Proper error handling */
+  if (!connection->super.alive)
+    {
+      werror("connection_write_data: Connection is dead.\n");
+      lsh_string_free(data);
+      return;
+    }
+  /* FIXME: If ssh_write_data returns 0, we need to but the connection
+     to sleep and wake it up later. */
   if (ssh_write_data(connection->writer,
 		     global_oop_source, connection->ssh_output, data) < 0)
-    fatal("Write failed.\n");
+    {
+      werror("write failed: %e\n", errno);
+      connection_disconnect(connection, 0, NULL);
+    }
 }
 
 void
@@ -205,7 +215,8 @@ lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
   length = lsh_string_length(line);
   version = lsh_string_data(line);
 
-  /* Line must start with "SSH-2.0-" (we may need to allow "SSH-1.99" as well). */
+  /* Line must start with "SSH-2.0-" (we may need to allow "SSH-1.99"
+     as well). */
   if (length < 8 || 0 != memcmp(version, "SSH-2.0-", 4))
     {
       connection_disconnect(self->connection, 0, NULL);
@@ -238,7 +249,11 @@ DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
 		     ssh_format("%i%S",
 				lsh_string_sequence_number(packet),
 				packet)) < 0)
-    fatal("lshd_service_handler: Write failed.\n");
+    {
+      connection_disconnect(connection,
+			    SSH_DISCONNECT_BY_APPLICATION,
+			    "Connection to service layer failed.");
+    }
 }
 
 static void
@@ -555,7 +570,7 @@ lshd_port_accept(oop_source *source UNUSED,
   s = accept(self->fd, (struct sockaddr *) &peer, &peer_length);
   if (s < 0)
     {
-      werror("accept faild: %e\n", errno);
+      werror("accept failed: %e\n", errno);
       return OOP_CONTINUE;
     }
 
@@ -676,7 +691,7 @@ main_argp =
 };
 
 int
-main(int argc UNUSED, char **argv UNUSED)
+main(int argc, char **argv)
 {  
   argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
 
