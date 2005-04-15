@@ -1,3 +1,17 @@
+2005-04-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c: New file.
+
+	* src/ssh.h (SSH_DISCONNECT_RESERVED): Deleted.
+
+	* src/server_pty.c (pty_open_master): Removed #else.
+
+	* src/lshd.c (connection_write_data, lshd_service_handler): Better
+	error handlign when write fails.
+
+	* src/exception.c (make_protocol_exception): Don't refer to
+	SSH_DISCONNECT_RESERVED.
+
 2005-04-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Deleted obsolete files
