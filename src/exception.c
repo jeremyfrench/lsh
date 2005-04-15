@@ -152,7 +152,6 @@ make_protocol_exception(uint32_t reason, const char *msg)
   };
     
   assert(reason <= MAX_REASON);
-  assert(reason != SSH_DISCONNECT_RESERVED);
 #undef MAX_REASON
 
   self->super.type = EXC_PROTOCOL;
