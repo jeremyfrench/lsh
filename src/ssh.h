@@ -103,8 +103,8 @@
 #define SSH_DISCONNECT_PROTOCOL_ERROR                   2
 #define SSH_DISCONNECT_KEY_EXCHANGE_FAILED              3
 
-/* Formely known as SSH_DISCONNECT_HOST_AUTHENTICATION_FAILED */
-#define SSH_DISCONNECT_RESERVED                         4
+/* The value 4 was formely known as
+   SSH_DISCONNECT_HOST_AUTHENTICATION_FAILED */
 
 #define SSH_DISCONNECT_MAC_ERROR                        5
 #define SSH_DISCONNECT_COMPRESSION_ERROR                6
