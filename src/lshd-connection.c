@@ -71,12 +71,16 @@ static void
 write_packet(struct connection *connection,
 	     struct lsh_string *packet)
 {
+  /* FIXME: Go to sleep if ssh_write_data returns 0? */
   if (ssh_write_data(connection->writer,
 		     global_oop_source, STDOUT_FILENO,
 		     ssh_format("%i%S",
 				lsh_string_sequence_number(packet),
 				packet)) < 0)
-    fatal("write_packet: Write failed: %e\n", errno);
+    {
+      werror("write_packet: Write failed: %e\n", errno);
+      exit(EXIT_FAILURE);
+    }
 }
 
 static void
@@ -90,33 +94,25 @@ disconnect(struct connection *connection, const char *msg)
   exit(EXIT_FAILURE);
 }
 
-static void
-error_callback(struct error_callback *s UNUSED,
-	       int error)
-{
-  fatal("error_callback:err = %e\n", error);
-}
-
-static struct error_callback *
-make_error_callback(void)
-{
-  NEW(error_callback, self);
-  self->error = error_callback;
-  return self;
-}
-
 /* GABA:
    (class
-     (name connection_write)
-     (super abstract_write)
+     (name connection_read_state)
+     (super ssh_read_state)
      (vars
        (connection object connection)))
 */
 
 static void
-read_handler(struct abstract_write *s, struct lsh_string *packet)
+error_handler(struct ssh_read_state *s UNUSED, int error)
 {
-  CAST(connection_write, self, s);
+  werror("Read failed: %e\n", error);
+  exit(EXIT_FAILURE);
+}
+
+static void
+read_handler(struct ssh_read_state *s, struct lsh_string *packet)
+{
+  CAST(connection_read_state, self, s);
   uint8_t msg;
 
   werror("read_handler: Received packet %xS\n", packet);
@@ -142,14 +138,23 @@ read_handler(struct abstract_write *s, struct lsh_string *packet)
   lsh_string_free(packet);
 }
 
-static struct abstract_write *
-make_connection_read_handler(struct connection *connection)
+static struct ssh_read_state *
+make_connection_read_state(struct connection *connection)
 {
-  NEW(connection_write, self);
-  self->super.write = read_handler;
+  NEW(connection_read_state, self);
+  init_ssh_read_state(&self->super, 8, 8, service_process_header, error_handler);
   self->connection = connection;
   return &self->super;
 }
+
+
+/* GABA:
+   (class
+     (name connection_write)
+     (super abstract_write)
+     (vars
+       (connection object connection)))
+*/
 
 static void
 write_handler(struct abstract_write *s, struct lsh_string *packet)
@@ -174,13 +179,9 @@ make_connection(void)
   NEW(connection, self);
   init_resource(&self->super, kill_connection);
   
-  struct error_callback *error = make_error_callback();
-  
-  self->reader = make_ssh_read_state(8, 8,
-				     service_process_header,
-				     error);
+  self->reader = make_connection_read_state(self);
   ssh_read_packet(self->reader, global_oop_source, STDIN_FILENO,
-		  make_connection_read_handler(self));
+		  read_handler);
   ssh_read_start(self->reader, global_oop_source, STDIN_FILENO);
 
   self->writer = make_ssh_write_state();
