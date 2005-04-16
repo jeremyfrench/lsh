@@ -55,7 +55,7 @@ service_process_header(struct ssh_read_state *self)
       werror("service_process_header: Receiving too large packet.\n"
 	     "  %i octets\n", length);
 
-      ERROR_CALLBACK(self->error, EINVAL);
+      self->io_error(self, EINVAL);
       return NULL;
     }
 
