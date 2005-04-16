@@ -14,7 +14,7 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
-bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
+bin_PROGRAMS = lsh lsh-transport lshg lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed \
 	       @SRP_PROGRAM@
 
@@ -130,6 +130,8 @@ lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
 
 lshd_SOURCES = lshd.c lshd_keyexchange.c transport_read.c
+
+lsh_transport_SOURCES = lsh-transport.c transport_read.c
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
