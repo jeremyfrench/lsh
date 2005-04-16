@@ -186,6 +186,41 @@ make_unix_process(pid_t pid, int signal)
   return &self->super;
 }
 
+/* GABA:
+   (class
+     (name logout_notice)
+     (super exit_callback)
+     (vars
+       (process object resource)
+       (c object exit_callback)))
+*/
+
+static void
+do_logout_notice(struct exit_callback *s,
+		 int signaled, int core, int value)
+{
+  CAST(logout_notice, self, s);
+
+  trace("unix_process: do_logout_notice\n");
+
+  /* No need to signal the process. */
+  self->process->alive = 0;
+
+  EXIT_CALLBACK(self->c, signaled, core, value);
+}
+
+static struct exit_callback *
+make_logout_notice(struct resource *process,
+		   struct exit_callback *c)
+{
+  NEW(logout_notice, self);
+  self->super.exit = do_logout_notice;
+  self->process = process;
+  self->c = c;
+
+  return &self->super;
+}
+
 static void
 safe_close(int fd)
 {
@@ -351,7 +386,7 @@ spawn_parent(struct spawn_info *info,
 
   /* FIXME: Doesn't do any utmp/wtmp logging */
   process = make_unix_process(child, SIGHUP);
-  reaper_handle(child, c);
+  reaper_handle(child, make_logout_notice(&process->super, c));
 
   trace("spawn_parent: parent after process setup\n");
 
@@ -477,41 +512,6 @@ spawn_shell(struct spawn_info *info,
 
 /* At the moment, utmp and wtmp can't work at all, due to lack of privileges. */
 #if 0
-
-/* GABA:
-   (class
-     (name logout_notice)
-     (super exit_callback)
-     (vars
-       (process object resource)
-       (c object exit_callback)))
-*/
-
-static void
-do_logout_notice(struct exit_callback *s,
-		 int signaled, int core, int value)
-{
-  CAST(logout_notice, self, s);
-
-  trace("unix_process: do_logout_notice\n");
-
-  /* No need to signal the process. */
-  self->process->alive = 0;
-
-  EXIT_CALLBACK(self->c, signaled, core, value);
-}
-
-static struct exit_callback *
-make_logout_notice(struct resource *process,
-		   struct exit_callback *c)
-{
-  NEW(logout_notice, self);
-  self->super.exit = do_logout_notice;
-  self->process = process;
-  self->c = c;
-
-  return &self->super;
-}
 
 
 /* GABA:
