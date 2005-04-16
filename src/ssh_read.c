@@ -136,7 +136,7 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
     {
     error:
       ssh_read_set_callback(self, source, fd, NULL);
-      ERROR_CALLBACK(self->error, e);
+      self->io_error(self, e);
       return OOP_CONTINUE;
     }
   else
@@ -163,7 +163,7 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
 	    length--;
 
 	  lsh_string_trunc(line, length);
-	  A_WRITE(self->handler, line);
+	  self->handle_data(self, line);
 	}
       else
 	{
@@ -199,7 +199,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
   if (e)
     {
       ssh_read_set_callback(self, source, fd, NULL);
-      ERROR_CALLBACK(self->error, e);
+      self->io_error(self, e);
       return OOP_CONTINUE;
     }
 
@@ -208,7 +208,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
       assert(self->pos == 0);
       ssh_read_set_callback(self, source, fd, NULL);
 
-      A_WRITE(self->handler, NULL);
+      self->handle_data(self, NULL);
       return OOP_CONTINUE;
     }
   
@@ -220,7 +220,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
       ssh_read_set_callback(self, source, fd, NULL);
       self->pos = 0;
       
-      packet = self->process(self);
+      packet = self->process_header(self);
       if (packet)
 	{
 	  assert(!self->data);
@@ -247,7 +247,7 @@ oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
   if (e)
     {
       ssh_read_set_callback(self, source, fd, NULL);
-      ERROR_CALLBACK(self->error, e);
+      self->io_error(self, e);
       return OOP_CONTINUE;
     }  
 
@@ -262,7 +262,7 @@ oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
       /* Prepare to read next packet. */      
       ssh_read_set_callback(self, source, fd, oop_ssh_read_header);
 	  
-      A_WRITE(self->handler, packet);
+      self->handle_data(self, packet);
     }
   return OOP_CONTINUE; 
 }
@@ -271,9 +271,9 @@ oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
 void
 init_ssh_read_state(struct ssh_read_state *self,
 		    uint32_t max_header, uint32_t header_length,
-		    struct lsh_string * (*process)
+		    struct lsh_string * (*process_header)
 		      (struct ssh_read_state *state),
-		    struct error_callback *error)
+		    void (*io_error)(struct ssh_read_state *state, int error))
 {
   self->state = NULL;
   self->active = 0;
@@ -284,19 +284,20 @@ init_ssh_read_state(struct ssh_read_state *self,
   self->header_length = header_length;
   
   self->data = NULL;
-  self->process = process;
-  self->handler = NULL;
-  self->error = error;
+  self->process_header = process_header;
+  self->handle_data = NULL;
+  self->io_error = io_error;
 }
 
 struct ssh_read_state *
 make_ssh_read_state(uint32_t max_header, uint32_t header_length,
-		    struct lsh_string * (*process)
+		    struct lsh_string * (*process_header)
 		      (struct ssh_read_state *state),
-		    struct error_callback *error)
+		    void (*io_error)(struct ssh_read_state *state, int error))
 {
   NEW(ssh_read_state, self);
-  init_ssh_read_state(self, max_header, header_length, process, error);
+  init_ssh_read_state(self, max_header, header_length,
+		      process_header, io_error);
 
   return self;
 }
@@ -304,12 +305,13 @@ make_ssh_read_state(uint32_t max_header, uint32_t header_length,
 void
 ssh_read_line(struct ssh_read_state *self, uint32_t max_length,
 	      oop_source *source, int fd,
-	      struct abstract_write *handler)
+	      void (*handle_data)
+	        (struct ssh_read_state *state, struct lsh_string *packet))
 {
   assert(!self->data);
   self->data = lsh_string_alloc(max_length);
   self->pos = 0;
-  self->handler = handler;
+  self->handle_data = handle_data;
 
   ssh_read_set_callback(self, source, fd, oop_ssh_read_line);
 }
@@ -318,9 +320,10 @@ ssh_read_line(struct ssh_read_state *self, uint32_t max_length,
 void
 ssh_read_packet(struct ssh_read_state *self,
 		oop_source *source, int fd,
-		struct abstract_write *handler)
+		void (*handle_data)
+	          (struct ssh_read_state *state, struct lsh_string *packet))
 {
-  self->handler = handler;
+  self->handle_data = handle_data;
 
   ssh_read_set_callback(self, source, fd, oop_ssh_read_header);
 }
