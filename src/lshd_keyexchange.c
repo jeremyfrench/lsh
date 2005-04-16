@@ -92,6 +92,7 @@ DEFINE_PACKET_HANDLER(lshd_kexinit_handler, connection, packet)
        (compression object compress_instance)))
 */
 
+/* FIXME: Move newkeys handling to transport_read.c? */
 static void
 lshd_newkeys_handler(struct lshd_packet_handler *s,
 		     struct lshd_connection *connection,
@@ -111,12 +112,13 @@ lshd_newkeys_handler(struct lshd_packet_handler *s,
       && (msg_number == SSH_MSG_NEWKEYS)
       && (parse_eod(&buffer)))
     {
-      connection->reader->super.header_length
+      struct transport_read_state *reader = &connection->reader->super;
+      reader->super.header_length
 	= self->crypto ? self->crypto->block_size : 8;
 
-      connection->rec_crypto = self->crypto;
-      connection->rec_mac = self->mac;
-      connection->rec_compress = self->compression;
+      reader->crypto = self->crypto;
+      reader->mac = self->mac;
+      reader->compression = self->compression;
       
       reset_kexinit_state(&connection->kex);
       if (connection->service_state == SERVICE_DISABLED)
