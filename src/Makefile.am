@@ -129,7 +129,7 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
 
-lshd_SOURCES = lshd.c lshd_read.c lshd_keyexchange.c
+lshd_SOURCES = lshd.c lshd_keyexchange.c transport_read.c
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
