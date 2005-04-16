@@ -58,7 +58,8 @@ lshd_send_kexinit(struct lshd_connection *connection)
     fatal("Not implemented\n");
 }
 
-DEFINE_PACKET_HANDLER(lshd_kexinit_handler, connection, packet)
+void
+lshd_kexinit_handler(struct lshd_connection *connection, struct lsh_string *packet)
 {
   const char *error;
 
