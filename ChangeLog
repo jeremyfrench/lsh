@@ -1,3 +1,44 @@
+2005-04-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (lshd_SOURCES): Added transport_read.c.
+
+	* src/lshd.c (lshd_service_handler, lshd_service_request_handler):
+	Use plain functions, not packet_handler objects.
+	* src/lshd_keyexchange.c (lshd_kexinit_handler): Likewise.
+
+	* src/lshd.h (DEFINE_PACKET_HANDLER): Deleted macro.
+
+	* src/lshd-connection.c (write_packet): Don't call fatal on read errors.
+	(class connection_read_state): New class. Adapted to new
+	ssh_read interface.
+
+	* src/lshd_keyexchange.c (lshd_newkeys_handler): Install new keys
+	in the transport_read_state object.
+
+	* src/lshd.c: Updated to use new transport_read_state class.
+	(class lshd_read_error): Deleted class.
+
+	* src/lshd.h (class lshd_read_state): Inherit transport_read_state.
+	(class lshd_read_handler): Deleted class.
+	(class lshd_service_read_state): New class.
+	(class lshd_connection): Deleted attributes rec_max_packet,
+	rec_mac, rec_crypto and rec_compress, they're now in the
+	transport_read_state class. Changed type of service_reader to
+	lshd_service_read_state. 
+
+	* src/transport_read.h: New file.
+	(class transport_read_state): New class.
+
+	* src/transport_read.c: New file. Code moved from lshd_read.c
+
+	* src/ssh_read.h (error_callback): Deleted class.
+	(class ssh_read_state): Renamed process method to process_header.
+	Renamed handler to handle_data, error to io_error, and made them
+	methods of this class.
+	* src/ssh_read.c: Corresponding updates.
+	* src/service_read.c (service_process_header): Updated for
+	io_error rename.
+
 2005-04-15  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-transport.c: New file.
