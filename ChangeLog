@@ -1,5 +1,11 @@
 2005-04-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/Makefile.am (bin_PROGRAMS): Added lsh-transport.
+	(lsh_transport_SOURCES): New variable.
+
+	* src/lsh-transport.c: Rough outline. Compiles, connects, and
+	doesn't do much more.
+
 	* src/server_authorization.c, src/server_authorization.h,
 	src/server_keyexchange.c, src/server_keyexchange.h,
 	src/server_password.c, src/server_publickey.c,
