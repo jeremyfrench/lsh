@@ -65,35 +65,36 @@ static const char *packet_types[0x100] =
 #include "packet_types.h"
 ;
 
-
-
-/* GABA:
-   (class
-     (name lshd_read_error)
-     (super error_callback)
-     (vars
-       (connection object lshd_connection)))
-*/
-
+/* Error callbacks for reading */
 static void
-lshd_read_error(struct error_callback *s, int error)
+lshd_read_error(struct ssh_read_state *s, int error)
 {
-  CAST(lshd_read_error, self, s);
+  CAST(lshd_read_state, self, s);
   werror("Read failed: %e\n", error);
   KILL(&self->connection->super);
 }
 
-static struct error_callback *
-make_lshd_read_error(struct lshd_connection *connection)
+static void
+lshd_protocol_error(struct transport_read_state *s, int reason, const char *msg)
 {
-  NEW(lshd_read_error, self);
-  self->super.error = lshd_read_error;
+  CAST(lshd_read_state, self, s);
+  connection_disconnect(self->connection, reason, msg);
+}
+
+struct lshd_read_state *
+make_lshd_read_state(struct lshd_connection *connection)
+{
+  NEW(lshd_read_state, self);
+  init_transport_read_state(&self->super, SSH_MAX_PACKET,
+			    lshd_read_error, lshd_protocol_error);
+
   self->connection = connection;
 
-  return &self->super;
+  return self;
 }
 
 
+/* Connection */
 static void
 kill_lshd_connection(struct resource *s)
 {
@@ -142,12 +143,7 @@ make_lshd_connection(struct configuration *config, int input, int output)
   self->kex_handler = NULL;
   self->service_handler = &lshd_service_request_handler;
 
-  self->reader = make_lshd_read_state(self, make_lshd_read_error(self));
-
-  self->rec_max_packet = SSH_MAX_PACKET;
-  self->rec_mac = NULL;
-  self->rec_crypto = NULL;
-  self->rec_compress = NULL;
+  self->reader = make_lshd_read_state(self);
 
   self->writer = make_ssh_write_state();
   self->send_mac = NULL;
@@ -204,9 +200,9 @@ connection_disconnect(struct lshd_connection *connection,
 };
 
 static void
-lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
+lshd_handle_line(struct ssh_read_state *s, struct lsh_string *line)
 {
-  CAST(lshd_read_handler, self, s);
+  CAST(lshd_read_state, self, s);
   const uint8_t *version;
   uint32_t length;
 
@@ -225,20 +221,9 @@ lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
 
   self->connection->kex.version[0] = line;
 
-  self->super.write = lshd_handle_packet;
-
-  ssh_read_packet(&self->connection->reader->super,
-		  global_oop_source, self->connection->ssh_input,
-		  &self->super);
-}
-
-static struct abstract_write *
-make_lshd_handle_line(struct lshd_connection *connection)
-{
-  NEW(lshd_read_handler, self);
-  self->connection = connection;
-  self->super.write = lshd_handle_line;
-  return &self->super;
+  transport_read_packet(&self->super,
+			global_oop_source, self->connection->ssh_input,
+			lshd_handle_ssh_packet);
 }
 
 /* Handles all packets to be sent to the service layer. */
@@ -257,9 +242,9 @@ DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
 }
 
 static void
-lshd_service_read_handler(struct abstract_write *s, struct lsh_string *packet)
+lshd_service_read_handler(struct ssh_read_state *s, struct lsh_string *packet)
 {
-  CAST(lshd_read_handler, self, s);
+  CAST(lshd_service_read_state, self, s);
   struct lshd_connection *connection = self->connection;
 
   if (!packet)
@@ -281,14 +266,24 @@ lshd_service_read_handler(struct abstract_write *s, struct lsh_string *packet)
     }
 }
 
-static struct abstract_write *
-make_lshd_service_read_handler(struct lshd_connection *connection)
+static void
+service_read_error(struct ssh_read_state *s, int error)
 {
-  NEW(lshd_read_handler, self);
-  self->super.write = lshd_service_read_handler;
+  CAST(lshd_service_read_state, self, s);
+  werror("Read from service layer failed: %e\n", error);
+
+  connection_disconnect(self->connection, SSH_DISCONNECT_BY_APPLICATION,
+			"Read from service layer failed.");  
+}
+
+struct lshd_service_read_state *
+make_lshd_service_read_state(struct lshd_connection *connection)
+{
+  NEW(lshd_service_read_state, self);
+  init_ssh_read_state(&self->super, 8, 8, service_process_header, service_read_error);
   self->connection = connection;
 
-  return &self->super;
+  return self;
 }
 
 /* FIXME: Duplicates server_session.c: lookup_subsystem. */
@@ -367,13 +362,11 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	      connection->service_state = SERVICE_STARTED;
 
 	      connection->service_reader
-		= make_ssh_read_state(8, 8,
-				      service_process_header,
-				      connection->reader->super.error);
-	      ssh_read_packet(connection->service_reader,
+		= make_lshd_service_read_state(connection);
+	      ssh_read_packet(&connection->service_reader->super,
 			      global_oop_source, connection->service_fd,
-			      make_lshd_service_read_handler(connection));
-	      ssh_read_start(connection->service_reader,
+			      lshd_service_read_handler);
+	      ssh_read_start(&connection->service_reader->super,
 			     global_oop_source, connection->service_fd);
 
 	      connection->service_writer = make_ssh_write_state();
@@ -412,8 +405,11 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 
 /* Handles decrypted packets. */
 void
-lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *packet)
+lshd_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet)
 {
+  CAST(lshd_read_state, self, s);
+  struct lshd_connection *connection = self->connection;
+  
   uint32_t length = lsh_string_length(packet);
   uint8_t msg;
 
@@ -426,7 +422,7 @@ lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *pa
       return;
     }
 
-  if (length > connection->rec_max_packet)
+  if (length > connection->reader->super.max_packet)
     {
       werror("Packet too large!\n");
       connection_error(connection, "Packet too large");
@@ -510,10 +506,10 @@ lshd_handshake(struct lshd_connection *connection)
 {
   connection->kex.version[1] = make_string("SSH-2.0-lshd-ng");
 
-  ssh_read_line(&connection->reader->super, 256,
+  ssh_read_line(&connection->reader->super.super, 256,
 		global_oop_source, connection->ssh_input,
-		make_lshd_handle_line(connection));
-  ssh_read_start(&connection->reader->super,
+		lshd_handle_line);
+  ssh_read_start(&connection->reader->super.super,
 		 global_oop_source, connection->ssh_input);
 
   connection_write_data(connection,
