@@ -1,5 +1,15 @@
 2005-04-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/server_authorization.c, src/server_authorization.h,
+	src/server_keyexchange.c, src/server_keyexchange.h,
+	src/server_password.c, src/server_publickey.c,
+	src/server_userauth.c, src/server_userauth.h, src/unix_user.c,
+	src/userauth.c, src/userauth.h: Deleted files.
+
+	* src/unix_process.c (spawn_parent): Use make_logout_notice,
+	to make sure that we don't try to send signals to children that
+	have been reaped.
+
 	* src/Makefile.am (lshd_SOURCES): Added transport_read.c.
 
 	* src/lshd.c (lshd_service_handler, lshd_service_request_handler):
