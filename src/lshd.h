@@ -30,7 +30,7 @@
 #include "kexinit.h"
 #include "publickey_crypto.h"
 #include "resource.h"
-#include "ssh_read.h"
+#include "transport_read.h"
 #include "ssh_write.h"
 
 struct lshd_connection;
@@ -49,34 +49,32 @@ enum service_state
 # include "lshd.h.x"
 #undef GABA_DECLARE
 
-/* FIXME: Could turn into a more general transport_read_state by
-   moving the current decrypt and uncompress objects here, replacing
-   the connection pointer. */
 /* GABA:
    (class
      (name lshd_read_state)
-     (super ssh_read_state)
-     (vars
-       (connection object lshd_connection)
-       (sequence_number . uint32_t);
-       (padding . uint8_t)))
-*/
-
-struct lshd_read_state *
-make_lshd_read_state(struct lshd_connection *connection,
-		     struct error_callback *error);
-
-/* GABA:
-   (class
-     (name lshd_read_handler)
-     (super abstract_write)
+     (super transport_read_state)
      (vars
        (connection object lshd_connection)))
 */
 
-void
-lshd_handle_packet(struct abstract_write *s, struct lsh_string *packet);
+struct lshd_read_state *
+make_lshd_read_state(struct lshd_connection *connection);
 
+/* GABA:
+   (class
+     (name lshd_service_read_state)
+     (super ssh_read_state)
+     (vars
+       (connection object lshd_connection)))
+*/
+
+struct lshd_service_read_state *
+make_lshd_service_read_state(struct lshd_connection *connection);
+
+void
+lshd_handle_packet(struct ssh_read_state *s, struct lsh_string *packet);
+
+/* FIXME: Do we really need a class for this? */
 /* GABA:
    (class
      (name lshd_packet_handler)
@@ -142,10 +140,6 @@ do_##NAME(struct lshd_packet_handler *s UNUSED,		\
        (ssh_input . int)
 
        (reader object lshd_read_state)
-       (rec_max_packet . uint32_t)
-       (rec_mac object mac_instance)
-       (rec_crypto object crypto_instance)
-       (rec_compress object compress_instance)
 
        ; Sending encrypted packets
        ; Output fd for the ssh connection, ; may equal ssh_input
@@ -160,12 +154,12 @@ do_##NAME(struct lshd_packet_handler *s UNUSED,		\
        ; Communication with service on top of the transport layer.
        ; This is a bidirectional pipe
        (service_fd . int)
-       (service_reader object ssh_read_state)
+       (service_reader object lshd_service_read_state)
        (service_writer object ssh_write_state)))
 */
 
 void
-lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *packet);
+lshd_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet);
 
 void
 connection_disconnect(struct lshd_connection *connection,
