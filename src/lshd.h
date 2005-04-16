@@ -74,32 +74,18 @@ make_lshd_service_read_state(struct lshd_connection *connection);
 void
 lshd_handle_packet(struct ssh_read_state *s, struct lsh_string *packet);
 
-/* FIXME: Do we really need a class for this? */
+/* This is used only for the keyexchange methods. */
 /* GABA:
    (class
      (name lshd_packet_handler)
      (vars
-       ; Does *not* consume the packet
+       ; Does *not* consume the packet. FIXME: Better to change this?
        (handler method void
                 "struct lshd_connection *connection"
 	        "struct lsh_string *packet")))
 */
 
 #define HANDLE_PACKET(s, c, p) ((s)->handler((s), (c), (p)))
-
-#define DEFINE_PACKET_HANDLER(NAME, CARG, PARG)	\
-static void						\
-do_##NAME(struct lshd_packet_handler *,			\
-	  struct lshd_connection *,			\
-	  struct lsh_string *);				\
-							\
-struct lshd_packet_handler NAME =			\
-{ STATIC_HEADER, do_##NAME };				\
-							\
-static void						\
-do_##NAME(struct lshd_packet_handler *s UNUSED,		\
-	  struct lshd_connection *CARG,			\
-	  struct lsh_string *PARG)
 
 
 /* Information shared by several connections */
@@ -127,13 +113,11 @@ do_##NAME(struct lshd_packet_handler *s UNUSED,		\
        
        (session_id string)
 
-       (kexinit_handler object lshd_packet_handler)
        (newkeys_handler object lshd_packet_handler)
        ; Handler for all messages in the key exchange specific range
        (kex_handler object lshd_packet_handler)
 
        (service_state . "enum service_state")
-       (service_handler object lshd_packet_handler)
        
        ; Receiving encrypted packets
        ; Input fd for the ssh connection
@@ -175,11 +159,8 @@ connection_write_packet(struct lshd_connection *connection,
 struct lshd_packet_handler *
 make_lshd_dh_handler(struct dh_method *method);
 
-extern struct lshd_packet_handler
-lshd_kexinit_handler;
-
-extern struct lshd_packet_handler
-lshd_service_request_handler;
+void
+lshd_kexinit_handler(struct lshd_connection *connection, struct lsh_string *packet);
 
 void
 lshd_send_kexinit(struct lshd_connection *connection);

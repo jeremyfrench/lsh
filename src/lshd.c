@@ -138,10 +138,8 @@ make_lshd_connection(struct configuration *config, int input, int output)
 
   self->service_state = SERVICE_DISABLED;
 
-  self->kexinit_handler = &lshd_kexinit_handler;
   self->newkeys_handler = NULL;
   self->kex_handler = NULL;
-  self->service_handler = &lshd_service_request_handler;
 
   self->reader = make_lshd_read_state(self);
 
@@ -227,7 +225,8 @@ lshd_handle_line(struct ssh_read_state *s, struct lsh_string *line)
 }
 
 /* Handles all packets to be sent to the service layer. */
-DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
+static void
+lshd_service_handler(struct lshd_connection *connection, struct lsh_string *packet)
 {
   if (ssh_write_data(connection->service_writer,
 		     global_oop_source, connection->service_fd,
@@ -311,7 +310,8 @@ format_service_accept(uint32_t name_length, const uint8_t *name)
   return ssh_format("%c%s", SSH_MSG_SERVICE_ACCEPT, name_length, name);
 };
 
-DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
+static void
+lshd_service_request_handler(struct lshd_connection *connection, struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -358,7 +358,6 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	      /* Parent process */
 	      close(pipe[1]);
 	      connection->service_fd = pipe[0];
-	      connection->service_handler = &lshd_service_handler;
 	      connection->service_state = SERVICE_STARTED;
 
 	      connection->service_reader
@@ -403,7 +402,9 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
     connection_error(connection, "Invalid SERVICE_REQUEST");
 }
 
-/* Handles decrypted packets. */
+/* Handles decrypted packets. The various handler functions called
+   from here should *not* free the packet. FIXME: Better to change
+   this? */
 void
 lshd_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet)
 {
@@ -475,7 +476,7 @@ lshd_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet
 
     case KEX_STATE_INIT:
       if (msg == SSH_MSG_KEXINIT)
-	HANDLE_PACKET(connection->kexinit_handler, connection, packet);
+	lshd_kexinit_handler(connection, packet);
 
       else if (msg == SSH_MSG_SERVICE_REQUEST)
 	{
@@ -484,11 +485,11 @@ lshd_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet
 				  SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				  "Unexpected service request");
 	  else
-	    HANDLE_PACKET(connection->service_handler, connection, packet);
+	    lshd_service_request_handler(connection, packet);
 	}
       else if (msg >= SSH_FIRST_USERAUTH_GENERIC
 	       && connection->service_state == SERVICE_STARTED)
-	HANDLE_PACKET(connection->service_handler, connection, packet);
+	lshd_service_handler(connection, packet);
 
       else
 	connection_write_packet(
