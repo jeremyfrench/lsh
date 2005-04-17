@@ -182,6 +182,14 @@ lsh_string_write(struct lsh_string *s, uint32_t start, uint32_t length,
 }
 
 void
+lsh_string_move(struct lsh_string *s, uintt32_t start, uint32_t length, uint32_t from)
+{
+  ASSERT_ROOM(s, start, length);
+  assert(start != from);
+  memmove(s->data + start, s->data + from, length);
+}
+
+void
 lsh_string_write_uint32(struct lsh_string *s, uint32_t start, uint32_t n)
 {
   ASSERT_ROOM(s, start, 4);
