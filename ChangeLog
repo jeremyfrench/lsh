@@ -1,3 +1,9 @@
+2005-04-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh_string.c (lsh_string_move): New function.
+
+	* src/ssh.h (SSH_MAX_LINE): New constant.
+
 2005-04-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (bin_PROGRAMS): Added lsh-transport.
