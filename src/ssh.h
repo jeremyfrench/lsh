@@ -189,6 +189,8 @@
 
 /* Limits */
 
+#define SSH_MAX_LINE 255
+
 /* Default max length of packet payload */
 #define SSH_MAX_PACKET 0x8000
 
