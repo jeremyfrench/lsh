@@ -113,7 +113,7 @@ void
 lsh_string_write_uint32(struct lsh_string *s, uint32_t start, uint32_t n);
 
 void
-lsh_string_move(struct lsh_string *s, uintt32_t start, uint32_t length, uint32_t from);
+lsh_string_move(struct lsh_string *s, uint32_t start, uint32_t length, uint32_t from);
 
 void
 lsh_string_write_xor(struct lsh_string *s, uint32_t start, uint32_t length,
