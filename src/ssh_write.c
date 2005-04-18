@@ -41,6 +41,8 @@
 /* Sending 5 packets at a time should be sufficient. */
 #define N_IOVEC 5
 
+#define SSH_WRITE_SIZE 1000
+
 void
 init_ssh_write_state(struct ssh_write_state *self)
 {
@@ -56,16 +58,13 @@ make_ssh_write_state(void)
   return self;
 }
 
-static void *
-oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
+int
+ssh_write_flush(struct ssh_write_state *self, int fd)
 {
-  CAST(ssh_write_state, self, (struct lsh_object *) state);
   struct iovec iv[N_IOVEC];
   unsigned n = 0;
   int res;
 
-  assert(event == OOP_WRITE);
-  
   FOR_STRING_QUEUE(&self->q, s)
     {
       iv[n].iov_base = (char *) lsh_string_data(s);
@@ -85,10 +84,9 @@ oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
   while (res < 0 && errno == EINTR);
 
   if (res < 0)
-    {
-      /* FIXME: We need an error callback */
-      fatal("oop_ssh_write: writev failed: %e\n", errno);
-    }
+    /* Let caller check for EWOULDBLOCK */
+    return -1;
+
   else
     {
       uint32_t written;
@@ -96,6 +94,7 @@ oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
       
       assert(res > 0);
       written = res;
+      self->size -= written;
       
       for (i = 0; i < n && written >= iv[i].iov_len; i++)
 	{
@@ -110,53 +109,18 @@ oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
       else
 	self->done = written;
     }
-  return OOP_CONTINUE;
+  return string_queue_is_empty(&self->q);
 }
 
 int
 ssh_write_data(struct ssh_write_state *self,
-	       oop_source *source, int fd,
+	       int fd, int flush,
 	       struct lsh_string *data)
 {
-  if (string_queue_is_empty(&self->q))
-    {
-      uint32_t length = lsh_string_length(data);
-      int res;
-
-      assert(length);
-
-      do
-	res = write(fd, lsh_string_data(data), length);
-      while (res < 0 && errno == EINTR);
-
-      assert(res);
-
-      if (res < 0)
-	{
-	  if (errno != EWOULDBLOCK)
-	    return -1;
-
-	  self->done = 0;
-	start_queue:
-	  string_queue_add_tail(&self->q, data);
-	  source->on_fd(source, fd, OOP_WRITE, oop_ssh_write, self);
-	  return 0;
-	}
-      else if (res == length)
-	{
-	  lsh_string_free(data);
-	  return 1;
-	}
-      else
-	{
-	  /* Partial write */
-	  self->done = res;
-	  goto start_queue;
-	}
-    }
+  string_queue_add_tail(&self->q, data);
+  self->size += data;
+  if (flush || self->size >= SSH_WRITE_SIZE)
+    return ssh_write_flush(self, fd);
   else
-    {
-      string_queue_add_tail(&self->q, data);
-      return 0;
-    }
+    return 0;
 }
