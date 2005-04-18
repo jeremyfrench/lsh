@@ -1,3 +1,16 @@
+2005-04-18  Niels Möller  <niels@s3.kth.se>
+
+	* src/transport_read.c: Rewritten to not use ssh_read.
+
+	* src/ssh_write.h (class ssh_write_state): New attribute size,
+	with the total amount of buffered data.
+
+	* src/ssh_write.c (ssh_write_flush): New function, which doesn't
+	know about liboop.
+	(ssh_write_data): Call ssh_write_flush.
+
+	* src/transport_write.c: New file.
+
 2005-04-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh_string.c (lsh_string_move): New function.
