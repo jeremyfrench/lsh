@@ -30,19 +30,17 @@
 
 #include "nettle/macros.h"
 
+#include "transport.h"
+
 #include "crypto.h"
 #include "compress.h"
 #include "lsh_string.h"
-#include "transport_read.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
-#define GABA_DEFINE
-# include "transport_read.h.x"
-#undef GABA_DEFINE
+#include "transport_read.c.x"
 
-#include "transport.h"
 
 /* How much data to read ahead */
 #define TRANSPORT_READ_AHEAD 1000
@@ -75,7 +73,7 @@ make_transport_read_state(void)
 {
   NEW(transport_read_state, self);
   self->input_buffer = lsh_string_alloc(SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ);
-  self->start = self->end = 0;
+  self->start = self->length = 0;
 
   self->mac_buffer = lsh_string_alloc(SSH_MAX_MAC_SIZE);
   self->output_buffer = lsh_string_alloc(SSH_MAX_PACKET + 1);
@@ -95,13 +93,13 @@ read_some(struct transport_read_state *self, int fd, uint32_t limit)
 
   if (self->start + limit > lsh_string_length(self->input_buffer))
     {
-      assert(start > 0);
+      assert(self->start > 0);
       lsh_string_move(self->input_buffer, 0, self->length, self->start);
       self->start = 0;
     }
   
   left = limit - self->length;
-  res = lsh_string_read(s, self->start + self->length, fd, left);
+  res = lsh_string_read(self->input_buffer, self->start + self->length, fd, left);
   if (res < 0)
     return 0;
   else if (res == 0)
@@ -158,7 +156,7 @@ transport_read_line(struct transport_read_state *self, int fd,
 
   else
     {
-      res = find_line(self, length, line);
+      res = find_line(self, error, msg, length, line);
       if (res != 0)
 	return res;
     }
@@ -166,7 +164,7 @@ transport_read_line(struct transport_read_state *self, int fd,
   if (fd < 0)
     return 0;
 
-  res = read_some(struct transport_read_state *self, fd, TRANSPORT_READ_AHEAD);
+  res = read_some(self, fd, TRANSPORT_READ_AHEAD);
   if (res == 0)
     { /* EOF */
       if (self->length == 0)
@@ -189,7 +187,7 @@ transport_read_line(struct transport_read_state *self, int fd,
       *error = errno;
       return -1;
     }
-  return find_line(self, error, length, line);
+  return find_line(self, error, msg, length, line);
 }  
 
 static int
@@ -202,7 +200,7 @@ decode_packet(struct transport_read_state *self,
   uint32_t mac_size = self->mac ? self->mac->mac_size : 0;
 
   uint32_t crypt_done = block_size - 5;
-  uint32_t crypt_left = self->total_length - (decrypt_done + mac_size);
+  uint32_t crypt_left = self->total_length - (crypt_done + mac_size);
 
   const uint8_t *data = lsh_string_data(self->input_buffer) + self->start;
   uint32_t length;
@@ -230,12 +228,13 @@ decode_packet(struct transport_read_state *self,
     }
 
   length = self->total_length - mac_size - self->padding;
-  self->start += total_length;
-  self->length -= total_length;
+  self->start += self->total_length;
+  self->length -= self->total_length;
   
-  if (self->compression)
+  if (self->inflate)
     fatal("Inflating not yet implemented.\n");
 
+  *seqno = self->seqno;
   *data_p = data;
   *length_p = length;
 
@@ -268,7 +267,7 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	  if (self->length == 0)
 	    {
 	      *length = 0;
-	      *line = NULL;
+	      *data = NULL;
 	      return 1;
 	    }
 	  else
@@ -295,12 +294,12 @@ transport_read_packet(struct transport_read_state *self, int fd,
 		self->input_buffer, self->start);
 	}
 
-      header = lsh_string_data(self->super.header);
+      header = lsh_string_data(self->input_buffer) + self->start;;
       
       if (self->mac)
 	{
 	  uint8_t s[4];
-	  WRITE_UINT32(s, self->sequence_number);
+	  WRITE_UINT32(s, self->seqno);
 	  MAC_UPDATE(self->mac, 4, s);
 	  MAC_UPDATE(self->mac, block_size, header);
 	}
@@ -309,7 +308,7 @@ transport_read_packet(struct transport_read_state *self, int fd,
       self->padding = header[4];
 
       if ( (self->padding < 4)
-	   || (self->padding >= length) )
+	   || (self->padding >= packet_length) )
 	{      
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Bogus padding length";

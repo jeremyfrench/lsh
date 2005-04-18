@@ -27,10 +27,19 @@
 #include "config.h"
 #endif
 
+#include "transport.h"
+
+#include "crypto.h"
+#include "ssh.h"
+#include "ssh_write.h"
+#include "xalloc.h"
+
+#include "transport_write.c.x"
+
 /* GABA:
    (class
      (name transport_write_state)
-     (super ssh_write)
+     (super ssh_write_state)
      (vars     
        (mac object mac_instance)
        (crypto object crypto_instance)
@@ -52,11 +61,13 @@ struct transport_write_state *
 make_transport_write_state(void)
 {
   NEW(transport_write_state, self);
-  init_ssh_write(&self->super);
+  init_ssh_write_state(&self->super);
   self->mac = NULL;
   self->crypto = NULL;
   self->deflate = NULL;
   self->seqno = 0;
+
+  return self;
 }
 
 /* Returns 1 on success, -1 on i/o error, -2 on buffer overflow, and 0
@@ -115,7 +126,7 @@ transport_write_packet(struct transport_write_state *self, int fd, int flush,
 	 part of the packet is flushed. */      
     }
 #endif
-  res = ssh_write(&self->super, fd, flush, packet);
+  res = ssh_write_data(&self->super, fd, flush, packet);
   if (res == 0 && self->super.size > TRANSPORT_MAX_BUFFER)
     return -2;
   else
@@ -127,7 +138,7 @@ transport_write_line(struct transport_write_state *self,
 		     int fd,
 		     struct lsh_string *line)
 {
-  return ssh_write(&self->super, fd, 0, line);
+  return ssh_write_data(&self->super, fd, 0, line);
 }
 
 int
