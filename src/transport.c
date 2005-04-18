@@ -22,6 +22,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
+#include "format.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "transport.h"
+
 #define GABA_DEFINE
 # include "transport.h.x"
 #undef GABA_DEFINE
@@ -32,16 +45,19 @@ init_transport_connection(struct transport_connection *self,
 			  struct transport_context *ctx,
 			  int ssh_input, int ssh_output,
 			  void (*event)(struct transport_connection *,
-					int event))
+					enum transport_event event))
 {
   init_resource(&self->super, kill);
   
   self->ctx = ctx;
 
-  init_kexinit_state(&self->kexinit_state);
+  init_kexinit_state(&self->kex);
   self->session_id = NULL;
   self->keyexchange_handler = NULL;
-
+  self->new_mac = NULL;
+  self->new_crypto = NULL;
+  self->new_compress = NULL;
+  
   self->ssh_input = ssh_input;
   self->reader = make_transport_read_state();
 
@@ -57,8 +73,10 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
   CAST(transport_connection, connection, (struct lsh_object *) state);
   int error;
   const char *error_msg;
-  int res;
-  
+  int res = 0;
+
+  assert(source == connection->ctx->oop);
+  assert(event == OOP_READ);
   assert(fd == connection->ssh_input);
 
   while (connection->line_handler && connection->ssh_input >= 0)
@@ -66,7 +84,7 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
       uint32_t length;
       const uint8_t *line;
   
-      res = transport_read_line(connection->reader, fd, &error, &msg,
+      res = transport_read_line(connection->reader, fd, &error, &error_msg,
 				&length, &line);
       if (res != 1)
 	goto done;
@@ -79,9 +97,9 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	  transport_close(connection, 0);
 	}
       else
-	HANDLE_PACKET(connection->line_handler, length, line);
+	connection->line_handler(connection, length, line);
     }
-  while (ssh->input >= 0)
+  while (connection->ssh_input >= 0)
     {
       uint32_t seqno;
       uint32_t length;
@@ -89,7 +107,7 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
       
       uint8_t msg;
 
-      res = transport_read_packet(connection->reader, fd, &error, &msg,
+      res = transport_read_packet(connection->reader, fd, &error, &error_msg,
 				  &seqno, &length, &packet);
       if (res != 1)
 	goto done;
@@ -104,7 +122,7 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	}
       if (length == 0)
 	{
-	  transport_error(connection, "Received empty packet");
+	  transport_protocol_error(connection, "Received empty packet");
 	  return OOP_CONTINUE;
 	}
       msg = packet[0];
@@ -137,22 +155,23 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	case KEX_STATE_IN_PROGRESS:
 	  if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
 	      || msg >= SSH_FIRST_USERAUTH_GENERIC)
-	    transport_error(connection,
+	    transport_protocol_error(connection,
 			    "Unexpected message during key exchange");
 	  else
-	    HANDLE_PACKET(connection->kex_handler, connection, length, packet);
+	    connection->keyexchange_handler->handler(connection->keyexchange_handler,
+						     connection, length, packet);
 	  break;
 	case KEX_STATE_NEWKEYS:
 	  if (msg != SSH_MSG_NEWKEYS)
-	    transport_error(connection, "NEWKEYS expected");
+	    transport_protocol_error(connection, "NEWKEYS expected");
 	  else if (length != 1)
-	    transport_error(connection, "Invalid NEWKEYS message");
+	    transport_protocol_error(connection, "Invalid NEWKEYS message");
 	  else
 	    {
-	      transport_read_newkeys(connection->reader,
-				     connection->new_mac,
-				     connection->new_crypto,
-				     connection->new_compress);
+	      transport_read_new_keys(connection->reader,
+				      connection->new_mac,
+				      connection->new_crypto,
+				      connection->new_compress);
 	      connection->new_mac = NULL;
 	      connection->new_crypto = NULL;
 	      connection->new_compress = NULL;
@@ -163,10 +182,9 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	  if (msg == SSH_MSG_KEXINIT)
 	    transport_kexinit_handler(connection, length, packet);
 	  else if (msg >= SSH_FIRST_USERAUTH_GENERIC)
-	    HANDLE_PACKET(connection->packet_handler, length, packet);
+	    connection->packet_handler(connection, length, packet);
 	  else
-	    transport_write_packet(connection->writer,
-				   format_unimplemented(seqno));
+	    transport_send_packet(connection, format_unimplemented(seqno));
 	  break;
 	}
       if (connection->ssh_input < 0)
@@ -194,6 +212,58 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
   return OOP_CONTINUE;
 }
 
+static void *
+oop_write_ssh(oop_source *source, int fd, oop_event event, void *state)
+{
+  CAST(transport_connection, connection, (struct lsh_object *) state);
+  int res;
+
+  assert(source == connection->ctx->oop);
+  assert(event == OOP_WRITE);
+  assert(fd == connection->ssh_output);
+
+  res = transport_write_flush(connection->writer, fd);
+  switch(res)
+    {
+    default: abort();
+    case 0:
+      /* More to write */
+      break;
+    case 1:
+      transport_write_pending(connection, 0);
+      break;
+    case -1:
+      if (errno != EWOULDBLOCK)
+	{
+	  werror("Write failed: %e\n", errno);
+	  transport_close(connection, 0);
+	}
+      break;
+    }
+  return OOP_CONTINUE;
+}
+
+void
+transport_write_pending(struct transport_connection *connection, int pending)
+{
+  if (pending != connection->write_pending)
+    {
+      oop_source *source = connection->ctx->oop;
+
+      connection->write_pending = pending;
+      if (pending)
+	{
+	  source->on_fd(source, connection->ssh_output, OOP_WRITE, oop_write_ssh, connection);
+	  connection->event_handler(connection, TRANSPORT_EVENT_STOP_APPLICATION);
+	}
+      else
+	{
+	  source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
+	  connection->event_handler(connection, TRANSPORT_EVENT_START_APPLICATION);	  
+	}      
+    }
+}
+
 /* FIXME: Naming is unfortunate, with transport_write_packet vs
    transport_send_packet */
 void
@@ -205,12 +275,12 @@ transport_send_packet(struct transport_connection *connection,
   if (!connection->super.alive)
     {
       werror("connection_write_data: Connection is dead.\n");
-      lsh_string_free(data);
+      lsh_string_free(packet);
       return;
     }
   
   res = transport_write_packet(connection->writer, connection->ssh_output,
-			       1, packet, self->ctx->random);
+			       1, packet, connection->ctx->random);
   switch(res)
   {
   case -2:
@@ -222,10 +292,10 @@ transport_send_packet(struct transport_connection *connection,
     transport_close(connection, 0);
     break;
   case 0:
-    transport_delayed_write(connection, 1);
+    transport_write_pending(connection, 1);
     break;
   case 1:
-    transport_delayed_write(connection, 0);
+    transport_write_pending(connection, 0);
     break;
   }
 }
@@ -238,7 +308,7 @@ transport_disconnect(struct transport_connection *connection,
     werror("Disconnecting: %z\n", msg);
   
   if (reason)
-    transport_write_packet(connection, format_disconnect(reason, msg, ""));
+    transport_send_packet(connection, format_disconnect(reason, msg, ""));
 
   transport_close(connection, 1);
 };
@@ -250,7 +320,7 @@ transport_send_kexinit(struct transport_connection *connection,
   struct lsh_string *s;
   struct kexinit *kex
     = connection->kex.kexinit[is_server]
-    = MAKE_KEXINIT(connection->config->kexinit);
+    = MAKE_KEXINIT(connection->ctx->kexinit);
   
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
   assert(connection->kex.state == KEX_STATE_INIT);
@@ -259,7 +329,7 @@ transport_send_kexinit(struct transport_connection *connection,
   
   s = format_kexinit(kex);
   connection->kex.literal_kexinit[is_server] = lsh_string_dup(s); 
-  transport_write_packet(connection, s);
+  transport_send_packet(connection, s);
 
   if (kex->first_kex_packet)
     fatal("Not implemented\n");
