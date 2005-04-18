@@ -1,3 +1,10 @@
+2005-04-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (lshd_SOURCES, lsh_transport_SOURCES): Added
+	transport.c and transport_write.c.
+
+	* src/lsh_string.h (lsh_string_move): Fixed typo in declaration.
+
 2005-04-18  Niels Möller  <niels@s3.kth.se>
 
 	* src/transport_read.c: Rewritten to not use ssh_read.
