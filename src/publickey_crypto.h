@@ -50,103 +50,68 @@ make_keypair(uint32_t type,
 	     struct signer *private);
 
 
-/* Groups. All group elements are represented by bignums. */
-
-/* GABA:
-   (class
-     (name zn_group)
-     (vars
-       (modulo bignum)
-       (generator bignum)
-       (order bignum)))
-*/
-
-int
-zn_range(const struct zn_group *G, const mpz_t x);
-
-void
-zn_invert(const struct zn_group *G, mpz_t res, const mpz_t x);
-
-void
-zn_mul(const struct zn_group *G, mpz_t res, const mpz_t x, const mpz_t y);
-
-void
-zn_exp(const struct zn_group *G, mpz_t res, const mpz_t x, const mpz_t e);
-
-void
-zn_exp_ui(const struct zn_group *G, mpz_t res, const mpz_t x, uint32_t e);
-
-/* Ring structure needed by SRP */
-int
-zn_add(const struct zn_group *G,
-       mpz_t res, const mpz_t a, const mpz_t b);
-
-int 
-zn_sub(const struct zn_group *G,
-       mpz_t res, const mpz_t a, const mpz_t b);
-
-const struct zn_group *
-make_ssh_group1(void);
-
-const struct zn_group *
-make_ssh_group14(void);
-
-const struct zn_group *
-make_ssh_ring_srp_1(void);
-
 /* DH key exchange, with authentication */
 /* GABA:
-   (class
-     (name dh_method)
+   (struct
+     (name dh_params)
      (vars
-       (G const object zn_group)
-       (H const object hash_algorithm)
-       (random object randomness)))
+       (limit . uint32_t)
+       (modulo bignum)
+       ; Generator for the multiplicative group of order modulo - 1
+       (generator bignum)
+       (H const object hash_algorithm)))
 */
 
-/* State common for both DH keyechange and SRP, for both client and
- * server. */
+void
+init_dh_params(struct dh_params *params,
+	       const char *modulo, unsigned generator,
+	       const struct hash_algorithm *H);
+
+void
+init_dh_group1(struct dh_params *params,
+	       const struct hash_algorithm *H);
+
+void
+init_dh_group14(struct dh_params *params,
+	       const struct hash_algorithm *H);
+
+/* State common for both all DH variants, for both client and
+   server. */
 /* GABA:
    (struct
-     (name dh_instance)
+     (name dh_state)
      (vars
-       (method const object dh_method)
+       (params const object dh_params)
        (e bignum)       ; Client value
        (f bignum)       ; Server value
 
        (secret bignum)  ; This side's secret exponent
 
-       ; Currently, K doesn't include any length header.
-       (K string)
        (hash object hash_instance)
+       
+       ; Session key
+       (K string)
        (exchange_hash string)))
 */
 
-     
+void
+init_dh_state(struct dh_state *self,
+	      const struct dh_params *m,
+	      struct kexinit_state *kex);
+
+void
+dh_hash_update(struct dh_state *self,
+	       struct lsh_string *s, int free);
+
+#if 0     
 /* Creates client message */
 struct lsh_string *
 dh_make_client_msg(struct dh_instance *self);
 
-/* Receives client message */
-int
-dh_process_client_msg(struct dh_instance *self,
-		      struct lsh_string *packet);
-
 /* Includes more data to the exchange hash. */
 void
-dh_hash_update(struct dh_instance *self,
-	       struct lsh_string *s, int free);
-
-/* Generates server's secret exponent */
-void
-dh_make_server_secret(struct dh_instance *self);
-
-/* Creates server message */
-struct lsh_string *
-dh_make_server_msg(struct dh_instance *self,
-		   struct lsh_string *server_key,
-		   int hostkey_algorithm,
-		   struct signer *s);
+dh_hash_update(struct dh_state *self,
+	       uint32_t length, const uint8_t *data);
 
 /* Decodes server message, but does not verify its signature. */
 struct lsh_string *
@@ -158,29 +123,16 @@ dh_process_server_msg(struct dh_instance *self,
 int
 dh_verify_server_msg(struct dh_instance *self,
 		     struct verifier *v);
+#endif
 
 void
-dh_generate_secret(const struct dh_method *self,
+dh_generate_secret(const struct dh_params *self,
+		   struct randomness *random, 
 		   mpz_t r, mpz_t v);
 
 void
-dh_hash_digest(struct dh_instance *self);
+dh_hash_digest(struct dh_state *self);
 
-struct dh_method *
-make_dh(const struct zn_group *G,
-	const struct hash_algorithm *H,
-	struct randomness *r);
-
-struct dh_method *
-make_dh1(struct randomness *r);
-
-struct dh_method *
-make_dh14(struct randomness *r);
-
-void
-init_dh_instance(const struct dh_method *m,
-		 struct dh_instance *self,
-		 struct kexinit_state *kex);
 
 /* RSA support */
 extern struct signature_algorithm rsa_sha1_algorithm;
