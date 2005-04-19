@@ -27,9 +27,12 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
+
 #include "transport.h"
 
 #include "crypto.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "ssh_write.h"
 #include "xalloc.h"
@@ -78,6 +81,8 @@ transport_write_packet(struct transport_write_state *self, int fd, int flush,
 {
   uint32_t length;
   int res;
+
+  assert(lsh_string_length(packet) > 0);
   packet = encrypt_packet(packet,
 			  self->deflate,
 			  self->crypto,
