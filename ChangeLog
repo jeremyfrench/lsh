@@ -1,3 +1,55 @@
+2005-04-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_write.c (transport_write_packet): Assert that
+	packet is non-empty.
+
+	* src/transport_read.c (find_line): Fixed off-by-one type.
+	(transport_read_packet): Fixed parsing of packet header.
+
+	* src/transport.c (class transport_timeout): New class.
+	(transport_timeout, transport_timeout_close): New functions.
+	(transport_close): New function.
+	(transport_kexinit_handler): New function.
+	(transport_timeout_reexchange, transport_timeout_keyexchange): New
+	functions.
+	(oop_read_ssh): Bug fixes.
+	(transport_write_pending): Generate events, depending on
+	kex.write_state.
+	(transport_send_kexinit): Implemented timeouts, tracking of the
+	write state, and partial support for sending a speculative first
+	keyexchange packet.
+	(transport_keyexchange_finish): New function.
+	(transport_handshake): New function.
+
+	* src/ssh_write.c (ssh_write_flush): Bugfixes for the cases that
+	the buffer is empty or is emtied.
+	(ssh_write_data): Fixed update of the total size.
+
+	* src/lshd.c: Updated to work with new transport code. Keyexchange
+	interface is incomplete.
+
+	* src/lsh_string.c (lsh_string_move): Typo fix.
+
+	* src/Makefile.am (lshd_SOURCES): Added server_keyexchange.c.
+	(liblsh_a_SOURCES): Removed some files that don't compile at the
+	moment.
+
+	* src/dh_exchange.c: Reorganized, to fit with new transport code.
+	Server-specific code moved to server_keyexchange; the same should
+	be done tot he client-specific code, but that's not done yet.
+
+	* src/publickey_crypto.h (class zn_group): Deleted, together with
+	the corresponding functions.
+	(struct dh_params): New struct, replacing the dh_method class.
+	(struct dh_state): New struct, replacing the dh_instance class.
+	
+	* src/keyexchange.c: Reorganized to fit with new transport code.
+	Moved code here from kexinit_state. Deleted code dealing with
+	timeouts. 
+
+	* src/server_keyexchange.c: Rewrote diffie-hellman key exchange.
+	Deleted SRP support.
+
 2005-04-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (lshd_SOURCES, lsh_transport_SOURCES): Added
