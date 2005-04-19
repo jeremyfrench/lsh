@@ -51,7 +51,7 @@
 
 #include "abstract_crypto.h"
 #include "compress.h"
-#include "kexinit.h"
+#include "keyexchange.h"
 #include "resource.h"
 
 struct transport_read_state;
@@ -62,9 +62,10 @@ enum transport_event {
   /* Initial keyexchange complete, time to transmit or accept a
      service request */
   TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE,
-  /* Disconnect message received */
-  TRANSPORT_EVENT_DISCONNECT,
-  /* Transport buffer non-empty, new data is discouraged */  
+  /* Connection is being closed */
+  TRANSPORT_EVENT_CLOSE,
+  /* Transport buffer non-empty, or key exchange in progress. New
+     application data is not allowed. */  
   TRANSPORT_EVENT_STOP_APPLICATION,
   /* Transport buffer empty again, new data is encouraged */
   TRANSPORT_EVENT_START_APPLICATION,
@@ -123,6 +124,7 @@ transport_write_flush(struct transport_write_state *self, int fd);
    (class
      (name transport_context)
      (vars
+       (is_server . int)
        (random object randomness)
        (algorithms object alist)
        (kexinit object make_kexinit)
@@ -148,17 +150,20 @@ transport_write_flush(struct transport_write_state *self, int fd);
      (vars
        (ctx object transport_context)
 
-       ; Key exchange 
+       ; Key exchange
+       ; The state for the receiving direction is reflected by kex.state
        (kex struct kexinit_state)
+       
        (session_id string)
        ; Packet handler for the keyexchange range of messages
        (keyexchange_handler object transport_handler)
+       ; New state to be taken into use after NEWKEYS
        (new_mac object mac_instance)
        (new_crypto object crypto_instance)
-       (new_compress object compress_instance)
+       (new_inflate object compress_instance)
 
-       ; Timer for key reexchange and kexexchange timeout
-       (timeout object resource)
+       ; Timer for kexexchange, reexchange, and disconnect
+       (expire object resource)
 
        ; Receiving encrypted packets
        ; Input fd for the ssh connection
@@ -170,10 +175,10 @@ transport_write_flush(struct transport_write_state *self, int fd);
        (ssh_output . int)
        (writer object transport_write_state)
        (write_pending . int)
-       
+
        (event_handler method void "enum transport_event event")
        ; Handles all non-transport messages
-       (packet_handler method void "uint32_t length"
+       (packet_handler method void "uint32_t seqno" "uint32_t length"
                                    "const uint8_t *packet")
        (line_handler method void "uint32_t length"
                                  "const uint8_t *line")))
@@ -207,5 +212,22 @@ transport_disconnect(struct transport_connection *connection,
 void
 transport_kexinit_handler(struct transport_connection *connection,
 			  uint32_t length, const uint8_t *packet);
+
+void
+transport_send_kexinit(struct transport_connection *connection);
+
+void
+transport_keyexchange_finish(struct transport_connection *connection,
+			     const struct hash_algorithm *H,
+			     struct lsh_string *exchange_hash,
+			     struct lsh_string *K);
+
+void
+transport_handshake(struct transport_connection *connection,
+		    struct lsh_string *version,
+		    void (*line_handler)
+		      (struct transport_connection *connection,
+		       uint32_t length,
+		       const uint8_t *line));
 
 #endif /* TRANSPORT_H_INCLUDED */
