@@ -58,10 +58,10 @@
        (inflate object compress_instance)
        (seqno . uint32_t)
 
-       (packet_length . uint32_t)
        (padding . uint8_t)
 
        ; The length of payload, padding and mac for current packet
+       ; Zero means that we need to process the packet header.
        (total_length . uint32_t)
 
        (mac_buffer string)
@@ -78,6 +78,8 @@ make_transport_read_state(void)
   self->mac_buffer = lsh_string_alloc(SSH_MAX_MAC_SIZE);
   self->output_buffer = lsh_string_alloc(SSH_MAX_PACKET + 1);
 
+  self->total_length = 0;
+  
   return self;
 }
 
@@ -130,8 +132,8 @@ find_line(struct transport_read_state *self,
 
       /* Skip newline character as well */
       line_length++;
-      self->start += line_length + 1;
-      self->length -= line_length + 1;
+      self->start += line_length;
+      self->length -= line_length;
       return 1;
     }
   else if (self->length >= SSH_MAX_LINE)
@@ -230,7 +232,10 @@ decode_packet(struct transport_read_state *self,
   length = self->total_length - mac_size - self->padding;
   self->start += self->total_length;
   self->length -= self->total_length;
-  
+
+  /* Reset for next header */
+  self->total_length = 0;
+
   if (self->inflate)
     fatal("Inflating not yet implemented.\n");
 
@@ -253,14 +258,13 @@ transport_read_packet(struct transport_read_state *self, int fd,
 
   if (self->length < block_size)
     {
-      const uint8_t *header;
-      uint32_t packet_length;
       int res;
       
       if (fd < 0)
 	return 0;
 
       res = read_some(self, fd, TRANSPORT_READ_AHEAD);
+      fd = -1;
 
       if (res == 0)
 	{
@@ -286,7 +290,15 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	}
       if (self->length < block_size)
 	return 0;
+    }
+  assert(self->length >= block_size);
 
+  if (self->total_length == 0)
+    {
+      uint32_t packet_length;
+      const uint8_t *header;
+
+      /* Process header */
       if (self->crypto)
 	{
 	  CRYPT(self->crypto, block_size,
@@ -294,7 +306,7 @@ transport_read_packet(struct transport_read_state *self, int fd,
 		self->input_buffer, self->start);
 	}
 
-      header = lsh_string_data(self->input_buffer) + self->start;;
+      header = lsh_string_data(self->input_buffer) + self->start;
       
       if (self->mac)
 	{
@@ -327,14 +339,14 @@ transport_read_packet(struct transport_read_state *self, int fd,
       /* Approximate test, to avoid overflow when computing the total
 	 size. Precice comparison to available buffer space comes
 	 later. */
-      if (self->packet_length > (SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ))
+      if (packet_length > (SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ))
 	{
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Packet too large";
 	  return -2;
 	}
 
-      self->total_length = self->packet_length - 1;
+      self->total_length = packet_length - 1;
       if (self->mac)
 	self->total_length += self->mac->mac_size;
 
@@ -346,11 +358,6 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	}
       self->start += 5;
       self->length -= 5;
-      if (self->length < self->total_length)
-	return 0;
-
-      return decode_packet(self, error, msg,
-			   seqno, length, data);
     }
   if (self->length < self->total_length)
     {
