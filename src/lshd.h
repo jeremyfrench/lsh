@@ -27,10 +27,11 @@
 #define LSHD_H_INCLUDED
 
 #include "abstract_io.h"
-#include "kexinit.h"
+#include "keyexchange.h"
 #include "publickey_crypto.h"
 #include "resource.h"
-#include "transport_read.h"
+#include "transport.h"
+#include "ssh_read.h"
 #include "ssh_write.h"
 
 struct lshd_connection;
@@ -49,16 +50,6 @@ enum service_state
 # include "lshd.h.x"
 #undef GABA_DECLARE
 
-/* GABA:
-   (class
-     (name lshd_read_state)
-     (super transport_read_state)
-     (vars
-       (connection object lshd_connection)))
-*/
-
-struct lshd_read_state *
-make_lshd_read_state(struct lshd_connection *connection);
 
 /* GABA:
    (class
@@ -92,11 +83,9 @@ lshd_handle_packet(struct ssh_read_state *s, struct lsh_string *packet);
 /* GABA:
    (class
      (name configuration)
+     (super transport_context)
      (vars
-       (random object randomness)
-       (algorithms object alist)
        (keys object alist)
-       (kexinit object make_kexinit)
        ; For now, a list { name, program, name, program, NULL }       
        (services . "const char **")))
 */
@@ -104,36 +93,9 @@ lshd_handle_packet(struct ssh_read_state *s, struct lsh_string *packet);
 /* GABA:
    (class
      (name lshd_connection)
-     (super resource)
+     (super transport_connection)
      (vars
-       (config object configuration)
-       
-       ; Key exchange 
-       (kex struct kexinit_state)
-       
-       (session_id string)
-
-       (newkeys_handler object lshd_packet_handler)
-       ; Handler for all messages in the key exchange specific range
-       (kex_handler object lshd_packet_handler)
-
        (service_state . "enum service_state")
-       
-       ; Receiving encrypted packets
-       ; Input fd for the ssh connection
-       (ssh_input . int)
-
-       (reader object lshd_read_state)
-
-       ; Sending encrypted packets
-       ; Output fd for the ssh connection, ; may equal ssh_input
-       (ssh_output . int)
-       (writer object ssh_write_state)
-
-       (send_mac object mac_instance)
-       (send_crypto object crypto_instance)
-       (send_compress object compress_instance)
-       (send_seqno . uint32_t)
        
        ; Communication with service on top of the transport layer.
        ; This is a bidirectional pipe
