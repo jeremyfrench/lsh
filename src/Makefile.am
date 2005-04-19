@@ -34,14 +34,16 @@ generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 bootstrap: $(generated_sources) $(dist_classes)
 	(cd spki && $(MAKE) bootstrap)
 
+# Old files client_keyexchange.c connection.c handshake.c
+
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	algorithms.c alist.c atoms.c \
 	channel.c channel_commands.c channel_forward.c \
 	charset.c \
-	client.c client_escape.c client_keyexchange.c \
+	client.c client_escape.c \
 	client_pty.c client_session.c client_userauth.c client_x11.c \
 	combinators.c command.c compress.c \
-	parse_config.c connection.c connection_commands.c \
+	parse_config.c connection_commands.c \
 	crypto.c \
 	daemon.c \
 	debug.c dh_exchange.c \
@@ -50,9 +52,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	exception.c \
 	format.c gc.c \
 	gateway.c gateway_channel.c gateway_commands.c \
-	handshake.c \
 	interact.c io.c io_commands.c \
-	kexinit.c kexinit_state.c keyexchange.c \
+	keyexchange.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
 	lsh_string.c parse.c \
@@ -129,7 +130,7 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
 
-lshd_SOURCES = lshd.c lshd_keyexchange.c transport.c transport_read.c transport_write.c
+lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c server_keyexchange.c
 
 lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c 
 
