@@ -65,6 +65,9 @@ ssh_write_flush(struct ssh_write_state *self, int fd)
   unsigned n = 0;
   int res;
 
+  if (string_queue_is_empty(&self->q))
+    return 1;
+
   FOR_STRING_QUEUE(&self->q, s)
     {
       iv[n].iov_base = (char *) lsh_string_data(s);
@@ -104,12 +107,14 @@ ssh_write_flush(struct ssh_write_state *self, int fd)
       if (string_queue_is_empty(&self->q))
 	{
 	  assert(self->done == 0);
-	  source->cancel_fd(source, fd, OOP_WRITE);
+	  return 1;
 	}
       else
-	self->done = written;
+	{
+	  self->done = written;
+	  return 0;
+	}
     }
-  return string_queue_is_empty(&self->q);
 }
 
 int
@@ -118,7 +123,7 @@ ssh_write_data(struct ssh_write_state *self,
 	       struct lsh_string *data)
 {
   string_queue_add_tail(&self->q, data);
-  self->size += data;
+  self->size += lsh_string_length(data);
   if (flush || self->size >= SSH_WRITE_SIZE)
     return ssh_write_flush(self, fd);
   else
