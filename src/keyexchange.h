@@ -116,8 +116,8 @@ handle_kexinit(struct kexinit_state *self,
 	     "struct kexinit_state *kex")))
 */
 
-#define KEYEXCHANGE_INIT(kex, connection, s) \
-((kex)->init((kex), (connection), (s)))
+#define KEYEXCHANGE_INIT(kex, random, s) \
+((kex)->init((kex), (random), (s)))
 
 /* GABA:
    (class
