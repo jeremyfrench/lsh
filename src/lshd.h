@@ -62,22 +62,6 @@ enum service_state
 struct lshd_service_read_state *
 make_lshd_service_read_state(struct lshd_connection *connection);
 
-void
-lshd_handle_packet(struct ssh_read_state *s, struct lsh_string *packet);
-
-/* This is used only for the keyexchange methods. */
-/* GABA:
-   (class
-     (name lshd_packet_handler)
-     (vars
-       ; Does *not* consume the packet. FIXME: Better to change this?
-       (handler method void
-                "struct lshd_connection *connection"
-	        "struct lsh_string *packet")))
-*/
-
-#define HANDLE_PACKET(s, c, p) ((s)->handler((s), (c), (p)))
-
 
 /* Information shared by several connections */
 /* GABA:
@@ -104,27 +88,5 @@ lshd_handle_packet(struct ssh_read_state *s, struct lsh_string *packet);
        (service_writer object ssh_write_state)))
 */
 
-void
-lshd_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet);
-
-void
-connection_disconnect(struct lshd_connection *connection,
-		      int reason, const uint8_t *msg);
-
-void
-connection_write_packet(struct lshd_connection *connection,
-			struct lsh_string *packet);
-
-#define connection_error(connection, msg) \
-  connection_disconnect((connection), SSH_DISCONNECT_PROTOCOL_ERROR, (msg))
-
-struct lshd_packet_handler *
-make_lshd_dh_handler(struct dh_method *method);
-
-void
-lshd_kexinit_handler(struct lshd_connection *connection, struct lsh_string *packet);
-
-void
-lshd_send_kexinit(struct lshd_connection *connection);
 
 #endif /* LSHD_H_INCLUDED */
