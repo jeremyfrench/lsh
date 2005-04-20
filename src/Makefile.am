@@ -130,7 +130,8 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
 
-lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c server_keyexchange.c
+lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
+	server_keyexchange.c
 
 lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c 
 
