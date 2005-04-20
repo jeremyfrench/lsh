@@ -88,12 +88,16 @@ server_dh_handler(struct transport_handler *s,
       && parse_eod(&buffer) )
     {
       mpz_init(tmp);
-      mpz_powm(tmp, self->dh.params->generator, self->dh.secret, self->dh.params->modulo);
+      mpz_powm(tmp, self->dh.e, self->dh.secret, self->dh.params->modulo);
       self->dh.K = ssh_format("%ln", tmp);
       mpz_clear(tmp);
-      
+
+      debug("Session key: %xS\n", self->dh.K);
+
       dh_hash_update(&self->dh, ssh_format("%S", self->key->public), 1);
       dh_hash_digest(&self->dh);
+
+      debug("Exchange hash: %xS\n", self->dh.exchange_hash);
 
       /* Send server's message, to complete key exchange */      
       transport_send_packet(connection,
