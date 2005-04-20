@@ -42,6 +42,11 @@
 
 #include "transport.c.x"
 
+/* FIXME: Duplicated in connection.c */
+static const char *packet_types[0x100] =
+#include "packet_types.h"
+;
+
 /* Maximum time for keyexchange to complete */
 #define TRANSPORT_TIMEOUT_KEYEXCHANGE (10 * 60)
 
@@ -181,14 +186,15 @@ transport_kexinit_handler(struct transport_connection *connection,
     CAST_SUBTYPE(keyexchange_algorithm, kex_algorithm,
 		 LIST(connection->kex.algorithm_list)[KEX_KEY_EXCHANGE]);
     
-    /* FIXME: Figure out precisely what KEYEXCHANGE_INIT is supposed
-       to do */
     connection->keyexchange_handler
       = KEYEXCHANGE_INIT(kex_algorithm,
-			 connection,
+			 connection->ctx->random,
 			 &connection->kex);
 
-    assert(connection->keyexchange_handler);
+    if (!connection->keyexchange_handler)
+      transport_disconnect(connection,
+			   SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			   "Configuration error");
   }  
 }
 
@@ -261,6 +267,8 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	}
       msg = packet[0];
 
+      debug("Received %z (%i) message\n", packet_types[msg], msg);
+
       /* Messages of type IGNORE, DISCONNECT and DEBUG are always
 	 acceptable. */
       if (msg == SSH_MSG_IGNORE)
@@ -289,8 +297,13 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	case KEX_STATE_IN_PROGRESS:
 	  if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
 	      || msg >= SSH_FIRST_USERAUTH_GENERIC)
-	    transport_protocol_error(connection,
-			    "Unexpected message during key exchange");
+	    {
+	      werror("Unexpected %z (%i) message during key exchange.\n",
+		     packet_types[msg], msg);
+	      transport_protocol_error(
+		connection,
+		"Unexpected message during key exchange");
+	    }
 	  else
 	    connection->keyexchange_handler->handler(connection->keyexchange_handler,
 						     connection, length, packet);
@@ -310,6 +323,7 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	      connection->new_crypto = NULL;
 	      connection->new_inflate = NULL;
 
+	      reset_kexinit_state(&connection->kex);
 	      transport_timeout(connection,
 				TRANSPORT_TIMEOUT_REEXCHANGE,
 				transport_timeout_reexchange);	      
@@ -517,10 +531,8 @@ transport_keyexchange_finish(struct transport_connection *connection,
 			     struct lsh_string *K)
 {
   int first = !connection->session_id;
-  
-  transport_send_packet(connection, format_newkeys());
 
-  connection->kex.write_state = 0;
+  transport_send_packet(connection, format_newkeys());
 
   if (first)
     connection->session_id = exchange_hash;
@@ -532,6 +544,10 @@ transport_keyexchange_finish(struct transport_connection *connection,
       return;
     }
 
+  assert(connection->kex.read_state == KEX_STATE_IN_PROGRESS);
+  connection->kex.read_state = KEX_STATE_NEWKEYS;  
+  connection->kex.write_state = 0;
+  
   if (first)    
     connection->event_handler(connection,
 			      TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE);
