@@ -502,17 +502,14 @@ make_configuration(const char *hostkey, oop_source *source)
   self->super.algorithms = all_symmetric_algorithms();
   self->super.oop = source;
 
-#if 0
-  /* FIXME: The keyexchange interface is broken */
-  ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-	    &make_lshd_dh_handler(make_dh14(self->super.random))->super);
-#endif
-
   self->keys = make_alist(0, -1);
   if (!read_host_key(hostkey,
 		     all_signature_algorithms(self->super.random),
 		     self->keys))
     werror("No host key.\n");
+  
+  ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
+	    &make_server_dh_group14_sha1(self->keys)->super);
 
   self->super.kexinit
     = make_simple_kexinit(
