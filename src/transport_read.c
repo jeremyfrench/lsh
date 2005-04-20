@@ -75,10 +75,16 @@ make_transport_read_state(void)
   self->input_buffer = lsh_string_alloc(SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ);
   self->start = self->length = 0;
 
+  self->mac = NULL;
+  self->crypto = NULL;
+  self->inflate = NULL;
+  self->seqno = 0;
+
+  self->padding = 0;
+  self->total_length = 0;
+  
   self->mac_buffer = lsh_string_alloc(SSH_MAX_MAC_SIZE);
   self->output_buffer = lsh_string_alloc(SSH_MAX_PACKET + 1);
-
-  self->total_length = 0;
   
   return self;
 }
@@ -239,7 +245,7 @@ decode_packet(struct transport_read_state *self,
   if (self->inflate)
     fatal("Inflating not yet implemented.\n");
 
-  *seqno = self->seqno;
+  *seqno = self->seqno++;
   *data_p = data;
   *length_p = length;
 
