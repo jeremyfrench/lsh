@@ -58,10 +58,6 @@
 
 #include "lshd.c.x"
 
-/* FIXME: Duplicated in connection.c */
-static const char *packet_types[0x100] =
-#include "packet_types.h"
-;
 
 /* Connection */
 static void
@@ -349,9 +345,6 @@ lshd_packet_handler(struct transport_connection *connection,
   assert(length > 0);
 
   msg = packet[0];
-
-  werror("lshd_packet_handler: Received packet of type %i (%z)\n",
-	 msg, packet_types[msg]);
 
   if (msg == SSH_MSG_SERVICE_REQUEST)
     {
