@@ -42,7 +42,6 @@
 
 #include "transport.c.x"
 
-/* FIXME: Duplicated in connection.c */
 static const char *packet_types[0x100] =
 #include "packet_types.h"
 ;
@@ -61,8 +60,8 @@ init_transport_connection(struct transport_connection *self,
 			  void (*kill)(struct resource *s),
 			  struct transport_context *ctx,
 			  int ssh_input, int ssh_output,
-			  void (*event)(struct transport_connection *,
-					enum transport_event event))
+			  int (*event)(struct transport_connection *,
+				       enum transport_event event))
 {
   init_resource(&self->super, kill);
   
@@ -74,6 +73,8 @@ init_transport_connection(struct transport_connection *self,
   self->new_mac = NULL;
   self->new_crypto = NULL;
   self->new_inflate = NULL;
+
+  self->expire = NULL;
   
   self->ssh_input = ssh_input;
   self->reader = make_transport_read_state();
@@ -81,6 +82,7 @@ init_transport_connection(struct transport_connection *self,
   self->ssh_output = ssh_output;
   self->writer = make_transport_write_state();
 
+  self->closing = 0;
   self->event_handler = event;
 }
 
@@ -113,27 +115,67 @@ transport_timeout_close(struct lsh_callback *s)
   CAST(transport_timeout, self, s);
   struct transport_connection *connection = self->connection;
 
-  transport_close(connection, 0);
+  KILL_RESOURCE(&connection->super);
 }
 
-/* FIXME: Need to figure out how to interact with lshd close, and with
-   the kill method. One idea: Generate a TRANSPORT_EVENT_CLOSE event,
-   and let it return a value saying if we should close immediately, or
-   linger a while for buffers to drain. */
+/* Intended to be called by the kill method in child class. */
+void
+transport_kill(struct transport_connection *connection)
+{
+  oop_source *source = connection->ctx->oop;
+  if (connection->expire)
+    {
+      KILL_RESOURCE(connection->expire);
+      connection->expire = NULL;
+    }
+      
+  if (connection->ssh_input >= 0)
+    {
+      source->cancel_fd(source, connection->ssh_input, OOP_READ);
+      if (connection->ssh_input != connection->ssh_output)
+	close (connection->ssh_input);
+      connection->ssh_input = -1;
+    }
+  if (connection->ssh_output >= 0)
+    {
+      source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
+      close(connection->ssh_output);
+      connection->ssh_output = -1;
+    }
+}
+
+/* We close the connection when we either have sent a DISCONNECT
+   message (possible as the result of a protocol error), or when we
+   have received a DISCONNECT message. In the first case, we want to
+   let out write buffer for the ssh connection drain (so that our
+   DISCONNECT message is delivered properly). We may also want to
+   deliver any buffered data to the application, but that's not quite
+   necessary.
+
+   In the latter case, when we have received DISCONNECT, we can
+   discard all data buffered on the ssh connection, but we should try
+   to deliver data bufferd for the application, i.e., the messages the
+   remote peer sent us just before the DISCONNECT message.
+
+   In both cases, the application can't generate any more data. We
+   generate a TRANSPORT_EVENT_CLOSE event tell it, and the return
+   value tells us if the application is finished.
+*/
+
 void
 transport_close(struct transport_connection *connection, int flush)
 {
-  if (connection->super.alive)
+  if (connection->super.alive && !connection->closing)
     {
       oop_source *source = connection->ctx->oop;
-      connection->event_handler(connection, TRANSPORT_EVENT_CLOSE);
+      connection->closing
+	= connection->event_handler(connection, TRANSPORT_EVENT_CLOSE);
+
       if (connection->expire)
 	{
 	  KILL_RESOURCE(connection->expire);
 	  connection->expire = NULL;
 	}
-      if (!flush)
-	connection->super.alive = 0;
       
       if (connection->ssh_input >= 0)
 	{
@@ -145,19 +187,21 @@ transport_close(struct transport_connection *connection, int flush)
       if (connection->ssh_output >= 0)
 	{
 	  if (flush && connection->write_pending)
-	    {
-	      /* Stay open for a while, to allow buffer to drain. */
-	      transport_timeout(connection,
-				TRANSPORT_TIMEOUT_CLOSE,
-				transport_timeout_close);
-	    }
+	    connection->closing++;
 	  else
-	    {
+	    {	      
 	      source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
 	      close(connection->ssh_output);
 	      connection->ssh_output = -1;
 	    }
 	}
+      if (connection->closing)
+	/* Stay open for a while, to allow buffers to drain. */
+	transport_timeout(connection,
+			  TRANSPORT_TIMEOUT_CLOSE,
+			  transport_timeout_close);
+      else
+	KILL_RESOURCE(&connection->super);	
     }
 }
 
@@ -333,8 +377,11 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 	case KEX_STATE_INIT:
 	  if (msg == SSH_MSG_KEXINIT)
 	    transport_kexinit_handler(connection, length, packet);
-	  else if (msg >= SSH_FIRST_USERAUTH_GENERIC
-		   && connection->packet_handler)
+	  
+	  /* Pass on everything except keyexchagne related messages. */
+	  else if ( (msg < SSH_FIRST_KEYEXCHANGE_GENERIC
+		     || msg >= SSH_FIRST_USERAUTH_GENERIC)
+		    && connection->packet_handler)
 	    connection->packet_handler(connection, seqno, length, packet);
 	  else
 	    transport_send_packet(connection, format_unimplemented(seqno));
@@ -414,7 +461,16 @@ transport_write_pending(struct transport_connection *connection, int pending)
       else
 	{
 	  source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
-	  if (!connection->kex.write_state)
+	  if (connection->closing)
+	    {
+	      close(connection->ssh_output);
+	      connection->ssh_output = -1;
+
+	      connection->closing--;
+	      if(!connection->closing)
+		KILL_RESOURCE(&connection->super);
+	    }
+	  else if (!connection->kex.write_state)
 	    connection->event_handler(connection,
 				      TRANSPORT_EVENT_START_APPLICATION); 
 	}
