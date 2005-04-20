@@ -1,3 +1,28 @@
+2005-04-20  Niels Möller  <niels@s3.kth.se>
+
+	* src/transport.c (packet_types): Table of packet type names.
+	(transport_kexinit_handler): The KEYEXCHANGE_INIT method takes a
+	randomness generator as the second argument. Disconnect if the
+	method returns NULL.
+	(oop_read_ssh): More debug messages. Call reset_kexinit_state when
+	handling NEWKEYS.
+	(transport_keyexchange_finish): Set kex state to
+	KEX_STATE_NEWKEYS.
+
+	* src/lshd.c (packet_types): Deleted table, moved to transport.c.
+
+	* src/kexinit.c, src/kexinit.h, src/kexinit_state.c: Deleted
+	files. 
+
+	* src/server_keyexchange.c (server_dh_handler): Fixed
+	diffie-hellman bug. Debug messages with session key and exchange
+	hash.
+
+	* src/lshd.h: Deleted unused declarations.
+
+	* src/lshd.c (make_configuration): Use
+	make_server_dh_group14_sha1.
+
 2005-04-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport_write.c (transport_write_packet): Assert that
