@@ -74,7 +74,7 @@ kill_lshd_connection(struct resource *s)
 	  close(self->service_fd);
 	  self->service_fd = -1;	  
 	}
-      transport_close(&self->super, 0);
+      transport_kill(&self->super);
     }
 }
 
@@ -82,10 +82,11 @@ static void
 lshd_packet_handler(struct transport_connection *connection,
 		    uint32_t seqno, uint32_t length, const uint8_t *packet);
 
-static void
+static int
 lshd_event_handler(struct transport_connection *connection,
 		   enum transport_event event)
 {
+  CAST(lshd_connection, self, connection);
   switch (event)
     {
     default:
@@ -97,12 +98,16 @@ lshd_event_handler(struct transport_connection *connection,
       werror("Event STOP_APPLICATION not handled.\n");
       break;
     case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
+      assert(self->service_state == SERVICE_DISABLED);
+      self->service_state = SERVICE_ENABLED;
       connection->packet_handler = lshd_packet_handler;
       break;
     case TRANSPORT_EVENT_CLOSE:
+      /* FIXME: Should allow service buffer to drain. */
       werror("Event CLOSE not handled.\n");
       break;
     }
+  return 0;
 }
 
 static struct lshd_connection *
