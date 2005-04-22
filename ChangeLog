@@ -1,3 +1,10 @@
+2005-04-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (kill_lshd_connection): Use transport_kill.
+	(lshd_event_handler): Enable service when receiving a
+	TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE event. Return 0 for all
+	events. 
+
 2005-04-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (make_transport_read_state): More thorough
