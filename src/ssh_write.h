@@ -21,6 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_SSH_WRITE_H_INCLUDED
+#define LSH_SSH_WRITE_H_INCLUDED
+
 #include "queue.h"
 
 #define GABA_DECLARE
@@ -31,25 +34,51 @@
    (class
      (name ssh_write_state)
      (vars
-       ; Total amount of buffered data
-       (size . uint32_t)
-       ; Number of bytes of the first string that have already been written
-       (done . uint32_t)
-       (q struct string_queue)))
+       (buffer string)
+       (start . uint32_t)
+       (length . uint32_t)
+       ; The preferred packet size, and amount of data we try to
+       ; collect actually writing anything.
+       (threshold . uint32_t)
+       ; Amount of unimportant data at end of buffer
+       (ignore . uint32_t)))
 */
 
+/* Error codes are negative */
+enum ssh_write_status
+{
+  /* I/O error (see errno) */
+  SSH_WRITE_IO_ERROR = -1,
+  /* Buffer grew too large */
+  SSH_WRITE_OVERFLOW = -2,
+  /* All buffered data (except ignore data) written successfully. */
+  SSH_WRITE_COMPLETE = 1,
+  /* Buffered data still pending; call ssh_write_flush. */
+  SSH_WRITE_PENDING
+};
+
+enum ssh_write_flag
+{
+  SSH_WRITE_FLAG_PUSH = 1,
+  SSH_WRITE_FLAG_IGNORE = 2,
+};
+
 void
-init_ssh_write_state(struct ssh_write_state *self);
+init_ssh_write_state(struct ssh_write_state *self,
+		     uint32_t buffer_size, uint32_t threshold);
 
 struct ssh_write_state *
-make_ssh_write_state(void);
+make_ssh_write_state(uint32_t buffer_size, uint32_t threshold);
 
-/* Returns 1 on success, 0 on EWOULDBLOCK, and -1 on error, indicated
-   by errno. Flush means that we should try writing the data at
-   once. */
-int
+/* If fd = -1, add data to buffer, don't write anything. Otherwise,
+   attempt to write data if we have more than threshold, or the push flag is set. */
+enum ssh_write_status
 ssh_write_data(struct ssh_write_state *self,
-	       int fd, int flush, struct lsh_string *data);
+	       int fd, enum ssh_write_flag flags,
+	       uint32_t length, const uint8_t *data);
 
-int
+/* Try write some more data */
+enum ssh_write_status
 ssh_write_flush(struct ssh_write_state *self, int fd);
+
+#endif /* LSH_SSH_WRITE_H_INCLUDED */
