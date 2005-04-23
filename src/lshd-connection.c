@@ -47,6 +47,9 @@
 
 #include "lshd-connection.c.x"
 
+#define CONNECTION_WRITE_THRESHOLD 1000
+#define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
+
 oop_source *global_oop_source;
 
 /* GABA:
@@ -72,14 +75,28 @@ write_packet(struct connection *connection,
 	     struct lsh_string *packet)
 {
   /* FIXME: Go to sleep if ssh_write_data returns 0? */
-  if (ssh_write_data(connection->writer,
-		     global_oop_source, STDOUT_FILENO,
-		     ssh_format("%i%S",
-				lsh_string_sequence_number(packet),
-				packet)) < 0)
+  enum ssh_write_status status;
+
+  packet = ssh_format("%i%S",
+		      lsh_string_sequence_number(packet),
+		      packet);
+  
+  status = ssh_write_data(connection->writer,
+			  STDOUT_FILENO, SSH_WRITE_FLAG_PUSH, 
+			  STRING_LD(packet));
+  lsh_string_free(packet);
+
+  switch (status)
     {
+    case SSH_WRITE_IO_ERROR:
       werror("write_packet: Write failed: %e\n", errno);
       exit(EXIT_FAILURE);
+    case SSH_WRITE_OVERFLOW:
+      werror("write_packet: Buffer fill\n", errno);
+      exit(EXIT_FAILURE);
+      
+      /* FIXME: Implement some flow control. Or use some different
+	 writer with unbounded buffers? */
     }
 }
 
@@ -184,7 +201,8 @@ make_connection(void)
 		  read_handler);
   ssh_read_start(self->reader, global_oop_source, STDIN_FILENO);
 
-  self->writer = make_ssh_write_state();
+  self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
+				      CONNECTION_WRITE_THRESHOLD);
 
   self->table = make_channel_table(make_connection_write_handler(self));
 
