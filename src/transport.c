@@ -78,7 +78,8 @@ init_transport_connection(struct transport_connection *self,
   
   self->ssh_input = ssh_input;
   self->reader = make_transport_read_state();
-
+  self->read_active = 0;
+  
   self->ssh_output = ssh_output;
   self->writer = make_transport_write_state();
 
@@ -131,7 +132,7 @@ transport_kill(struct transport_connection *connection)
       
   if (connection->ssh_input >= 0)
     {
-      source->cancel_fd(source, connection->ssh_input, OOP_READ);
+      transport_stop_read(connection);
       if (connection->ssh_input != connection->ssh_output)
 	close (connection->ssh_input);
       connection->ssh_input = -1;
@@ -179,7 +180,7 @@ transport_close(struct transport_connection *connection, int flush)
       
       if (connection->ssh_input >= 0)
 	{
-	  source->cancel_fd(source, connection->ssh_input, OOP_READ);
+	  transport_stop_read(connection);
 	  if (connection->ssh_input != connection->ssh_output)
 	    close (connection->ssh_input);
 	  connection->ssh_input = -1;
@@ -412,26 +413,48 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
   return OOP_CONTINUE;
 }
 
+void
+transport_start_read(struct transport_connection *connection)
+{
+  if (!connection->read_active)
+    {
+      connection->read_active = 1;
+      oop_source *source = connection->ctx->oop;
+      source->on_fd(source, connection->ssh_input, OOP_READ, oop_read_ssh, connection);
+    }
+}
+
+void
+transport_stop_read(struct transport_connection *connection)
+{
+  connection->read_active = 0;
+  oop_source *source = connection->ctx->oop;
+  source->cancel_fd(source, connection->ssh_input, OOP_READ);  
+}
+
 static void *
 oop_write_ssh(oop_source *source, int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
-  int res;
+  enum ssh_write_status status;
 
   assert(event == OOP_WRITE);
   assert(fd == connection->ssh_output);
 
-  res = transport_write_flush(connection->writer, fd);
-  switch(res)
+  status = transport_write_flush(connection->writer, fd, connection->ctx->random);
+  switch(status)
     {
-    default: abort();
-    case 0:
+    default:
+    case SSH_WRITE_OVERFLOW:
+      abort();
+    case SSH_WRITE_PENDING:
       /* More to write */
       break;
-    case 1:
+    case SSH_WRITE_COMPLETE:
       transport_write_pending(connection, 0);
       break;
-    case -1:
+      
+    case SSH_WRITE_IO_ERROR:
       if (errno != EWOULDBLOCK)
 	{
 	  werror("Write failed: %e\n", errno);
@@ -623,16 +646,15 @@ transport_handshake(struct transport_connection *connection,
 		       uint32_t length,
 		       const uint8_t *line))
 {
-  oop_source *source = connection->ctx->oop;
   int is_server = connection->ctx->is_server;
-  int res;
+  enum ssh_write_status status;
   
   connection->kex.version[is_server] = version;
-  res = transport_write_line(connection->writer,
-			     connection->ssh_output,
-			     ssh_format("%lS\r\n", version));
+  status = transport_write_line(connection->writer,
+				connection->ssh_output,
+				ssh_format("%lS\r\n", version));
 
-  if (res < 0)
+  if (status < 0)
     {
       werror("Writing version string failed: %e\n", errno);
       transport_close(connection, 0);
@@ -642,6 +664,5 @@ transport_handshake(struct transport_connection *connection,
 
   connection->line_handler = line_handler;
 
-  source->on_fd(source, connection->ssh_input, OOP_READ,
-		oop_read_ssh, connection);
+  transport_start_read(connection);
 }

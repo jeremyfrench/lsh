@@ -44,8 +44,8 @@
    requests a lot of data, but doesn't read any.
 */
 
-#ifndef TRANSPORT_H_INCLUDED
-#define TRANSPORT_H_INCLUDED
+#ifndef LSH_TRANSPORT_H_INCLUDED
+#define LSH_TRANSPORT_H_INCLUDED
 
 #include <oop.h>
 
@@ -53,9 +53,9 @@
 #include "compress.h"
 #include "keyexchange.h"
 #include "resource.h"
+#include "ssh_write.h"
 
 struct transport_read_state;
-struct transport_write_state;
 struct transport_connection;
 
 enum transport_event {
@@ -97,14 +97,26 @@ transport_read_new_keys(struct transport_read_state *self,
 			struct compress_instance *inflate);
 
 
+/* GABA:
+   (class
+     (name transport_write_state)
+     (super ssh_write_state)
+     (vars     
+       (mac object mac_instance)
+       (crypto object crypto_instance)
+       (deflate object compress_instance)
+       (seqno . uint32_t)))
+*/
+
 struct transport_write_state *
 make_transport_write_state(void);
 
-int
-transport_write_packet(struct transport_write_state *self, int fd, int flush,
+enum ssh_write_status
+transport_write_packet(struct transport_write_state *self,
+		       int fd, enum ssh_write_flag flags,
 		       struct lsh_string *packet, struct randomness *random);
 
-int
+enum ssh_write_status
 transport_write_line(struct transport_write_state *self,
 		     int fd,
 		     struct lsh_string *line);
@@ -117,8 +129,9 @@ transport_write_new_keys(struct transport_write_state *self,
 
 /* Attempt to send pending data, and maybe add an extra SSH_MSG_IGNORE
    packet */
-int
-transport_write_flush(struct transport_write_state *self, int fd);
+enum ssh_write_status
+transport_write_flush(struct transport_write_state *self,
+		      int fd, struct randomness *random);
 
 /* Fixed state used by all connections. */
 /* GABA:
@@ -170,7 +183,8 @@ transport_write_flush(struct transport_write_state *self, int fd);
        ; Input fd for the ssh connection
        (ssh_input . int)
        (reader object transport_read_state)
-       
+       (read_active . int)
+
        ; Sending encrypted packets
        ; Output fd for the ssh connection, ; may equal ssh_input
        (ssh_output . int)
@@ -212,6 +226,12 @@ void
 transport_write_pending(struct transport_connection *connection, int pending);
 
 void
+transport_start_read(struct transport_connection *connection);
+
+void
+transport_stop_read(struct transport_connection *connection);
+
+void
 transport_disconnect(struct transport_connection *connection,
 		     int reason, const uint8_t *msg);
 
@@ -239,4 +259,4 @@ transport_handshake(struct transport_connection *connection,
 		       uint32_t length,
 		       const uint8_t *line));
 
-#endif /* TRANSPORT_H_INCLUDED */
+#endif /* LSH_TRANSPORT_H_INCLUDED */
