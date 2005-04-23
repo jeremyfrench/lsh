@@ -1,3 +1,48 @@
+2005-04-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport.h (class transport_write_state): Moved declaration
+	here. 
+	(transport_connection): New attribute read_active.
+
+	* src/transport.c (transport_start_read, transport_stop_read): New
+	functions.
+	(oop_write_ssh): Updated to new ssh_write_state interface.
+	(transport_handshake): Likewise.
+
+	* src/transport_write.c: Updated to new ssh_write_state interface.
+	(make_ignore_packet): New function.
+	(transport_write_packet): Generate SSH_MSG_IGNORE packets.
+	(transport_write_flush): Likewise.
+
+	* src/ssh_write.c: Rewritten. Now uses a hard limit on buffer
+	size, supports ignore-data, and a better push mechanism.
+
+	* src/lshd.c (lshd_event_handler): Implemented flow control.
+	(lshd_line_handler): Fixed format string for verbose output.
+	(lshd_service_handler): Updated to new ssh_write_state interface.
+	(lshd_service_request_handler): Likewise.
+	(make_configuration): Use make_server_dh_exchange and
+	make_dh_group14.
+	(SERVICE_WRITE_THRESHOLD, SERVICE_WRITE_BUFFER_SIZE): New constants.
+
+	* src/lshd-connection.c (CONNECTION_WRITE_THRESHOLD) 
+	(CONNECTION_WRITE_BUFFER_SIZE): New constants.
+	(write_packet): Updated to new ssh_write_state interface.
+	(make_connection): Likewise.
+
+	* src/server_keyexchange.c (server_dh_exchange): dh_params is a
+	class, not a struct.
+	(make_server_dh_exchange): Take a dh_params object as argument.
+	(make_server_dh_group1_sha1, make_server_dh_group14_sha1): Deleted
+	functions.
+
+	* src/dh_exchange.c (make_dh_params): Replaces init_dh_params.
+	(make_dh_group1): Replaces init_dh_group1.
+	(make_dh_group14): Replaces init_dh_group14.
+
+	* src/publickey_crypto.h (class dh_params): Should be a class, not
+	a struct.
+
 2005-04-22  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (kill_lshd_connection): Use transport_kill.
