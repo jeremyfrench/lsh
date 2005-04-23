@@ -30,6 +30,7 @@
 #include "list.h"
 
 struct transport_connection;
+struct dh_params;
 
 /* State affecting incoming keyexchange packets */
 enum kex_state
@@ -157,10 +158,8 @@ make_simple_kexinit(struct int_list *kex_algorithms,
 		    struct int_list *languages);
 
 struct keyexchange_algorithm *
-make_server_dh_group1_sha1(struct alist *keys);
-
-struct keyexchange_algorithm *
-make_server_dh_group14_sha1(struct alist *keys);
+make_server_dh_exchange(const struct dh_params *params,
+			struct alist *keys);
 
 #if 0
 
