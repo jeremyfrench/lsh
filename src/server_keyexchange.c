@@ -47,7 +47,7 @@
      (name server_dh_exchange)
      (super keyexchange_algorithm)
      (vars
-       (params struct dh_params)
+       (params const object dh_params)
        (keys object alist)))
 */
 
@@ -139,40 +139,26 @@ server_dh_init(struct keyexchange_algorithm *s,
       
       /* Initialize */
       handler->super.handler = server_dh_handler;
-      init_dh_state(&handler->dh, &self->params, kex);
+      init_dh_state(&handler->dh, self->params, kex);
 
       handler->key = key;
 
       /* Generate server's secret exponent */
-      dh_generate_secret(&self->params, random, handler->dh.secret, handler->dh.f);
+      dh_generate_secret(self->params, random, handler->dh.secret, handler->dh.f);
   
       /* Return handler */
       return &handler->super;
     }
 }
 
-static struct keyexchange_algorithm *
-make_server_dh_exchange(void (*init)(struct dh_params *params,
-				     const struct hash_algorithm *H),
-			const struct hash_algorithm *H,
+struct keyexchange_algorithm *
+make_server_dh_exchange(const struct dh_params *params,
 			struct alist *keys)
 {
   NEW(server_dh_exchange, self);
-  init(&self->params, H);
   self->super.init = server_dh_init;
+  self->params = params;
   self->keys = keys;
 
   return &self->super;
-}
-
-struct keyexchange_algorithm *
-make_server_dh_group1_sha1(struct alist *keys)
-{
-  return make_server_dh_exchange(init_dh_group1, &crypto_sha1_algorithm, keys);
-}
-
-struct keyexchange_algorithm *
-make_server_dh_group14_sha1(struct alist *keys)
-{
-  return make_server_dh_exchange(init_dh_group14, &crypto_sha1_algorithm, keys);
 }
