@@ -52,7 +52,7 @@ make_keypair(uint32_t type,
 
 /* DH key exchange, with authentication */
 /* GABA:
-   (struct
+   (class
      (name dh_params)
      (vars
        (limit . uint32_t)
@@ -62,18 +62,15 @@ make_keypair(uint32_t type,
        (H const object hash_algorithm)))
 */
 
-void
-init_dh_params(struct dh_params *params,
-	       const char *modulo, unsigned generator,
+const struct dh_params *
+make_dh_params(const char *modulo, unsigned generator,
 	       const struct hash_algorithm *H);
 
-void
-init_dh_group1(struct dh_params *params,
-	       const struct hash_algorithm *H);
+const struct dh_params *
+make_dh_group1(const struct hash_algorithm *H);
 
-void
-init_dh_group14(struct dh_params *params,
-	       const struct hash_algorithm *H);
+const struct dh_params *
+make_dh_group14(const struct hash_algorithm *H);
 
 /* State common for both all DH variants, for both client and
    server. */
@@ -96,7 +93,7 @@ init_dh_group14(struct dh_params *params,
 
 void
 init_dh_state(struct dh_state *self,
-	      const struct dh_params *m,
+	      const struct dh_params *params,
 	      struct kexinit_state *kex);
 
 void
