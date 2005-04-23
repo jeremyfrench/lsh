@@ -37,6 +37,8 @@
 
 #include <oop.h>
 
+#include "nettle/macros.h"
+
 #include "lshd.h"
 
 #include "algorithms.h"
@@ -58,6 +60,18 @@
 
 #include "lshd.c.x"
 
+#define SERVICE_WRITE_THRESHOLD 1000
+
+/* Selectign a reasonable the buffer size here a little subtle. The
+   buffer can contain 2*SERVICE_WRITE_THRESHOLD leftover bytes + one
+   full packet + whatever the TRANSPORT_READ_AHEAD encrypted and
+   compressed read ahead expands to. Currently, that's 1000 transport
+   bytes, at most 41 packets, which could potentially explode to 32000
+   bytes each. We limit the exploded read ahead to 10000 bytes, and
+   consider extremely inflatable packets as an error. */
+
+#define SERVICE_WRITE_BUFFER_SIZE \
+  (SSH_MAX_PACKET + 2*SERVICE_WRITE_THRESHOLD + 10000)
 
 /* Connection */
 static void
@@ -92,10 +106,14 @@ lshd_event_handler(struct transport_connection *connection,
     default:
       abort();
     case TRANSPORT_EVENT_START_APPLICATION:
-      werror("Event START_APPLICATION not handled.\n");
+      if (self->service_reader)
+	ssh_read_start(&self->service_reader->super,
+		       connection->ctx->oop, self->service_fd);
       break;
     case TRANSPORT_EVENT_STOP_APPLICATION:
-      werror("Event STOP_APPLICATION not handled.\n");
+      if (self->service_reader)
+	ssh_read_stop(&self->service_reader->super,
+		       connection->ctx->oop, self->service_fd);
       break;
     case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
       assert(self->service_state == SERVICE_DISABLED);
@@ -128,7 +146,7 @@ static void
 lshd_line_handler(struct transport_connection *connection,
 		  uint32_t length, const uint8_t *line)
 {
-  verbose("Client version string: %p\n", length, line);
+  verbose("Client version string: %ps\n", length, line);
 
   /* Line must start with "SSH-2.0-" (we may need to allow "SSH-1.99"
      as well). */
@@ -147,22 +165,45 @@ static void
 lshd_service_handler(struct lshd_connection *self,
 		     uint32_t seqno, uint32_t length, const uint8_t *packet)
 {
-  int res = ssh_write_data(self->service_writer,
-			   self->service_fd, 1,
-			   ssh_format("%i%s",
-				      seqno, length, packet));
+  enum ssh_write_status status;
+  
+  uint8_t header[8];
 
-  if (res < 0)
+  WRITE_UINT32(header, seqno);
+  WRITE_UINT32(header + 4, length);
+
+  status = ssh_write_data(self->service_writer,
+			  self->service_fd, 0,
+			  sizeof(header), header);
+  if (status >= 0)
+    status = ssh_write_data(self->service_writer,
+			    self->service_fd, SSH_WRITE_FLAG_PUSH,
+			    length, packet);
+
+  switch (status)
     {
+    default:
+      abort();
+    case SSH_WRITE_IO_ERROR:
       transport_disconnect(&self->super,
 			   SSH_DISCONNECT_BY_APPLICATION,
 			   "Connection to service layer failed.");
+      break;
+    case SSH_WRITE_OVERFLOW:
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Service layer not responsive.");
+      break;
+    case SSH_WRITE_PENDING:
+      if (self->service_writer->length > 2 * self->service_writer->threshold)
+	transport_stop_read(&self->super);
+      else
+	{
+	case SSH_WRITE_COMPLETE:
+	  transport_start_read(&self->super);
+	}
+      break;
     }
-#if 0
-  XXX
-  else
-    lshd_service_pending(self, (res == 0));
-#endif
 }
 
 static void
@@ -303,7 +344,9 @@ lshd_service_request_handler(struct lshd_connection *connection,
 			     connection->super.ctx->oop,
 			     connection->service_fd);
 
-	      connection->service_writer = make_ssh_write_state();
+	      connection->service_writer
+		= make_ssh_write_state(SERVICE_WRITE_BUFFER_SIZE,
+				       SERVICE_WRITE_THRESHOLD);
 
 	      transport_send_packet(&connection->super,
 				    format_service_accept(name_length, name));
@@ -507,7 +550,8 @@ make_configuration(const char *hostkey, oop_source *source)
     werror("No host key.\n");
   
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-	    &make_server_dh_group14_sha1(self->keys)->super);
+	    &make_server_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
+				    self->keys)->super);
 
   self->super.kexinit
     = make_simple_kexinit(
