@@ -65,8 +65,11 @@ enum transport_event {
   /* Connection is being closed. Event handler returns the number of
      non-empty buffers the application wants to wait for. */
   TRANSPORT_EVENT_CLOSE,
+  /* Push through any buffered data; no more is arriving on the ssh
+     connection. */
+  TRANSPORT_EVENT_PUSH,
   /* Transport buffer non-empty, or key exchange in progress. New
-     application data is not allowed. */  
+     application data is not allowed. */
   TRANSPORT_EVENT_STOP_APPLICATION,
   /* Transport buffer empty again, new data is encouraged */
   TRANSPORT_EVENT_START_APPLICATION,
@@ -79,16 +82,41 @@ enum transport_event {
 struct transport_read_state *
 make_transport_read_state(void);
 
-int
+/* FIXME: 1. Some of this could perhaps be generalized to work with
+   the service reader too. 2. It would be desirable to get the push
+   indication together with the last read packet. To get that to work,
+   the reader must be able to decrypt the next packet header. To do
+   this, the handling of SSH_MSG_NEWKEYS must be moved down to the
+   reader layer, which does make some sense. */
+
+enum transport_read_status
+{
+  /* Read error, errno value stored in *error. */
+  TRANSPORT_READ_IO_ERROR = -1,
+  /* Protocol error, SSH_DISCONNECT reson code stored in *error and
+     error message in *msg. */
+  TRANSPORT_READ_PROTOCOL_ERROR = -2,
+  /* End of file reached. */
+  TRANSPORT_READ_EOF = 0,
+  /* Packet/line read successfully. */
+  TRANSPORT_READ_COMPLETE = 1,
+  /* There's more data available for the next read. */
+  TRANSPORT_READ_PENDING = 2,
+  /* No more data available now, so read data should be delivered
+     immediately. */
+  TRANSPORT_READ_PUSH = 3,
+};
+  
+enum transport_read_status
 transport_read_line(struct transport_read_state *self, int fd,
 		    int *error, const char **msg,
 		    uint32_t *length, const uint8_t **line);
 
-int
+enum transport_read_status
 transport_read_packet(struct transport_read_state *self, int fd,
 		      int *error, const char **msg,
 		      uint32_t *seqno,
-		      uint32_t *length, const uint8_t **data);
+		      uint32_t *length, struct lsh_string *packet);
 
 void
 transport_read_new_keys(struct transport_read_state *self,
@@ -184,7 +212,13 @@ transport_write_flush(struct transport_write_state *self,
        (ssh_input . int)
        (reader object transport_read_state)
        (read_active . int)
-
+       ; Buffer for the latest read packet.
+       (read_packet string)
+       ; If non-zero, we should let the application process the
+       ; previous packet again.
+       (retry_length . uint32_t)
+       (retry_seqno . uint32_t)
+       
        ; Sending encrypted packets
        ; Output fd for the ssh connection, ; may equal ssh_input
        (ssh_output . int)
@@ -197,8 +231,9 @@ transport_write_flush(struct transport_write_state *self,
        ; Return value is used only for TRANSPORT_EVENT_CLOSE
        ; FIXME: Should it be an unsigned?
        (event_handler method int "enum transport_event event")
-       ; Handles all non-transport messages
-       (packet_handler method void "uint32_t seqno" "uint32_t length"
+       ; Handles all non-transport messages. Returns 1 on success,
+       ; or 0 if the application's buffers are full.
+       (packet_handler method int "uint32_t seqno" "uint32_t length"
                                    "const uint8_t *packet")
        (line_handler method void "uint32_t length"
                                  "const uint8_t *line")))
