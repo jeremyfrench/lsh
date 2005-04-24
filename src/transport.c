@@ -30,6 +30,7 @@
 
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -79,6 +80,8 @@ init_transport_connection(struct transport_connection *self,
   self->ssh_input = ssh_input;
   self->reader = make_transport_read_state();
   self->read_active = 0;
+  self->retry_length = 0;
+  self->retry_seqno = 0;
   
   self->ssh_output = ssh_output;
   self->writer = make_transport_write_state();
@@ -253,162 +256,194 @@ transport_timeout_reexchange(struct lsh_callback *s)
   transport_send_kexinit(connection);
 }
 
+/* Returns 1 if processing of the packet is complete, or 0 if it
+   should be retried later. */
+static int
+transport_process_packet(struct transport_connection *connection,
+			 uint32_t seqno, uint32_t length, const struct lsh_string *packet)
+{
+  const uint8_t *data;
+  uint8_t msg;
+
+  if (length == 0)
+    {
+      transport_protocol_error(connection, "Received empty packet");
+      return 1;
+    }
+
+  data = lsh_string_data(packet);
+  msg = data[0];
+
+  debug("Received %z (%i) message\n", packet_types[msg], msg);
+  
+  /* Messages of type IGNORE, DISCONNECT and DEBUG are always
+     acceptable. */
+  if (msg == SSH_MSG_IGNORE)
+    {
+      /* Do nothing */
+      /* FIXME: Better to pass it the application? */
+    }
+  else if (msg == SSH_MSG_DISCONNECT)
+    {
+      verbose("Received disconnect message.\n");
+      transport_close(connection, 0);
+    }
+  else if (msg == SSH_MSG_DEBUG)
+    {
+      /* Ignore it. Perhaps it's best to pass it on to the
+	 application? */
+    }
+
+  /* Otherwise, behaviour depends on the kex state */
+  else switch (connection->kex.read_state)
+    {
+    default:
+      abort();
+    case KEX_STATE_IGNORE:
+      connection->kex.read_state = KEX_STATE_IN_PROGRESS;
+      break;
+    case KEX_STATE_IN_PROGRESS:
+      if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
+	  || msg >= SSH_FIRST_USERAUTH_GENERIC)
+	{
+	  werror("Unexpected %z (%i) message during key exchange.\n",
+		 packet_types[msg], msg);
+	  transport_protocol_error(connection,
+				   "Unexpected message during key exchange");
+	}
+      else
+	connection->keyexchange_handler->handler(connection->keyexchange_handler,
+						 connection, length, data);
+      break;
+    case KEX_STATE_NEWKEYS:
+      if (msg != SSH_MSG_NEWKEYS)
+	transport_protocol_error(connection, "NEWKEYS expected");
+      else if (length != 1)
+	transport_protocol_error(connection, "Invalid NEWKEYS message");
+      else
+	{
+	  transport_read_new_keys(connection->reader,
+				  connection->new_mac,
+				  connection->new_crypto,
+				  connection->new_inflate);
+	  connection->new_mac = NULL;
+	  connection->new_crypto = NULL;
+	  connection->new_inflate = NULL;
+
+	  reset_kexinit_state(&connection->kex);
+	  transport_timeout(connection,
+			    TRANSPORT_TIMEOUT_REEXCHANGE,
+			    transport_timeout_reexchange);	      
+	}
+      break;
+
+    case KEX_STATE_INIT:
+      if (msg == SSH_MSG_KEXINIT)
+	transport_kexinit_handler(connection, length, data);
+	  
+      /* Pass on everything except keyexchagne related messages. */
+      else if ( (msg < SSH_FIRST_KEYEXCHANGE_GENERIC
+		 || msg >= SSH_FIRST_USERAUTH_GENERIC)
+		&& connection->packet_handler)
+	return connection->packet_handler(connection, seqno, length, data);
+      else
+	transport_send_packet(connection, format_unimplemented(seqno));
+      break;
+    }
+  return 1;
+}
+
 static void *
 oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
   int error;
   const char *error_msg;
-  int res = 0;
+  enum transport_read_status status;
 
   assert(event == OOP_READ);
   assert(fd == connection->ssh_input);
+
+  assert(!connection->retry_length);
 
   while (connection->line_handler && connection->ssh_input >= 0)
     {
       uint32_t length;
       const uint8_t *line;
   
-      res = transport_read_line(connection->reader, fd, &error, &error_msg,
-				&length, &line);
-      if (res != 1)
-	goto done;
-      
+      status = transport_read_line(connection->reader, fd, &error, &error_msg,
+				   &length, &line);
       fd = -1;
-
-      if (!line)
+      
+      switch (status)
 	{
+	default:
+	  return OOP_CONTINUE;
+
+	case TRANSPORT_READ_IO_ERROR:
+	  werror("Read error: %e\n", error);
+	  transport_close(connection, 0);
+	  break;
+
+	case TRANSPORT_READ_PROTOCOL_ERROR:
+	  transport_disconnect(connection, error, error_msg);
+	  break;
+
+	case TRANSPORT_READ_EOF:
 	  werror("Unexpected EOF at start of line.\n");
 	  transport_close(connection, 0);
+	  break;
+
+	case TRANSPORT_READ_COMPLETE:
+	  connection->line_handler(connection, length, line);
+	  break;
 	}
-      else
-	connection->line_handler(connection, length, line);
     }
   while (connection->ssh_input >= 0)
     {
       uint32_t seqno;
       uint32_t length;
-      const uint8_t *packet;
       
-      uint8_t msg;
-
-      res = transport_read_packet(connection->reader, fd, &error, &error_msg,
-				  &seqno, &length, &packet);
-      if (res != 1)
-	goto done;
-      
+      status = transport_read_packet(connection->reader, fd, &error, &error_msg,
+				     &seqno, &length, connection->read_packet);
       fd = -1;
-      
-      /* Process packet */
-      if (!packet)
-	{
-	  werror("Unexpected EOF at start of packet.\n");
-	  transport_close(connection, 0);	  
-	}
-      if (length == 0)
-	{
-	  transport_protocol_error(connection, "Received empty packet");
-	  return OOP_CONTINUE;
-	}
-      msg = packet[0];
 
-      debug("Received %z (%i) message\n", packet_types[msg], msg);
-
-      /* Messages of type IGNORE, DISCONNECT and DEBUG are always
-	 acceptable. */
-      if (msg == SSH_MSG_IGNORE)
+      switch (status)
 	{
-	  /* Do nothing */	  
-	}
-      else if (msg == SSH_MSG_DISCONNECT)
-	{
-	  verbose("Received disconnect message.\n");
-	  transport_close(connection, 0);
-	}
-      else if (msg == SSH_MSG_DEBUG)
-	{
-	  /* Ignore it. Perhaps it's best to pass it on to the
-	     application? */
-	}
-
-      /* Otherwise, behaviour depends on the kex state */
-      else switch (connection->kex.read_state)
-	{
+#if 0
 	default:
 	  abort();
-	case KEX_STATE_IGNORE:
-	  connection->kex.read_state = KEX_STATE_IN_PROGRESS;
-	  break;
-	case KEX_STATE_IN_PROGRESS:
-	  if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
-	      || msg >= SSH_FIRST_USERAUTH_GENERIC)
-	    {
-	      werror("Unexpected %z (%i) message during key exchange.\n",
-		     packet_types[msg], msg);
-	      transport_protocol_error(
-		connection,
-		"Unexpected message during key exchange");
-	    }
-	  else
-	    connection->keyexchange_handler->handler(connection->keyexchange_handler,
-						     connection, length, packet);
-	  break;
-	case KEX_STATE_NEWKEYS:
-	  if (msg != SSH_MSG_NEWKEYS)
-	    transport_protocol_error(connection, "NEWKEYS expected");
-	  else if (length != 1)
-	    transport_protocol_error(connection, "Invalid NEWKEYS message");
-	  else
-	    {
-	      transport_read_new_keys(connection->reader,
-				      connection->new_mac,
-				      connection->new_crypto,
-				      connection->new_inflate);
-	      connection->new_mac = NULL;
-	      connection->new_crypto = NULL;
-	      connection->new_inflate = NULL;
-
-	      reset_kexinit_state(&connection->kex);
-	      transport_timeout(connection,
-				TRANSPORT_TIMEOUT_REEXCHANGE,
-				transport_timeout_reexchange);	      
-	    }
+#endif
+	case TRANSPORT_READ_IO_ERROR:
+	  werror("Read error: %e\n", error);
+	  transport_close(connection, 0);
 	  break;
 
-	case KEX_STATE_INIT:
-	  if (msg == SSH_MSG_KEXINIT)
-	    transport_kexinit_handler(connection, length, packet);
-	  
-	  /* Pass on everything except keyexchagne related messages. */
-	  else if ( (msg < SSH_FIRST_KEYEXCHANGE_GENERIC
-		     || msg >= SSH_FIRST_USERAUTH_GENERIC)
-		    && connection->packet_handler)
-	    connection->packet_handler(connection, seqno, length, packet);
-	  else
-	    transport_send_packet(connection, format_unimplemented(seqno));
+	case TRANSPORT_READ_PROTOCOL_ERROR:
+	  transport_disconnect(connection, error, error_msg);
 	  break;
-	}
-      if (connection->ssh_input < 0)
-	{
-	  /* We've been closed? */
+
+	case TRANSPORT_READ_EOF:
+	  werror("Unexpected EOF at start of packet.\n");
+	  transport_close(connection, 0);	  
+	  break;
+
+	case TRANSPORT_READ_PUSH:
+	  connection->event_handler(connection, TRANSPORT_EVENT_PUSH);
+	  /* Fall through */
+	case TRANSPORT_READ_PENDING:
 	  return OOP_CONTINUE;
+	  
+	case TRANSPORT_READ_COMPLETE:
+	  if (!transport_process_packet(connection, seqno, length, connection->read_packet))
+	    {
+	      connection->retry_length = length;
+	      connection->retry_seqno = seqno;
+	      transport_stop_read(connection);
+	      return OOP_CONTINUE;
+	    }
+	  break;
 	}
-    }
- done:
-  switch (res)
-    {
-    default:
-      abort();
-    case 0: case 1:
-      break;
-    case -1:
-      /* I/O error */
-      werror("Read error: %e\n", error);
-      transport_close(connection, 0);
-      break;
-    case -2:
-      transport_disconnect(connection, error, error_msg);
-      break;
     }
   return OOP_CONTINUE;
 }
