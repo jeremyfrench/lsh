@@ -1,3 +1,26 @@
+2005-04-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_read.c (class transport_read_state): New attribute
+	read_status. Deleted output_buffer.
+	(readable_p): New function.
+	(read_some): Determine if the read data needs to be pushed, and
+	storing this information in read_status.
+	(find_line, transport_read_line, decode_packet) 
+	(transport_read_packet): Changed return type to enum
+	transport_read_status.
+
+	* src/transport.c (transport_process_packet): New function,
+	extracted from...
+	(oop_read_ssh): ... Call transport_process_packet. Check return
+	value, on zero, prepare for retrying the packet later.
+
+	* src/transport.h (TRANSPORT_EVENT_PUSH): New event type.
+	(enum transport_read_status): Return type from transport read
+	calls.
+	(class transport_connection): New attributes read_buffer,
+	retry_length and retry_seqno. Changed packet_handler method to
+	return an int.
+
 2005-04-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport.h (class transport_write_state): Moved declaration
