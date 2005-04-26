@@ -357,7 +357,8 @@ transport_process_packet(struct transport_connection *connection,
 }
 
 static void *
-oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
+oop_read_ssh(oop_source *source UNUSED,
+	     int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
   int error;
@@ -448,7 +449,8 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 }
 
 static void *
-oop_timer_retry(oop_source *oop, struct timeval tv, void *state)
+oop_timer_retry(oop_source *oop UNUSED,
+		struct timeval tv UNUSED, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
   uint32_t length = connection->retry_length;
@@ -545,7 +547,8 @@ static void
 transport_stop_write(struct transport_connection *connection);
 
 static void *
-oop_write_ssh(oop_source *source, int fd, oop_event event, void *state)
+oop_write_ssh(oop_source *source UNUSED,
+	      int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
   enum ssh_write_status status;
