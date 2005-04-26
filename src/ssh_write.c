@@ -101,6 +101,9 @@ ssh_write_flush(struct ssh_write_state *self, int fd)
     /* Let caller check for EWOULDBLOCK, if approproate */
     return SSH_WRITE_IO_ERROR;
 
+#if 0
+  trace("ssh_write: Wrote 0x%xi bytes.\n", res);
+#endif
   assert(res > 0);
   self->start += res;
   self->length -= res;
