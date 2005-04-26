@@ -77,6 +77,9 @@ ssh_write_data(struct ssh_write_state *self,
 	       int fd, enum ssh_write_flag flags,
 	       uint32_t length, const uint8_t *data);
 
+uint32_t
+ssh_write_available(const struct ssh_write_state *self);
+
 /* Try write some more data */
 enum ssh_write_status
 ssh_write_flush(struct ssh_write_state *self, int fd);

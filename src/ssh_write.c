@@ -231,3 +231,11 @@ ssh_write_data(struct ssh_write_state *self,
     }
   return enqueue(self, flags, length, data);
 }      
+
+uint32_t
+ssh_write_available(const struct ssh_write_state *self)
+{
+  uint32_t size = lsh_string_length(self->buffer);
+  assert(self->length <= size);
+  return size - self->length;
+}
