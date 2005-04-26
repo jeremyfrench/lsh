@@ -201,7 +201,8 @@ lshd_line_handler(struct transport_connection *connection,
 /* Communication with service layer */
 
 static void *
-oop_read_service(oop_source *source, int fd, oop_event event, void *state)
+oop_read_service(oop_source *source UNUSED,
+		 int fd, oop_event event, void *state)
 {
   CAST(lshd_connection, self, (struct lsh_object *) state);
 
@@ -283,7 +284,8 @@ lshd_service_stop_read(struct lshd_connection *self)
 }
 
 static void *
-oop_write_service(oop_source *source, int fd, oop_event event, void *state)
+oop_write_service(oop_source *source UNUSED,
+		  int fd, oop_event event, void *state)
 {
   CAST(lshd_connection, self, (struct lsh_object *) state);
   enum ssh_write_status status;
