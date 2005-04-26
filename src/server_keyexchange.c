@@ -100,7 +100,7 @@ server_dh_handler(struct transport_handler *s,
       debug("Exchange hash: %xS\n", self->dh.exchange_hash);
 
       /* Send server's message, to complete key exchange */      
-      transport_send_packet(connection,
+      transport_send_packet(connection, 0, 
 			    ssh_format("%c%S%n%fS",
 				       SSH_MSG_KEXDH_REPLY,
 				       self->key->public,
