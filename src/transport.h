@@ -223,7 +223,7 @@ transport_write_flush(struct transport_write_state *self,
        ; Output fd for the ssh connection, ; may equal ssh_input
        (ssh_output . int)
        (writer object transport_write_state)
-       (write_pending . int)
+       (write_active . int)
 
        ; If non-zero, it's the number of buffers that we are waiting on.
        (closing . unsigned)
@@ -255,7 +255,8 @@ void
 transport_close(struct transport_connection *self, int flush);
 
 void
-transport_send_packet(struct transport_connection *connection, struct lsh_string *packet);
+transport_send_packet(struct transport_connection *connection,
+		      enum ssh_write_flag flags, struct lsh_string *packet);
 
 void
 transport_write_pending(struct transport_connection *connection, int pending);
