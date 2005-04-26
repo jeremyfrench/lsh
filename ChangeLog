@@ -1,3 +1,12 @@
+2005-04-26  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd-connection.c: Use service_read_state interface.
+	(make_connection): Set stdin into non-blocking mode, and use
+	atexit to restore it.
+
+	* src/io.c (io_set_blocking): Reintroduced function. Used by
+	lshd-connection.
+
 2005-04-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (oop_read_service, lshd_service_start_read) 
