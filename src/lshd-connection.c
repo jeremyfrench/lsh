@@ -39,7 +39,7 @@
 #include "reaper.h"
 #include "server_session.h"
 #include "ssh.h"
-#include "ssh_read.h"
+#include "service.h"
 #include "ssh_write.h"
 #include "version.h"
 #include "werror.h"
@@ -57,7 +57,7 @@ oop_source *global_oop_source;
      (name connection)
      (super resource)
      (vars
-       (reader object ssh_read_state)
+       (reader object service_read_state)
        (writer object ssh_write_state)
        (table object channel_table)))
 */
@@ -92,11 +92,17 @@ write_packet(struct connection *connection,
       werror("write_packet: Write failed: %e\n", errno);
       exit(EXIT_FAILURE);
     case SSH_WRITE_OVERFLOW:
-      werror("write_packet: Buffer fill\n", errno);
+      werror("write_packet: Buffer full\n", errno);
       exit(EXIT_FAILURE);
-      
+
+    case SSH_WRITE_PENDING:
       /* FIXME: Implement some flow control. Or use some different
-	 writer with unbounded buffers? */
+	 writer with unbounded buffers? Or use totally blocking
+	 writes? */
+      werror("write_packet: ssh_write_data returned SSH_WRITE_PENDING.\n");
+      break;
+    case SSH_WRITE_COMPLETE:
+      break;
     }
 }
 
@@ -111,59 +117,88 @@ disconnect(struct connection *connection, const char *msg)
   exit(EXIT_FAILURE);
 }
 
-/* GABA:
-   (class
-     (name connection_read_state)
-     (super ssh_read_state)
-     (vars
-       (connection object connection)))
-*/
+static void
+service_start_read(struct connection *self);
 
 static void
-error_handler(struct ssh_read_state *s UNUSED, int error)
+service_stop_read(struct connection *self);
+
+static void *
+oop_read_service(oop_source *source, int fd, oop_event event, void *state)
 {
-  werror("Read failed: %e\n", error);
-  exit(EXIT_FAILURE);
-}
+  CAST(connection, self, (struct lsh_object *) state);
 
-static void
-read_handler(struct ssh_read_state *s, struct lsh_string *packet)
-{
-  CAST(connection_read_state, self, s);
-  uint8_t msg;
-
-  werror("read_handler: Received packet %xS\n", packet);
-
-  if (!lsh_string_length(packet))
-    disconnect(self->connection,
-	       "lshd-connection received an empty packet");
-  
-  msg = lsh_string_data(packet)[0];
-
-  if (msg < SSH_FIRST_USERAUTH_GENERIC)
-    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-    disconnect(self->connection,
-	       "lshd-connection received a transport layer packet");
-
-  if (msg < SSH_FIRST_CONNECTION_GENERIC)
+  for (;;)
     {
-      /* Ignore */
+      enum service_read_status status;
+
+      uint32_t seqno;
+      uint32_t length;      
+      const uint8_t *packet;
+      const char *error_msg;
+      uint8_t msg;
+      
+      status = service_read_packet(self->reader, fd,
+				   &error_msg,
+				   &seqno, &length, &packet);
+      switch (status)
+	{
+	case SERVICE_READ_IO_ERROR:
+	  werror("Read failed: %e\n", errno);
+	  exit(EXIT_FAILURE);
+	  break;
+	case SERVICE_READ_PROTOCOL_ERROR:
+	  werror("Invalid data from transport layer: %z\n", error_msg);
+	  exit(EXIT_FAILURE);
+	  break;
+	case SERVICE_READ_EOF:
+	  werror("Transport layer closed\n", error_msg);
+	  return OOP_HALT;
+	  break;
+	case SERVICE_READ_PUSH:
+	case SERVICE_READ_PENDING:
+	  return OOP_CONTINUE;
+
+	case SERVICE_READ_COMPLETE:
+	  if (!length)
+	    disconnect(self,
+		       "lshd-connection received an empty packet");
+
+	  msg = packet[0];
+
+	  if (msg < SSH_FIRST_USERAUTH_GENERIC)
+	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
+	    disconnect(self,
+		       "lshd-connection received a transport layer packet");
+
+	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
+	    {
+	      /* Ignore */
+	    }
+	  else
+	    {
+	      struct lsh_string *s = ssh_format("%ls", length, packet);
+	      channel_packet_handler(self->table, s);
+	      lsh_string_free(s);
+	    }
+	}
     }
-  else
-    channel_packet_handler(self->connection->table, packet);
-
-  lsh_string_free(packet);
 }
 
-static struct ssh_read_state *
-make_connection_read_state(struct connection *connection)
+static void
+service_start_read(struct connection *self)
 {
-  NEW(connection_read_state, self);
-  init_ssh_read_state(&self->super, 8, 8, service_process_header, error_handler);
-  self->connection = connection;
-  return &self->super;
+  global_oop_source->on_fd(global_oop_source,
+			   STDIN_FILENO, OOP_READ,
+			   oop_read_service, self);  
 }
 
+static void
+service_stop_read(struct connection *self)
+{
+  global_oop_source->cancel_fd(global_oop_source,
+			       STDIN_FILENO, OOP_READ);
+}
 
 /* GABA:
    (class
@@ -190,16 +225,22 @@ make_connection_write_handler(struct connection *connection)
   return &self->super;
 }
 
+static void
+restore_stdin(void)
+{
+  io_set_blocking(STDIN_FILENO);
+}
+
 static struct connection *
 make_connection(void)
 {
   NEW(connection, self);
   init_resource(&self->super, kill_connection);
   
-  self->reader = make_connection_read_state(self);
-  ssh_read_packet(self->reader, global_oop_source, STDIN_FILENO,
-		  read_handler);
-  ssh_read_start(self->reader, global_oop_source, STDIN_FILENO);
+  self->reader = make_service_read_state();
+  service_start_read(self);
+  io_set_nonblocking(STDIN_FILENO);
+  atexit(restore_stdin);
 
   self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
 				      CONNECTION_WRITE_THRESHOLD);
