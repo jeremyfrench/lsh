@@ -80,11 +80,13 @@ init_transport_connection(struct transport_connection *self,
   self->ssh_input = ssh_input;
   self->reader = make_transport_read_state();
   self->read_active = 0;
+  self->read_packet = lsh_string_alloc(SSH_MAX_PACKET + 1);
   self->retry_length = 0;
   self->retry_seqno = 0;
   
   self->ssh_output = ssh_output;
   self->writer = make_transport_write_state();
+  self->write_active = 0;
 
   self->closing = 0;
   self->event_handler = event;
@@ -190,7 +192,7 @@ transport_close(struct transport_connection *connection, int flush)
 	}
       if (connection->ssh_output >= 0)
 	{
-	  if (flush && connection->write_pending)
+	  if (flush && connection->write_active)
 	    connection->closing++;
 	  else
 	    {	      
@@ -347,7 +349,8 @@ transport_process_packet(struct transport_connection *connection,
 		&& connection->packet_handler)
 	return connection->packet_handler(connection, seqno, length, data);
       else
-	transport_send_packet(connection, format_unimplemented(seqno));
+	transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+			      format_unimplemented(seqno));
       break;
     }
   return 1;
@@ -410,10 +413,6 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
 
       switch (status)
 	{
-#if 0
-	default:
-	  abort();
-#endif
 	case TRANSPORT_READ_IO_ERROR:
 	  werror("Read error: %e\n", error);
 	  transport_close(connection, 0);
@@ -448,14 +447,89 @@ oop_read_ssh(oop_source *source, int fd, oop_event event, void *state)
   return OOP_CONTINUE;
 }
 
+static void *
+oop_timer_retry(oop_source *oop, struct timeval tv, void *state)
+{
+  CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
+  uint32_t length = connection->retry_length;
+  uint32_t seqno = connection->retry_seqno;
+  
+  assert(length);
+
+  connection->retry_length = 0;
+  connection->retry_seqno = 0;
+  connection->read_active = 0;
+
+  if (!connection->packet_handler(connection, seqno, length,
+				  lsh_string_data(connection->read_packet)))
+    {
+      transport_disconnect(connection,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Application layer not responsive.");
+      return OOP_CONTINUE;
+    }
+
+  /* Process any remaining buffered packets */
+  while (connection->ssh_input >= 0)
+    {
+      enum transport_read_status status;
+      const char *error_msg;
+      int error;
+
+      status = transport_read_packet(connection->reader, -1, &error, &error_msg,
+				     &seqno, &length, connection->read_packet);
+
+      switch (status)
+	{
+	case TRANSPORT_READ_IO_ERROR:
+	  werror("Read error: %e\n", error);
+	  transport_close(connection, 0);
+	  break;
+
+	case TRANSPORT_READ_PROTOCOL_ERROR:
+	  transport_disconnect(connection, error, error_msg);
+	  break;
+
+	case TRANSPORT_READ_EOF:
+	  werror("Unexpected EOF at start of packet.\n");
+	  transport_close(connection, 0);	  
+	  break;
+
+	case TRANSPORT_READ_PUSH:
+	  connection->event_handler(connection, TRANSPORT_EVENT_PUSH);
+	  /* Fall through */
+	case TRANSPORT_READ_PENDING:
+	  transport_start_read(connection);
+	  return OOP_CONTINUE;
+	  
+	case TRANSPORT_READ_COMPLETE:
+	  if (!transport_process_packet(connection, seqno, length, connection->read_packet))
+	    {
+	      connection->retry_length = length;
+	      connection->retry_seqno = seqno;
+	      /* Wait for application to wake us up again */
+	      return OOP_CONTINUE;
+	    }
+	  break;
+	}
+    }
+  return OOP_CONTINUE;
+}
+
 void
 transport_start_read(struct transport_connection *connection)
 {
   if (!connection->read_active)
     {
-      connection->read_active = 1;
       oop_source *source = connection->ctx->oop;
-      source->on_fd(source, connection->ssh_input, OOP_READ, oop_read_ssh, connection);
+      connection->read_active = 1;
+
+      if (connection->retry_length)
+	/* Arrange to have the packet handler called from the main
+	   event loop. */
+	source->on_time(source, OOP_TIME_NOW, oop_timer_retry, connection);
+      else
+	source->on_fd(source, connection->ssh_input, OOP_READ, oop_read_ssh, connection);
     }
 }
 
@@ -466,6 +540,9 @@ transport_stop_read(struct transport_connection *connection)
   oop_source *source = connection->ctx->oop;
   source->cancel_fd(source, connection->ssh_input, OOP_READ);  
 }
+
+static void
+transport_stop_write(struct transport_connection *connection);
 
 static void *
 oop_write_ssh(oop_source *source, int fd, oop_event event, void *state)
@@ -486,7 +563,7 @@ oop_write_ssh(oop_source *source, int fd, oop_event event, void *state)
       /* More to write */
       break;
     case SSH_WRITE_COMPLETE:
-      transport_write_pending(connection, 0);
+      transport_stop_write(connection);
       break;
       
     case SSH_WRITE_IO_ERROR:
@@ -500,75 +577,89 @@ oop_write_ssh(oop_source *source, int fd, oop_event event, void *state)
   return OOP_CONTINUE;
 }
 
-void
-transport_write_pending(struct transport_connection *connection, int pending)
+static void
+transport_start_write(struct transport_connection *connection)
 {
-  if (pending != connection->write_pending)
+  if (!connection->write_active)
     {
       oop_source *source = connection->ctx->oop;
 
-      connection->write_pending = pending;
-      if (pending)
-	{
-	  source->on_fd(source, connection->ssh_output,
-			OOP_WRITE, oop_write_ssh, connection);
-	  if (!connection->kex.write_state)
-	    connection->event_handler(connection,
-				      TRANSPORT_EVENT_STOP_APPLICATION);
-	}
-      else
-	{
-	  source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
-	  if (connection->closing)
-	    {
-	      close(connection->ssh_output);
-	      connection->ssh_output = -1;
+      connection->write_active = 1;
+      
+      source->on_fd(source, connection->ssh_output,
+		    OOP_WRITE, oop_write_ssh, connection);
+    }
+  
+  if (connection->kex.write_state == KEX_STATE_INIT)
+    connection->event_handler(connection,
+			      TRANSPORT_EVENT_STOP_APPLICATION);
+}
 
-	      connection->closing--;
-	      if(!connection->closing)
-		KILL_RESOURCE(&connection->super);
-	    }
-	  else if (!connection->kex.write_state)
-	    connection->event_handler(connection,
-				      TRANSPORT_EVENT_START_APPLICATION); 
+static void
+transport_stop_write(struct transport_connection *connection)
+{
+  if (connection->write_active)
+    {
+      oop_source *source = connection->ctx->oop;
+
+      connection->write_active = 0;
+
+      source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
+      if (connection->closing)
+	{
+	  close(connection->ssh_output);
+	  connection->ssh_output = -1;
+
+	  connection->closing--;
+	  if(!connection->closing)
+	    KILL_RESOURCE(&connection->super);
 	}
+      else if (connection->kex.write_state == KEX_STATE_INIT)
+	connection->event_handler(connection,
+				  TRANSPORT_EVENT_START_APPLICATION); 
     }
 }
 
 /* FIXME: Naming is unfortunate, with transport_write_packet vs
-   transport_send_packet */
+   transport_send_packet. FIXME: Use a length / const uint8_t * interface. */
+/* A NULL packets means to push out the buffered data. */
 void
 transport_send_packet(struct transport_connection *connection,
+		      enum ssh_write_flag flags,
 		      struct lsh_string *packet)
 {
-  int res;
-  
+  enum ssh_write_status status;
+
   if (!connection->super.alive)
     {
       werror("connection_write_data: Connection is dead.\n");
       lsh_string_free(packet);
       return;
     }
-  
-  res = transport_write_packet(connection->writer, connection->ssh_output,
-			       1, packet, connection->ctx->random);
-  switch(res)
-  {
-  case -2:
-    werror("Remote peer not responsive. Disconnecting.\n");
-    transport_close(connection, 0);
-    break;
-  case -1:
-    werror("Write failed: %e\n", errno);
-    transport_close(connection, 0);
-    break;
-  case 0:
-    transport_write_pending(connection, 1);
-    break;
-  case 1:
-    transport_write_pending(connection, 0);
-    break;
-  }
+
+  if (packet)
+    status = transport_write_packet(connection->writer, connection->ssh_output,
+				    flags, packet, connection->ctx->random);
+  else
+    status = transport_write_flush(connection->writer, connection->ssh_output,
+				   connection->ctx->random);
+  switch (status)
+    {
+    case SSH_WRITE_OVERFLOW:
+      werror("Remote peer not responsive. Disconnecting.\n");
+      transport_close(connection, 0);
+      break;
+    case SSH_WRITE_IO_ERROR:
+      werror("Write failed: %e\n", errno);
+      transport_close(connection, 0);
+      break;
+    case SSH_WRITE_PENDING:
+      transport_start_write(connection);
+      break;
+    case SSH_WRITE_COMPLETE:
+      transport_stop_write(connection);
+      break;
+    }
 }
 
 void
@@ -579,7 +670,8 @@ transport_disconnect(struct transport_connection *connection,
     werror("Disconnecting: %z\n", msg);
   
   if (reason)
-    transport_send_packet(connection, format_disconnect(reason, msg, ""));
+    transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+			  format_disconnect(reason, msg, ""));
 
   transport_close(connection, 1);
 };
@@ -602,7 +694,7 @@ transport_send_kexinit(struct transport_connection *connection)
   struct kexinit *kex;
 
   connection->kex.write_state = 1;
-  if (!connection->write_pending)
+  if (!connection->write_active)
     connection->event_handler(connection, TRANSPORT_EVENT_STOP_APPLICATION);
   
   kex = MAKE_KEXINIT(connection->ctx->kexinit, connection->ctx->random);
@@ -614,7 +706,7 @@ transport_send_kexinit(struct transport_connection *connection)
   
   s = format_kexinit(kex);
   connection->kex.literal_kexinit[is_server] = lsh_string_dup(s); 
-  transport_send_packet(connection, s);
+  transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, s);
 
   /* NOTE: This feature isn't fully implemented, as we won't tell
    * the selected key exchange method if the guess was "right". */
@@ -623,7 +715,7 @@ transport_send_kexinit(struct transport_connection *connection)
       s = kex->first_kex_packet;
       kex->first_kex_packet = NULL;
 
-      transport_send_packet(connection, s);
+      transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, s);
     }
 
   if (connection->session_id)
@@ -646,7 +738,7 @@ transport_keyexchange_finish(struct transport_connection *connection,
 {
   int first = !connection->session_id;
 
-  transport_send_packet(connection, format_newkeys());
+  transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, format_newkeys());
 
   if (first)
     connection->session_id = exchange_hash;
