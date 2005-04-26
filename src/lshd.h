@@ -84,8 +84,10 @@ make_lshd_service_read_state(struct lshd_connection *connection);
        ; Communication with service on top of the transport layer.
        ; This is a bidirectional pipe
        (service_fd . int)
-       (service_reader object lshd_service_read_state)
-       (service_writer object ssh_write_state)))
+       (service_reader object service_read_state)
+       (service_read_active . int)
+       (service_writer object ssh_write_state)
+       (service_write_active . int)))
 */
 
 
