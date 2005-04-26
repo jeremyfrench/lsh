@@ -1,3 +1,35 @@
+2005-04-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (oop_read_service, lshd_service_start_read) 
+	(lshd_service_stop_read): New functions, using the
+	service_read_state interface.
+	(oop_write_service): New function, replacing lshd_service_read_handler.
+	(lshd_service_request_handler): Set service pipe into non-blocking mode.
+
+	* src/lshd.h (class lshd_connection): New attributes
+	service_read_active and service_write_active. Use
+	service_read_state, not lshd_service_read_state.
+
+	* src/server_keyexchange.c (server_dh_handler): Pass zero flags to
+	transport_send_packet.
+
+	* src/transport.c (init_transport_connection): Allocate
+	read_packet.
+	(oop_timer_retry): New function.
+	(transport_start_read): Use oop_timer_retry to implement retrying.
+	(transport_write_pending): Split into two functions, ...
+	(transport_start_write, transport_stop_write): ... new functions.
+	(transport_send_packet): New argument flags. Let a NULL packet
+	imply a push of buffered data. Updated callers.
+
+	* src/transport.h (class transport_connection): Renamed
+	write_pending to write_active.
+
+	* src/ssh_write.c (ssh_write_available): New function.
+
+	* src/service_read.c: New file. Reads the service protocol using
+	an interface similar to transport_read.
+
 2005-04-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (class transport_read_state): New attribute
