@@ -34,7 +34,11 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 #include <netdb.h>
+
+/* For struct spki_iterator */
+#include "spki/parse.h"
 
 #include "algorithms.h"
 #include "crypto.h"
@@ -48,6 +52,7 @@
 #include "randomness.h"
 #include "resource.h"
 #include "service.h"
+#include "spki.h"
 #include "ssh.h"
 #include "ssh_write.h"
 #include "transport.h"
@@ -73,21 +78,26 @@ lsh_transport_service_start_write(struct lsh_transport_connection *self);
 static void
 lsh_transport_service_stop_write(struct lsh_transport_connection *self);
 
-static struct lookup_verifier *
-make_lsh_lookup_verifier(struct lsh_transport_config *config);
+struct lsh_transport_lookup_verifier;
+
+static struct lsh_transport_lookup_verifier *
+make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
 
 /* GABA:
    (class
      (name lsh_transport_config)
      (super transport_context)
-     (vars
+     (vars       
        (tty object interact)
 
        (sloppy . int)
-       (capture . "const char *")
-       (capture_file object abstract_write)
-       (known_hosts . "const char *")
-       
+       (capture_file . "const char *")
+       (capture_fd . int)
+
+       (signature_algorithms object alist)
+       (host_acls . "const char *")
+       (host_db object lsh_transport_lookup_verifier)
+
        (home . "const char *")       
        (port . "const char *")
        (target . "const char *")
@@ -120,13 +130,15 @@ make_lsh_transport_config(oop_source *oop)
       return NULL;
     }
   
-  self->tty = make_unix_interact();
-
   self->super.algorithms = all_symmetric_algorithms();
+  self->signature_algorithms = all_signature_algorithms(self->super.random);
+
+  self->tty = make_unix_interact();
+  self->host_db = make_lsh_transport_lookup_verifier(self);
 
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
 	    &make_client_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
-				     make_lsh_lookup_verifier(self))->super);
+				     &self->host_db->super)->super);
   self->super.kexinit
     = make_simple_kexinit(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
 			  default_hostkey_algorithms(),
@@ -135,9 +147,9 @@ make_lsh_transport_config(oop_source *oop)
 			  default_compression_algorithms(self->super.algorithms),
 			  make_int_list(0, -1));
   self->sloppy = 0;
-  self->capture = 0;
   self->capture_file = NULL;
-  self->known_hosts = NULL;
+  self->capture_fd = -1;
+  self->host_acls = NULL;
 
   self->port = "22";
   self->target = NULL;
@@ -376,27 +388,279 @@ lsh_connect(struct lsh_transport_config *config)
      (name lsh_transport_lookup_verifier)
      (super lookup_verifier)
      (vars
-       (config object lsh_transport_config)))
+       (config object lsh_transport_config)
+       (db object spki_context)
+       (access string)
+       ; For fingerprinting
+       (hash const object hash_algorithm)))
 */
 
 static struct verifier *
-lsh_transport_lookup_verifier(struct lookup_verifier *s UNUSED,
-			      int hostkey_algorithm UNUSED,
-			      uint32_t key_length UNUSED, const uint8_t *key UNUSED)
+lsh_transport_lookup_verifier(struct lookup_verifier *s,
+			      int hostkey_algorithm,
+			      uint32_t key_length, const uint8_t *key)
 {
-  return NULL;
+  CAST(lsh_transport_lookup_verifier, self, s);
+  struct spki_principal *subject;
+
+  switch (hostkey_algorithm)
+    {
+    case ATOM_SSH_DSS:
+      {	
+	struct lsh_string *spki_key;
+	struct verifier *v = make_ssh_dss_verifier(key_length, key);
+
+	if (!v)
+	  {
+	    werror("do_lsh_lookup: Invalid ssh-dss key.\n");
+	    return NULL;
+	  }
+
+	/* FIXME: It seems like a waste to pick apart the sexp again */
+	spki_key = PUBLIC_SPKI_KEY(v, 0);
+
+	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
+	assert(subject);
+	assert(subject->verifier);
+
+	lsh_string_free(spki_key);
+	break;
+      }
+    case ATOM_SSH_RSA:
+      {
+	struct lsh_string *spki_key;
+	struct verifier *v = make_ssh_rsa_verifier(key_length, key);
+
+	if (!v)
+	  {
+	    werror("do_lsh_lookup: Invalid ssh-rsa key.\n");
+	    return NULL;
+	  }
+
+	/* FIXME: It seems like a waste to pick apart the sexp again */
+	spki_key = PUBLIC_SPKI_KEY(v, 0);
+	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
+	assert(subject);
+	assert(subject->verifier);
+
+	lsh_string_free(spki_key);
+	break;
+      }
+      
+      /* It doesn't matter here which flavour of SPKI is used. */
+    case ATOM_SPKI_SIGN_RSA:
+    case ATOM_SPKI_SIGN_DSS:
+      {
+	subject = spki_lookup(self->db, key_length, key, NULL);
+	if (!subject)
+	  {
+	    werror("do_lsh_lookup: Invalid spki key.\n");
+	    return NULL;
+	  }
+	if (!subject->verifier)
+	  {
+	    werror("do_lsh_lookup: Valid SPKI subject, but no key available.\n");
+	    return NULL;
+	  }
+	break;
+      }
+    default:
+      werror("do_lsh_lookup: Unknown key type. Should not happen!\n");
+      return NULL;
+    }
+
+  assert(subject->key);
+  
+  /* Check authorization */
+
+  if (spki_authorize(self->db, subject, time(NULL), self->access))
+    {
+      verbose("SPKI host authorization successful!\n");
+    }
+  else
+    {
+      struct lsh_string *acl;
+      struct spki_iterator i;
+      
+      verbose("SPKI authorization failed.\n");
+      if (!self->config->sloppy)
+	{
+	  werror("Server's hostkey is not trusted. Disconnecting.\n");
+	  return NULL;
+	}
+      
+      /* Ok, let's see if we want to use this untrusted key. */
+      if (!quiet_flag)
+	{
+	  /* Display fingerprint */
+	  /* FIXME: Rewrite to use libspki subject */
+#if 0
+	  struct lsh_string *spki_fingerprint = 
+	    hash_string(self->hash, subject->key, 0);
+#endif
+	  
+	  struct lsh_string *fingerprint = 
+	    lsh_string_colonize( 
+				ssh_format( "%lfxS", 
+					    hash_string_l(&crypto_md5_algorithm,
+							  key_length, key)
+					    ), 
+				2, 
+				1  
+				);
+
+	  struct lsh_string *babble = 
+	    lsh_string_bubblebabble( 
+				    hash_string_l(&crypto_sha1_algorithm,
+						  key_length, key),
+				    1 
+				    );
+	  
+	  if (!INTERACT_YES_OR_NO
+	      (self->config->tty,
+	       ssh_format("Received unauthenticated key for host %lz\n"
+			  "Key details:\n"
+			  "Bubble Babble: %lfS\n"
+			  "Fingerprint:   %lfS\n"
+			  "Do you trust this key? (y/n) ",
+			  self->config->target, babble, fingerprint), 0, 1))
+	    return NULL;
+	}
+
+      acl = lsh_string_format_sexp(0, "(acl(entry(subject%l)%l))",
+				   subject->key_length, subject->key,
+				   STRING_LD(self->access));
+      
+      /* FIXME: Seems awkward to pick the acl apart again. */
+      if (!spki_iterator_first(&i, STRING_LD(acl)))
+	fatal("Internal error.\n");
+      
+      /* Remember this key. We don't want to ask again for key re-exchange */
+      spki_add_acl(self->db, &i);
+
+      /* Write an ACL to disk. */
+      if (self->config->capture_fd > 0)
+	{
+	  int fd = open(self->config->capture_file, O_RDWR | O_APPEND | O_CREAT, 0666);
+
+	  if (fd < 0)
+	    werror("Opening `%z' for writing failed: %e\n",
+		   self->config->capture_file, errno);
+	  else
+	    {
+	      struct lsh_string *entry
+		= ssh_format("\n; ACL for host %lz\n"
+			     "%lfS\n",
+			     self->config->target,
+			     lsh_string_format_sexp(1, "%l", STRING_LD(acl)));
+	      if (!write_raw(fd, STRING_LD(entry)))
+		werror("Writing acl entry failed: %e\n", errno);
+
+	      lsh_string_free(entry);
+	      close(fd);
+	    }
+	}
+      lsh_string_free(acl);
+    }
+  
+  return subject->verifier;
 }
 
-static struct lookup_verifier *
-make_lsh_lookup_verifier(struct lsh_transport_config *config)
+static struct lsh_transport_lookup_verifier *
+make_lsh_transport_lookup_verifier(struct lsh_transport_config *config)
 {
   NEW(lsh_transport_lookup_verifier, self);
   self->super.lookup = lsh_transport_lookup_verifier;
   self->config = config;
+  self->db = NULL;
+  self->access = NULL;
+  self->hash = &crypto_sha1_algorithm;
   
-  return &self->super;
+  return self;
 }
 
+/* Initialize the spki database and the access tag. Called after
+   options parsing. */
+static void
+read_host_acls(struct lsh_transport_lookup_verifier *self)
+{
+  struct lsh_string *contents;
+  int fd;
+  struct spki_iterator i;
+  const char *sexp_conv;
+  const char *args[] = { "sexp-conv", "-s", "canonical", NULL };
+
+  assert(self->config->target);
+  
+  self->access = make_ssh_hostkey_tag(self->config->target);
+  self->db = make_spki_context(self->config->signature_algorithms);
+  
+  if (self->config->host_acls)
+    {
+      fd = open(self->config->host_acls, O_RDONLY);
+      if (fd < 0)
+	{
+	  werror("Failed to open `%z' for reading: %e\n",
+		 self->config->host_acls, errno);
+	  return;
+	}
+    }
+  else
+    {
+      struct lsh_string *tmp = ssh_format("%lz/.lsh/host-acls", self->config->home);
+      fd = open(lsh_get_cstring(tmp), O_RDONLY);
+      
+      if (fd < 0)
+	{
+	  struct stat sbuf;
+	  struct lsh_string *known_hosts;
+
+	  werror("Failed to open `%S' for reading: %e\n", tmp, errno);
+	  known_hosts = ssh_format("%lz/.lsh/known_hosts", self->config->home);
+
+	  if (stat(lsh_get_cstring(known_hosts), &sbuf) == 0)
+	    {
+	      werror("You have an old known-hosts file `%S'.\n"
+		     "To work with lsh-2.0, run the lsh-upgrade script,\n"
+		     "which will convert that to a new host-acls file.\n",
+		     tmp);
+	    }
+	  lsh_string_free(known_hosts);
+	  lsh_string_free(tmp);
+	  return;
+	}
+      lsh_string_free(tmp);
+    }
+
+  sexp_conv = getenv(ENV_SEXP_CONV);
+  if (!sexp_conv)
+    sexp_conv = PATH_SEXP_CONV;
+  
+  contents = lsh_popen_read(sexp_conv, args, fd, 5000);
+  
+  if (!contents)
+    {
+      werror("Failed to read host-acls file: %e\n", errno);
+      close(fd);
+      return;
+    }
+
+  close(fd);
+
+  if (!spki_iterator_first(&i, STRING_LD(contents)))
+    werror("read_known_hosts: S-expression syntax error.\n");
+    
+  else
+    while (i.type != SPKI_TYPE_END_OF_EXPR)
+      {
+	if (!spki_add_acl(self->db, &i))
+	  {
+	    werror("read_known_hosts: Invalid ACL.\n");
+	    break;
+	  }
+      }
+  lsh_string_free(contents);
+}
 
 /* Option parsing */
 
@@ -436,8 +700,8 @@ main_options[] =
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
     "Never, never, ever trust an unknown hostkey. (default)", 0 },
   { "capture-to", OPT_CAPTURE, "File", 0,
-    "When a new hostkey is received, append an ACL expressing trust in the key. "
-    "In sloppy mode, the default is ~/.lsh/captured_keys.", 0 },
+    "When a new untrusted hostkey is received, append an ACL expressing trust in the key. "
+    "The default is ~/.lsh/captured_keys.", 0 },
   
   /* User authentication */
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
@@ -473,7 +737,27 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
-      /* FIXME: Open capture file if appropriate */
+      read_host_acls(self->host_db);
+
+      if (self->capture_file)
+	{
+	  self->capture_fd = open(self->capture_file,
+				  O_RDWR | O_APPEND | O_CREAT, 0600);
+	  if (self->capture_fd < 0)
+	    werror("Opening `%z' for writing failed: %e\n",
+		   self->capture_file, errno);
+	}
+      else if (self->sloppy)
+	{
+	  struct lsh_string *s = ssh_format("%lz/.lsh/captured-keys", self->home);
+	  self->capture_fd = open(lsh_get_cstring(s),
+				  O_RDWR | O_APPEND | O_CREAT, 0600);
+	  if (self->capture_fd < 0)
+	    werror("Opening `%S' for writing failed: %e\n",
+		   s, errno);
+	  
+	  lsh_string_free(s);
+	}
       break;
       
     case 'p':
@@ -481,7 +765,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_HOST_DB:
-      self->known_hosts = arg;
+      self->host_acls = arg;
       break;
       
     case OPT_SLOPPY:
@@ -493,7 +777,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_CAPTURE:
-      self->capture = arg;
+      self->capture_file = arg;
       break;
 
     case 'i':
