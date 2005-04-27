@@ -1404,18 +1404,7 @@ io_set_nonblocking(int fd)
 }
 
 void
-io_set_blocking(int fd)
-{
-  int old = fcntl(fd, F_GETFL);
-
-  if (old < 0)
-    werror("io_set_blocking: fcntl(F_GETFL) failed: %e\n", errno);
-
-  else if (fcntl(fd, F_SETFL, old & ~O_NONBLOCK) < 0)
-    werror("io_set_blocking: fcntl(F_SETFL) failed: %e\n", errno);
-}
-
-void io_set_close_on_exec(int fd)
+io_set_close_on_exec(int fd)
 {
   /* NOTE: There's only one documented flag bit, so reading the old
    * value should be redundant. */
