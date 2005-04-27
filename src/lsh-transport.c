@@ -44,38 +44,45 @@
 #include "io.h"
 #include "keyexchange.h"
 #include "lsh_string.h"
+#include "publickey_crypto.h"
 #include "randomness.h"
 #include "resource.h"
+#include "service.h"
 #include "ssh.h"
 #include "ssh_write.h"
-#include "transport_read.h"
+#include "transport.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
 #include "lsh-transport.c.x"
 
-static struct lsh_transport_read_state *
-make_lsh_transport_read_state(struct lsh_transport_connection *connection);
+static int
+lsh_transport_packet_handler(struct transport_connection *connection,
+			     uint32_t seqno, uint32_t length, const uint8_t *packet);
 
 static void
-connection_disconnect(struct lsh_transport_connection *connection,
-		      int reason, const uint8_t *msg);
+lsh_transport_service_start_read(struct lsh_transport_connection *self);
 
 static void
-lsh_transport_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet);
+lsh_transport_service_stop_read(struct lsh_transport_connection *self);
 
-static oop_source *global_oop_source;
+static void
+lsh_transport_service_start_write(struct lsh_transport_connection *self);
+
+static void
+lsh_transport_service_stop_write(struct lsh_transport_connection *self);
+
+static struct lookup_verifier *
+make_lsh_lookup_verifier(struct lsh_transport_config *config);
 
 /* GABA:
    (class
      (name lsh_transport_config)
+     (super transport_context)
      (vars
-       (random object randomness)
-       (algorithms object alist)
        (tty object interact)
 
-       (kexinit object make_kexinit)
        (sloppy . int)
        (capture . "const char *")
        (capture_file object abstract_write)
@@ -93,9 +100,11 @@ static oop_source *global_oop_source;
 */
 
 static struct lsh_transport_config *
-make_lsh_transport_config(void)
+make_lsh_transport_config(oop_source *oop)
 {
   NEW(lsh_transport_config, self);
+  self->super.is_server = 0;
+  self->super.oop = oop;
 
   self->home = getenv(ENV_HOME);
   if (!self->home)
@@ -104,8 +113,8 @@ make_lsh_transport_config(void)
       return NULL;
     }
   
-  self->random = make_user_random(self->home);
-  if (!self->random)
+  self->super.random = make_user_random(self->home);
+  if (!self->super.random)
     {
       werror("No randomness generator available.\n");
       return NULL;
@@ -113,18 +122,18 @@ make_lsh_transport_config(void)
   
   self->tty = make_unix_interact();
 
-  self->algorithms = all_symmetric_algorithms();
-#if 0
-  ALIST_SET(self->algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-	    &make_lsh_transport_dh_handler(make_dh14(self->random))->super);
-#endif
-  self->kexinit = make_simple_kexinit(self->random,
-				      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
-				      default_hostkey_algorithms(),
-				      default_crypto_algorithms(self->algorithms),
-				      default_mac_algorithms(self->algorithms),
-				      default_compression_algorithms(self->algorithms),
-				      make_int_list(0, -1));
+  self->super.algorithms = all_symmetric_algorithms();
+
+  ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
+	    &make_client_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
+				     make_lsh_lookup_verifier(self))->super);
+  self->super.kexinit
+    = make_simple_kexinit(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
+			  default_hostkey_algorithms(),
+			  default_crypto_algorithms(self->super.algorithms),
+			  default_mac_algorithms(self->super.algorithms),
+			  default_compression_algorithms(self->super.algorithms),
+			  make_int_list(0, -1));
   self->sloppy = 0;
   self->capture = 0;
   self->capture_file = NULL;
@@ -145,226 +154,163 @@ make_lsh_transport_config(void)
 /* GABA:
    (class
      (name lsh_transport_connection)
-     (super resource)
+     (super transport_connection)
      (vars
-       (config object lsh_transport_config)
-       ; Key exchange 
-       (kex struct kexinit_state)
-       
-       (session_id string)
-
-       ; Connection fd
-       (fd . int)
-
-       ; Receiving encrypted packets
-       (reader object lsh_transport_read_state)
-
-       ; Sending encrypted packets
-       (writer object ssh_write_state)
-       (send_mac object mac_instance)
-       (send_crypto object crypto_instance)
-       (send_compress object compress_instance)
-       (send_seqno . uint32_t)))
+       (service_reader object service_read_state)
+       (service_read_active . int)
+       (service_writer object ssh_write_state)
+       (service_write_active . int)))     
 */
 
 static void
-kill_lsh_transport_connection(struct resource *s)
+kill_lsh_transport_connection(struct resource *s UNUSED)
 {
-  CAST(lsh_transport_connection, self, s);
-  if (self->super.alive)
+  exit(EXIT_SUCCESS);
+}
+
+static int
+lsh_transport_event_handler(struct transport_connection *connection,
+			    enum transport_event event)
+{
+  CAST(lsh_transport_connection, self, connection);
+  switch (event)
     {
-      close(self->fd);
-      exit(EXIT_FAILURE);
+    case TRANSPORT_EVENT_START_APPLICATION:
+      lsh_transport_service_start_read(self);
+      break;
+    case TRANSPORT_EVENT_STOP_APPLICATION:
+      lsh_transport_service_stop_read(self);
+      break;
+    case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
+      connection->packet_handler = lsh_transport_packet_handler;
+      break;
+    case TRANSPORT_EVENT_CLOSE:
+      /* FIXME: Should allow service buffer to drain. */
+      break;
+    case TRANSPORT_EVENT_PUSH:
+      {
+	enum ssh_write_status status;
+
+	status = ssh_write_flush(self->service_writer, STDOUT_FILENO);
+
+	switch(status)
+	  {
+	  case SSH_WRITE_IO_ERROR:
+	    transport_disconnect(&self->super,
+				 SSH_DISCONNECT_BY_APPLICATION,
+				 "Connection to service layer failed.");
+	    break;
+	  case SSH_WRITE_OVERFLOW:
+	    werror("Overflow from ssh_write_flush! Should not happen.\n");
+	    transport_disconnect(&self->super,
+				 SSH_DISCONNECT_BY_APPLICATION,
+				 "Service layer not responsive.");
+	    break;
+	  case SSH_WRITE_PENDING:
+	    lsh_transport_service_start_write(self);
+      
+	  case SSH_WRITE_COMPLETE:
+	    lsh_transport_service_stop_write(self);
+	    break;
+	  }
+	}
     }
+  return 0;
 }
 
 static struct lsh_transport_connection *
 make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
 {
   NEW(lsh_transport_connection, self);
-  init_resource(&self->super, kill_lsh_transport_connection);
-
-  self->config = config;
-  
-  init_kexinit_state(&self->kex);
-  self->session_id = NULL;
-
-  self->fd = fd;
-  self->reader = make_lsh_transport_read_state(self);
-
-  self->writer = make_ssh_write_state();
-  self->send_mac = NULL;
-  self->send_crypto = NULL;
-  self->send_compress = NULL;
-  self->send_seqno = 0;
+  init_transport_connection(&self->super, kill_lsh_transport_connection,
+			    &config->super, fd, fd,
+			    lsh_transport_event_handler);
+  self->service_reader = make_service_read_state();
+  self->service_read_active = 0;
+  self->service_writer = make_ssh_write_state(3 * SSH_MAX_PACKET, 1000);
+  self->service_write_active = 0;
 
   return self;
 }
 
-/* FIXME: Duplicates code in lshd.c. We need a shared transport object
-   responsible for encrypted input, output and some of the keyexchange
-   logic. */
-static void
-connection_write_data(struct lsh_transport_connection *connection,
-		      struct lsh_string *data)
-{
-  if (!connection->super.alive)
-    {
-      werror("connection_write_data: Connection is dead.\n");
-      lsh_string_free(data);
-      return;
-    }
-  /* FIXME: If ssh_write_data returns 0, we need to but the connection
-     to sleep and wake it up later. */
-  if (ssh_write_data(connection->writer,
-		     global_oop_source, connection->fd, data) < 0)
-    {
-      werror("write failed: %e\n", errno);
-      connection_disconnect(connection, 0, NULL);
-    }
-}
 
 static void
-connection_write_packet(struct lsh_transport_connection *connection,
-			struct lsh_string *packet)
+lsh_transport_line_handler(struct transport_connection *connection,
+			   uint32_t length, const uint8_t *line)
 {
-  connection_write_data(connection,
-			encrypt_packet(packet,
-				       connection->send_compress,
-				       connection->send_crypto,
-				       connection->send_mac,
-				       connection->config->random,
-				       connection->send_seqno++));
-}
-
-static void
-connection_disconnect(struct lsh_transport_connection *connection,
-		      int reason, const uint8_t *msg)
-{
-  if (reason)
-    connection_write_packet(connection, format_disconnect(reason, msg, ""));
-
-  KILL_RESOURCE(&connection->super);
-};
-
-/* GABA:
-   (class
-     (name lsh_transport_read_state)
-     (super transport_read_state)
-     (vars
-       (connection object lsh_transport_connection)))
-*/
-
-static void
-lsh_transport_read_error(struct ssh_read_state *s, int error)
-{
-  CAST(lsh_transport_read_state, self, s);
-  werror("Read failed: %e\n", error);
-  KILL(&self->connection->super);
-}
-
-static void
-lsh_transport_protocol_error(struct transport_read_state *s, int reason, const char *msg)
-{
-  CAST(lsh_transport_read_state, self, s);
-  connection_disconnect(self->connection, reason, msg);
-}
-
-static struct lsh_transport_read_state *
-make_lsh_transport_read_state(struct lsh_transport_connection *connection)
-{
-  NEW(lsh_transport_read_state, self);
-  init_transport_read_state(&self->super, SSH_MAX_PACKET,
-			    lsh_transport_read_error, lsh_transport_protocol_error);
-
-  self->connection = connection;
-  return self;
-}
-
-static void
-lsh_transport_handle_line(struct ssh_read_state *s, struct lsh_string *line)
-{
-  CAST(lsh_transport_read_state, self, s);
-  struct lsh_transport_connection *connection = self->connection;
-  const uint8_t *data;
-  uint32_t length;
-
-  length = lsh_string_length(line);
-  data = lsh_string_data(line);
-  if (length < 4 || 0 != memcmp(data, "SSH-", 4))
+  if (length < 4 || 0 != memcmp(line, "SSH-", 4))
     {
       /* A banner line */
-      werror("%pfS\n", line);
-      /* Prepare for next line */
-      ssh_read_line(&connection->reader->super.super, 256,
-		    global_oop_source, connection->fd,
-		    lsh_transport_handle_line);           
-    }
-  verbose("Server version string: %pS\n", line);
-
-
-  /* Line must start with "SSH-2.0-" or "SSH-1.99". FIXME: 1.99 not implemented */
-  if (length < 8 || 0 != memcmp(data, "SSH-2.0-", 4))
-    {
-      connection_disconnect(self->connection, 0, NULL);
+      werror("%ps\n", length, line);
       return;
     }
+  verbose("Server version string: %ps\n", length, line);
 
-  self->connection->kex.version[1] = line;
+  /* Line must start with "SSH-2.0-". */
+  if (length < 8 || 0 != memcmp(line, "SSH-2.0-", 4))
+    {
+      transport_disconnect(connection, 0, "Bad version string.");
+      return;
+    }
+  
+  connection->kex.version[1] = ssh_format("%ls", length, line);
+  connection->line_handler = NULL;
+}
 
-  transport_read_packet(&self->super,
-			global_oop_source, self->connection->fd,
-			lsh_transport_handle_ssh_packet);
+/* Communication with service layer */
+
+static void *
+oop_read_service(oop_source *source UNUSED,
+		 int fd UNUSED, oop_event event UNUSED, void *state UNUSED)
+{
+  return OOP_HALT;
+}
+
+static void
+lsh_transport_service_start_read(struct lsh_transport_connection *self UNUSED)
+{
+}
+
+static void
+lsh_transport_service_stop_read(struct lsh_transport_connection *self UNUSED)
+{
+}
+
+static void *
+oop_write_service(oop_source *source UNUSED,
+		  int fd UNUSED, oop_event event UNUSED, void *state UNUSED)
+{
+  return OOP_HALT;
+}
+
+static void
+lsh_transport_service_start_write(struct lsh_transport_connection *self UNUSED)
+{
+}
+
+static void
+lsh_transport_service_stop_write(struct lsh_transport_connection *self UNUSED)
+{
 }
 
 /* Handles decrypted packets. The various handler functions called
    from here should *not* free the packet. FIXME: Better to change
    this? */
-static void
-lsh_transport_handle_ssh_packet(struct transport_read_state *s, struct lsh_string *packet)
+static int
+lsh_transport_packet_handler(struct transport_connection *connection,
+			     uint32_t seqno UNUSED, uint32_t length, const uint8_t *packet)
 {
-  CAST(lsh_transport_read_state, self, s);
-  struct lsh_transport_connection *connection = self->connection;
+  CAST(lsh_transport_connection, self, connection);
   
-  werror("Received packet: %xS\n", packet);
-  lsh_string_free(packet);
-}
-
-static void
-lsh_transport_send_kexinit(struct lsh_transport_connection *connection)
-{
-  struct lsh_string *s;
-  struct kexinit *kex
-    = connection->kex.kexinit[0]
-    = MAKE_KEXINIT(connection->config->kexinit);
+  uint8_t msg;
   
-  assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
-  assert(connection->kex.state == KEX_STATE_INIT);
+  werror("Received packet: %xs\n", length, packet);
+  assert(length > 0);
 
-  /* FIXME: Deal with timeout */
-  
-  s = format_kexinit(kex);
-  connection->kex.literal_kexinit[0] = lsh_string_dup(s); 
-  connection_write_packet(connection, s);
+  msg = packet[0];
+  /* XXX */
 
-  if (kex->first_kex_packet)
-    fatal("Not implemented\n");
-}
-
-static void
-lsh_transport_handshake(struct lsh_transport_connection *connection)
-{
-  connection->kex.version[0] = make_string("SSH-2.0-lsh-transport");
-
-  ssh_read_line(&connection->reader->super.super, 256,
-		global_oop_source, connection->fd,
-		lsh_transport_handle_line);
-  ssh_read_start(&connection->reader->super.super,
-		 global_oop_source, connection->fd);
-
-  connection_write_data(connection,
-			ssh_format("%lS\r\n", connection->kex.version[0]));
-  lsh_transport_send_kexinit(connection);
+  return 1;
 }
 
 static int
@@ -414,11 +360,41 @@ lsh_connect(struct lsh_transport_config *config)
   
   /* We keep the socket in blocking mode */
   connection = make_lsh_transport_connection(config, s);
-  gc_global(&connection->super);
+  gc_global(&connection->super.super);
 
-  lsh_transport_handshake(connection);
+  transport_handshake(&connection->super,
+		      make_string("SSH-2.0-lsh-transport"),
+		      lsh_transport_line_handler);
 
   return 1;
+}
+
+/* Maps a host key to a (trusted) verifier object. */
+
+/* GABA:
+   (class
+     (name lsh_transport_lookup_verifier)
+     (super lookup_verifier)
+     (vars
+       (config object lsh_transport_config)))
+*/
+
+static struct verifier *
+lsh_transport_lookup_verifier(struct lookup_verifier *s UNUSED,
+			      int hostkey_algorithm UNUSED,
+			      uint32_t key_length UNUSED, const uint8_t *key UNUSED)
+{
+  return NULL;
+}
+
+static struct lookup_verifier *
+make_lsh_lookup_verifier(struct lsh_transport_config *config)
+{
+  NEW(lsh_transport_lookup_verifier, self);
+  self->super.lookup = lsh_transport_lookup_verifier;
+  self->config = config;
+  
+  return &self->super;
 }
 
 
@@ -554,14 +530,13 @@ int
 main(int argc, char **argv)
 {
   struct lsh_transport_config *config;
-
-  config = make_lsh_transport_config();
+  struct oop_source *source = io_init();
+  
+  config = make_lsh_transport_config(source);
   if (!config)
     return EXIT_FAILURE;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
-
-  global_oop_source = io_init();
 
   if (!lsh_connect(config))
     return EXIT_FAILURE;
