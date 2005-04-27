@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef GATEWAY_COMMANDS_H_INCLUDED
-#define GATEWAY_COMMANDS_H_INCLUDED
+#ifndef LSH_GATEWAY_COMMANDS_H_INCLUDED
+#define LSH_GATEWAY_COMMANDS_H_INCLUDED
 
 #include "io.h"
 
@@ -35,4 +35,4 @@ extern struct command_2 gateway_accept;
 struct command *
 make_gateway_setup(struct local_info *local);
 
-#endif /* GATEWAY_COMMANDS_H_INCLUDED */
+#endif /* LSH_GATEWAY_COMMANDS_H_INCLUDED */

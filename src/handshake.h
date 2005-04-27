@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef HANDSHAKE_H_INCLUDED
-#define HANDSHAKE_H_INCLUDED
+#ifndef LSH_HANDSHAKE_H_INCLUDED
+#define LSH_HANDSHAKE_H_INCLUDED
 
 #include "alist.h"
 #include "connection.h"
@@ -67,4 +67,4 @@ void init_connection_service(struct ssh_connection *connection);
 extern struct command connection_service_command;
 #define INIT_CONNECTION_SERVICE (&connection_service_command.super)
 
-#endif /* HANDSHAKE_H_INCLUDED */
+#endif /* LSH_HANDSHAKE_H_INCLUDED */

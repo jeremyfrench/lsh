@@ -23,8 +23,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SRP_H_INCLUDED
-#define SRP_H_INCLUDED
+#ifndef LSH_SRP_H_INCLUDED
+#define LSH_SRP_H_INCLUDED
 
 #include "publickey_crypto.h"
 
@@ -90,4 +90,4 @@ srp_process_server_proof(struct lsh_string *m2,
 struct dh_method *
 make_srp1(struct randomness *r);
 
-#endif /* SRP_H_INCLUDED */
+#endif /* LSH_SRP_H_INCLUDED */

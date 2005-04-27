@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef GATEWAY_H_INCLUDED
-#define GATEWAY_H_INCLUDED
+#ifndef LSH_GATEWAY_H_INCLUDED
+#define LSH_GATEWAY_H_INCLUDED
 
 /* FIXME: Do we really need this file? */
 
@@ -34,4 +34,4 @@ struct local_info *
 make_gateway_address(const char *local_user, const char *remote_user,
 		     const char *target);
 
-#endif /* GATEWAY_H_INCLUDED */
+#endif /* LSH_GATEWAY_H_INCLUDED */
