@@ -27,13 +27,12 @@
 
 #include <assert.h>
 
-#include "publickey_crypto.h"
-
 #include "atoms.h"
 #include "command.h"
 #include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
+#include "publickey_crypto.h"
 #include "sexp.h"
 #include "ssh.h"
 #include "transport.h"
@@ -51,7 +50,7 @@
        (keys object alist)))
 */
 
-/* Handler for the kex_dh_reply message */
+/* Handler for the KEXDH_INIT message */
 /* GABA:
    (class
      (name server_dh_handler)
@@ -68,9 +67,8 @@ server_dh_handler(struct transport_handler *s,
 {
   CAST(server_dh_handler, self, s);
   struct simple_buffer buffer;
-  mpz_t tmp;
   
-  trace("handle_dh_init\n");
+  trace("server_dh_handler\n");
 
   assert(length > 0);
   if (packet[0] != SSH_MSG_KEXDH_INIT)
@@ -87,6 +85,8 @@ server_dh_handler(struct transport_handler *s,
       && (mpz_cmp(self->dh.e, self->dh.params->modulo) < 0)
       && parse_eod(&buffer) )
     {
+      mpz_t tmp;
+      
       mpz_init(tmp);
       mpz_powm(tmp, self->dh.e, self->dh.secret, self->dh.params->modulo);
       self->dh.K = ssh_format("%ln", tmp);
@@ -122,11 +122,10 @@ server_dh_handler(struct transport_handler *s,
 
 static struct transport_handler *
 server_dh_init(struct keyexchange_algorithm *s,
-	       struct randomness *random,
-	       struct kexinit_state *kex)
+	       struct transport_connection *connection)
 {
   CAST(server_dh_exchange, self, s);
-  CAST(keypair, key, ALIST_GET(self->keys, kex->hostkey_algorithm));
+  CAST(keypair, key, ALIST_GET(self->keys, connection->kex.hostkey_algorithm));
 
   if (!key)
     {
@@ -138,13 +137,14 @@ server_dh_init(struct keyexchange_algorithm *s,
       NEW(server_dh_handler, handler);
       
       /* Initialize */
-      handler->super.handler = server_dh_handler;
-      init_dh_state(&handler->dh, self->params, kex);
+      init_dh_state(&handler->dh, self->params, &connection->kex);
 
+      handler->super.handler = server_dh_handler;
       handler->key = key;
 
       /* Generate server's secret exponent */
-      dh_generate_secret(self->params, random, handler->dh.secret, handler->dh.f);
+      dh_generate_secret(self->params, connection->ctx->random,
+			 handler->dh.secret, handler->dh.f);
   
       /* Return handler */
       return &handler->super;
