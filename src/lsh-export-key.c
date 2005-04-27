@@ -354,7 +354,6 @@ int main(int argc, char **argv)
 {
   struct export_key_options *options = make_options();
 
-  const struct exception *e;
   int in = STDIN_FILENO;
   int out = STDOUT_FILENO;
   
@@ -402,14 +401,12 @@ int main(int argc, char **argv)
   if (!output)
     return EXIT_FAILURE;
 
-  e = write_raw(out, STRING_LD(output));
-  lsh_string_free(output);
-
-  if (e)
+  if (!write_raw(out, STRING_LD(output)))
     {
-      werror("%z\n", e->msg);
+      werror("Write failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
 
   gc_final();
   

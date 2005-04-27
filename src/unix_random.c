@@ -80,20 +80,15 @@ static int
 write_seed_file(struct yarrow256_ctx *ctx,
 	       int fd)
 {
-  const struct exception *e;
-  
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
       werror("Seeking to beginning of seed file failed!? %e\n", errno);
       return 0;
     }
 
-  e = write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file);
-
-  if (e)
+  if (!write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file))
     {
-      werror("Overwriting seed file failed: %z\n",
-	     e->msg);
+      werror("Overwriting seed file failed: %e\n", errno);
       return 0;
     }
 

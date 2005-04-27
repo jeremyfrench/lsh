@@ -279,8 +279,8 @@ io_resolv_address(const char *host, const char *service,
 		  unsigned default_port,
 		  struct addr_queue *q);
 
-/* Returns an exception, if anything went wrong */
-const struct exception *
+/* Returns an 1 on success, 0 on error (and then see errno) */
+int
 write_raw(int fd, uint32_t length, const uint8_t *data);
 
 const struct exception *

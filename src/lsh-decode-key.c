@@ -163,7 +163,6 @@ lsh_decode_key(struct lsh_string *contents)
 int main(int argc, char **argv)
 {
   struct lsh_decode_key_options *options = make_lsh_decode_key_options();
-  const struct exception *e;
   struct lsh_string *input;
   struct lsh_string *output;
   
@@ -211,15 +210,12 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     
-  e = write_raw(out, STRING_LD(output));
-  lsh_string_free(output);
-  
-  if (e)
+  if (!write_raw(out, STRING_LD(output)))
     {
-      werror("Write failed: %z\n",
-             e->msg);
+      werror("Write failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
   
   gc_final();
   

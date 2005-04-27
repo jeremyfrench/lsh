@@ -178,7 +178,6 @@ main(int argc, char **argv)
   struct lsh_decryptkey_options *options = make_lsh_decryptkey_options();
   struct lsh_string *input;
   struct lsh_string *output;
-  const struct exception *e;
   struct alist *mac = make_alist(0, -1);
   struct alist *crypto = make_alist(0, -1);
   
@@ -210,15 +209,12 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     
-  e = write_raw(options->out_fd, STRING_LD(output));
-  lsh_string_free(output);
-  
-  if (e)
+  if (!write_raw(options->out_fd, STRING_LD(output)))
     {
-      werror("Writing decrypted key failed: %z\n",
-             e->msg);
+      werror("Writing decrypted key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
   
   gc_final();
   

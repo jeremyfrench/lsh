@@ -417,7 +417,6 @@ main(int argc, char **argv)
   int public_fd;
   struct lsh_string *input;
   struct lsh_string *output;
-  const struct exception *e;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -447,15 +446,12 @@ main(int argc, char **argv)
   if (private_fd < 0)
     return EXIT_FAILURE;
 
-  e = write_raw(private_fd, STRING_LD(output));
-  lsh_string_free(output);
-
-  if (e)
+  if (!write_raw(private_fd, STRING_LD(output)))
     {
-      werror("Writing private key failed: %z\n",
-             e->msg);
+      werror("Writing private key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
 
   output = process_public(input, options);
   lsh_string_free(input);
@@ -467,15 +463,12 @@ main(int argc, char **argv)
   if (public_fd < 0)
     return EXIT_FAILURE;
   
-  e = write_raw(public_fd, STRING_LD(output));
-  lsh_string_free(output);
-  
-  if (e)
+  if (!write_raw(public_fd, STRING_LD(output)))
     {
-      werror("Writing public key failed: %z\n",
-             e->msg);
+      werror("Writing public key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
   
   gc_final();
   

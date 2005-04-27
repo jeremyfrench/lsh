@@ -134,11 +134,11 @@ static uint8_t error_buffer[BUF_SIZE];
 static uint32_t error_pos = 0;
 static int error_raw = 0;
 
-static const struct exception *
+static int
 (*error_write)(int fd, uint32_t length, const uint8_t *data) = write_raw;
 
 #if HAVE_SYSLOG
-static const struct exception *
+static int
 write_syslog(int fd UNUSED, uint32_t length, const uint8_t *data)
 {
   struct lsh_string *s;
@@ -155,7 +155,7 @@ write_syslog(int fd UNUSED, uint32_t length, const uint8_t *data)
   syslog(LOG_NOTICE, "%s", lsh_get_cstring(s));
   lsh_string_free(s);
   
-  return NULL;
+  return 1;
 }
 
 /* FIXME: Delete argument and use program_name. */
@@ -168,10 +168,10 @@ set_error_syslog(const char *id)
 }
 #endif /* HAVE_SYSLOG */
 
-static const struct exception *
+static int
 write_ignore(int fd UNUSED,
 	     uint32_t length UNUSED, const uint8_t *data UNUSED)
-{ return NULL; }
+{ return 1; }
 
 void
 set_error_stream(int fd)

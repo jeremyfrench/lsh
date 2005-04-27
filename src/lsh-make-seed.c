@@ -1213,7 +1213,6 @@ main(int argc, char **argv)
 
   int overwrite = 0;
   
-  const struct exception *e;
   int fd;
 
   struct yarrow256_ctx yarrow;
@@ -1368,12 +1367,9 @@ main(int argc, char **argv)
 	}
     }
   
-  e = write_raw(fd, sizeof(yarrow.seed_file), yarrow.seed_file);
-
-  if (e)
+  if (!write_raw(fd, sizeof(yarrow.seed_file), yarrow.seed_file))
     {
-      werror("Writing seed file failed: %z\n",
-	     e->msg);
+      werror("Writing seed file failed: %e\n", errno);
 
       /* If we're overwriting the file, it's already truncated now,
        * we can't leave it unmodified. So just delete it. */

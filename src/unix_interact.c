@@ -276,14 +276,14 @@ unix_yes_or_no(struct interact *s,
   else    
     {
       uint8_t buffer[TTY_BUFSIZE];
-      const struct exception *e;
+      int res;
   
-      e = write_raw(self->tty_fd, STRING_LD(prompt));
+      res = write_raw(self->tty_fd, STRING_LD(prompt));
 
       if (free)
 	lsh_string_free(prompt);
 
-      if (e)
+      if (!res)
 	return def;
 
       if (!read_line(self->tty_fd, TTY_BUFSIZE, buffer))
@@ -309,12 +309,9 @@ unix_dialog(struct interact *s,
 {
 #define DIALOG_BUFSIZE 150
   CAST(unix_interact, self, s);
-  const struct exception *e;
   unsigned i;
   
-  e = write_raw(self->tty_fd, STRING_LD(dialog->instruction));
-
-  if (e)
+  if (!write_raw(self->tty_fd, STRING_LD(dialog->instruction)))
     return 0;
 
   for (i = 0; i < dialog->nprompt; i++)
@@ -325,8 +322,7 @@ unix_dialog(struct interact *s,
 	  uint8_t buffer[DIALOG_BUFSIZE];
 	  uint32_t length;
 	  
-	  e = write_raw(self->tty_fd, STRING_LD(prompt));
-	  if (e)
+	  if (!write_raw(self->tty_fd, STRING_LD(prompt)))
 	    return 0;
 	  length = read_line(self->tty_fd, DIALOG_BUFSIZE, buffer);
 	  if (!length)

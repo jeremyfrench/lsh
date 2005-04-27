@@ -874,29 +874,24 @@ do_exc_io_handler(struct exception_handler *self,
 
 /* These functions are used by werror and friends */
 
-/* For fd:s in blocking mode. */
-const struct exception *
+/* For fd:s in blocking mode. On error, see errno. */
+int
 write_raw(int fd, uint32_t length, const uint8_t *data)
 {
-  while(length)
+  while (length)
     {
       int written = write(fd, data, length);
-
       if (written < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
+	{
+	  if (errno == EINTR)
 	    continue;
-	  default:
-	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
-				     NULL, errno, NULL);
-	  }
-      
+	  else
+	    return 0;
+	}
       length -= written;
       data += written;
     }
-  return NULL;
+  return 1;
 }
 
 /* For fd:s in blocking mode. */
@@ -2124,12 +2119,11 @@ static void
 do_write_only_file(struct abstract_write *s, struct lsh_string *data)
 {
   CAST(write_only_file, self, s);
-  const struct exception *e;
 
-  e = write_raw(self->fd, STRING_LD(data));
-
-  if (e)
-    EXCEPTION_RAISE(self->e, e);
+  if (!write_raw(self->fd, STRING_LD(data)))
+    EXCEPTION_RAISE(self->e,
+		    make_io_exception(EXC_IO_BLOCKING_WRITE,
+				      NULL, errno, NULL));
 
   lsh_string_free(data);
 }

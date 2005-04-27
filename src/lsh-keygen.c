@@ -270,8 +270,6 @@ main(int argc, char **argv)
   struct lsh_string *key;
   struct randomness *r;
 
-  const struct exception *e;
-  
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   r = (options->server
@@ -302,11 +300,9 @@ main(int argc, char **argv)
 
   /* Now, output a private key spki structure. */
 
-  e = write_raw(STDOUT_FILENO, STRING_LD(key));
-
-  if (e)
+  if (!write_raw(STDOUT_FILENO, STRING_LD(key)))
     {
-      werror("lsh-keygen: %z\n", e->msg);
+      werror("Write failed: %e\n", errno);
       return EXIT_FAILURE;
     }
   

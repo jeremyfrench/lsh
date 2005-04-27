@@ -922,10 +922,8 @@ do_background_process(struct command *s,
       if (self->write_pid)
 	{
 	  struct lsh_string *msg = ssh_format("%di\n", pid);
-	  const struct exception *e = write_raw (STDOUT_FILENO, STRING_LD(msg));
-
-	  if (e)
-	    werror ("Write to stdout failed!?: %z\n", e->msg);
+	  if (!write_raw (STDOUT_FILENO, STRING_LD(msg)))
+	    werror ("Write to stdout failed!?: %e\n", errno);
 	}
       _exit(EXIT_SUCCESS);
     }
