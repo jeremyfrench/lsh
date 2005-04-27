@@ -100,28 +100,6 @@ void
 dh_hash_update(struct dh_state *self,
 	       struct lsh_string *s, int free);
 
-#if 0     
-/* Creates client message */
-struct lsh_string *
-dh_make_client_msg(struct dh_instance *self);
-
-/* Includes more data to the exchange hash. */
-void
-dh_hash_update(struct dh_state *self,
-	       uint32_t length, const uint8_t *data);
-
-/* Decodes server message, but does not verify its signature. */
-struct lsh_string *
-dh_process_server_msg(struct dh_instance *self,
-		      struct lsh_string **signature,
-		      struct lsh_string *packet);
-
-/* Verifies server's signature */
-int
-dh_verify_server_msg(struct dh_instance *self,
-		     struct verifier *v);
-#endif
-
 void
 dh_generate_secret(const struct dh_params *self,
 		   struct randomness *random, 
