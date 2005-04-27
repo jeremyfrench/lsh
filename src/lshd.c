@@ -77,7 +77,7 @@ kill_lshd_connection(struct resource *s)
 	  source->cancel_fd(source, self->service_fd, OOP_READ);
 	  source->cancel_fd(source, self->service_fd, OOP_WRITE);
 	  close(self->service_fd);
-	  self->service_fd = -1;	  
+	  self->service_fd = -1;
 	}
       transport_kill(&self->super);
     }
@@ -151,7 +151,7 @@ lshd_event_handler(struct transport_connection *connection,
 	      break;
 	    case SSH_WRITE_PENDING:
 	      lshd_service_start_write(self);
-      
+
 	    case SSH_WRITE_COMPLETE:
 	      lshd_service_stop_write(self);
 	      break;
@@ -213,10 +213,10 @@ oop_read_service(oop_source *source UNUSED,
     {
       enum service_read_status status;
       uint32_t seqno;
-      uint32_t length;      
+      uint32_t length;
       const uint8_t *packet;
       const char *msg;
-      
+
       status = service_read_packet(self->service_reader, fd, &msg,
 				   &seqno, &length, &packet);
       switch (status)
@@ -224,7 +224,7 @@ oop_read_service(oop_source *source UNUSED,
 	case SERVICE_READ_IO_ERROR:
 	  transport_disconnect(&self->super,
 			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Read from service layer failed.");  
+			       "Read from service layer failed.");
 	  break;
 	case SERVICE_READ_PROTOCOL_ERROR:
 	  werror("Invalid data from service layer: %z\n", msg);
@@ -266,7 +266,7 @@ lshd_service_start_read(struct lshd_connection *self)
   if (!self->service_read_active)
     {
       oop_source *source = self->super.ctx->oop;
-      self->service_read_active = 1;      
+      self->service_read_active = 1;
       source->on_fd(source, self->service_fd, OOP_READ, oop_read_service, self);
     }
 }
@@ -277,7 +277,7 @@ lshd_service_stop_read(struct lshd_connection *self)
   if (self->service_read_active)
     {
       oop_source *source = self->super.ctx->oop;
-      
+
       self->service_read_active = 0;
       source->cancel_fd(source, self->service_fd, OOP_READ);
     }
@@ -310,7 +310,7 @@ oop_write_service(oop_source *source UNUSED,
     case SSH_WRITE_PENDING:
       /* Do nothing. */
       break;
-      
+
     case SSH_WRITE_COMPLETE:
       lshd_service_stop_write(self);
       break;
@@ -324,7 +324,7 @@ lshd_service_start_write(struct lshd_connection *self)
   if (!self->service_write_active)
     {
       oop_source *source = self->super.ctx->oop;
-      
+
       self->service_write_active = 1;
       source->on_fd(source, self->service_fd, OOP_WRITE, oop_write_service, self);
     }
@@ -336,7 +336,7 @@ lshd_service_stop_write(struct lshd_connection *self)
   if (self->service_write_active)
     {
       oop_source *source = self->super.ctx->oop;
-      
+
       self->service_write_active = 0;
       source->cancel_fd(source, self->service_fd, OOP_WRITE);
       transport_start_read(&self->super);
@@ -484,7 +484,7 @@ lshd_service_request_handler(struct lshd_connection *self,
 	    {
 	      /* Child process */
 	      struct lsh_string *hex;
-	      
+
 	      close(pipe[0]);
 	      dup2(pipe[1], STDIN_FILENO);
 	      dup2(pipe[1], STDOUT_FILENO);
@@ -515,9 +515,9 @@ lshd_packet_handler(struct transport_connection *connection,
 		    uint32_t seqno, uint32_t length, const uint8_t *packet)
 {
   CAST(lshd_connection, self, connection);
-  
+
   uint8_t msg;
-  
+
   werror("Received packet: %xs\n", length, packet);
   assert(length > 0);
 
@@ -615,7 +615,7 @@ open_ports(struct configuration *config, int port_number)
   int s;
 
   source = config->super.oop;
-  
+
   s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0)
     {
@@ -662,7 +662,7 @@ make_configuration(const char *hostkey, oop_source *source)
     { "ssh-userauth", "lshd-userauth", NULL };
 
   self->super.is_server = 1;
-  
+
   self->super.random = make_system_random();
 
   if (!self->super.random)
@@ -670,7 +670,7 @@ make_configuration(const char *hostkey, oop_source *source)
       werror("No randomness generator available.\n");
       exit(EXIT_FAILURE);
     }
-  
+
   self->super.algorithms = all_symmetric_algorithms();
   self->super.oop = source;
 
@@ -679,10 +679,10 @@ make_configuration(const char *hostkey, oop_source *source)
 		     all_signature_algorithms(self->super.random),
 		     self->keys))
     werror("No host key.\n");
-  
+
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
 	    &make_server_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
-				    self->keys)->super);
+				     self->keys)->super);
 
   self->super.kexinit
     = make_simple_kexinit(
@@ -736,7 +736,7 @@ main(int argc, char **argv)
 
   /* Ignore status from child processes */
   signal(SIGCHLD, SIG_IGN);
-  
+
   io_run();
 
   return EXIT_SUCCESS;
