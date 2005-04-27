@@ -1,3 +1,32 @@
+2005-04-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_keyexchange.h: Deleted.
+	* src/transport_read.h: Deleted.
+
+	* src/Makefile.am (lsh_transport_SOURCES): Added client_keyexchange.c.
+	(liblsh_a_SOURCES): Deleted lookup_verifier.c.
+
+	* src/server_keyexchange.c (server_dh_init): Adapted to new
+	keyexchange_algorithm interface.
+	* src/transport.c (transport_kexinit_handler): Likewise.
+
+	* src/io.c (io_set_blocking): Deleted again.
+
+	* src/lshd-connection.c (oop_read_service): Do only a single read
+	call. Then we can keep the fd in blocking-mode at all times.
+
+	* src/lsh-transport.c: Reorganized to use transport_connection.
+
+	* src/lookup_verifier.c, src/lookup_verifier.h: Deleted files.
+	Moved declaration to keyexchange.c.
+
+	* src/keyexchange.h (class keyexchange_algorithm): Changed init
+	method to take a transport connection as argument.
+	(class lookup_verifier): Moved here, from lookup_verifier.h.
+
+	* src/client_keyexchange.c: Rewritten, to work with the new
+	transport layer.
+
 2005-04-26  Niels Möller  <niels@s3.kth.se>
 
 	* src/lshd-connection.c: Use service_read_state interface.
