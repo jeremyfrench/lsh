@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 2005 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,16 +27,15 @@
 
 #include <assert.h>
 
-#include "client_keyexchange.h"
+#include "keyexchange.h"
 
 #include "atoms.h"
 #include "command.h"
-#include "connection.h"
 #include "format.h"
-#include "lookup_verifier.h"
 #include "lsh_string.h"
-#include "srp.h"
+#include "publickey_crypto.h"
 #include "ssh.h"
+#include "transport.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -44,307 +43,138 @@
 
 /* GABA:
    (class
-     (name dh_client_exchange)
+     (name client_dh_exchange)
      (super keyexchange_algorithm)
      (vars
-       (dh const object dh_method)))
+       (params const object dh_params)
+       (db object lookup_verifier)))
 */
 
-/* Handler for the kex_dh_reply message */
+/* Handler for the KEXDH_REPLY message */
 /* GABA:
    (class
-     (name dh_client)
-     (super packet_handler)
+     (name client_dh_handler)
+     (super transport_handler)
      (vars
-       (dh struct dh_instance)
-       (hostkey_algorithm . int)
-       (verifier object lookup_verifier)
-       (algorithms object object_list)))
-*/
-    
-static void
-do_handle_dh_reply(struct packet_handler *c,
-		   struct ssh_connection *connection,
-		   struct lsh_string *packet)
-{
-  CAST(dh_client, closure, c);
-  struct lsh_string *server_key;
-  struct lsh_string *signature;
-  struct verifier *v;
-  int res;
-  
-  trace("handle_dh_reply\n");
-
-  server_key = dh_process_server_msg(&closure->dh, &signature, packet);
-
-  if (!server_key)
-    {
-      disconnect_kex_failed(connection, "Bad dh-reply\r\n");
-      return;
-    }
-    
-  v = LOOKUP_VERIFIER(closure->verifier, closure->hostkey_algorithm,
-		      server_key);
-  lsh_string_free(server_key);
-
-  if (!v)
-    {
-      /* FIXME: Use a more appropriate error code? */
-      disconnect_kex_failed(connection, "Bad server host key\r\n");
-      lsh_string_free(signature);
-      return;
-    }
-
-  res = VERIFY(v, closure->hostkey_algorithm,
-	       lsh_string_length(closure->dh.exchange_hash),
-	       lsh_string_data(closure->dh.exchange_hash),
-	       lsh_string_length(signature), lsh_string_data(signature));
-  lsh_string_free(signature);
-
-  if (!res)
-    {
-      werror("Invalid server signature. Disconnecting.\n");
-      /* FIXME: Use a more appropriate error code? */
-      disconnect_kex_failed(connection, "Invalid server signature\r\n");
-      return;
-    }
-  
-  /* Key exchange successful! */
-
-  connection->dispatch[SSH_MSG_KEXDH_REPLY] = &connection_fail_handler;
-
-  keyexchange_finish(connection, closure->algorithms,
-		     closure->dh.method->H,
-		     closure->dh.exchange_hash,
-		     closure->dh.K);
-
-  /* For gc */
-  closure->dh.K = NULL;
-  closure->dh.exchange_hash = NULL;  
-}
-
-static void
-do_init_client_dh(struct keyexchange_algorithm *c,
-		  struct ssh_connection *connection,
-		  int hostkey_algorithm_atom,
-		  struct lsh_object *extra,
-		  struct object_list *algorithms)
-{
-  CAST(dh_client_exchange, closure, c);
-  CAST_SUBTYPE(lookup_verifier, verifier, extra);
-  
-  NEW(dh_client, dh);
-
-  assert(verifier);
-  
-  /* Initialize */
-  dh->super.handler = do_handle_dh_reply;
-  init_dh_instance(closure->dh, &dh->dh, &connection->kex);
-
-  dh->verifier = verifier;
-  dh->hostkey_algorithm = hostkey_algorithm_atom;
-
-  dh->algorithms = algorithms;
-  
-  /* Send client's message */
-  connection_send_kex(connection, dh_make_client_msg(&dh->dh));
-
-  /* Install handler */
-  connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
-}
-
-
-struct keyexchange_algorithm *
-make_dh_client(const struct dh_method *dh)
-{
-  NEW(dh_client_exchange, self);
-
-  self->super.init = do_init_client_dh;
-  self->dh = dh;
-  
-  return &self->super;
-}
-
-
-#if WITH_SRP
-/* SRP key exchange */
-
-/* GABA:
-   (class
-     (name srp_client_instance)
-     (vars
-       (dh struct dh_instance)
-       (tty object interact)
-       (name string)
-       (m2 string)
-       (algorithms object object_list)))
-*/
-
-/* GABA:
-   (class
-     (name srp_client_handler)
-     (super packet_handler)
-     (vars
-       (srp object srp_client_instance)))
+       (dh struct dh_state)
+       (db object lookup_verifier)
+       (hostkey_algorithm . int)))
 */
 
 static void
-do_srp_client_proof_handler(struct packet_handler *s,
-			    struct ssh_connection *connection,
-			    struct lsh_string *packet)
+client_dh_handler(struct transport_handler *s,
+		  struct transport_connection *connection,
+		  uint32_t length, const uint8_t *packet)
 {
-  CAST(srp_client_handler, self, s);
-
-  int res = srp_process_server_proof(self->srp->m2,
-				     packet);
-
-  connection->dispatch[SSH_MSG_KEXSRP_PROOF] = &connection_fail_handler;
+  CAST(client_dh_handler, self, s);
+  struct simple_buffer buffer;
+  uint32_t key_length;
+  const uint8_t *key;
+  uint32_t signature_length;
+  const uint8_t *signature;
   
-  if (res)
+  trace("client_dh_handler\n");
+
+  assert(length > 0);
+  if (packet[0] != SSH_MSG_KEXDH_REPLY)
     {
-      connection->flags |= CONNECTION_SRP;
+      transport_disconnect(connection, SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			   "No KEXDH_REPLY message.");
+      return;
+    }
+
+  simple_buffer_init(&buffer, length-1, packet+1);
+  if (parse_string(&buffer, &key_length, &key)
+      && parse_bignum(&buffer, self->dh.f, self->dh.params->limit)
+      && (mpz_cmp_ui(self->dh.f, 1) > 0)
+      && (mpz_cmp(self->dh.f, self->dh.params->modulo) < 0)
+      && parse_string(&buffer, &signature_length, &signature)
+      && parse_eod(&buffer))
+    {
+      mpz_t tmp;
       
-      keyexchange_finish(connection, self->srp->algorithms,
-			 self->srp->dh.method->H,
-			 self->srp->dh.exchange_hash,
-			 self->srp->dh.K);
+      struct verifier *v = LOOKUP_VERIFIER(self->db, self->hostkey_algorithm,
+					   key_length, key);
+      if (!v)
+	{
+	  transport_disconnect(connection, SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			       "Unknown server host key");
+	  return;
+	}
 
-      /* For gc */
-      self->srp->dh.K = NULL;
-      self->srp->dh.exchange_hash = NULL;
+      /* Construct key */
+      mpz_init(tmp);
+
+      mpz_powm(tmp, self->dh.f, self->dh.secret, self->dh.params->modulo);
+      self->dh.K = ssh_format("%ln", tmp);
+      mpz_clear(tmp);
+
+      debug("Session key: %xS\n", self->dh.K);
+
+      /* FIXME: Unnecessary allocation */
+      dh_hash_update(&self->dh, ssh_format("%s", key_length, key), 1);
+      dh_hash_digest(&self->dh);
+
+      debug("Exchange hash: %xS\n", self->dh.exchange_hash);
+      
+      if (!VERIFY(v, self->hostkey_algorithm,
+		  lsh_string_length(self->dh.exchange_hash),
+		  lsh_string_data(self->dh.exchange_hash),
+		  signature_length, signature))
+	{
+	  transport_disconnect(connection, SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			       "Invalid server signature");
+	  return;	 
+	}
+
+      transport_keyexchange_finish(connection,
+				   self->dh.params->H,
+				   self->dh.exchange_hash,
+				   self->dh.K);
+      self->dh.exchange_hash = NULL;
+      self->dh.K = NULL;      
     }
   else
-    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_KEXSRP_PROOF message");
-
-  /* Try to purge information about the key exchange */
-  KILL(self->srp);
-  KILL(self);
+    transport_disconnect(connection, SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			 "Invalid KEXDH_REPLY message");
 }
 
-static struct packet_handler *
-make_srp_client_proof_handler(struct srp_client_instance *srp)
+static struct transport_handler *
+client_dh_init(struct keyexchange_algorithm *s,
+	       struct transport_connection *connection)
 {
-  NEW(srp_client_handler, self);
-  self->super.handler = do_srp_client_proof_handler;
-  self->srp = srp;
-
-  return &self->super;
-}
-
-#define MAX_PASSWD 100
-
-static void
-do_handle_srp_reply(struct packet_handler *s,
-		    struct ssh_connection *connection,
-		    struct lsh_string *packet)
-{
-  CAST(srp_client_handler, self, s);
-  struct lsh_string *salt = srp_process_reply_msg(&self->srp->dh, packet);
-  struct lsh_string *passwd;
-  struct lsh_string *response;
-  
-  mpz_t x;
-  
-  connection->dispatch[SSH_MSG_KEXSRP_REPLY] = &connection_fail_handler;
-    
-  if (!salt)
-    {
-      PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_KEXSRP_REPLY message");
-      return;
-    }
-
-  /* Ask for SRP password */
-  passwd = INTERACT_READ_PASSWORD(self->srp->tty, MAX_PASSWD,
-				  ssh_format("SRP password for %lS: ",
-					     self->srp->name));
-  if (!passwd)
-    {
-      lsh_string_free(salt);
-      disconnect_kex_failed(connection, "Bye");
-      return;
-    }
-  
-  mpz_init(x);
-  srp_hash_password(x, self->srp->dh.method->H,
-		    salt, self->srp->name,
-		    passwd);
-
-  lsh_string_free(salt);
-  lsh_string_free(passwd);
-
-  response = srp_make_client_proof(&self->srp->dh, &self->srp->m2, x);
-  mpz_clear(x);
-
-  if (!response)
-    {
-      PROTOCOL_ERROR(connection->e,
-		     "SRP failure: Invalid public value from server.");
-      return;
-    }
-  connection_send_kex(connection, response);
-  
-  connection->dispatch[SSH_MSG_KEXSRP_PROOF]
-    = make_srp_client_proof_handler(self->srp);
-}
-
-static struct packet_handler *
-make_srp_reply_handler(struct srp_client_instance *srp)
-{
-  NEW(srp_client_handler, self);
-  self->super.handler = do_handle_srp_reply;
-  self->srp = srp;
-
-  return &self->super;
-}
-
-/* GABA:
-   (class
-     (name srp_client_exchange)
-     (super keyexchange_algorithm)
-     (vars
-       (dh const object dh_method)
-       (tty object interact)
-       (name string)))
-*/
-
-static void
-do_init_client_srp(struct keyexchange_algorithm *s,
-		   struct ssh_connection *connection,
-		   int hostkey_algorithm_atom UNUSED,
-		   struct lsh_object *extra UNUSED,
-		   struct object_list *algorithms)
-{
-  CAST(srp_client_exchange, self, s);
-  
-  NEW(srp_client_instance, srp);
+  CAST(client_dh_exchange, self, s);
+  NEW(client_dh_handler, handler);
 
   /* Initialize */
-  init_dh_instance(self->dh, &srp->dh, &connection->kex);
+  init_dh_state(&handler->dh, self->params, &connection->kex);  
 
-  srp->tty = self->tty;
-  srp->algorithms = algorithms;
-  srp->name = self->name;
-  srp->m2 = NULL;
+  handler->super.handler = client_dh_handler;
+  handler->db = self->db;
+  handler->hostkey_algorithm = connection->kex.hostkey_algorithm;
   
+  /* Generate clients 's secret exponent */
+  dh_generate_secret(self->params, connection->ctx->random,
+		     handler->dh.secret, handler->dh.e);
+
   /* Send client's message */
-  connection_send_kex(connection, srp_make_init_msg(&srp->dh, self->name));
+  transport_send_packet(connection, 1,
+			ssh_format("%c%n", SSH_MSG_KEXDH_INIT, handler->dh.e));
 
   /* Install handler */
-  connection->dispatch[SSH_MSG_KEXSRP_REPLY] = make_srp_reply_handler(srp);
+  return &handler->super;
 }
 
-struct keyexchange_algorithm *
-make_srp_client(const struct dh_method *dh, struct interact *tty,
-		struct lsh_string *name)
-{
-  NEW(srp_client_exchange, self);
 
-  self->super.init = do_init_client_srp;
-  self->dh = dh;
-  self->tty = tty;
-  self->name = name;
+struct keyexchange_algorithm *
+make_client_dh_exchange(const struct dh_params *params,
+			struct lookup_verifier *db)
+{
+  NEW(client_dh_exchange, self);
+
+  self->super.init = client_dh_init;
+  self->params = params;
+  self->db = db;
   
   return &self->super;
 }
-
-#endif /* WITH_SRP */
