@@ -237,9 +237,7 @@ transport_kexinit_handler(struct transport_connection *connection,
 		 LIST(connection->kex.algorithm_list)[KEX_KEY_EXCHANGE]);
     
     connection->keyexchange_handler
-      = KEYEXCHANGE_INIT(kex_algorithm,
-			 connection->ctx->random,
-			 &connection->kex);
+      = KEYEXCHANGE_INIT(kex_algorithm, connection);
 
     if (!connection->keyexchange_handler)
       transport_disconnect(connection,
