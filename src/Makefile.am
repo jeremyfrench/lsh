@@ -54,7 +54,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	gateway.c gateway_channel.c gateway_commands.c \
 	interact.c io.c io_commands.c \
 	keyexchange.c \
-	list.c lookup_verifier.c \
+	list.c \
 	lock_file.c \
 	lsh_string.c parse.c \
 	pkcs5.c \
@@ -133,7 +133,8 @@ lshg_LDADD = liblsh.a @LIBARGP@
 lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
 	server_keyexchange.c
 
-lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c 
+lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c \
+	client_keyexchange.c
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
