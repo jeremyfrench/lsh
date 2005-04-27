@@ -1,5 +1,14 @@
 2005-04-27  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lsh-transport.c (lsh_transport_lookup_verifier)
+	(make_lsh_transport_lookup_verifier): Host db handling, mostly
+	copied from lsh.c.
+
+	* src/io.c (write_raw): Return an integer success indication, not
+	an exception. Updated all callers.
+
+	* src/abstract_crypto.c (hash_string_l): New function.
+
 	* src/client_keyexchange.h: Deleted.
 	* src/transport_read.h: Deleted.
 
