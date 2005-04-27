@@ -120,13 +120,12 @@ disconnect(struct connection *connection, const char *msg)
 static void
 service_start_read(struct connection *self);
 
-static void
-service_stop_read(struct connection *self);
-
 static void *
-oop_read_service(oop_source *source, int fd, oop_event event, void *state)
+oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
 {
   CAST(connection, self, (struct lsh_object *) state);
+
+  assert(event == OOP_READ);
 
   for (;;)
     {
@@ -141,6 +140,8 @@ oop_read_service(oop_source *source, int fd, oop_event event, void *state)
       status = service_read_packet(self->reader, fd,
 				   &error_msg,
 				   &seqno, &length, &packet);
+      fd = -1;
+
       switch (status)
 	{
 	case SERVICE_READ_IO_ERROR:
@@ -193,13 +194,6 @@ service_start_read(struct connection *self)
 			   oop_read_service, self);  
 }
 
-static void
-service_stop_read(struct connection *self)
-{
-  global_oop_source->cancel_fd(global_oop_source,
-			       STDIN_FILENO, OOP_READ);
-}
-
 /* GABA:
    (class
      (name connection_write)
@@ -225,12 +219,6 @@ make_connection_write_handler(struct connection *connection)
   return &self->super;
 }
 
-static void
-restore_stdin(void)
-{
-  io_set_blocking(STDIN_FILENO);
-}
-
 static struct connection *
 make_connection(void)
 {
@@ -239,8 +227,6 @@ make_connection(void)
   
   self->reader = make_service_read_state();
   service_start_read(self);
-  io_set_nonblocking(STDIN_FILENO);
-  atexit(restore_stdin);
 
   self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
 				      CONNECTION_WRITE_THRESHOLD);
