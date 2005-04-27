@@ -111,14 +111,12 @@ handle_kexinit(struct kexinit_state *self,
        ;; FIXME: Add some method or attribute describing
        ;; the requirements on the hostkey algorithm.
 
-       ; Algorithms is an array indexed by the KEX_* values above
        (init method (object transport_handler)
-	     "struct randomness *random"
-	     "struct kexinit_state *kex")))
+             "struct transport_connection *connection")))
 */
 
-#define KEYEXCHANGE_INIT(kex, random, s) \
-((kex)->init((kex), (random), (s)))
+#define KEYEXCHANGE_INIT(kex, connection) \
+((kex)->init((kex), (connection)))
 
 /* GABA:
    (class
@@ -161,22 +159,24 @@ struct keyexchange_algorithm *
 make_server_dh_exchange(const struct dh_params *params,
 			struct alist *keys);
 
-#if 0
+/* Maps a key blob to a signature verifier, using some signature
+ * algorithm and some method to determine the authenticity of the key.
+ * Returns NULL if the key is invalid or not trusted. */
 
-/* Sends the keyexchange message, which must already be stored in
- * connection->kexinits[connection->flags & CONNECTION_MODE]
- */
-void send_kexinit(struct ssh_connection *connection);
+/* GABA:
+   (class
+     (name lookup_verifier)
+     (vars
+       (lookup method (object verifier)
+                      "int method"
+		      "uint32_t length" "const uint8_t *key")))
+*/
 
-struct packet_handler *
-make_kexinit_handler(struct lsh_object *extra,
-		     struct alist *algorithms);
+#define LOOKUP_VERIFIER(s, m, l, k) ((s)->lookup((s), (m), (l), (k)))
 
-struct packet_handler *
-make_newkeys_handler(struct crypto_instance *crypto,
-		     struct mac_instance *mac,
-		     struct compress_instance *compression);
-#endif
+struct keyexchange_algorithm *
+make_client_dh_exchange(const struct dh_params *params,
+			struct lookup_verifier *db);
 
 int
 keyexchange_finish(struct transport_connection *connection,
