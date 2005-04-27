@@ -127,7 +127,7 @@ init_dh_state(struct dh_state *self,
   self->hash = make_hash(params->H);
   self->exchange_hash = NULL;
 
-  debug("init_dh_instance\n"
+  debug("init_dh_state\n"
 	" V_C: %pS\n", kex->version[0]);
   debug(" V_S: %pS\n", kex->version[1]);
   debug(" I_C: %xS\n", kex->literal_kexinit[0]);
