@@ -42,17 +42,27 @@
 
 
 struct lsh_string *
-hash_string(const struct hash_algorithm *a,
-	    const struct lsh_string *in,
-	    int free)
+hash_string_l(const struct hash_algorithm *a,
+	      uint32_t length, const uint8_t *data)
 {
   struct hash_instance *hash = make_hash(a);
   struct lsh_string *out;
 
-  hash_update(hash, STRING_LD(in));
+  hash_update(hash, length, data);
   out = hash_digest_string(hash);
 
   KILL(hash);
+
+  return out;
+}
+
+struct lsh_string *
+hash_string(const struct hash_algorithm *a,
+	    const struct lsh_string *in,
+	    int free)
+{
+  struct lsh_string *out = hash_string_l(a, STRING_LD(in));
+
   if (free)
     lsh_string_free(in);
 

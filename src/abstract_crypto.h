@@ -209,6 +209,10 @@ MAC_DIGEST((instance), lsh_string_alloc((instance)->mac_size), 0)
 
 /* Simple hashing */
 struct lsh_string *
+hash_string_l(const struct hash_algorithm *a,
+	      uint32_t length, const uint8_t *data);
+
+struct lsh_string *
 hash_string(const struct hash_algorithm *a,
 	    const struct lsh_string *in,
 	    int free);
