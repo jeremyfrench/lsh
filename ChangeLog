@@ -1,3 +1,12 @@
+2005-04-28  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c (enum lsh_transport_state): New type.
+	(class lsh_transport_connection): New attribute state.
+	(lsh_transport_event_handler): Send a service request after
+	keyexchange is complete.
+	(lsh_transport_packet_handler): Handle SSH_MSG_SERVICE_ACCEPT.
+	(main_options): New options --userauth and --no-userauth.
+
 2005-04-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_lookup_verifier)
