@@ -60,6 +60,18 @@
 #include "werror.h"
 #include "xalloc.h"
 
+enum lsh_transport_state
+{
+  /* Initial handshake and key exchange */
+  STATE_HANDSHAKE,
+  /* We have sent our service request, waiting for reply. */
+  STATE_SERVICE_REQUEST,
+  /* We're trying to log in */
+  STATE_USERAUTH,
+  /* We're forwarding packets for the service */
+  STATE_SERVICE_FORWARD,
+};
+
 #include "lsh-transport.c.x"
 
 static int
@@ -78,6 +90,12 @@ lsh_transport_service_start_write(struct lsh_transport_connection *self);
 static void
 lsh_transport_service_stop_write(struct lsh_transport_connection *self);
 
+static void
+start_userauth(struct lsh_transport_connection *self);
+
+static void
+start_service(struct lsh_transport_connection *self);
+
 struct lsh_transport_lookup_verifier;
 
 static struct lsh_transport_lookup_verifier *
@@ -87,7 +105,7 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
    (class
      (name lsh_transport_config)
      (super transport_context)
-     (vars       
+     (vars
        (tty object interact)
 
        (sloppy . int)
@@ -102,10 +120,14 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
        (port . "const char *")
        (target . "const char *")
 
+       (userauth . int)
        (local_user . "char *")
        (user . "char *")
        (identity . "char *")
 
+       ; The service we ask for in the SERVICE_REQUEST
+       (requested_service . "const char *")
+       ; The service we ultimately want to start
        (service . "const char *")))
 */
 
@@ -146,6 +168,7 @@ make_lsh_transport_config(oop_source *oop)
 			  default_mac_algorithms(self->super.algorithms),
 			  default_compression_algorithms(self->super.algorithms),
 			  make_int_list(0, -1));
+
   self->sloppy = 0;
   self->capture_file = NULL;
   self->capture_fd = -1;
@@ -154,6 +177,7 @@ make_lsh_transport_config(oop_source *oop)
   self->port = "22";
   self->target = NULL;
 
+  self->userauth = 1;
   USER_NAME_FROM_ENV(self->user);
   self->local_user = self->user;
   self->identity = NULL;
@@ -168,6 +192,7 @@ make_lsh_transport_config(oop_source *oop)
      (name lsh_transport_connection)
      (super transport_connection)
      (vars
+       (state . "enum lsh_transport_state")
        (service_reader object service_read_state)
        (service_read_active . int)
        (service_writer object ssh_write_state)
@@ -185,6 +210,8 @@ lsh_transport_event_handler(struct transport_connection *connection,
 			    enum transport_event event)
 {
   CAST(lsh_transport_connection, self, connection);
+  CAST(lsh_transport_config, config, connection->ctx);
+
   switch (event)
     {
     case TRANSPORT_EVENT_START_APPLICATION:
@@ -194,8 +221,17 @@ lsh_transport_event_handler(struct transport_connection *connection,
       lsh_transport_service_stop_read(self);
       break;
     case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
+      assert(self->state == STATE_HANDSHAKE);
+
+      transport_send_packet(
+	connection, SSH_WRITE_FLAG_PUSH,
+	ssh_format("%c%z", SSH_MSG_SERVICE_REQUEST,
+		   config->requested_service));
+
+      self->state = STATE_SERVICE_REQUEST;
       connection->packet_handler = lsh_transport_packet_handler;
       break;
+
     case TRANSPORT_EVENT_CLOSE:
       /* FIXME: Should allow service buffer to drain. */
       break;
@@ -237,6 +273,8 @@ make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
   init_transport_connection(&self->super, kill_lsh_transport_connection,
 			    &config->super, fd, fd,
 			    lsh_transport_event_handler);
+
+  self->state = STATE_HANDSHAKE;
   self->service_reader = make_service_read_state();
   self->service_read_active = 0;
   self->service_writer = make_ssh_write_state(3 * SSH_MAX_PACKET, 1000);
@@ -313,6 +351,7 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 			     uint32_t seqno UNUSED, uint32_t length, const uint8_t *packet)
 {
   CAST(lsh_transport_connection, self, connection);
+  CAST(lsh_transport_config, config, connection->ctx);
   
   uint8_t msg;
   
@@ -320,9 +359,59 @@ lsh_transport_packet_handler(struct transport_connection *connection,
   assert(length > 0);
 
   msg = packet[0];
-  /* XXX */
+
+  switch(self->state)
+    {
+    case STATE_HANDSHAKE:
+      abort();
+    case STATE_SERVICE_REQUEST:
+      if (msg == SSH_MSG_SERVICE_ACCEPT)
+	{
+	  struct simple_buffer buffer;
+	  uint32_t service_length;
+	  const uint8_t *service;
+	  
+	  simple_buffer_init(&buffer, length-1, packet + 1);
+	  if (parse_string(&buffer, &service_length, &service)
+	      && parse_eod(&buffer)
+	      && length == strlen(config->requested_service)
+	      && 0 == memcmp(service, config->requested_service, length))
+	    {
+	      if (config->userauth)
+		{
+		  self->state = STATE_USERAUTH;
+		  start_userauth(self);
+		}
+	      else
+		{
+		  self->state = STATE_SERVICE_FORWARD;
+		  start_service(self);
+		}
+	    }
+	  break;
+	}
+      else
+	transport_protocol_error(connection,
+				 "Expected SERVICE_ACCEPT message");
+      break;
+
+    case STATE_USERAUTH:
+      break;
+    case STATE_SERVICE_FORWARD:
+      break;
+    }
 
   return 1;
+}
+
+static void
+start_userauth(struct lsh_transport_connection *self UNUSED)
+{
+}
+
+static void
+start_service(struct lsh_transport_connection *self UNUSED)
+{
 }
 
 static int
@@ -704,6 +793,11 @@ main_options[] =
     "The default is ~/.lsh/captured_keys.", 0 },
   
   /* User authentication */
+  { "userauth", OPT_USERAUTH, NULL, 0,
+    "Enable user authentication (default).", 0},
+  { "no-userauth", OPT_USERAUTH | ARG_NOT, NULL, 0,
+    "Disable user authentication.", 0},
+  
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
   { "service" , OPT_SERVICE, "Name", 0, "Service to request. Default is `ssh-connection'.", 0},
   
@@ -737,6 +831,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
+      self->requested_service
+	= self->userauth ? "ssh-userauth" : self->service;
+
       read_host_acls(self->host_db);
 
       if (self->capture_file)
@@ -778,6 +875,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_CAPTURE:
       self->capture_file = arg;
+      break;
+
+    case OPT_USERAUTH:
+      self->userauth = 1;
+      break;
+    case OPT_USERAUTH | ARG_NOT:
+      self->userauth = 0;
       break;
 
     case 'i':
