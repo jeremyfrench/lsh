@@ -1,3 +1,12 @@
+2005-04-29  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c (lsh_transport_packet_handler): Fixed
+	handling of SERVICE_ACCEPT. Handle USERAUTH_SUCCESS and
+	USERAUTH_FAILURE. 
+	(start_userauth): Try publickey authentication.
+	(read_user_key): New function, based on lsh.c:read_user_keys.
+	(main_argp_parser): Call read_user_key.
+
 2005-04-28  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-transport.c (enum lsh_transport_state): New type.
