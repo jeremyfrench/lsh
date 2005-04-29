@@ -124,7 +124,8 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
        (local_user . "char *")
        (user . "char *")
        (identity . "char *")
-
+       (keypair object keypair)
+       
        ; The service we ask for in the SERVICE_REQUEST
        (requested_service . "const char *")
        ; The service we ultimately want to start
@@ -181,6 +182,7 @@ make_lsh_transport_config(oop_source *oop)
   USER_NAME_FROM_ENV(self->user);
   self->local_user = self->user;
   self->identity = NULL;
+  self->keypair = NULL;
 
   self->service = "ssh-connection";
   
@@ -374,8 +376,9 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 	  simple_buffer_init(&buffer, length-1, packet + 1);
 	  if (parse_string(&buffer, &service_length, &service)
 	      && parse_eod(&buffer)
-	      && length == strlen(config->requested_service)
-	      && 0 == memcmp(service, config->requested_service, length))
+	      && service_length == strlen(config->requested_service)
+	      && 0 == memcmp(service, config->requested_service,
+			     service_length))
 	    {
 	      if (config->userauth)
 		{
@@ -388,7 +391,9 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 		  start_service(self);
 		}
 	    }
-	  break;
+	  else
+	    transport_protocol_error(connection,
+				     "Invalid SERVICE_ACCEPT message");
 	}
       else
 	transport_protocol_error(connection,
@@ -396,6 +401,45 @@ lsh_transport_packet_handler(struct transport_connection *connection,
       break;
 
     case STATE_USERAUTH:
+      switch (msg)
+	{
+	case SSH_MSG_USERAUTH_SUCCESS:
+	  if (length == 1)
+	    {
+	      self->state = STATE_SERVICE_FORWARD;
+	      start_service(self);	      
+	    }
+	  else
+	    transport_protocol_error(connection,
+				     "Invalid USERAUTH_SUCCESS message");
+	case SSH_MSG_USERAUTH_BANNER:
+	  /* FIXME: Ignored */
+	  break;
+
+	case SSH_MSG_USERAUTH_FAILURE:
+	  {
+	    struct simple_buffer buffer;
+	    struct int_list *methods;
+	    int partial;
+	    simple_buffer_init(&buffer, length-1, packet + 1);
+	    if ( (methods = parse_atom_list(&buffer, 17))
+		 && parse_boolean(&buffer, &partial)
+		 && parse_eod(&buffer))
+	      {
+		werror("Userauth failure%z. Methods: %A\n",
+		       partial ? " (partial)" : "", methods);
+		transport_disconnect(connection,
+				     SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+				     "No more auth methods available");
+	      }
+	    else
+	      transport_protocol_error(connection,
+				       "Invalid USERAUTH_FAILURE message");
+	  }
+	default:
+	  transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+				format_unimplemented(seqno));	  
+	}
       break;
     case STATE_SERVICE_FORWARD:
       break;
@@ -405,8 +449,50 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 }
 
 static void
-start_userauth(struct lsh_transport_connection *self UNUSED)
+start_userauth(struct lsh_transport_connection *self)
 {
+  CAST(lsh_transport_config, config, self->super.ctx);
+
+  if (config->keypair)
+    {
+      struct keypair *key = config->keypair;
+      
+      /* Generate signature straight away. */
+
+      /* The part of the request we sign */
+      struct lsh_string *request
+	= ssh_format("%c%z%z%a%c%a%S",
+		     SSH_MSG_USERAUTH_REQUEST,
+		     config->user,
+		     config->service,
+		     ATOM_PUBLICKEY,
+		     1,
+		     key->type, key->public);
+
+      struct lsh_string *signed_data
+	= ssh_format("%S%lS", self->super.session_id, request);
+
+      request =	ssh_format("%flS%fS", 
+			   request, 
+			   SIGN(key->private, key->type,
+				lsh_string_length(signed_data),
+				lsh_string_data(signed_data)));
+
+      lsh_string_free(signed_data);
+
+      transport_send_packet(&self->super, SSH_WRITE_FLAG_PUSH,
+			    request);
+    }
+  else
+    {
+      /* Find out whether or not password authentication is supported. */
+      transport_send_packet(&self->super, SSH_WRITE_FLAG_PUSH,
+			    ssh_format("%c%z%z%a",
+				       SSH_MSG_USERAUTH_REQUEST,
+				       config->user,
+				       config->service,
+				       ATOM_NONE));
+    }
 }
 
 static void
@@ -468,6 +554,114 @@ lsh_connect(struct lsh_transport_config *config)
 		      lsh_transport_line_handler);
 
   return 1;
+}
+
+/* For now, supports only a single key */
+static struct keypair *
+read_user_key(struct lsh_transport_config *config)
+{
+  struct lsh_string *tmp = NULL;
+  struct lsh_string *contents;
+  int fd;
+  int algorithm_name;
+  
+  struct signer *s;
+  struct verifier *v;
+
+  trace("read_user_key\n");
+  
+  if (!config->userauth)
+    return NULL;
+
+  if (config->identity)
+    {
+      fd = open(config->identity, O_RDONLY);
+      if (fd < 0)
+	verbose("Failed to open `%z' for reading %e\n",
+		config->identity, errno);
+    }
+  else
+    {
+      tmp = ssh_format("%lz/.lsh/identity", config->home);
+      fd = open(lsh_get_cstring(tmp), O_RDONLY);
+      if (fd < 0)
+	werror("Failed to open `%S' for reading %e\n",
+		tmp, errno);
+      lsh_string_free(tmp);
+    }
+
+  if (fd < 0)
+    return NULL;
+
+  contents = io_read_file_raw(fd, 2000);
+
+  if (!contents)
+    {
+      werror("Failed to read private key file: %e\n", errno);
+      close(fd);
+
+      return NULL;
+    }
+
+  close(fd);
+
+  /* FIXME: We should read the public key somehow, and decrypt the
+     private key only if it is needed. */
+  if (config->tty)
+    {
+      struct alist *mac = make_alist(0, -1);
+      struct alist *crypto = make_alist(0, -1);
+
+      alist_select_l(mac, config->super.algorithms,
+		     2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
+      alist_select_l(crypto, config->super.algorithms,
+		     4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+		     ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1);
+      
+      contents = spki_pkcs5_decrypt(mac, crypto,
+				    config->tty,
+				    contents);
+      if (!contents)
+        {
+          werror("Decrypting private key failed.\n");
+          return NULL;;
+        }
+    }
+  
+  s = spki_make_signer(config->signature_algorithms, contents,
+		       &algorithm_name);
+
+  lsh_string_free(contents);
+  
+  if (!s)
+    {
+      werror("Invalid private key.\n");
+      return NULL;
+    }
+  
+  v = SIGNER_GET_VERIFIER(s);
+  assert(v);
+
+  /* FIXME: SPKI support */
+
+  /* Test key here? */  
+  switch (algorithm_name)
+    {	  
+    case ATOM_DSA:
+      return make_keypair(ATOM_SSH_DSS,
+			  PUBLIC_KEY(v), s);
+
+    case ATOM_RSA_PKCS1:
+    case ATOM_RSA_PKCS1_SHA1:
+      return make_keypair(ATOM_SSH_RSA,
+			  PUBLIC_KEY(v), s);
+    case ATOM_RSA_PKCS1_MD5:
+      werror("Key type rsa-pkcs1-md5 not supported.\n");
+      return NULL;
+
+    default:
+      fatal("Internal error!\n");
+    }
 }
 
 /* Maps a host key to a (trusted) verifier object. */
@@ -836,6 +1030,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       read_host_acls(self->host_db);
 
+      self->keypair = read_user_key(self);
+      
       if (self->capture_file)
 	{
 	  self->capture_fd = open(self->capture_file,
