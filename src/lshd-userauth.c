@@ -48,6 +48,7 @@
 #include "list.h"
 #include "lsh_string.h"
 #include "format.h"
+#include "io.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "ssh.h"
@@ -58,22 +59,6 @@
 #include "lsh_argp.h"
 
 #define HEADER_SIZE 8
-
-static void
-die(const char *format, ...) NORETURN;
-
-/* FIXME: Should this be moved to werror.c? */
-static void
-die(const char *format, ...)
-{
-  va_list args;
-
-  va_start(args, format);  
-  werror_vformat(format, args);
-  va_end(args);
-
-  exit(EXIT_FAILURE);
-}
 
 static struct lsh_string *
 format_userauth_failure(struct int_list *methods,
@@ -155,28 +140,11 @@ read_packet(void)
 static void
 write_packet(struct lsh_string *packet)
 {
-  uint32_t done;
-  const uint8_t *data;
-  uint32_t length;
-  
   packet = ssh_format("%i%fS", lsh_string_sequence_number(packet), packet);
 
-  length = lsh_string_length(packet);
-  data = lsh_string_data(packet);
+  if (!write_raw(STDOUT_FILENO, STRING_LD(packet)))
+    die("write_packet: write failed: %e\n", errno);
 
-  for (done = 0; done < length; )
-    {
-      int res;
-      do
-	res = write(STDOUT_FILENO, data + done, length - done);
-      while (res < 0 && errno == EINTR);
-
-      assert (res != 0);
-      if (res < 0)
-	die("write_packet: write failed: %e\n", errno);
-
-      done += res;      
-    }
   lsh_string_free(packet);
 }
 
@@ -365,7 +333,7 @@ handle_publickey(struct simple_buffer *buffer,
   int res;
   
   struct verifier *v;
-  
+
   if (! (parse_boolean(buffer, &check_key)
 	 && parse_atom(buffer, &algorithm)
 	 && parse_string(buffer, &key_length, &key)))
