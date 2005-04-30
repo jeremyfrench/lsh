@@ -135,7 +135,7 @@ enqueue(struct ssh_write_state *self,
 		   length, data);
   self->length += length;
 
-  if (flags && SSH_WRITE_FLAG_IGNORE)
+  if (flags & SSH_WRITE_FLAG_IGNORE)
     self->ignore += length;
   else
     self->ignore = 0;
