@@ -1,5 +1,18 @@
 2005-04-30  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/abstract_crypto.c, src/abstract_crypto.h,
+	src/publickey_crypto.c, src/publickey_crypto.h: Deleted files.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed abstract_crypto.c
+	and publickey_crypto.c.
+	(bin_PROGRAMS): For the time being, don't build lsh, lshd or
+	srp-gen. 
+
+	* src/crypto.c: Moved utility functions here, from abstract_crypto.c.
+
+	* src/crypto.h: Moved declarations here, from abstract_crypto.h
+	and publickey_crypto.h. Updated all users.
+
 	* src/werror.c (die): New function.
 
 	* src/ssh_write.c (enqueue): Fixed bug in SSH_WRITE_FLAG_IGNORE
