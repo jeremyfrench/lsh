@@ -219,6 +219,8 @@ oop_read_service(oop_source *source UNUSED,
 
       status = service_read_packet(self->service_reader, fd, &msg,
 				   &seqno, &length, &packet);
+      fd = -1;
+
       switch (status)
 	{
 	case SERVICE_READ_IO_ERROR:
