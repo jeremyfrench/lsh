@@ -1,3 +1,31 @@
+2005-04-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/werror.c (die): New function.
+
+	* src/ssh_write.c (enqueue): Fixed bug in SSH_WRITE_FLAG_IGNORE
+	handling.
+
+	* src/lshd.c (oop_read_service): Do only a single read call.
+
+	* src/lshd-userauth.c (write_packet): Use write_raw.
+	(die): Deleted function, moved to werror.c.
+
+	* src/lsh-transport.c (lsh_transport_event_handler): When handling
+	TRANSPORT_EVENT_PUSH, check that service_writer is non-NULL.
+	(make_lsh_transport_connection): Initialize service_reader and
+	service_writer to NULL.
+	(oop_read_service, oop_write_service): New functions.
+	(lsh_transport_service_start_read) 
+	(lsh_transport_service_stop_read) 
+	(lsh_transport_service_start_write) 
+	(lsh_transport_service_stop_write): Implemented.
+	(lsh_transport_packet_handler): Verbose message for
+	USERAUTH_SUCCESS. Don't try to display the message list for
+	USERAUTH_FAILURE.
+	(start_service): Initialize service_reader and service_writer, and
+	start reading.
+	(lsh_transport_lookup_verifier): Fixed handling of capture_fd.
+
 2005-04-29  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-transport.c (lsh_transport_packet_handler): Fixed
