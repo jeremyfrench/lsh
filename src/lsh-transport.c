@@ -238,32 +238,34 @@ lsh_transport_event_handler(struct transport_connection *connection,
       /* FIXME: Should allow service buffer to drain. */
       break;
     case TRANSPORT_EVENT_PUSH:
-      {
-	enum ssh_write_status status;
+      if (self->service_writer)
+	{
+	  enum ssh_write_status status;
 
-	status = ssh_write_flush(self->service_writer, STDOUT_FILENO);
+	  status = ssh_write_flush(self->service_writer, STDOUT_FILENO);
 
-	switch(status)
-	  {
-	  case SSH_WRITE_IO_ERROR:
-	    transport_disconnect(&self->super,
-				 SSH_DISCONNECT_BY_APPLICATION,
-				 "Connection to service layer failed.");
-	    break;
-	  case SSH_WRITE_OVERFLOW:
-	    werror("Overflow from ssh_write_flush! Should not happen.\n");
-	    transport_disconnect(&self->super,
-				 SSH_DISCONNECT_BY_APPLICATION,
-				 "Service layer not responsive.");
-	    break;
-	  case SSH_WRITE_PENDING:
-	    lsh_transport_service_start_write(self);
+	  switch(status)
+	    {
+	    case SSH_WRITE_IO_ERROR:
+	      transport_disconnect(&self->super,
+				   SSH_DISCONNECT_BY_APPLICATION,
+				   "Connection to service layer failed.");
+	      break;
+	    case SSH_WRITE_OVERFLOW:
+	      werror("Overflow from ssh_write_flush! Should not happen.\n");
+	      transport_disconnect(&self->super,
+				   SSH_DISCONNECT_BY_APPLICATION,
+				   "Service layer not responsive.");
+	      break;
+	    case SSH_WRITE_PENDING:
+	      lsh_transport_service_start_write(self);
       
-	  case SSH_WRITE_COMPLETE:
-	    lsh_transport_service_stop_write(self);
-	    break;
-	  }
+	    case SSH_WRITE_COMPLETE:
+	      lsh_transport_service_stop_write(self);
+	      break;
+	    }
 	}
+      break;
     }
   return 0;
 }
@@ -277,9 +279,9 @@ make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
 			    lsh_transport_event_handler);
 
   self->state = STATE_HANDSHAKE;
-  self->service_reader = make_service_read_state();
+  self->service_reader = NULL;
   self->service_read_active = 0;
-  self->service_writer = make_ssh_write_state(3 * SSH_MAX_PACKET, 1000);
+  self->service_writer = NULL;
   self->service_write_active = 0;
 
   return self;
@@ -313,36 +315,147 @@ lsh_transport_line_handler(struct transport_connection *connection,
 
 static void *
 oop_read_service(oop_source *source UNUSED,
-		 int fd UNUSED, oop_event event UNUSED, void *state UNUSED)
+		 int fd, oop_event event, void *state)
 {
-  return OOP_HALT;
+  CAST(lsh_transport_connection, self, (struct lsh_object *) state);
+
+  assert(fd == STDIN_FILENO);
+  assert(event == OOP_READ);
+
+  while (self->service_read_active)
+    {
+      enum service_read_status status;
+      uint32_t seqno;
+      uint32_t length;
+      const uint8_t *packet;
+      const char *msg;
+
+      status = service_read_packet(self->service_reader, fd, &msg,
+				   &seqno, &length, &packet);
+      fd = -1;
+
+      switch (status)
+	{
+	case SERVICE_READ_IO_ERROR:
+	  transport_disconnect(&self->super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Read from service layer failed.");
+	  break;
+	case SERVICE_READ_PROTOCOL_ERROR:
+	  werror("Invalid data from service layer: %z\n", msg);
+	  transport_disconnect(&self->super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Invalid data from service layer.");
+	  break;
+	case SERVICE_READ_EOF:
+	  transport_disconnect(&self->super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Service done.");
+	  break;
+	case TRANSPORT_READ_PUSH:
+	  transport_send_packet(&self->super, 0, NULL);
+	  /* Fall through */
+	case TRANSPORT_READ_PENDING:
+	  return OOP_CONTINUE;
+
+	case SERVICE_READ_COMPLETE:
+	  if (!length)
+	    transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
+				 "Received empty packet from service layer.");
+	  else
+	    {
+	      /* FIXME: This is unnecessary allocation and copying. */
+	      transport_send_packet(&self->super, 0,
+				    ssh_format("%ls", length, packet));
+	      if (packet[0] == SSH_MSG_DISCONNECT)
+		transport_close(&self->super, 1);
+	    }
+	}
+    }
+  return OOP_CONTINUE;
 }
 
 static void
-lsh_transport_service_start_read(struct lsh_transport_connection *self UNUSED)
+lsh_transport_service_start_read(struct lsh_transport_connection *self)
 {
+  if (!self->service_read_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+      self->service_read_active = 1;
+      source->on_fd(source, STDIN_FILENO, OOP_READ, oop_read_service, self);
+    }
 }
 
 static void
-lsh_transport_service_stop_read(struct lsh_transport_connection *self UNUSED)
+lsh_transport_service_stop_read(struct lsh_transport_connection *self)
 {
+  if (self->service_read_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+      self->service_read_active = 0;
+      source->cancel_fd(source, STDIN_FILENO, OOP_READ);
+    }
 }
 
 static void *
 oop_write_service(oop_source *source UNUSED,
-		  int fd UNUSED, oop_event event UNUSED, void *state UNUSED)
+		  int fd, oop_event event, void *state)
 {
-  return OOP_HALT;
+  CAST(lsh_transport_connection, self, (struct lsh_object *) state);
+  enum ssh_write_status status;
+
+  assert(fd == STDOUT_FILENO);
+  assert(event == OOP_WRITE);
+
+  status = ssh_write_flush(self->service_writer, STDOUT_FILENO);
+  switch(status)
+    {
+    case SSH_WRITE_IO_ERROR:
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Connection to service layer failed.");
+      break;
+    case SSH_WRITE_OVERFLOW:
+      werror("Overflow from ssh_write_flush! Should not happen.\n");
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Service layer not responsive.");
+      break;
+    case SSH_WRITE_PENDING:
+      /* Do nothing. */
+      break;
+
+    case SSH_WRITE_COMPLETE:
+      lsh_transport_service_stop_write(self);
+      break;
+    }
+  return OOP_CONTINUE;
 }
 
 static void
-lsh_transport_service_start_write(struct lsh_transport_connection *self UNUSED)
+lsh_transport_service_start_write(struct lsh_transport_connection *self)
 {
+  if (!self->service_write_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+      self->service_write_active = 1;
+      source->on_fd(source, STDOUT_FILENO, OOP_WRITE, oop_write_service, self);
+    }
 }
 
 static void
-lsh_transport_service_stop_write(struct lsh_transport_connection *self UNUSED)
+lsh_transport_service_stop_write(struct lsh_transport_connection *self)
 {
+  if (self->service_write_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+      self->service_write_active = 0;
+      source->cancel_fd(source, STDOUT_FILENO, OOP_WRITE);
+      transport_start_read(&self->super);
+    }
 }
 
 /* Handles decrypted packets. The various handler functions called
@@ -406,6 +519,7 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 	case SSH_MSG_USERAUTH_SUCCESS:
 	  if (length == 1)
 	    {
+	      verbose("Received USERAUTH_SUCCESS.\n");
 	      self->state = STATE_SERVICE_FORWARD;
 	      start_service(self);	      
 	    }
@@ -426,8 +540,8 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 		 && parse_boolean(&buffer, &partial)
 		 && parse_eod(&buffer))
 	      {
-		werror("Userauth failure%z. Methods: %A\n",
-		       partial ? " (partial)" : "", methods);
+		werror("Userauth failure%z.\n",
+		       partial ? " (partial)" : "");
 		transport_disconnect(connection,
 				     SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
 				     "No more auth methods available");
@@ -498,6 +612,10 @@ start_userauth(struct lsh_transport_connection *self)
 static void
 start_service(struct lsh_transport_connection *self UNUSED)
 {
+  self->service_reader = make_service_read_state();
+  lsh_transport_service_start_read(self);
+
+  self->service_writer = make_ssh_write_state(3 * SSH_MAX_PACKET, 1000);
 }
 
 static int
@@ -822,26 +940,17 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
       spki_add_acl(self->db, &i);
 
       /* Write an ACL to disk. */
-      if (self->config->capture_fd > 0)
+      if (self->config->capture_fd >= 0)
 	{
-	  int fd = open(self->config->capture_file, O_RDWR | O_APPEND | O_CREAT, 0666);
-
-	  if (fd < 0)
-	    werror("Opening `%z' for writing failed: %e\n",
-		   self->config->capture_file, errno);
-	  else
-	    {
-	      struct lsh_string *entry
-		= ssh_format("\n; ACL for host %lz\n"
-			     "%lfS\n",
-			     self->config->target,
-			     lsh_string_format_sexp(1, "%l", STRING_LD(acl)));
-	      if (!write_raw(fd, STRING_LD(entry)))
+	  struct lsh_string *entry
+	    = ssh_format("\n; ACL for host %lz\n"
+			 "%lfS\n",
+			 self->config->target,
+			 lsh_string_format_sexp(1, "%l", STRING_LD(acl)));
+	  if (!write_raw(self->config->capture_fd, STRING_LD(entry)))
 		werror("Writing acl entry failed: %e\n", errno);
 
-	      lsh_string_free(entry);
-	      close(fd);
-	    }
+	  lsh_string_free(entry);
 	}
       lsh_string_free(acl);
     }
