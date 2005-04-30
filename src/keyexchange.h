@@ -24,9 +24,9 @@
 #ifndef LSH_KEYEXCHANGE_H_INCLUDED
 #define LSH_KEYEXCHANGE_H_INCLUDED
 
-#include "abstract_crypto.h"
 #include "alist.h"
 #include "compress.h"
+#include "crypto.h"
 #include "list.h"
 
 struct transport_connection;

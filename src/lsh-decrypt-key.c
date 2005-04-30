@@ -45,7 +45,6 @@
 #include "io_commands.h"
 #include "interact.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"

@@ -29,7 +29,7 @@
 #include <time.h>
 
 #include "alist.h"
-#include "publickey_crypto.h"
+#include "crypto.h"
 
 #include "spki/certificate.h"
 

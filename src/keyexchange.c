@@ -40,7 +40,6 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "parse.h"
-/* #include "publickey_crypto.h" */
 #include "ssh.h"
 #include "transport.h"
 #include "werror.h"

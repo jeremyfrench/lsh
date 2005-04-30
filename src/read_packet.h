@@ -27,8 +27,8 @@
 #define LSH_READ_PACKET_H_INCLUDED
 
 #include "abstract_io.h"
-#include "abstract_crypto.h"
 #include "connection.h"
+#include "crypto.h"
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
 				      struct ssh_connection *connection);

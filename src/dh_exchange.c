@@ -29,10 +29,9 @@
 
 #include "nettle/bignum.h"
 
-#include "publickey_crypto.h"
+#include "crypto.h"
 
 #include "connection.h"
-#include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
 #include "randomness.h"

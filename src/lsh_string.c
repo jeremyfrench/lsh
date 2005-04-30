@@ -45,7 +45,7 @@
 
 #include "lsh_string.h"
 
-#include "abstract_crypto.h"
+#include "crypto.h"
 #include "randomness.h"
 #include "werror.h"
 #include "xalloc.h"

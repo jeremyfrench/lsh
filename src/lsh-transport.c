@@ -48,7 +48,7 @@
 #include "io.h"
 #include "keyexchange.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
+#include "parse.h"
 #include "randomness.h"
 #include "resource.h"
 #include "service.h"

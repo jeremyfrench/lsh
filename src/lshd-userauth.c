@@ -50,7 +50,6 @@
 #include "format.h"
 #include "io.h"
 #include "parse.h"
-#include "publickey_crypto.h"
 #include "ssh.h"
 #include "version.h"
 #include "werror.h"

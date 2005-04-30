@@ -13,11 +13,11 @@
 
 #include "nettle/sexp.h"
 
+#include "crypto.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_argp.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"

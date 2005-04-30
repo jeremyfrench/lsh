@@ -32,7 +32,6 @@
 #include "atoms.h"
 #include "compress.h"
 #include "crypto.h"
-#include "publickey_crypto.h"
 #include "xalloc.h"
 
 #include "lsh_argp.h"

@@ -49,8 +49,8 @@
 
 #include <oop.h>
 
-#include "abstract_crypto.h"
 #include "compress.h"
+#include "crypto.h"
 #include "keyexchange.h"
 #include "resource.h"
 #include "ssh_write.h"

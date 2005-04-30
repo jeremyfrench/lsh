@@ -47,6 +47,7 @@
 #include "io.h"
 #include "keyexchange.h"
 #include "lsh_string.h"
+#include "parse.h"
 #include "randomness.h"
 #include "server.h"
 #include "service.h"

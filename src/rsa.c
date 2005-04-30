@@ -33,7 +33,7 @@
 #include "nettle/sexp.h"
 #include "nettle/sha.h"
 
-#include "publickey_crypto.h"
+#include "crypto.h"
 
 #include "atoms.h"
 #include "format.h"

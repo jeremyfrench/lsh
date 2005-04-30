@@ -32,7 +32,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
+#include "parse.h"
 #include "sexp.h"
 #include "ssh.h"
 #include "transport.h"

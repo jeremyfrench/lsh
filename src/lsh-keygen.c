@@ -47,7 +47,6 @@
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
 #include "randomness.h"
 #include "sexp.h"
 #include "version.h"

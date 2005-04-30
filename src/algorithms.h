@@ -9,6 +9,8 @@
 
 #include "alist.h"
 #include "compress.h"
+#include "crypto.h"
+#include "list.h"
 #include "lsh_argp.h"
 #include "randomness.h"
 
@@ -21,7 +23,6 @@
      (name algorithms_options)
      (vars
        (algorithms object alist)
-       ; (pubkey_algorithms object alist)
        
        (crypto_algorithms object int_list)
        (mac_algorithms object int_list)

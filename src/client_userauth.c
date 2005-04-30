@@ -31,10 +31,10 @@
 
 #include "charset.h"
 #include "command.h"
+#include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
 #include "parse.h"
-#include "publickey_crypto.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"

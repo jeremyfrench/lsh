@@ -45,7 +45,6 @@
 #include "list.h"
 #include "lsh_string.h"
 #include "parse.h"
-#include "publickey_crypto.h"
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"

@@ -27,8 +27,8 @@
 #define LSHD_H_INCLUDED
 
 #include "abstract_io.h"
+#include "crypto.h"
 #include "keyexchange.h"
-#include "publickey_crypto.h"
 #include "resource.h"
 #include "transport.h"
 #include "ssh_read.h"
