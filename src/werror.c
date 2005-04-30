@@ -716,6 +716,19 @@ fatal(const char *format, ...)
   abort();
 }
 
+void
+die(const char *format, ...)
+{
+  va_list args;
+
+  va_start(args, format);  
+  werror_vformat(format, args);
+  va_end(args);
+
+  exit(EXIT_FAILURE);
+}
+
+
 static unsigned
 format_size_in_hex(uint32_t n)
 {

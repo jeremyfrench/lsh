@@ -77,6 +77,7 @@ void werror(const char *format, ...);
 void trace(const char *format, ...);
 void debug(const char *format, ...);
 void verbose(const char *format, ...);
+void die(const char *format, ...) NORETURN;
 
 /* Displays the string with no prefix or new-line or buffering.
  * Suitable for progress indication. */
