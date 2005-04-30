@@ -14,9 +14,10 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
-bin_PROGRAMS = lsh lsh-transport lshg lsh-keygen lsh-writekey lsh-decrypt-key \
-	       lsh-decode-key lsh-export-key lsh-make-seed \
-	       @SRP_PROGRAM@
+# lsh lshg and @SRP_PROGRAM@ are broken at the moment
+bin_PROGRAMS = lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
+	       lsh-decode-key lsh-export-key lsh-make-seed
+	       
 
 sbin_PROGRAMS = lshd lshd-userauth lshd-connection lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp
@@ -36,7 +37,7 @@ bootstrap: $(generated_sources) $(dist_classes)
 
 # Old files client_keyexchange.c connection.c handshake.c
 
-liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
+liblsh_a_SOURCES = abstract_io.c \
 	algorithms.c alist.c atoms.c \
 	channel.c channel_commands.c channel_forward.c \
 	charset.c \
@@ -58,7 +59,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	lock_file.c \
 	lsh_string.c parse.c \
 	pkcs5.c \
-	publickey_crypto.c queue.c \
+	queue.c \
 	randomness.c \
 	read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
