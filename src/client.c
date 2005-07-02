@@ -566,6 +566,7 @@ init_client_options(struct client_options *self,
   object_queue_init(&self->actions);
   
   self->resources = make_resource_list();
+  gc_global(&self->resources->super);
 }
 
 static const struct argp_option
