@@ -1,3 +1,8 @@
+2005-07-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (init_client_options): Use gc_global for the
+	resource list. Needed for consistent gc if the connection fails.
+
 2005-03-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.2.
