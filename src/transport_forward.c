@@ -1,0 +1,387 @@
+/* transport_forward.c
+ *
+ * Uses the transport protocol and forwards unecrypted packets to and
+ * from other fd:s.
+ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 2005 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
+#include <unistd.h>
+
+#include "nettle/macros.h"
+
+#include "format.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "transport_forward.h"
+
+#define FORWARD_WRITE_THRESHOLD 1000
+#define FORWARD_WRITE_BUFFER_SIZE (3 * SSH_MAX_PACKET)
+
+static void
+forward_start_read(struct transport_forward *self);
+
+static void
+forward_stop_read(struct transport_forward *self);
+
+static void
+forward_start_write(struct transport_forward *self);
+
+static void
+forward_stop_write(struct transport_forward *self);
+
+void
+init_transport_forward(struct transport_forward *self,
+		       void (*kill)(struct resource *s),
+		       struct transport_context *ctx,
+		       int ssh_input, int ssh_output,
+		       int (*event)(struct transport_connection *,
+				    enum transport_event event))
+{
+  init_transport_connection(&self->super, kill, ctx, ssh_input, ssh_output, event);
+
+  self->service_in = self->service_out = -1;
+
+  self->service_reader = NULL;
+  self->service_writer = NULL;
+}
+
+static void
+transport_forward_close(struct transport_forward *self)
+{
+  if (self->service_in >= 0)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+     if (self->service_read_active)
+	source->cancel_fd(source, self->service_in, OOP_READ);
+
+      if (self->service_in != self->service_out)
+	close(self->service_in);
+
+      if (self->service_write_active)
+	source->cancel_fd(source, self->service_out, OOP_WRITE);
+
+      close(self->service_out);
+      self->service_in = self->service_out = -1;
+    }
+}
+
+/* Intended to be called by the kill method in child class. */
+void
+transport_forward_kill(struct transport_forward *self)
+{
+  transport_forward_close(self);
+  transport_connection_kill(&self->super);
+}
+
+/* Communication with service layer */
+
+static void *
+oop_read_service(oop_source *source UNUSED,
+		 int fd, oop_event event, void *state)
+{
+  CAST(transport_forward, self, (struct lsh_object *) state);
+
+  assert(fd == self->service_in);
+  assert(event == OOP_READ);
+
+  /* FIXME: Must check self->service_read_active, and stop the reading
+     loop in case the write buffer fills up and the transport
+     generates a TRANSPORT_EVENT_STOP_APPLICATION. */
+  while (self->service_in >= 0 && self->service_read_active)
+    {
+      enum service_read_status status;
+      uint32_t seqno;
+      uint32_t length;
+      const uint8_t *packet;
+      const char *msg;
+
+      status = service_read_packet(self->service_reader, fd, &msg,
+				   &seqno, &length, &packet);
+      fd = -1;
+
+      switch (status)
+	{
+	case SERVICE_READ_IO_ERROR:
+	  transport_disconnect(&self->super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Read from service layer failed.");
+	  break;
+	case SERVICE_READ_PROTOCOL_ERROR:
+	  werror("Invalid data from service layer: %z\n", msg);
+	  transport_disconnect(&self->super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Invalid data from service layer.");
+	  break;
+	case SERVICE_READ_EOF:
+	  transport_disconnect(&self->super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Service done.");
+	  break;
+	case TRANSPORT_READ_PUSH:
+	  transport_send_packet(&self->super, 0, NULL);
+	  /* Fall through */
+	case TRANSPORT_READ_PENDING:
+	  return OOP_CONTINUE;
+
+	case SERVICE_READ_COMPLETE:
+	  if (!length)
+	    transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
+				 "Received empty packet from service layer.");
+	  else
+	    {
+	      /* FIXME: This is unnecessary allocation and copying. */
+	      transport_send_packet(&self->super, 0,
+				    ssh_format("%ls", length, packet));
+	      if (packet[0] == SSH_MSG_DISCONNECT)
+		transport_close(&self->super, 1);
+	    }
+	}
+    }
+  return OOP_CONTINUE;
+}
+
+static void
+forward_start_read(struct transport_forward *self)
+{
+  if (!self->service_read_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+      self->service_read_active = 1;
+      source->on_fd(source, self->service_in, OOP_READ, oop_read_service, self);
+    }
+}
+
+static void
+forward_stop_read(struct transport_forward *self)
+{
+  if (self->service_read_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+      self->service_read_active = 0;
+      source->cancel_fd(source, self->service_in, OOP_READ);
+    }
+}
+
+static void *
+oop_write_service(oop_source *source UNUSED,
+		  int fd, oop_event event, void *state)
+{
+  CAST(transport_forward, self, (struct lsh_object *) state);
+  enum ssh_write_status status;
+
+  assert(fd == self->service_out);
+  assert(event == OOP_WRITE);
+
+  status = ssh_write_flush(self->service_writer, self->service_out);
+  switch(status)
+    {
+    case SSH_WRITE_IO_ERROR:
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Connection to service layer failed.");
+      break;
+    case SSH_WRITE_OVERFLOW:
+      werror("Overflow from ssh_write_flush! Should not happen.\n");
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Service layer not responsive.");
+      break;
+    case SSH_WRITE_PENDING:
+      /* If we have space for a new packet, make sure we keep reading
+	 transport packets. */
+      if (ssh_write_available(self->service_writer) > SSH_MAX_PACKET + 8)
+	transport_start_read(&self->super);
+
+      break;
+
+    case SSH_WRITE_COMPLETE:
+      forward_stop_write(self);
+      transport_start_read(&self->super);
+      break;
+    }
+  return OOP_CONTINUE;
+}
+
+static void
+forward_start_write(struct transport_forward *self)
+{
+  if (!self->service_write_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+      self->service_write_active = 1;
+      source->on_fd(source, self->service_out, OOP_WRITE, oop_write_service, self);
+    }
+}
+
+static void
+forward_stop_write(struct transport_forward *self)
+{
+  if (self->service_write_active)
+    {
+      oop_source *source = self->super.ctx->oop;
+
+      self->service_write_active = 0;
+      source->cancel_fd(source, self->service_out, OOP_WRITE);
+    }
+}
+
+static int
+forward_event_handler(struct transport_connection *connection,
+		      enum transport_event event)
+{
+  CAST(transport_forward, self, connection);
+  switch (event)
+    {
+    case TRANSPORT_EVENT_START_APPLICATION:
+      /* FIXME: Must also arrange so that buffered data is read. */
+      forward_start_read(self);
+      break;
+
+    case TRANSPORT_EVENT_STOP_APPLICATION:
+      forward_stop_read(self);
+      break;
+
+    case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
+      fatal("Internal error\n");
+
+    case TRANSPORT_EVENT_CLOSE:
+      assert(self->service_in >= 0);
+      
+      /* FIXME: Should maybe allow service buffer to drain. On the
+	 other hand, the connection layer exchange of EOF and CLOSE
+	 messages should be sufficient to ensure that all important
+	 data is delivered. */
+      transport_forward_close(self);
+      return 1;
+
+    case TRANSPORT_EVENT_PUSH:
+      if (self->service_out >= 0)
+	{
+	  enum ssh_write_status status;
+
+	  status = ssh_write_flush(self->service_writer, self->service_out);
+
+	  switch(status)
+	    {
+	    case SSH_WRITE_IO_ERROR:
+	      transport_disconnect(&self->super,
+				   SSH_DISCONNECT_BY_APPLICATION,
+				   "Connection to service layer failed.");
+	      break;
+	    case SSH_WRITE_OVERFLOW:
+	      werror("Overflow from ssh_write_flush! Should not happen.\n");
+	      transport_disconnect(&self->super,
+				   SSH_DISCONNECT_BY_APPLICATION,
+				   "Service layer not responsive.");
+	      break;
+	    case SSH_WRITE_PENDING:
+	      forward_start_write(self);
+
+	    case SSH_WRITE_COMPLETE:
+	      forward_stop_write(self);
+	      break;
+	    }
+	}
+    }
+  return 0;
+}
+
+/* Handles decrypted packets above the ssh transport layer. */
+static int
+forward_packet_handler(struct transport_connection *connection,
+		       uint32_t seqno, uint32_t length, const uint8_t *packet)
+{
+  CAST(transport_forward, self, connection);
+
+  enum ssh_write_status status;
+  uint8_t header[8];
+
+  assert(length > 0);
+  
+  if (ssh_write_available(self->service_writer) < length + 8)
+    return 0;
+
+  WRITE_UINT32(header, seqno);
+  WRITE_UINT32(header + 4, length);
+
+  status = ssh_write_data(self->service_writer,
+			  self->service_out, 0,
+			  sizeof(header), header);
+  if (status >= 0)
+    status = ssh_write_data(self->service_writer,
+			    self->service_out, SSH_WRITE_FLAG_PUSH,
+			    length, packet);
+
+  switch (status)
+    {
+    case SSH_WRITE_IO_ERROR:
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Connection to service layer failed.");
+      break;
+    case SSH_WRITE_OVERFLOW:
+      werror("Overflow when sending packet to service layer! Should not happen.\n");
+      transport_disconnect(&self->super,
+			   SSH_DISCONNECT_BY_APPLICATION,
+			   "Service layer not responsive.");
+      break;
+    case SSH_WRITE_PENDING:
+      forward_start_write(self);
+      
+      break;
+    case SSH_WRITE_COMPLETE:
+      forward_stop_write(self);
+      
+      break;
+    }
+  return 1;
+}
+
+void
+transport_forward_setup(struct transport_forward *self,
+			int service_in, int service_out)
+{
+  assert (self->service_in == -1);
+
+  self->service_in = service_in;
+  self->service_reader = make_service_read_state();
+  
+  self->service_out = service_out;
+  self->service_writer = make_ssh_write_state(FORWARD_WRITE_BUFFER_SIZE,
+					      FORWARD_WRITE_THRESHOLD);
+  
+  self->super.event_handler = forward_event_handler;
+  self->super.packet_handler = forward_packet_handler;
+
+  forward_start_read(self);
+}
+
