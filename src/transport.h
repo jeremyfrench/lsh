@@ -33,15 +33,20 @@
     --------+           +-----------+           +--------
 
    We use non-blocking mode for i/o, with essentially a single-packet
-   read buffer for each fd. Write buffers must be larger, to avoid
+   read buffer for each fd. Write buffers are larger, to avoid
    deadlock in the conversation with the remote peer. To stop buffers
    from filling up, whenever the write-buffer for the encrypted
-   channel is non-empty, we stop reading from the unencrypted channel,
-   and vice versa.
+   channel is getting full, we stop reading from the unencrypted
+   channel, and vice versa.
 
-   If either write buffer fills up completely, the connection is
-   closed. This can happen if the application or the remote peer
-   requests a lot of data, but doesn't read any.
+   The write buffer for encrypted packets can also fill up with
+   transport-layer packets generated in response to received encrypted
+   packets. E.g, when receiving a KEXINIT message we need to reply to
+   it directly; it is not passed to the application. We reserve buffer
+   space of SSH_MAX_TRANSPORT_RESPONSE for such responses, and stop
+   reading unencrypted data when less space than this is available in
+   the buffer. If the buffer is filled up completely in spite of this
+   margin, we disconnect.
 */
 
 #ifndef LSH_TRANSPORT_H_INCLUDED
@@ -224,15 +229,21 @@ transport_write_flush(struct transport_write_state *self,
        (ssh_output . int)
        (writer object transport_write_state)
        (write_active . int)
-
+       ; Space we want to have left in the write buffer. We need space
+       ; for one full packet, plus transport level responses such as
+       ; KEXINIT, KEXDH_INIT, KEXDH_REPLY and UNIMPLEMENTED.
+       (write_margin . uint32_t)
+       
        ; If non-zero, it's the number of buffers that we are waiting on.
        (closing . unsigned)
 
        ; Return value is used only for TRANSPORT_EVENT_CLOSE
        ; FIXME: Should it be an unsigned?
        (event_handler method int "enum transport_event event")
-       ; Handles all non-transport messages. Returns 1 on success,
-       ; or 0 if the application's buffers are full.
+
+       ; Handles all non-transport messages. Returns 1 on success, or
+       ; 0 if the application's buffers are full. FIXME: Call should
+       ; include a push indication.
        (packet_handler method int "uint32_t seqno" "uint32_t length"
                                    "const uint8_t *packet")
        (line_handler method void "uint32_t length"
@@ -248,7 +259,7 @@ init_transport_connection(struct transport_connection *self,
 				       enum transport_event event));
 
 void
-transport_kill(struct transport_connection *connection);
+transport_connection_kill(struct transport_connection *connection);
 
 /* If flush is 1, try sending buffered data before closing. */
 void

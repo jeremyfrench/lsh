@@ -87,6 +87,7 @@ init_transport_connection(struct transport_connection *self,
   self->ssh_output = ssh_output;
   self->writer = make_transport_write_state();
   self->write_active = 0;
+  self->write_margin = SSH_MAX_TRANSPORT_RESPONSE;
 
   self->closing = 0;
   self->event_handler = event;
@@ -126,7 +127,7 @@ transport_timeout_close(struct lsh_callback *s)
 
 /* Intended to be called by the kill method in child class. */
 void
-transport_kill(struct transport_connection *connection)
+transport_connection_kill(struct transport_connection *connection)
 {
   oop_source *source = connection->ctx->oop;
   if (connection->expire)
@@ -174,6 +175,8 @@ transport_close(struct transport_connection *connection, int flush)
   if (connection->super.alive && !connection->closing)
     {
       oop_source *source = connection->ctx->oop;
+
+      /* FIXME: Is the return value from the event handler really useful? */
       connection->closing
 	= connection->event_handler(connection, TRANSPORT_EVENT_CLOSE);
 
@@ -541,6 +544,14 @@ transport_stop_read(struct transport_connection *connection)
   source->cancel_fd(source, connection->ssh_input, OOP_READ);  
 }
 
+/* Returns 1 if the write buffer is close to full */ 
+static int
+transport_write_almost_full(struct transport_connection *connection)
+{
+  return (connection->writer->super.length + connection->write_margin
+	  > lsh_string_length(connection->writer->super.buffer));
+}
+
 static void
 transport_stop_write(struct transport_connection *connection);
 
@@ -591,7 +602,8 @@ transport_start_write(struct transport_connection *connection)
 		    OOP_WRITE, oop_write_ssh, connection);
     }
   
-  if (connection->kex.write_state == KEX_STATE_INIT)
+  if (connection->kex.write_state == KEX_STATE_INIT
+      && transport_write_almost_full(connection))
     connection->event_handler(connection,
 			      TRANSPORT_EVENT_STOP_APPLICATION);
 }
@@ -615,20 +627,29 @@ transport_stop_write(struct transport_connection *connection)
 	  if(!connection->closing)
 	    KILL_RESOURCE(&connection->super);
 	}
-      else if (connection->kex.write_state == KEX_STATE_INIT)
+      else if (connection->kex.write_state == KEX_STATE_INIT
+	       && !transport_write_almost_full(connection))
 	connection->event_handler(connection,
 				  TRANSPORT_EVENT_START_APPLICATION); 
     }
 }
 
 /* FIXME: Naming is unfortunate, with transport_write_packet vs
-   transport_send_packet. FIXME: Use a length / const uint8_t * interface. */
+   transport_send_packet.
+
+   FIXME: Use a length / const uint8_t * interface.
+
+   FIXME: Return a result code saying if more data can be sent right
+   away, or if the buffer is full.
+*/
+
 /* A NULL packets means to push out the buffered data. */
 void
 transport_send_packet(struct transport_connection *connection,
 		      enum ssh_write_flag flags,
 		      struct lsh_string *packet)
 {
+  struct transport_write_state *writer;
   enum ssh_write_status status;
 
   if (!connection->super.alive)
@@ -638,11 +659,12 @@ transport_send_packet(struct transport_connection *connection,
       return;
     }
 
+  writer = connection->writer;  
   if (packet)
-    status = transport_write_packet(connection->writer, connection->ssh_output,
+    status = transport_write_packet(writer, connection->ssh_output,
 				    flags, packet, connection->ctx->random);
   else
-    status = transport_write_flush(connection->writer, connection->ssh_output,
+    status = transport_write_flush(writer, connection->ssh_output,
 				   connection->ctx->random);
   switch (status)
     {
@@ -695,13 +717,14 @@ transport_send_kexinit(struct transport_connection *connection)
   struct kexinit *kex;
 
   connection->kex.write_state = 1;
-  if (!connection->write_active)
+
+  if (connection->session_id)
+    /* This is a reexchange; no more data can be sent */
     connection->event_handler(connection, TRANSPORT_EVENT_STOP_APPLICATION);
   
   kex = MAKE_KEXINIT(connection->ctx->kexinit, connection->ctx->random);
   connection->kex.kexinit[is_server] = kex;
 
-  
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
   assert(connection->kex.read_state == KEX_STATE_INIT);
   
@@ -717,13 +740,6 @@ transport_send_kexinit(struct transport_connection *connection)
       kex->first_kex_packet = NULL;
 
       transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, s);
-    }
-
-  if (connection->session_id)
-    {
-      /* This is a reexchange; no more data can be sent */
-      connection->event_handler(connection,
-				TRANSPORT_EVENT_START_APPLICATION);
     }
 
   transport_timeout(connection,
