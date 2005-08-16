@@ -40,7 +40,7 @@
 # include "ssh_read.h.x"
 #undef GABA_DEFINE
 
-/* Returns zero on success. OTherwise returns errno, using EPIPE for
+/* Returns zero on success. Otherwise returns errno, using EPIPE for
    an unexpected EOF. */
 static int
 ssh_read(struct lsh_string *data, uint32_t start, int fd, uint32_t length,
