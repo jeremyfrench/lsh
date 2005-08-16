@@ -132,10 +132,10 @@ lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
 
 lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
-	server_keyexchange.c
+	transport_forward.c server_keyexchange.c
 
 lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c \
-	client_keyexchange.c
+	transport_forward.c client_keyexchange.c
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
