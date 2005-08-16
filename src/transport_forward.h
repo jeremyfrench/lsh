@@ -53,6 +53,13 @@ init_transport_forward(struct transport_forward *self,
 		       int (*event)(struct transport_connection *,
 				    enum transport_event event));
 
+struct transport_forward *
+make_transport_forward(void (*kill)(struct resource *s),
+		       struct transport_context *ctx,
+		       int ssh_input, int ssh_output,
+		       int (*event)(struct transport_connection *,
+				    enum transport_event event));
+
 void
 transport_forward_kill(struct transport_forward *self);
 

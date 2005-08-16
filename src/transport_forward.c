@@ -40,6 +40,10 @@
 
 #include "transport_forward.h"
 
+#define GABA_DEFINE
+# include "transport_forward.h.x"
+#undef GABA_DEFINE
+
 #define FORWARD_WRITE_THRESHOLD 1000
 #define FORWARD_WRITE_BUFFER_SIZE (3 * SSH_MAX_PACKET)
 
@@ -69,6 +73,18 @@ init_transport_forward(struct transport_forward *self,
 
   self->service_reader = NULL;
   self->service_writer = NULL;
+}
+
+struct transport_forward *
+make_transport_forward(void (*kill)(struct resource *s),
+		       struct transport_context *ctx,
+		       int ssh_input, int ssh_output,
+		       int (*event)(struct transport_connection *,
+				    enum transport_event event))
+{
+  NEW(transport_forward, self);
+  init_transport_forward(self, kill, ctx, ssh_input, ssh_output, event);
+  return self;
 }
 
 static void
@@ -106,7 +122,7 @@ static void *
 oop_read_service(oop_source *source UNUSED,
 		 int fd, oop_event event, void *state)
 {
-  CAST(transport_forward, self, (struct lsh_object *) state);
+  CAST_SUBTYPE(transport_forward, self, (struct lsh_object *) state);
 
   assert(fd == self->service_in);
   assert(event == OOP_READ);
@@ -194,7 +210,7 @@ static void *
 oop_write_service(oop_source *source UNUSED,
 		  int fd, oop_event event, void *state)
 {
-  CAST(transport_forward, self, (struct lsh_object *) state);
+  CAST_SUBTYPE(transport_forward, self, (struct lsh_object *) state);
   enum ssh_write_status status;
 
   assert(fd == self->service_out);
@@ -258,7 +274,7 @@ static int
 forward_event_handler(struct transport_connection *connection,
 		      enum transport_event event)
 {
-  CAST(transport_forward, self, connection);
+  CAST_SUBTYPE(transport_forward, self, connection);
   switch (event)
     {
     case TRANSPORT_EVENT_START_APPLICATION:
@@ -281,7 +297,7 @@ forward_event_handler(struct transport_connection *connection,
 	 messages should be sufficient to ensure that all important
 	 data is delivered. */
       transport_forward_close(self);
-      return 1;
+      break;
 
     case TRANSPORT_EVENT_PUSH:
       if (self->service_out >= 0)
@@ -320,7 +336,7 @@ static int
 forward_packet_handler(struct transport_connection *connection,
 		       uint32_t seqno, uint32_t length, const uint8_t *packet)
 {
-  CAST(transport_forward, self, connection);
+  CAST_SUBTYPE(transport_forward, self, connection);
 
   enum ssh_write_status status;
   uint8_t header[8];
