@@ -54,8 +54,7 @@
 #include "service.h"
 #include "spki.h"
 #include "ssh.h"
-#include "ssh_write.h"
-#include "transport.h"
+#include "transport_forward.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -77,18 +76,6 @@ enum lsh_transport_state
 static int
 lsh_transport_packet_handler(struct transport_connection *connection,
 			     uint32_t seqno, uint32_t length, const uint8_t *packet);
-
-static void
-lsh_transport_service_start_read(struct lsh_transport_connection *self);
-
-static void
-lsh_transport_service_stop_read(struct lsh_transport_connection *self);
-
-static void
-lsh_transport_service_start_write(struct lsh_transport_connection *self);
-
-static void
-lsh_transport_service_stop_write(struct lsh_transport_connection *self);
 
 static void
 start_userauth(struct lsh_transport_connection *self);
@@ -192,13 +179,9 @@ make_lsh_transport_config(oop_source *oop)
 /* GABA:
    (class
      (name lsh_transport_connection)
-     (super transport_connection)
+     (super transport_forward)
      (vars
-       (state . "enum lsh_transport_state")
-       (service_reader object service_read_state)
-       (service_read_active . int)
-       (service_writer object ssh_write_state)
-       (service_write_active . int)))     
+       (state . "enum lsh_transport_state")))
 */
 
 static void
@@ -217,11 +200,12 @@ lsh_transport_event_handler(struct transport_connection *connection,
   switch (event)
     {
     case TRANSPORT_EVENT_START_APPLICATION:
-      lsh_transport_service_start_read(self);
-      break;
     case TRANSPORT_EVENT_STOP_APPLICATION:
-      lsh_transport_service_stop_read(self);
+    case TRANSPORT_EVENT_CLOSE:
+    case TRANSPORT_EVENT_PUSH:
+      /* Do nothing */
       break;
+
     case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
       assert(self->state == STATE_HANDSHAKE);
 
@@ -233,39 +217,6 @@ lsh_transport_event_handler(struct transport_connection *connection,
       self->state = STATE_SERVICE_REQUEST;
       connection->packet_handler = lsh_transport_packet_handler;
       break;
-
-    case TRANSPORT_EVENT_CLOSE:
-      /* FIXME: Should allow service buffer to drain. */
-      break;
-    case TRANSPORT_EVENT_PUSH:
-      if (self->service_writer)
-	{
-	  enum ssh_write_status status;
-
-	  status = ssh_write_flush(self->service_writer, STDOUT_FILENO);
-
-	  switch(status)
-	    {
-	    case SSH_WRITE_IO_ERROR:
-	      transport_disconnect(&self->super,
-				   SSH_DISCONNECT_BY_APPLICATION,
-				   "Connection to service layer failed.");
-	      break;
-	    case SSH_WRITE_OVERFLOW:
-	      werror("Overflow from ssh_write_flush! Should not happen.\n");
-	      transport_disconnect(&self->super,
-				   SSH_DISCONNECT_BY_APPLICATION,
-				   "Service layer not responsive.");
-	      break;
-	    case SSH_WRITE_PENDING:
-	      lsh_transport_service_start_write(self);
-      
-	    case SSH_WRITE_COMPLETE:
-	      lsh_transport_service_stop_write(self);
-	      break;
-	    }
-	}
-      break;
     }
   return 0;
 }
@@ -274,15 +225,11 @@ static struct lsh_transport_connection *
 make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
 {
   NEW(lsh_transport_connection, self);
-  init_transport_connection(&self->super, kill_lsh_transport_connection,
-			    &config->super, fd, fd,
-			    lsh_transport_event_handler);
+  init_transport_forward(&self->super, kill_lsh_transport_connection,
+			 &config->super, fd, fd,
+			 lsh_transport_event_handler);
 
   self->state = STATE_HANDSHAKE;
-  self->service_reader = NULL;
-  self->service_read_active = 0;
-  self->service_writer = NULL;
-  self->service_write_active = 0;
 
   return self;
 }
@@ -311,156 +258,7 @@ lsh_transport_line_handler(struct transport_connection *connection,
   connection->line_handler = NULL;
 }
 
-/* Communication with service layer */
-
-static void *
-oop_read_service(oop_source *source UNUSED,
-		 int fd, oop_event event, void *state)
-{
-  CAST(lsh_transport_connection, self, (struct lsh_object *) state);
-
-  assert(fd == STDIN_FILENO);
-  assert(event == OOP_READ);
-
-  while (self->service_read_active)
-    {
-      enum service_read_status status;
-      uint32_t seqno;
-      uint32_t length;
-      const uint8_t *packet;
-      const char *msg;
-
-      status = service_read_packet(self->service_reader, fd, &msg,
-				   &seqno, &length, &packet);
-      fd = -1;
-
-      switch (status)
-	{
-	case SERVICE_READ_IO_ERROR:
-	  transport_disconnect(&self->super,
-			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Read from service layer failed.");
-	  break;
-	case SERVICE_READ_PROTOCOL_ERROR:
-	  werror("Invalid data from service layer: %z\n", msg);
-	  transport_disconnect(&self->super,
-			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Invalid data from service layer.");
-	  break;
-	case SERVICE_READ_EOF:
-	  transport_disconnect(&self->super,
-			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Service done.");
-	  break;
-	case TRANSPORT_READ_PUSH:
-	  transport_send_packet(&self->super, 0, NULL);
-	  /* Fall through */
-	case TRANSPORT_READ_PENDING:
-	  return OOP_CONTINUE;
-
-	case SERVICE_READ_COMPLETE:
-	  if (!length)
-	    transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
-				 "Received empty packet from service layer.");
-	  else
-	    {
-	      /* FIXME: This is unnecessary allocation and copying. */
-	      transport_send_packet(&self->super, 0,
-				    ssh_format("%ls", length, packet));
-	      if (packet[0] == SSH_MSG_DISCONNECT)
-		transport_close(&self->super, 1);
-	    }
-	}
-    }
-  return OOP_CONTINUE;
-}
-
-static void
-lsh_transport_service_start_read(struct lsh_transport_connection *self)
-{
-  if (!self->service_read_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-      self->service_read_active = 1;
-      source->on_fd(source, STDIN_FILENO, OOP_READ, oop_read_service, self);
-    }
-}
-
-static void
-lsh_transport_service_stop_read(struct lsh_transport_connection *self)
-{
-  if (self->service_read_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-
-      self->service_read_active = 0;
-      source->cancel_fd(source, STDIN_FILENO, OOP_READ);
-    }
-}
-
-static void *
-oop_write_service(oop_source *source UNUSED,
-		  int fd, oop_event event, void *state)
-{
-  CAST(lsh_transport_connection, self, (struct lsh_object *) state);
-  enum ssh_write_status status;
-
-  assert(fd == STDOUT_FILENO);
-  assert(event == OOP_WRITE);
-
-  status = ssh_write_flush(self->service_writer, STDOUT_FILENO);
-  switch(status)
-    {
-    case SSH_WRITE_IO_ERROR:
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Connection to service layer failed.");
-      break;
-    case SSH_WRITE_OVERFLOW:
-      werror("Overflow from ssh_write_flush! Should not happen.\n");
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Service layer not responsive.");
-      break;
-    case SSH_WRITE_PENDING:
-      /* Do nothing. */
-      break;
-
-    case SSH_WRITE_COMPLETE:
-      lsh_transport_service_stop_write(self);
-      break;
-    }
-  return OOP_CONTINUE;
-}
-
-static void
-lsh_transport_service_start_write(struct lsh_transport_connection *self)
-{
-  if (!self->service_write_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-
-      self->service_write_active = 1;
-      source->on_fd(source, STDOUT_FILENO, OOP_WRITE, oop_write_service, self);
-    }
-}
-
-static void
-lsh_transport_service_stop_write(struct lsh_transport_connection *self)
-{
-  if (self->service_write_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-
-      self->service_write_active = 0;
-      source->cancel_fd(source, STDOUT_FILENO, OOP_WRITE);
-      transport_start_read(&self->super);
-    }
-}
-
-/* Handles decrypted packets. The various handler functions called
-   from here should *not* free the packet. FIXME: Better to change
-   this? */
+/* Handles decrypted packets. Replaced after userauth is complete. */
 static int
 lsh_transport_packet_handler(struct transport_connection *connection,
 			     uint32_t seqno UNUSED, uint32_t length, const uint8_t *packet)
@@ -478,7 +276,7 @@ lsh_transport_packet_handler(struct transport_connection *connection,
   switch(self->state)
     {
     case STATE_HANDSHAKE:
-      abort();
+      fatal("Internal error.\n");
     case STATE_SERVICE_REQUEST:
       if (msg == SSH_MSG_SERVICE_ACCEPT)
 	{
@@ -565,7 +363,7 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 static void
 start_userauth(struct lsh_transport_connection *self)
 {
-  CAST(lsh_transport_config, config, self->super.ctx);
+  CAST(lsh_transport_config, config, self->super.super.ctx);
 
   if (config->keypair)
     {
@@ -584,7 +382,7 @@ start_userauth(struct lsh_transport_connection *self)
 		     key->type, key->public);
 
       struct lsh_string *signed_data
-	= ssh_format("%S%lS", self->super.session_id, request);
+	= ssh_format("%S%lS", self->super.super.session_id, request);
 
       request =	ssh_format("%flS%fS", 
 			   request, 
@@ -594,13 +392,13 @@ start_userauth(struct lsh_transport_connection *self)
 
       lsh_string_free(signed_data);
 
-      transport_send_packet(&self->super, SSH_WRITE_FLAG_PUSH,
+      transport_send_packet(&self->super.super, SSH_WRITE_FLAG_PUSH,
 			    request);
     }
   else
     {
       /* Find out whether or not password authentication is supported. */
-      transport_send_packet(&self->super, SSH_WRITE_FLAG_PUSH,
+      transport_send_packet(&self->super.super, SSH_WRITE_FLAG_PUSH,
 			    ssh_format("%c%z%z%a",
 				       SSH_MSG_USERAUTH_REQUEST,
 				       config->user,
@@ -612,10 +410,17 @@ start_userauth(struct lsh_transport_connection *self)
 static void
 start_service(struct lsh_transport_connection *self UNUSED)
 {
-  self->service_reader = make_service_read_state();
-  lsh_transport_service_start_read(self);
+  /* Setting stdio fd:s to non-blocking mode is unfriendly in a
+     general purpose program, that may share stdin and stdout with
+     other processes. But we expect to get our own exclusive pipe when
+     we are started by lsh. */
 
-  self->service_writer = make_ssh_write_state(3 * SSH_MAX_PACKET, 1000);
+  /* FIXME: We can probably get by with only stdout non-blocking. */
+  io_set_nonblocking(STDIN_FILENO);
+  io_set_nonblocking(STDOUT_FILENO);
+  
+  /* Replaces event_handler and packet_handler. */  
+  transport_forward_setup(&self->super, STDIN_FILENO, STDOUT_FILENO);
 }
 
 static int
@@ -665,9 +470,9 @@ lsh_connect(struct lsh_transport_config *config)
   
   /* We keep the socket in blocking mode */
   connection = make_lsh_transport_connection(config, s);
-  gc_global(&connection->super.super);
+  gc_global(&connection->super.super.super);
 
-  transport_handshake(&connection->super,
+  transport_handshake(&connection->super.super,
 		      make_string("SSH-2.0-lsh-transport"),
 		      lsh_transport_line_handler);
 

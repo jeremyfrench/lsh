@@ -39,8 +39,6 @@
 
 #include "nettle/macros.h"
 
-#include "lshd.h"
-
 #include "algorithms.h"
 #include "crypto.h"
 #include "format.h"
@@ -52,35 +50,36 @@
 #include "server.h"
 #include "service.h"
 #include "ssh.h"
+#include "transport_forward.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#define GABA_DEFINE
-# include "lshd.h.x"
-#undef GABA_DEFINE
 
 #include "lshd.c.x"
 
 #define SERVICE_WRITE_THRESHOLD 1000
 #define SERVICE_WRITE_BUFFER_SIZE (3 * SSH_MAX_PACKET)
 
+/* Information shared by several connections */
+/* GABA:
+   (class
+     (name configuration)
+     (super transport_context)
+     (vars
+       (keys object alist)
+       ; For now, a list { name, program, name, program, NULL }       
+       (services . "const char **")))
+*/
+
 /* Connection */
 static void
 kill_lshd_connection(struct resource *s)
 {
-  CAST(lshd_connection, self, s);
+  CAST(transport_forward, self, s);
   if (self->super.super.alive)
     {
-      oop_source *source = self->super.ctx->oop;
-      if (self->service_fd != -1)
-	{
-	  source->cancel_fd(source, self->service_fd, OOP_READ);
-	  source->cancel_fd(source, self->service_fd, OOP_WRITE);
-	  close(self->service_fd);
-	  self->service_fd = -1;
-	}
-      transport_kill(&self->super);
+      transport_forward_kill(self);
+      self->super.super.alive = 0;
     }
 }
 
@@ -88,95 +87,35 @@ static int
 lshd_packet_handler(struct transport_connection *connection,
 		    uint32_t seqno, uint32_t length, const uint8_t *packet);
 
-static void
-lshd_service_start_read(struct lshd_connection *self);
-
-static void
-lshd_service_stop_read(struct lshd_connection *self);
-
-static void
-lshd_service_start_write(struct lshd_connection *self);
-
-static void
-lshd_service_stop_write(struct lshd_connection *self);
-
+/* Used only until the service is started. */
 static int
 lshd_event_handler(struct transport_connection *connection,
 		   enum transport_event event)
 {
-  CAST(lshd_connection, self, connection);
   switch (event)
     {
-    case TRANSPORT_EVENT_START_APPLICATION:
-      if (self->service_state == SERVICE_STARTED)
-	lshd_service_start_read(self);
-      break;
-    case TRANSPORT_EVENT_STOP_APPLICATION:
-      if (self->service_state == SERVICE_STARTED)
-	lshd_service_stop_read(self);
-      break;
     case TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE:
-      assert(self->service_state == SERVICE_DISABLED);
-      self->service_state = SERVICE_ENABLED;
       connection->packet_handler = lshd_packet_handler;
       break;
+
+    case TRANSPORT_EVENT_START_APPLICATION:
+    case TRANSPORT_EVENT_STOP_APPLICATION:
     case TRANSPORT_EVENT_CLOSE:
-      /* FIXME: Should allow service buffer to drain. */
-      if (self->service_fd >= 0)
-	{
-	  lshd_service_stop_read(self);
-	  close(self->service_fd);
-	  self->service_fd = -1;
-	}
-      break;
     case TRANSPORT_EVENT_PUSH:
-      if (self->service_state == SERVICE_STARTED
-	  && self->service_fd >= 0)
-	{
-	  enum ssh_write_status status;
-
-	  status = ssh_write_flush(self->service_writer, self->service_fd);
-
-	  switch(status)
-	    {
-	    case SSH_WRITE_IO_ERROR:
-	      transport_disconnect(&self->super,
-				   SSH_DISCONNECT_BY_APPLICATION,
-				   "Connection to service layer failed.");
-	      break;
-	    case SSH_WRITE_OVERFLOW:
-	      werror("Overflow from ssh_write_flush! Should not happen.\n");
-	      transport_disconnect(&self->super,
-				   SSH_DISCONNECT_BY_APPLICATION,
-				   "Service layer not responsive.");
-	      break;
-	    case SSH_WRITE_PENDING:
-	      lshd_service_start_write(self);
-
-	    case SSH_WRITE_COMPLETE:
-	      lshd_service_stop_write(self);
-	      break;
-	    }
-	}
+      /* Do nothing */
+      break;
     }
   return 0;
 }
 
-static struct lshd_connection *
+static struct transport_forward *
 make_lshd_connection(struct configuration *config, int input, int output)
 {
-  NEW(lshd_connection, self);
-  init_transport_connection(&self->super, kill_lshd_connection,
-			    &config->super,
-			    input, output,
-			    lshd_event_handler);
-  self->service_state = SERVICE_DISABLED;
-  self->service_fd = -1;
-  self->service_reader = NULL;
-  self->service_read_active = 0;
-  self->service_write_active = 0;
-  self->service_writer = NULL;
-
+  struct transport_forward *self
+    = make_transport_forward(kill_lshd_connection,
+			     &config->super,
+			     input, output,
+			     lshd_event_handler);
   return self;
 };
 
@@ -196,199 +135,6 @@ lshd_line_handler(struct transport_connection *connection,
 
   connection->kex.version[0] = ssh_format("%ls", length, line);
   connection->line_handler = NULL;
-}
-
-
-/* Communication with service layer */
-
-static void *
-oop_read_service(oop_source *source UNUSED,
-		 int fd, oop_event event, void *state)
-{
-  CAST(lshd_connection, self, (struct lsh_object *) state);
-
-  assert(fd == self->service_fd);
-  assert(event == OOP_READ);
-
-  while (self->service_fd >= 0)
-    {
-      enum service_read_status status;
-      uint32_t seqno;
-      uint32_t length;
-      const uint8_t *packet;
-      const char *msg;
-
-      status = service_read_packet(self->service_reader, fd, &msg,
-				   &seqno, &length, &packet);
-      fd = -1;
-
-      switch (status)
-	{
-	case SERVICE_READ_IO_ERROR:
-	  transport_disconnect(&self->super,
-			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Read from service layer failed.");
-	  break;
-	case SERVICE_READ_PROTOCOL_ERROR:
-	  werror("Invalid data from service layer: %z\n", msg);
-	  transport_disconnect(&self->super,
-			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Invalid data from service layer.");
-	  break;
-	case SERVICE_READ_EOF:
-	  transport_disconnect(&self->super,
-			       SSH_DISCONNECT_BY_APPLICATION,
-			       "Service done.");
-	  break;
-	case TRANSPORT_READ_PUSH:
-	  transport_send_packet(&self->super, 0, NULL);
-	  /* Fall through */
-	case TRANSPORT_READ_PENDING:
-	  return OOP_CONTINUE;
-
-	case SERVICE_READ_COMPLETE:
-	  if (!length)
-	    transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
-				 "Received empty packet from service layer.");
-	  else
-	    {
-	      /* FIXME: This is unnecessary allocation and copying. */
-	      transport_send_packet(&self->super, 0,
-				    ssh_format("%ls", length, packet));
-	      if (packet[0] == SSH_MSG_DISCONNECT)
-		transport_close(&self->super, 1);
-	    }
-	}
-    }
-  return OOP_CONTINUE;
-}
-
-static void
-lshd_service_start_read(struct lshd_connection *self)
-{
-  if (!self->service_read_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-      self->service_read_active = 1;
-      source->on_fd(source, self->service_fd, OOP_READ, oop_read_service, self);
-    }
-}
-
-static void
-lshd_service_stop_read(struct lshd_connection *self)
-{
-  if (self->service_read_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-
-      self->service_read_active = 0;
-      source->cancel_fd(source, self->service_fd, OOP_READ);
-    }
-}
-
-static void *
-oop_write_service(oop_source *source UNUSED,
-		  int fd, oop_event event, void *state)
-{
-  CAST(lshd_connection, self, (struct lsh_object *) state);
-  enum ssh_write_status status;
-
-  assert(fd == self->service_fd);
-  assert(event == OOP_WRITE);
-
-  status = ssh_write_flush(self->service_writer, self->service_fd);
-  switch(status)
-    {
-    case SSH_WRITE_IO_ERROR:
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Connection to service layer failed.");
-      break;
-    case SSH_WRITE_OVERFLOW:
-      werror("Overflow from ssh_write_flush! Should not happen.\n");
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Service layer not responsive.");
-      break;
-    case SSH_WRITE_PENDING:
-      /* Do nothing. */
-      break;
-
-    case SSH_WRITE_COMPLETE:
-      lshd_service_stop_write(self);
-      break;
-    }
-  return OOP_CONTINUE;
-}
-
-static void
-lshd_service_start_write(struct lshd_connection *self)
-{
-  if (!self->service_write_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-
-      self->service_write_active = 1;
-      source->on_fd(source, self->service_fd, OOP_WRITE, oop_write_service, self);
-    }
-}
-
-static void
-lshd_service_stop_write(struct lshd_connection *self)
-{
-  if (self->service_write_active)
-    {
-      oop_source *source = self->super.ctx->oop;
-
-      self->service_write_active = 0;
-      source->cancel_fd(source, self->service_fd, OOP_WRITE);
-      transport_start_read(&self->super);
-    }
-}
-
-/* Handles all packets to be sent to the service layer. */
-static int
-lshd_service_handler(struct lshd_connection *self,
-		     uint32_t seqno, uint32_t length, const uint8_t *packet)
-{
-  enum ssh_write_status status;
-  uint8_t header[8];
-
-  if (ssh_write_available(self->service_writer) < length + 8)
-    return 0;
-
-  WRITE_UINT32(header, seqno);
-  WRITE_UINT32(header + 4, length);
-
-  status = ssh_write_data(self->service_writer,
-			  self->service_fd, 0,
-			  sizeof(header), header);
-  if (status >= 0)
-    status = ssh_write_data(self->service_writer,
-			    self->service_fd, SSH_WRITE_FLAG_PUSH,
-			    length, packet);
-
-  switch (status)
-    {
-    case SSH_WRITE_IO_ERROR:
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Connection to service layer failed.");
-      break;
-    case SSH_WRITE_OVERFLOW:
-      werror("Overflow when sending packet to service layer! Should not happen.\n");
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Service layer not responsive.");
-      break;
-    case SSH_WRITE_PENDING:
-      lshd_service_start_write(self);
-      break;
-    case SSH_WRITE_COMPLETE:
-      transport_start_read(&self->super);
-      break;
-    }
-  return 1;
 }
 
 /* FIXME: Duplicates server_session.c: lookup_subsystem. */
@@ -417,7 +163,7 @@ format_service_accept(uint32_t name_length, const uint8_t *name)
 };
 
 static void
-lshd_service_request_handler(struct lshd_connection *self,
+lshd_service_request_handler(struct transport_forward *self,
 			     uint32_t length, const uint8_t *packet)
 {
   struct simple_buffer buffer;
@@ -425,8 +171,6 @@ lshd_service_request_handler(struct lshd_connection *self,
 
   const uint8_t *name;
   uint32_t name_length;
-
-  assert(self->service_state == SERVICE_ENABLED);
 
   simple_buffer_init(&buffer, length, packet);
 
@@ -470,18 +214,12 @@ lshd_service_request_handler(struct lshd_connection *self,
 	      /* Parent process */
 	      close(pipe[1]);
 	      io_set_nonblocking(pipe[0]);
-	      self->service_fd = pipe[0];
-	      self->service_state = SERVICE_STARTED;
-
-	      self->service_reader = make_service_read_state();
-	      lshd_service_start_read(self);
-
-	      self->service_writer
-		= make_ssh_write_state(SERVICE_WRITE_BUFFER_SIZE,
-				       SERVICE_WRITE_THRESHOLD);
 
 	      transport_send_packet(&self->super, SSH_WRITE_FLAG_PUSH,
 				    format_service_accept(name_length, name));
+
+	      /* Setup forwarding. Replaces event_handler and packet_handler. */
+	      transport_forward_setup(self, pipe[0], pipe[0]);
 	    }
 	  else
 	    {
@@ -512,12 +250,13 @@ lshd_service_request_handler(struct lshd_connection *self,
     transport_protocol_error(&self->super, "Invalid SERVICE_REQUEST");
 }
 
-/* Handles decrypted packets above the ssh transport layer. */
+/* Handles decrypted packets above the ssh transport layer. Replaced
+   after the service exchange is complete. */
 static int
 lshd_packet_handler(struct transport_connection *connection,
 		    uint32_t seqno, uint32_t length, const uint8_t *packet)
 {
-  CAST(lshd_connection, self, connection);
+  CAST(transport_forward, self, connection);
 
   uint8_t msg;
 
@@ -528,20 +267,18 @@ lshd_packet_handler(struct transport_connection *connection,
 
   if (msg == SSH_MSG_SERVICE_REQUEST)
     {
-      if (self->service_state != SERVICE_ENABLED)
-	transport_disconnect(connection,
-			     SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-			     "Unexpected service request");
-      else
-	lshd_service_request_handler(self, length, packet);
+      lshd_service_request_handler(self, length, packet);
     }
-  else if (msg >= SSH_FIRST_USERAUTH_GENERIC
-	   && self->service_state == SERVICE_STARTED)
-    return lshd_service_handler(self, seqno, length, packet);
   else
-    transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
-			  format_unimplemented(seqno));
-
+    {
+      /* FIXME: If for example userauth packets are received before
+	 the corresponding service is started, we reply with
+	 UNIMPLEMENTED, not DISCONNECT. */
+	 
+      transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+			    format_unimplemented(seqno));
+    }
+  
   return 1;
 }
 
@@ -583,7 +320,7 @@ lshd_port_accept(oop_source *source UNUSED,
 		 int fd, oop_event event, void *state)
 {
   CAST(lshd_port, self, (struct lsh_object *) state);
-  struct lshd_connection *connection;
+  struct transport_forward *connection;
   struct sockaddr_in peer;
   socklen_t peer_length = sizeof(peer);
   int s;
