@@ -204,6 +204,10 @@
 /* Subtract this to get a reasonable max_packet value for a channel. */
 #define SSH_CHANNEL_MAX_PACKET_FUZZ 100
 
+/* The maximum amount of transport packets (KEXINIT, KEX_DHREPLY, UNIMPLEMENTED, etc)
+   we are willing to buffer in response to messages from the remote end. */
+#define SSH_MAX_TRANSPORT_RESPONSE 20000
+
 /* Largest block size we support (NOTE: This is not a protocol limit) */
 #define SSH_MAX_BLOCK_SIZE 16
 
