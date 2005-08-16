@@ -18,6 +18,7 @@
 #include "io.h"
 #include "lsh_argp.h"
 #include "lsh_string.h"
+#include "parse.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
