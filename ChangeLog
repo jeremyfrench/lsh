@@ -1,3 +1,36 @@
+2005-08-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.h: Deleted file.
+
+	* src/transport.h (class transport_connection): New attribute
+	write_margin.
+
+	* src/transport.c (init_transport_connection): Initialize write_margin.
+	(transport_connection_kill): Renamed function. Was transport_kill.
+	(transport_write_almost_full): New function.
+	(transport_start_write): Use transport_write_almost_full.
+	(transport_stop_write): Likewise.
+	(transport_send_packet): Slight simplification, using local
+	variable writer.
+	(transport_send_kexinit): Generating
+	TRANSPORT_EVENT_STOP_APPLICATION, not
+	TRANSPORT_EVENT_START_APPLICATION.
+
+	* src/ssh.h (SSH_MAX_TRANSPORT_RESPONSE): New constant.
+
+	* src/lsh-transport.c: Use transport_forward.c. Deleted old code
+	for communicating with the service layer.
+	* src/lshd.c: Likewise.
+
+	* src/lsh-decode-key.c: Include parse.h.
+
+	* src/Makefile.am (lshd_SOURCES, lsh_transport_SOURCES): Added
+	transport_forward.c.
+
+	* src/transport_forward.c: New file, implementing the forwarding
+	of cleartext messages needed by lshd and lsh-transport.
+	* src/transport_forward.h: New file.
+
 2005-04-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/abstract_crypto.c, src/abstract_crypto.h,
