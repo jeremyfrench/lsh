@@ -573,6 +573,7 @@ if test x$lsh_cv_sys_ai_numerichost = xyes ; then
   AC_DEFINE(HAVE_AI_NUMERICHOST)
 fi
 
+# Used only by lsh-make-seed, the rest of te code uses liboop
 AC_CHECK_FUNCS(poll,,[AC_LIBOBJ([jpoll])])
 
 # Test if the libc includes a good enough argp.
