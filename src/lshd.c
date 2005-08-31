@@ -41,6 +41,7 @@
 
 #include "algorithms.h"
 #include "crypto.h"
+#include "environ.h"
 #include "format.h"
 #include "io.h"
 #include "keyexchange.h"
@@ -398,8 +399,11 @@ static struct configuration *
 make_configuration(const char *hostkey, oop_source *source)
 {
   NEW(configuration, self);
-  static const char *services[] =
-    { "ssh-userauth", "lshd-userauth", NULL };
+  static const char *services[3];
+
+  services[0] = "ssh-userauth";
+  GET_FILE_ENV(services[1], LSHD_USERAUTH);
+  services[2] = NULL;
 
   self->super.is_server = 1;
 
