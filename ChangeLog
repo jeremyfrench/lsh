@@ -1,3 +1,7 @@
+2005-08-31  Niels Möller  <niels@s3.kth.se>
+
+	* src/io.c (lsh_copy_file): Deleted unused function.
+
 2005-08-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.h: Deleted file.
