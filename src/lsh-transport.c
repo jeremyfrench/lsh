@@ -829,9 +829,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
       lsh_string_free(tmp);
     }
 
-  sexp_conv = getenv(ENV_SEXP_CONV);
-  if (!sexp_conv)
-    sexp_conv = PATH_SEXP_CONV;
+  GET_FILE_ENV(sexp_conv, SEXP_CONV);
   
   contents = lsh_popen_read(sexp_conv, args, fd, 5000);
   
