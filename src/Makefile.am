@@ -14,8 +14,8 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
-# lsh lshg and @SRP_PROGRAM@ are broken at the moment
-bin_PROGRAMS = lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
+# lshg and @SRP_PROGRAM@ are broken at the moment
+bin_PROGRAMS = lsh lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed
 	       
 
