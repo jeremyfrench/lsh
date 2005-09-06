@@ -35,7 +35,6 @@
 #include "algorithms.h"
 #include "alist.h"
 #include "command.h"
-#include "connection.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
