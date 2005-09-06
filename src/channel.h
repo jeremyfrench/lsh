@@ -458,64 +458,8 @@ channel_transmit_extended(struct ssh_channel *channel,
 			  uint32_t type,
 			  struct lsh_string *data);
 
-void
-handle_global_request(struct channel_table *table,
-		      struct lsh_string *packet);
-
-void
-handle_global_success(struct channel_table *table,
-		      struct lsh_string *packet);
-
-void
-handle_global_failure(struct channel_table *table,
-		      struct lsh_string *packet);
-
-void
-handle_channel_request(struct channel_table *table,
-			struct lsh_string *packet);
-
-void
-handle_channel_open(struct channel_table *table,
-		    struct lsh_string *packet);
-
-void
-handle_adjust_window(struct channel_table *table,
-		     struct lsh_string *packet);
-
-void
-handle_channel_data(struct channel_table *table,
-		    struct lsh_string *packet);
-
-void
-handle_channel_extended_data(struct channel_table *table,
-			     struct lsh_string *packet);
-
-void
-handle_channel_eof(struct channel_table *table,
-		   struct lsh_string *packet);
-
-void
-handle_channel_close(struct channel_table *table,
-		     struct lsh_string *packet);
-
-void
-handle_open_confirm(struct channel_table *table,
-		    struct lsh_string *packet);
-
-void
-handle_open_failure(struct channel_table *table,
-		    struct lsh_string *packet);
-
-void
-handle_channel_success(struct channel_table *table,
-		       struct lsh_string *packet);
-
-void
-handle_channel_failure(struct channel_table *table,
-		       struct lsh_string *packet);
-
-void
+int
 channel_packet_handler(struct channel_table *table,
-		       struct lsh_string *packet);
+		       uint32_t length, const uint8_t *packet);
 
 #endif /* LSH_CHANNEL_H_INCLUDED */

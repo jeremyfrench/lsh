@@ -1,4 +1,47 @@
+2005-09-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (oop_read_service): Adapted to channel_packet_handler
+	changes. 
+	* src/lshd-connection.c (oop_read_service): Likewise.
+
+	* src/channel.c (channel_packet_handler): Return 1 for success, or
+	zero if message type is unimplemented. Take length and pointer as
+	arguments, not a struct lsh_string *. All called functions
+	(handle_global_request, etc) changed to take a struct
+	simple_buffer * as argument, and made static.
+
 2005-09-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-connection.c (blocking_writev): New function.
+	(write_packet): Use blocking_writev, instead of the ssh_write
+	class.
+	(class connection): Deleted attribute writer.
+	(class connection_write): Deleted class.
+	(make_connection_write_handler): Deleted function.
+	(disconnect): Deleted connection argument.
+	(do_exc_lshd_connection_handler): New function.
+	(lshd_connection_exception_handler): New static object.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed some files:
+	client_userauth.c, connection_commands.c, debug.c,
+	gateway_commands.c, io_commands.c, read_packet.c, socks.c,
+	tcpforward.c, tcpforward_commands.c, and write_packet.c.
+
+	* src/lsh.c: Don't include io.h, io_commands.h and handshake.h.
+
+	* src/lsh-decrypt-key.c: Include io.h, not io_commands.h.
+	* src/lsh-writekey.c: Likewise.
+
+	* src/dh_exchange.c: Include keyexchange.h, not connection.h.
+
+	* src/command.c: Don't include connection.h.
+	* src/keyexchange.c: Likewise.
+	* src/server_pty.c: Likewise.
+
+	* src/client.c: Don't include connection.h. 
+	(client_argp_parser): Ifed out tcp-forward handling.
+
+	* src/channel.c (make_channel_table): Take an exception handler argument.
 
 	* src/testsuite/functions.sh: Set and export LSH_TRANSPORT,
 	LSHD_CONNECTION and LSHD_USERAUTH.
