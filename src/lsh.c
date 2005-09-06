@@ -63,8 +63,9 @@
 #include "randomness.h"
 #include "reaper.h"
 #include "sexp.h"
-#include "spki.h"
+#include "service.h"
 #include "ssh.h"
+#include "ssh_write.h"
 #include "tcpforward.h"
 #include "version.h"
 #include "werror.h"
@@ -74,15 +75,196 @@
 
 #include "lsh.c.x"
 
+#define CONNECTION_WRITE_THRESHOLD 1000
+#define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
+
+oop_source *global_oop_source;
+
 /* GABA:
    (class
      (name connection)
      (super resource)
      (vars
+       (transport . int)
        (reader object service_read_state)
        (writer object ssh_write_state)
        (table object channel_table)))
 */
+
+/* FIXME: Duplicates code in lshd-connection */
+
+static void
+kill_connection(struct resource *s)
+{
+  CAST(connection, self, s);
+  werror("kill_connection\n");
+  if (self->transport >= 0)
+    close(self->transport);
+  exit(EXIT_FAILURE);
+}
+
+static void
+write_packet(struct connection *connection,
+	     struct lsh_string *packet)
+{
+  /* FIXME: Go to sleep if ssh_write_data returns 0? */
+  enum ssh_write_status status;
+
+  packet = ssh_format("%i%S",
+		      lsh_string_sequence_number(packet),
+		      packet);
+  
+  status = ssh_write_data(connection->writer,
+			  connection->transport, SSH_WRITE_FLAG_PUSH, 
+			  STRING_LD(packet));
+  lsh_string_free(packet);
+
+  switch (status)
+    {
+    case SSH_WRITE_IO_ERROR:
+      werror("write_packet: Write failed: %e\n", errno);
+      exit(EXIT_FAILURE);
+    case SSH_WRITE_OVERFLOW:
+      werror("write_packet: Buffer full\n", errno);
+      exit(EXIT_FAILURE);
+
+    case SSH_WRITE_PENDING:
+      /* FIXME: Implement some flow control. Or use some different
+	 writer with unbounded buffers? Or use totally blocking
+	 writes? */
+      werror("write_packet: ssh_write_data returned SSH_WRITE_PENDING.\n");
+      break;
+    case SSH_WRITE_COMPLETE:
+      break;
+    }
+}
+
+static void
+disconnect(struct connection *connection, const char *msg)
+{
+  werror("disconnecting: %z.\n", msg);
+
+  write_packet(connection,
+	       format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
+				 msg, ""));
+  exit(EXIT_FAILURE);
+}
+
+static void
+service_start_read(struct connection *self);
+
+static void *
+oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
+{
+  CAST(connection, self, (struct lsh_object *) state);
+
+  assert(event == OOP_READ);
+
+  for (;;)
+    {
+      enum service_read_status status;
+
+      uint32_t seqno;
+      uint32_t length;      
+      const uint8_t *packet;
+      const char *error_msg;
+      uint8_t msg;
+      
+      status = service_read_packet(self->reader, fd,
+				   &error_msg,
+				   &seqno, &length, &packet);
+      fd = -1;
+
+      switch (status)
+	{
+	case SERVICE_READ_IO_ERROR:
+	  werror("Read failed: %e\n", errno);
+	  exit(EXIT_FAILURE);
+	  break;
+	case SERVICE_READ_PROTOCOL_ERROR:
+	  werror("Invalid data from transport layer: %z\n", error_msg);
+	  exit(EXIT_FAILURE);
+	  break;
+	case SERVICE_READ_EOF:
+	  werror("Transport layer closed\n", error_msg);
+	  return OOP_HALT;
+	  break;
+	case SERVICE_READ_PUSH:
+	case SERVICE_READ_PENDING:
+	  return OOP_CONTINUE;
+
+	case SERVICE_READ_COMPLETE:
+	  if (!length)
+	    disconnect(self,
+		       "lshd-connection received an empty packet");
+
+	  msg = packet[0];
+
+	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
+	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
+	    disconnect(self,
+		       "lshd-connection received a transport or userauth layer packet");
+
+	  else
+	    {
+	      struct lsh_string *s = ssh_format("%ls", length, packet);
+	      channel_packet_handler(self->table, s);
+	      lsh_string_free(s);
+	    }
+	}
+    }
+}
+
+static void
+service_start_read(struct connection *self)
+{
+  global_oop_source->on_fd(global_oop_source,
+			   self->transport, OOP_READ,
+			   oop_read_service, self);  
+}
+
+/* GABA:
+   (class
+     (name connection_write)
+     (super abstract_write)
+     (vars
+       (connection object connection)))
+*/
+
+static void
+write_handler(struct abstract_write *s, struct lsh_string *packet)
+{
+  CAST(connection_write, self, s);
+
+  write_packet(self->connection, packet);
+}
+
+static struct abstract_write *
+make_connection_write_handler(struct connection *connection)
+{
+  NEW(connection_write, self);
+  self->super.write = write_handler;
+  self->connection = connection;
+  return &self->super;
+}
+
+static struct connection *
+make_connection(int fd)
+{
+  NEW(connection, self);
+  init_resource(&self->super, kill_connection);
+
+  self->transport = fd;
+  self->reader = make_service_read_state();
+  service_start_read(self);
+
+  self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
+				      CONNECTION_WRITE_THRESHOLD);
+
+  self->table = make_channel_table(make_connection_write_handler(self));
+
+  return self;
+}
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -534,7 +716,7 @@ make_transport_exit_callback(void)
   return self;
 }
 
-static struct lsh_fd *
+static struct connection *
 fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
 {
   int pipe[2];
@@ -556,11 +738,15 @@ fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
   else if (child)
     {
       /* Parent process */
+      struct connection *connection;
       close(pipe[1]);
       io_set_nonblocking(pipe[0]);
       
-      reaper_handle (child, make_transport_exit_callback());
-      /* XXX */
+      reaper_handle(child, make_transport_exit_callback());
+      connection = make_connection(pipe[0]);
+
+      gc_global(&connection->super);
+      return connection;
     }
   else
     {
@@ -585,8 +771,7 @@ int
 main(int argc, char **argv, const char** envp)
 {
   struct lsh_options *options;
-  struct lsh_fd *fd;
-  struct command *lsh_connect;
+  struct connection *connection;
   
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
@@ -595,7 +780,7 @@ main(int argc, char **argv, const char** envp)
     = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
 			       HANDLER_CONTEXT);
 
-  io_init();
+  global_oop_source = io_init();
   reaper_init();
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -613,36 +798,17 @@ main(int argc, char **argv, const char** envp)
   envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
-  fd = fork_lsh_transport(options, handler);
-#if 0
-  lsh_connect =
-    make_lsh_connect(
-      &options->super.resources->super,
-      make_handshake_info(CONNECTION_CLIENT,
-			  SOFTWARE_SLOGAN, NULL,
-			  SSH_MAX_PACKET,
-			  options->super.random,
-			  options->algorithms->algorithms,
-			  make_simple_kexinit(
-			    options->super.random,
-			    options->kex_algorithms,
-			    options->algorithms->hostkey_algorithms,
-			    options->algorithms->crypto_algorithms,
-			    options->algorithms->mac_algorithms,
-			    options->algorithms->compression_algorithms,
-			    make_int_list(0, -1)),
-			  NULL),
-      make_lsh_host_db(spki,
-		       options->super.tty,
-		       options->super.target,
-		       options->sloppy,
-		       options->capture_file),
-      queue_to_list(&options->super.actions),
-      make_lsh_login(options, keys));
+  connection = fork_lsh_transport(options, handler);
+  if (!connection)
+    exit(EXIT_FAILURE);
 
-  COMMAND_CALL(lsh_connect, remote, &discard_continuation,
-	       handler);
-#endif
+  {
+    FOR_OBJECT_QUEUE(&options->super.actions, n)
+      {
+	CAST_SUBTYPE(command, action, n);
+	COMMAND_CALL(action, connection->table, &discard_continuation, handler);
+      }
+  }
   
   io_run();
 
