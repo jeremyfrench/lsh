@@ -438,6 +438,8 @@ lsh_connect(struct lsh_transport_config *config)
   hints.ai_family = PF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
+  verbose("Connecting to %s:%s....\n", config->target, config->port);
+  
   err = getaddrinfo(config->target, config->port, &hints, &list);
   if (err)
     {
@@ -467,7 +469,9 @@ lsh_connect(struct lsh_transport_config *config)
 
   if (s < 0)
     return 0;
-  
+
+  verbose("... connected.\n");
+
   /* We keep the socket in blocking mode */
   connection = make_lsh_transport_connection(config, s);
   gc_global(&connection->super.super.super);
