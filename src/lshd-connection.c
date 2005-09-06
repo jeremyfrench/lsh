@@ -31,6 +31,8 @@
 
 #include <oop.h>
 
+#include "nettle/macros.h"
+
 #include "channel.h"
 #include "format.h"
 #include "io.h"
@@ -40,15 +42,11 @@
 #include "server_session.h"
 #include "service.h"
 #include "ssh.h"
-#include "ssh_write.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
 #include "lshd-connection.c.x"
-
-#define CONNECTION_WRITE_THRESHOLD 1000
-#define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
 
 oop_source *global_oop_source;
 
@@ -58,61 +56,78 @@ oop_source *global_oop_source;
      (super resource)
      (vars
        (reader object service_read_state)
-       (writer object ssh_write_state)
        (table object channel_table)))
 */
 
 static void
-kill_connection(struct resource *s)
+kill_connection(struct resource *s UNUSED)
 {
-  CAST(connection, self, s);
   werror("kill_connection\n");
   exit(EXIT_FAILURE);
 }
 
-static void
-write_packet(struct connection *connection,
-	     struct lsh_string *packet)
+/* Modifies the iv in place */
+static int
+blocking_writev(int fd, struct iovec *iv, size_t n)
 {
-  /* FIXME: Go to sleep if ssh_write_data returns 0? */
-  enum ssh_write_status status;
-
-  packet = ssh_format("%i%S",
-		      lsh_string_sequence_number(packet),
-		      packet);
-  
-  status = ssh_write_data(connection->writer,
-			  STDOUT_FILENO, SSH_WRITE_FLAG_PUSH, 
-			  STRING_LD(packet));
-  lsh_string_free(packet);
-
-  switch (status)
+  while (n > 0)
     {
-    case SSH_WRITE_IO_ERROR:
-      werror("write_packet: Write failed: %e\n", errno);
-      exit(EXIT_FAILURE);
-    case SSH_WRITE_OVERFLOW:
-      werror("write_packet: Buffer full\n", errno);
-      exit(EXIT_FAILURE);
+      int res = writev(fd, iv, n);
+      uint32_t done;
+      
+      if (res < 0)
+	{
+	  if (errno == EINTR)
+	    continue;
+	  else
+	    return 0;
+	}
 
-    case SSH_WRITE_PENDING:
-      /* FIXME: Implement some flow control. Or use some different
-	 writer with unbounded buffers? Or use totally blocking
-	 writes? */
-      werror("write_packet: ssh_write_data returned SSH_WRITE_PENDING.\n");
-      break;
-    case SSH_WRITE_COMPLETE:
-      break;
+      for (done = res; n > 0 && done >= iv[0].iov_len ;)
+	{
+	  done -= iv[0].iov_len;
+	  iv++; n--;
+	}
+      if (done > 0)
+	{
+	  iv[0].iov_base = (char *) iv[0].iov_base + done;
+	  iv[0].iov_len -= done;
+	}
     }
+  return 1;
 }
 
+/* NOTE: Uses blocking mode. Doesn't set any sequence number. */
 static void
-disconnect(struct connection *connection, const char *msg)
+write_packet(struct lsh_string *packet)
+{
+  uint32_t length;
+  uint8_t header[8];
+  struct iovec iv[2];
+  
+  length = lsh_string_length(packet);
+  
+  WRITE_UINT32(header, 0);
+  WRITE_UINT32(header + 4, length);
+  
+  iv[0].iov_base = header;
+  iv[0].iov_len = sizeof(header);
+  iv[1].iov_base = (char *) lsh_string_data(packet);
+  iv[1].iov_len = length;
+
+  if (!blocking_writev(STDOUT_FILENO, iv, 2))
+    {
+      werror("write_packet: Write failed: %e\n", errno);
+      exit(EXIT_FAILURE);      
+    }
+}
+		  
+static void
+disconnect(const char *msg)
 {
   werror("disconnecting: %z.\n", msg);
 
-  write_packet(connection,
-	       format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
+  write_packet(format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
 				 msg, ""));
   exit(EXIT_FAILURE);
 }
@@ -120,6 +135,7 @@ disconnect(struct connection *connection, const char *msg)
 static void
 service_start_read(struct connection *self);
 
+/* NOTE: fd is in blocking mode, so we want precisely one call to read. */
 static void *
 oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
 {
@@ -162,15 +178,13 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 
 	case SERVICE_READ_COMPLETE:
 	  if (!length)
-	    disconnect(self,
-		       "lshd-connection received an empty packet");
+	    disconnect("lshd-connection received an empty packet");
 
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_USERAUTH_GENERIC)
 	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-	    disconnect(self,
-		       "lshd-connection received a transport layer packet");
+	    disconnect("lshd-connection received a transport layer packet");
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
 	    {
@@ -194,33 +208,18 @@ service_start_read(struct connection *self)
 			   oop_read_service, self);  
 }
 
-/* GABA:
-   (class
-     (name connection_write)
-     (super abstract_write)
-     (vars
-       (connection object connection)))
-*/
 
 static void
-write_handler(struct abstract_write *s, struct lsh_string *packet)
+do_write_handler(struct abstract_write *s UNUSED, struct lsh_string *packet)
 {
-  CAST(connection_write, self, s);
-
-  write_packet(self->connection, packet);
+  write_packet(packet);
 }
 
-static struct abstract_write *
-make_connection_write_handler(struct connection *connection)
-{
-  NEW(connection_write, self);
-  self->super.write = write_handler;
-  self->connection = connection;
-  return &self->super;
-}
+static struct abstract_write
+write_handler = { STATIC_HEADER, do_write_handler };
 
 static struct connection *
-make_connection(void)
+make_connection(struct exception_handler *e)
 {
   NEW(connection, self);
   init_resource(&self->super, kill_connection);
@@ -228,10 +227,7 @@ make_connection(void)
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
-				      CONNECTION_WRITE_THRESHOLD);
-
-  self->table = make_channel_table(make_connection_write_handler(self));
+  self->table = make_channel_table(&write_handler, e);
 
   /* FIXME: Always enables X11 */
   ALIST_SET(self->table->channel_types, ATOM_SESSION,
@@ -268,6 +264,24 @@ main_argp =
   NULL, NULL
 };
 
+/* FIXME: What kind of exceptions do we really need to handle? */
+static void
+do_exc_lshd_connection_handler(struct exception_handler *self,
+			       const struct exception *e)
+{
+  if (e->type & EXC_IO)
+    {
+      CAST_SUBTYPE(io_exception, exc, e);
+      
+      werror("%z, (errno = %i)\n", e->msg, exc->error);
+    }
+  else
+    EXCEPTION_RAISE(self->parent, e);
+}
+
+static struct exception_handler lshd_connection_exception_handler
+= STATIC_EXCEPTION_HANDLER(do_exc_lshd_connection_handler, &default_exception_handler);
+
 int
 main(int argc, char **argv)
 {
@@ -286,7 +300,7 @@ main(int argc, char **argv)
 
   werror("Started connection service\n");
   
-  connection = make_connection();
+  connection = make_connection(&lshd_connection_exception_handler);
   gc_global(&connection->super);
 
   io_run();
