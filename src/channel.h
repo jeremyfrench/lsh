@@ -356,7 +356,8 @@ void
 init_channel(struct ssh_channel *channel);
 
 struct channel_table *
-make_channel_table(struct abstract_write *write);
+make_channel_table(struct abstract_write *write,
+		   struct exception_handler *e);
 
 int
 alloc_channel(struct channel_table *table);
