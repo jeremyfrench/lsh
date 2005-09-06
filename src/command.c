@@ -29,7 +29,6 @@
 
 #include "command.h"
 
-#include "connection.h"
 #include "io.h"
 #include "werror.h"
 #include "xalloc.h"
