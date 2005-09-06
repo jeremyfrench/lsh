@@ -202,12 +202,8 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	    disconnect(self,
 		       "lshd-connection received a transport or userauth layer packet");
 
-	  else
-	    {
-	      struct lsh_string *s = ssh_format("%ls", length, packet);
-	      channel_packet_handler(self->table, s);
-	      lsh_string_free(s);
-	    }
+	  else if (!channel_packet_handler(self->table, length, packet))
+	    write_packet(self, format_unimplemented(seqno));	    
 	}
     }
 }

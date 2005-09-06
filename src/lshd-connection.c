@@ -190,12 +190,8 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	    {
 	      /* Ignore */
 	    }
-	  else
-	    {
-	      struct lsh_string *s = ssh_format("%ls", length, packet);
-	      channel_packet_handler(self->table, s);
-	      lsh_string_free(s);
-	    }
+	  else if (!channel_packet_handler(self->table, length, packet))
+	    write_packet(format_unimplemented(seqno));
 	}
     }
 }
