@@ -10,8 +10,11 @@ set -e
 
 # For lsh-authorize
 : ${SEXP_CONV:="`pwd`/../nettle/tools/sexp-conv"}
+: ${LSH_TRANSPORT:=`pwd`/../lsh-transport"}
+: ${LSHD_CONNECTION:=`pwd`/../lshd-connection"}
+: ${LSHD_USERAUTH:=`pwd`/../lshd-userauth"}
 
-export LSH_YARROW_SEED_FILE SEXP_CONV
+export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT LSHD_CONNECTION LSHD_USERAUTH
 
 : ${LSHD_FLAGS:='-q --enable-core'}
 : ${LSH_FLAGS:=-q}
