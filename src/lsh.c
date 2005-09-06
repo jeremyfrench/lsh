@@ -32,6 +32,7 @@
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <fcntl.h>
 
@@ -42,14 +43,11 @@
 /* For struct spki_iterator */
 #include "spki/parse.h"
 
-#include "algorithms.h"
 #include "alist.h"
 #include "atoms.h"
 #include "channel.h"
 #include "charset.h"
 #include "client.h"
-#include "keyexchange.h"
-#include "client_userauth.h"
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
@@ -61,28 +59,30 @@
 #include "gateway.h"
 #include "gateway_commands.h"
 #include "handshake.h"
-#include "lookup_verifier.h"
 #include "lsh_string.h"
 #include "randomness.h"
+#include "reaper.h"
 #include "sexp.h"
 #include "spki.h"
-#include "srp.h" 
 #include "ssh.h"
 #include "tcpforward.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
-
 #include "lsh_argp.h"
 
-/* Forward declarations */
-
-static struct request_service request_userauth_service =
-STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
-#define REQUEST_USERAUTH_SERVICE (&request_userauth_service.super.super)
-
 #include "lsh.c.x"
+
+/* GABA:
+   (class
+     (name connection)
+     (super resource)
+     (vars
+       (reader object service_read_state)
+       (writer object ssh_write_state)
+       (table object channel_table)))
+*/
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -97,26 +97,10 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
      (name lsh_options)
      (super client_options)
      (vars
-       (algorithms object algorithms_options)
-
-       (signature_algorithms object alist)
        (home . "const char *")
        
-       (identity . "char *")
-       (with_publickey . int)
-
-       (with_srp_keyexchange . int)
-       (with_dh_keyexchange . int)
-
-       (kex_algorithms object int_list)
-       
-       (sloppy . int)
-       (capture . "const char *")
-       (capture_file object abstract_write)
-
-       (known_hosts . "const char *")
-       
-       (start_gateway . int)))
+       ;; (with_gateway . int)
+       ))
 */
 
 
@@ -127,499 +111,16 @@ make_options(struct exception_handler *handler,
   NEW(lsh_options, self);
   const char *home = getenv(ENV_HOME);
   struct randomness *r = make_user_random(home);
+  
+  init_client_options(&self->super, r, handler, exit_code);
 
-  init_client_options(&self->super, r,
-		      handler, exit_code);
-
-  self->algorithms = make_algorithms_options(all_symmetric_algorithms());
   self->home = home;
+#if 0
+  self->with_gateway = 0;
+#endif
 
-  /* OK to init with NULL */  
-  self->signature_algorithms = all_signature_algorithms(r);
-
-  self->sloppy = 0;
-  self->capture = NULL;
-  self->capture_file = NULL;
-
-  self->known_hosts = NULL;
-  
-  self->start_gateway = 0;
-
-  self->with_publickey = 1;
-
-  self->with_srp_keyexchange = 0;
-
-  /* By default, enable only one of dh and srp. */
-  self->with_dh_keyexchange = -1;
-  
-  self->kex_algorithms = NULL;
-  
   return self;
 }
-
-
-/* Open hostkey database. By default, "~/.lsh/host-acls". */
-
-static struct spki_context *
-read_known_hosts(struct lsh_options *options)
-{
-  struct lsh_string *tmp = NULL;
-  const char *s;
-  struct lsh_string *contents;
-  int fd;
-  struct spki_iterator i;
-  struct spki_context *context;
-  const char *sexp_conv = getenv(ENV_SEXP_CONV);
-  const char *args[] = { "sexp-conv", "-s", "canonical", NULL };
-  
-  context = make_spki_context(options->signature_algorithms);
-  
-  if (options->known_hosts)
-    {
-      s = options->known_hosts;
-      fd = open(s, O_RDONLY);
-    }
-  else
-    {
-      tmp = ssh_format("%lz/.lsh/host-acls", options->home);
-      s = lsh_get_cstring(tmp);
-      fd = open(s, O_RDONLY);
-      
-      if (fd < 0)
-	{
-	  struct stat sbuf;
-	  struct lsh_string *known_hosts
-	    = ssh_format("%lz/.lsh/known_hosts", options->home);
-
-	  if (stat(lsh_get_cstring(known_hosts), &sbuf) == 0)
-	    {
-	      werror("You have an old known-hosts file `%S'.\n"
-		     "To work with lsh-2.0, run the lsh-upgrade script,\n"
-		     "which will convert that to a new host-acls file.\n",
-		     tmp);
-	    }
-	  lsh_string_free(known_hosts);
-	}
-    }
-
-  if (fd < 0)
-    {
-      werror("Failed to open `%z' for reading %e\n", s, errno);
-      lsh_string_free(tmp);
-
-      return context;
-    }
-
-  lsh_string_free(tmp);
-
-  if (!sexp_conv)
-    sexp_conv = PATH_SEXP_CONV;
-  
-  contents = lsh_popen_read(sexp_conv, args, fd, 5000);
-  
-  if (!contents)
-  {
-    werror("Failed to read host-acls file %e\n", errno);
-    close(fd);
-    return context;
-  }
-
-  close(fd);
-
-  /* We could use transport syntax instead. That would have the
-   * advantage that we can read and process one entry at a time. */
-  if (!spki_iterator_first(&i, STRING_LD(contents)))
-    werror("read_known_hosts: S-expression syntax error.\n");
-    
-  else
-    while (i.type != SPKI_TYPE_END_OF_EXPR)
-      {
-	if (!spki_add_acl(context, &i))
-	  {
-	    werror("read_known_hosts: Invalid ACL.\n");
-	    break;
-	  }
-      }
-  lsh_string_free(contents);
-  return context;
-}
-
-/* For now, supports only a single key */
-static struct object_list *
-read_user_keys(struct lsh_options *options)
-{
-  struct lsh_string *tmp = NULL;
-  struct lsh_string *contents;
-  const char *name = NULL;
-  int fd;
-  int algorithm_name;
-  
-  struct signer *s;
-  struct verifier *v;
-  struct lsh_string *spki_public;
-
-  trace("read_user_keys\n");
-  
-  if (!options->with_publickey)
-    return make_object_list(0, -1);
-
-  if (options->identity)
-    name = options->identity;
-  else 
-    {
-      tmp = ssh_format("%lz/.lsh/identity", options->home);
-      name = lsh_get_cstring(tmp);
-    }
-
-  fd = open(name, O_RDONLY);
-  if (fd < 0)
-    {
-      verbose("Failed to open `%z' for reading %e\n", name, errno);
-      lsh_string_free(tmp);
-
-      return make_object_list(0, -1);
-    }
-
-  lsh_string_free(tmp);
-
-  contents = io_read_file_raw(fd, 2000);
-
-  if (!contents)
-    {
-      werror("Failed to read private key file %e\n", errno);
-      close(fd);
-
-      return make_object_list(0, -1);
-    }
-
-  close(fd);
-
-  if (options->super.tty)
-    {
-      struct alist *mac = make_alist(0, -1);
-      struct alist *crypto = make_alist(0, -1);
-
-      alist_select_l(mac, options->algorithms->algorithms,
-		     2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
-      alist_select_l(crypto, options->algorithms->algorithms,
-		     4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
-		     ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1);
-      
-      contents = spki_pkcs5_decrypt(mac, crypto,
-				    options->super.tty,
-				    contents);
-      if (!contents)
-        {
-          werror("Decrypting private key failed.\n");
-          return make_object_list(0, -1);
-        }
-    }
-  
-  s = spki_make_signer(options->signature_algorithms, contents,
-		       &algorithm_name);
-
-  lsh_string_free(contents);
-  
-  if (!s)
-    {
-      werror("Invalid private key.\n");
-      return make_object_list(0, -1);
-    }
-  
-  v = SIGNER_GET_VERIFIER(s);
-  assert(v);
-  
-  spki_public = PUBLIC_SPKI_KEY(v, 0);
-
-  /* Test key here? */  
-  switch (algorithm_name)
-    {	  
-    case ATOM_DSA:
-      return make_object_list(2,
-                              make_keypair(ATOM_SSH_DSS,
-                                           PUBLIC_KEY(v),
-                                           s),
-                              make_keypair(ATOM_SPKI_SIGN_DSS,
-                                           spki_public, s),
-                              -1);
-      break;
-
-    case ATOM_RSA_PKCS1:
-    case ATOM_RSA_PKCS1_SHA1:
-      return make_object_list(2, 
-                              make_keypair(ATOM_SSH_RSA,
-                                           PUBLIC_KEY(v),
-                                           s),
-                              make_keypair(ATOM_SPKI_SIGN_RSA,
-                                           spki_public, s),
-                              -1);
-
-    case ATOM_RSA_PKCS1_MD5:
-      return make_object_list(1,
-                              make_keypair(ATOM_SPKI_SIGN_RSA,
-                                           spki_public, s),
-                              -1);
-
-    default:
-      fatal("Internal error!\n");
-    }
-}
-
-
-/* Maps a host key to a (trusted) verifier object. */
-
-/* GABA:
-   (class
-     (name lsh_host_db)
-     (super lookup_verifier)
-     (vars
-       (db object spki_context)
-       (tty object interact)
-       (access string)
-       (host . "const char *")
-       ; Allow unauthorized keys
-       (sloppy . int)
-       ; If non-null, append an ACL for the received key to this file.
-       (file object abstract_write)
-       ; For fingerprinting
-       (hash const object hash_algorithm)))
-*/
-
-static struct verifier *
-do_lsh_lookup(struct lookup_verifier *c,
-	      int method,
-	      struct lsh_string *key)
-{
-  CAST(lsh_host_db, self, c);
-  struct spki_principal *subject;
-
-  switch (method)
-    {
-    case ATOM_SSH_DSS:
-      {	
-	struct lsh_string *spki_key;
-	struct verifier *v = make_ssh_dss_verifier(STRING_LD(key));
-
-	if (!v)
-	  {
-	    werror("do_lsh_lookup: Invalid ssh-dss key.\n");
-	    return NULL;
-	  }
-
-	/* FIXME: It seems like a waste to pick apart the sexp again */
-	spki_key = PUBLIC_SPKI_KEY(v, 0);
-
-	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
-	assert(subject);
-	assert(subject->verifier);
-
-	lsh_string_free(spki_key);
-	break;
-      }
-    case ATOM_SSH_RSA:
-      {
-	struct lsh_string *spki_key;
-	struct verifier *v = make_ssh_rsa_verifier(STRING_LD(key));
-
-	if (!v)
-	  {
-	    werror("do_lsh_lookup: Invalid ssh-rsa key.\n");
-	    return NULL;
-	  }
-
-	/* FIXME: It seems like a waste to pick apart the sexp again */
-	spki_key = PUBLIC_SPKI_KEY(v, 0);
-	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
-	assert(subject);
-	assert(subject->verifier);
-
-	lsh_string_free(spki_key);
-	break;
-      }
-      
-      /* It doesn't matter here which flavour of SPKI is used. */
-    case ATOM_SPKI_SIGN_RSA:
-    case ATOM_SPKI_SIGN_DSS:
-      {
-	subject = spki_lookup(self->db, STRING_LD(key), NULL);
-	if (!subject)
-	  {
-	    werror("do_lsh_lookup: Invalid spki key.\n");
-	    return NULL;
-	  }
-	if (!subject->verifier)
-	  {
-	    werror("do_lsh_lookup: Valid SPKI subject, but no key available.\n");
-	    return NULL;
-	  }
-	break;
-      }
-    default:
-      werror("do_lsh_lookup: Unknown key type. Should not happen!\n");
-      return NULL;
-    }
-
-  assert(subject->key);
-  
-  /* Check authorization */
-
-  if (spki_authorize(self->db, subject, time(NULL), self->access))
-    {
-      verbose("SPKI host authorization successful!\n");
-    }
-  else
-    {
-      struct lsh_string *acl;
-      struct spki_iterator i;
-      
-      verbose("SPKI authorization failed.\n");
-      if (!self->sloppy)
-	{
-	  werror("Server's hostkey is not trusted. Disconnecting.\n");
-	  return NULL;
-	}
-      
-      /* Ok, let's see if we want to use this untrusted key. */
-      if (!quiet_flag)
-	{
-	  /* Display fingerprint */
-	  /* FIXME: Rewrite to use libspki subject */
-#if 0
-	  struct lsh_string *spki_fingerprint = 
-	    hash_string(self->hash, subject->key, 0);
-#endif
-	  
-	  struct lsh_string *fingerprint = 
-	    lsh_string_colonize( 
-				ssh_format( "%lfxS", 
-					    hash_string(&crypto_md5_algorithm,
-							key,
-							0)
-					    ), 
-				2, 
-				1  
-				);
-
-	  struct lsh_string *babble = 
-	    lsh_string_bubblebabble( 
-				    hash_string(&crypto_sha1_algorithm,
-						key,
-						0),
-				    1 
-				    );
-	  
-	  if (!INTERACT_YES_OR_NO
-	      (self->tty,
-	       ssh_format("Received unauthenticated key for host %lz\n"
-			  "Key details:\n"
-			  "Bubble Babble: %lfS\n"
-			  "Fingerprint:   %lfS\n"
-			  /* "SPKI SHA1:     %lfxS\n" */
-			  "Do you trust this key? (y/n) ",
-			  self->host, babble, fingerprint /* , spki_fingerprint */), 0, 1))
-	    return NULL;
-	}
-
-      acl = lsh_string_format_sexp(0, "(acl(entry(subject%l)%l))",
-				   subject->key_length, subject->key,
-				   STRING_LD(self->access));
-      
-      /* FIXME: Seems awkward to pick the acl apart again. */
-      if (!spki_iterator_first(&i, STRING_LD(acl)))
-	fatal("Internal error.\n");
-      
-      /* Remember this key. We don't want to ask again for key re-exchange */
-      spki_add_acl(self->db, &i);
-
-      /* Write an ACL to disk. */
-      if (self->file)
-	{
-	  A_WRITE(self->file,
-		  ssh_format("\n; ACL for host %lz\n"
-			     "%lfS\n",
-			     self->host, lsh_string_format_sexp(1, "%l", STRING_LD(acl))));
-
-	  lsh_string_free(acl);
-	}
-    }
-  
-  return subject->verifier;
-}
-
-static struct lookup_verifier *
-make_lsh_host_db(struct spki_context *db,
-		 struct interact *tty,
-		 const char *host,
-		 int sloppy,
-		 struct abstract_write *file)
-{
-  NEW(lsh_host_db, res);
-
-  res->super.lookup = do_lsh_lookup;
-  res->db = db;
-  res->tty = tty;
-  res->access = make_ssh_hostkey_tag(host);
-  res->host = host;
-  res->sloppy = sloppy;
-  res->file = file;
-  res->hash = &crypto_sha1_algorithm;
-
-  return &res->super;
-}
-
-static struct command *
-make_lsh_login(struct lsh_options *options,
-	       struct object_list *keys)
-{
-  struct client_userauth_method *password
-    = make_client_password_auth(options->super.tty);
-
-  struct client_userauth_method *kbdinteract
-    = make_client_kbdinteract_auth(options->super.tty);
-  
-  /* FIXME: Perhaps we should try "none" only when using SRP. */
-  struct client_userauth_method *none
-    = make_client_none_auth();
-
-  struct object_list *methods;
-  if (LIST_LENGTH(keys))
-    methods = make_object_list(4,
-			       none,
-			       make_client_publickey_auth(keys),
-			       password,
-			       kbdinteract,
-			       -1);
-  else
-    methods = make_object_list(3, none, password, kbdinteract, -1);
-  
-  return make_client_userauth
-    (ssh_format("%lz", options->super.user),
-     ATOM_SSH_CONNECTION, methods);
-}
-
-/* GABA:
-   (expr
-     (name make_lsh_connect)
-     (params
-       (resource object resource)
-       (handshake object handshake_info)
-       (db object lookup_verifier)
-       (actions object object_list)
-       (login object command))
-     (expr (lambda (remote)
-               ; What to do with the service
-	       ((progn actions)
-		 (init_connection_service
-		   (login
-		     (request_userauth_service
-		       ; Start the ssh transport protocol
-		       (protect resource connection_handshake
-			 handshake
-			 db
-			 ; Connect using tcp
-			 (connect_list remote)))))))))
-*/
-
 
 /* Option parsing */
 
@@ -651,6 +152,9 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
+#if 0
+  /* Most of these options should be passed on to lsh-transport. */
+  
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
   { "publickey", OPT_PUBLICKEY, NULL, 0,
     "Try publickey user authentication (default).", 0 },
@@ -673,11 +177,14 @@ main_options[] =
     "Enable DH support (default, unless SRP is being used).", 0 },
 
   { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
+#endif
   
   /* Actions */
+#if 0
   { "forward-remote-port", 'R', "remote-port:target-host:target-port",
     0, "", CLIENT_ARGP_ACTION_GROUP },
   { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
+#endif
 
 #if WITH_X11_FORWARD
   /* FIXME: Perhaps this should be moved from lsh.c to client.c? It
@@ -697,7 +204,6 @@ static const struct argp_child
 main_argp_children[] =
 {
   { &client_argp, 0, "", 0 },
-  { &algorithms_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -741,8 +247,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
-      state->child_inputs[1] = self->algorithms;
-      state->child_inputs[2] = NULL;
+      state->child_inputs[1] = NULL;
       break;
       
     case ARGP_KEY_END:
@@ -755,6 +260,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
+#if 0
       if (!self->super.random)
 	argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
 
@@ -829,7 +335,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	lsh_string_free(tmp);
       }
-
+#endif
+      
       /* We can't add the gateway action immediately when the -G
        * option is encountered, as we need the name and port of the
        * remote machine (self->super.remote) first.
@@ -840,6 +347,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
        * lsh -G -B, and expects the gateway to be up by the time lsh
        * goes into the background), we prepend it on the list of
        * actions. */
+#if 0
       if (self->start_gateway)
 	{
 	  struct local_info *gateway;
@@ -863,7 +371,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  client_prepend_action(&self->super,
 				make_gateway_setup(gateway));
 	}
-
+#endif
       if (object_queue_is_empty(&self->super.actions))
 	{
 	  argp_error(state, "No actions given.");
@@ -871,7 +379,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
 
       break;
-      
+#if 0
     case 'i':
       self->identity = arg;
       break;
@@ -896,7 +404,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     CASE_FLAG(OPT_DH, with_dh_keyexchange);
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
+#endif
 
+#if 0
     case 'R':
       {
 	uint32_t listen_port;
@@ -914,9 +424,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
 	self->super.remote_forward = 1;
 	break;
-      }      
-      
-    CASE_FLAG('G', start_gateway);
+      }
+
+    CASE_FLAG('G', with_gateway);
+#endif
 #if WITH_X11_FORWARD
     CASE_FLAG('x', super.with_x11);
 #endif
@@ -992,13 +503,89 @@ make_lsh_default_handler(int *status, struct exception_handler *parent,
   return &self->super;
 }
 
+static void
+transport_exit_callback(struct exit_callback *s UNUSED,
+			int signalled, int core, int value)
+{
+  if (signalled)
+    {
+      werror("Transport process killed by %s (signal %d)%s.\n",
+	     STRSIGNAL(value), value, core ? " (core dumped)" : "");
+      /* FIXME: Design and document error code values. */
+      exit(17);
+    }
+  else if (value)
+    {
+      werror("Transport process exited with error code %d.\n", value);
+      exit(value);
+    }
+  else
+    {
+      werror("Transport process exited successfully.\n");
+      /* Do nothing */
+    }
+}
 
-int main(int argc, char **argv, const char** envp)
+static struct exit_callback *
+make_transport_exit_callback(void)
+{
+  NEW(exit_callback, self);
+  self->exit = transport_exit_callback;
+  return self;
+}
+
+static struct lsh_fd *
+fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
+{
+  int pipe[2];
+  pid_t child;
+
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
+    {
+      werror("fork_lsh_transport: socketpair failed: %e\n", errno);
+      return NULL;
+    }
+  child = fork();
+  if (child < 0)
+    {
+      werror("fork_lsh_transport: fork failed: %e\n", errno);
+      close(pipe[0]);
+      close(pipe[1]);
+      return NULL;
+    }
+  else if (child)
+    {
+      /* Parent process */
+      close(pipe[1]);
+      io_set_nonblocking(pipe[0]);
+      
+      reaper_handle (child, make_transport_exit_callback());
+      /* XXX */
+    }
+  else
+    {
+      /* Child process */
+      const char *program;
+
+      GET_FILE_ENV(program, LSH_TRANSPORT);
+
+      close(pipe[0]);
+      dup2(pipe[1], STDIN_FILENO);
+      dup2(pipe[1], STDOUT_FILENO);
+      close(pipe[1]);
+
+      execl(program, program, "-v", "--trace", "--debug",
+	    "-p", options->super.port, options->super.target, NULL);
+      werror("fork_lsh_transport: exec failed: %e\n", errno);
+      _exit(EXIT_FAILURE);
+    }
+}
+
+int
+main(int argc, char **argv, const char** envp)
 {
   struct lsh_options *options;
-  struct spki_context *spki;
-  struct object_list *keys;
-  struct connect_list_state *remote;
+  struct lsh_fd *fd;
   struct command *lsh_connect;
   
   /* Default exit code if something goes wrong. */
@@ -1009,6 +596,7 @@ int main(int argc, char **argv, const char** envp)
 			       HANDLER_CONTEXT);
 
   io_init();
+  reaper_init();
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -1025,25 +613,8 @@ int main(int argc, char **argv, const char** envp)
   envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
-  if (!options->super.random)
-    {
-      werror("Failed to initialize randomness generator.\n");
-      return EXIT_FAILURE;
-    }
-
-  remote = make_connect_list_state();;
-  
-  if (!io_resolv_address(options->super.target,
-			 options->super.port, 22,
-			 &remote->q))
-    {
-      werror("Could not resolv address `%z'\n", options->super.target);
-      return EXIT_FAILURE;
-    }
-  
-  spki = read_known_hosts(options);
-  keys = read_user_keys(options);
-  
+  fd = fork_lsh_transport(options, handler);
+#if 0
   lsh_connect =
     make_lsh_connect(
       &options->super.resources->super,
@@ -1071,6 +642,7 @@ int main(int argc, char **argv, const char** envp)
 
   COMMAND_CALL(lsh_connect, remote, &discard_continuation,
 	       handler);
+#endif
   
   io_run();
 
