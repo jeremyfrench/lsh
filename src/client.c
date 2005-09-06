@@ -69,92 +69,6 @@
 #define DEFAULT_ESCAPE_CHAR '~'
 #define DEFAULT_SOCKS_PORT 1080
 
-static struct lsh_string *
-format_service_request(int name)
-{
-  return ssh_format("%c%a", SSH_MSG_SERVICE_REQUEST, name);
-}
-
-/* Start a service that the server has accepted (for instance
- * ssh-userauth). */
-/* GABA:
-   (class
-     (name accept_service_handler)
-     (super packet_handler)
-     (vars
-       (service . int)
-       (c object command_continuation)))
-*/
-
-static void
-do_accept_service(struct packet_handler *c,
-		  struct ssh_connection *connection,
-		  struct lsh_string *packet)
-{
-  CAST(accept_service_handler, closure, c);
-
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  int name;
-
-  simple_buffer_init(&buffer, STRING_LD(packet));
-  
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_SERVICE_ACCEPT)
-      && parse_atom(&buffer, &name)
-      && (name == closure->service)
-      && parse_eod(&buffer))
-    {
-      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
-      
-      COMMAND_RETURN(closure->c, connection);
-    }
-  else
-    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
-}
-
-struct packet_handler *
-make_accept_service_handler(uint32_t service,
-			    struct command_continuation *c)
-{
-  NEW(accept_service_handler, closure);
-
-  closure->super.handler = do_accept_service;
-  closure->service = service;
-  closure->c = c;
-  
-  return &closure->super;
-}
-
-void
-do_request_service(struct command *s,
-		   struct lsh_object *x,
-		   struct command_continuation *c,
-		   struct exception_handler *e UNUSED)
-{
-  CAST(request_service, self, s);
-  CAST(ssh_connection, connection, x);
-
-  /* NOTE: Uses the connection's exception handler, not the one passed
-   * in. */
-  connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
-    = make_accept_service_handler(self->service, c);
-  
-  connection_send(connection,
-		  format_service_request(self->service));
-}
-
-struct command *
-make_request_service(int service)
-{
-  NEW(request_service, closure);
-
-  closure->super.call = do_request_service;
-  closure->service = service;
-
-  return &closure->super;
-}
-
 
 /* GABA:
    (class
@@ -578,9 +492,9 @@ client_options[] =
     "Program to use for reading passwords. "
     "Should be an absolute filename.", 0 },
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
+#if 0
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-socks", 'D', "port", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
-#if 0
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
 #endif
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
@@ -1313,7 +1227,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       options->with_pty = 0;
 #endif
       break;
-
+#if 0
     case 'L':
       {
 	uint32_t listen_port;
@@ -1344,7 +1258,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 					     socks_port)));
 	break;
       }
-      
+#endif 
     case 'N':
       options->start_shell = 0;
       break;
