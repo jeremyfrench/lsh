@@ -1,3 +1,48 @@
+2005-09-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh: Set and export LSH_TRANSPORT,
+	LSHD_CONNECTION and LSHD_USERAUTH.
+
+	* src/Makefile.am (bin_PROGRAMS): Reenable building of the lsh binary.
+
+	* src/lsh.c (class connection): New class.
+	(class lsh_options): Deleted most options.
+	(read_known_hosts, read_user_keys, do_lsh_lookup,
+	make_lsh_host_db, make_lsh_login, make_lsh_connect): Deleted
+	functions that have moved to lsh-transport.
+	(class lsh_host_db): Deleted class.
+	(main_options): Ifed out unimplemented options.
+	(main_argp_parser): Likewise.
+	(transport_exit_callback, make_transport_exit_callback): New
+	functions.
+	(fork_lsh_transport): New function.
+	(main): Call fork_lsh_transport.
+
+	* src/lshd-userauth.c (main): Bugfix: Use LSHD_CONNECTION, not
+	LSHD_USERAUTH.
+
+	* src/lsh-transport.c (lsh_connect): New verbose messages.
+
+	* src/client.c (format_service_request, do_accept_service) 
+	(make_accept_service_handler, do_request_service) 
+	(make_request_service): Deleted obsolete functions.
+	(class accept_service_handler): Deleted.
+	(client_options): Ifed out unimplemented flags.
+	(client_argp_parser): Likewise.
+
+2005-08-31  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (read_host_acls): Use GET_FILE_ENV.
+	* src/lshd-userauth.c (main): Likewise.
+	* src/lshd.c (make_configuration): Likewise.
+
+	* src/environ.h.in (ENV_LSH_TRANSPORT, ENV_LSHD_CONNECTION) 
+	(ENV_LSHD_USERAUTH): New environment variables.
+	(GET_FILE_ENV): New macro.
+	(PATH_EXECUV): Deleted. Other PATH_* names renamed to FILE_*.
+	(FILE_LSHD_CONNECTION, FILE_LSHD_USERAUTH, FILE_LSH_TRANSPORT):
+	New filenames.
+
 2005-08-31  Niels Möller  <niels@s3.kth.se>
 
 	* src/io.c (lsh_copy_file): Deleted unused function.
@@ -42,7 +87,7 @@
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed abstract_crypto.c
 	and publickey_crypto.c.
-	(bin_PROGRAMS): For the time being, don't build lsh, lshd or
+	(bin_PROGRAMS): For the time being, don't build lsh, lshg or
 	srp-gen. 
 
 	* src/crypto.c: Moved utility functions here, from abstract_crypto.c.
