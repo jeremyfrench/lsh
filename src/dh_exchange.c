@@ -31,8 +31,8 @@
 
 #include "crypto.h"
 
-#include "connection.h"
 #include "format.h"
+#include "keyexchange.h"
 #include "lsh_string.h"
 #include "randomness.h"
 #include "ssh.h"
