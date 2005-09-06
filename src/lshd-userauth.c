@@ -663,7 +663,7 @@ main(int argc, char **argv)
 
   {
     char *args[] = { NULL, "-v", "--trace", NULL };
-    GET_FILE_ENV(args[0], LSHD_USERAUTH);
+    GET_FILE_ENV(args[0], LSHD_CONNECTION);
     start_service(&user, args);
     
     service_error("Failed to start service process");
