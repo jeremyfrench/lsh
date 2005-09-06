@@ -607,21 +607,15 @@ make_global_request_exception_handler(struct channel_table *table,
   return &self->super;
 }
 
-void
+static void
 handle_global_request(struct channel_table *table,
-		      struct lsh_string *packet)
+		      struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   int name;
   int want_reply;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_GLOBAL_REQUEST)
-      && parse_atom(&buffer, &name)
-      && parse_boolean(&buffer, &want_reply))
+  if (parse_atom(buffer, &name)
+      && parse_boolean(buffer, &want_reply))
     {
       struct global_request *req = NULL;
       struct command_continuation *c = &discard_continuation;
@@ -661,24 +655,22 @@ handle_global_request(struct channel_table *table,
 	      e = make_report_exception_handler(&global_req_ignore,
 						e, HANDLER_CONTEXT);
 	    }
-	  GLOBAL_REQUEST(req, table, name, want_reply, &buffer, c, e);
+	  GLOBAL_REQUEST(req, table, name, want_reply, buffer, c, e);
 	}
     }
   else
     PROTOCOL_ERROR(table->e, "Invalid SSH_MSG_GLOBAL_REQUEST message.");
 }
 
-void
+static void
 handle_global_success(struct channel_table *table,
-		      struct lsh_string *packet)
+		      struct simple_buffer *buffer)
 {
-  if (lsh_string_length(packet) != 1)
+  if (!parse_eod(buffer))
     {
       PROTOCOL_ERROR(table->e, "Invalid GLOBAL_REQUEST_SUCCESS message.");
       return;
     }
-
-  assert(lsh_string_data(packet)[0] == SSH_MSG_REQUEST_SUCCESS);
 
   if (object_queue_is_empty(&table->pending_global_requests))
     {
@@ -695,17 +687,15 @@ handle_global_success(struct channel_table *table,
 struct exception global_request_exception =
 STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "Global request failed");
 
-void
+static void
 handle_global_failure(struct channel_table *table,
-		      struct lsh_string *packet)
+		      struct simple_buffer *buffer)
 {
-  if (lsh_string_length(packet) != 1)
+  if (!parse_eod(buffer))
     {
       PROTOCOL_ERROR(table->e, "Invalid GLOBAL_REQUEST_FAILURE message.");
       return;
     }
-
-  assert(lsh_string_data(packet)[0] == SSH_MSG_REQUEST_FAILURE);
 
   if (object_queue_is_empty(&table->pending_global_requests))
     {
@@ -831,16 +821,13 @@ make_channel_request_exception_handler(struct ssh_channel *channel,
   return &self->super;
 }
 
+/* FIXME: Inline in caller */
 static int
 parse_channel_request(struct simple_buffer *buffer,
 		      uint32_t *channel_number,
 		      struct channel_request_info *info)
 {
-  unsigned msg_number;
-
-  if (parse_uint8(buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_REQUEST)
-      && parse_uint32(buffer, channel_number)
+  if (parse_uint32(buffer, channel_number)
       && parse_string(buffer,
 		      &info->type_length, &info->type_data)
       && parse_boolean(buffer, &info->want_reply))
@@ -852,17 +839,14 @@ parse_channel_request(struct simple_buffer *buffer,
     return 0;
 }
 
-void
+static void
 handle_channel_request(struct channel_table *table,
-		       struct lsh_string *packet)
+		       struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
   struct channel_request_info info;
   uint32_t channel_number;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_channel_request(&buffer, &channel_number, &info))
+  if (parse_channel_request(buffer, &channel_number, &info))
     {
       struct ssh_channel *channel = lookup_channel(table,
 						   channel_number);
@@ -910,7 +894,7 @@ handle_channel_request(struct channel_table *table,
 						    e, HANDLER_CONTEXT);
 		}
 	      
-	      CHANNEL_REQUEST(req, channel, &info, &buffer, c, e);
+	      CHANNEL_REQUEST(req, channel, &info, buffer, c, e);
 	    }
 	  else
 	    {
@@ -921,8 +905,8 @@ handle_channel_request(struct channel_table *table,
 	}
       else
 	{
-	  werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i: %xS\n",
-		 channel_number, packet);
+	  werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i: %xs\n",
+		 channel_number, buffer->capacity, buffer->pos);
 	}
     }
   else
@@ -1048,15 +1032,12 @@ make_exc_channel_open_handler(struct channel_table *table,
   return &self->super;
 }
 
+/* FIXME: Inline in caller */
 static int
 parse_channel_open(struct simple_buffer *buffer,
 		   struct channel_open_info *info)
 {
-  unsigned msg_number;
-
-  if (parse_uint8(buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_OPEN)
-      && parse_string(buffer, &info->type_length, &info->type_data)
+  if (parse_string(buffer, &info->type_length, &info->type_data)
       && parse_uint32(buffer, &info->remote_channel_number)
       && parse_uint32(buffer, &info->send_window_size)
       && parse_uint32(buffer, &info->send_max_packet))
@@ -1077,18 +1058,15 @@ parse_channel_open(struct simple_buffer *buffer,
     return 0;
 }
 
-void
+static void
 handle_channel_open(struct channel_table *table,
-		    struct lsh_string *packet)
+		    struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
   struct channel_open_info info;
 
   trace("handle_channel_open\n");
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_channel_open(&buffer, &info))
+  if (parse_channel_open(buffer, &info))
     {
       struct channel_open *open = NULL;
 
@@ -1144,7 +1122,7 @@ handle_channel_open(struct channel_table *table,
 	      
 	      CHANNEL_OPEN(open, table,
 			   &info,
-			   &buffer,
+			   buffer,
 			   make_channel_open_continuation(table,
 							  local_number,
 							  info.remote_channel_number,
@@ -1163,22 +1141,16 @@ handle_channel_open(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid SSH_MSG_CHANNEL_OPEN message.");
 }     
 
-void
+static void
 handle_adjust_window(struct channel_table *table,
-		     struct lsh_string *packet)
+		     struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   uint32_t size;
 
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_WINDOW_ADJUST)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_uint32(&buffer, &size)
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &channel_number)
+      && parse_uint32(buffer, &size)
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel = lookup_channel(table,
 						   channel_number);
@@ -1205,22 +1177,16 @@ handle_adjust_window(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_WINDOW_ADJUST message.");
 }
 
-void
+static void
 handle_channel_data(struct channel_table *table,
-		    struct lsh_string *packet)
+		    struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   struct lsh_string *data;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_DATA)
-      && parse_uint32(&buffer, &channel_number)
-      && ( (data = parse_string_copy(&buffer)) )
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &channel_number)
+      && ( (data = parse_string_copy(buffer)) )
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel = lookup_channel(table,
 						   channel_number);
@@ -1276,24 +1242,18 @@ handle_channel_data(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_DATA message.");
 }
 
-void
+static void
 handle_channel_extended_data(struct channel_table *table,
-			     struct lsh_string *packet)
+			     struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   uint32_t type;
   struct lsh_string *data;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_EXTENDED_DATA)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_uint32(&buffer, &type)
-      && ( (data = parse_string_copy(&buffer)) )
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &channel_number)
+      && parse_uint32(buffer, &type)
+      && ( (data = parse_string_copy(buffer)) )
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel = lookup_channel(table,
 						   channel_number);
@@ -1360,20 +1320,14 @@ handle_channel_extended_data(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_EXTENDED_DATA message.");
 }
 
-void
+static void
 handle_channel_eof(struct channel_table *table,
-		    struct lsh_string *packet)
+		   struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_EOF)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &channel_number)
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel = lookup_channel(table,
 						   channel_number);
@@ -1422,20 +1376,14 @@ handle_channel_eof(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_EOF message");
 }
 
-void
+static void
 handle_channel_close(struct channel_table *table,
-		     struct lsh_string *packet)
+		     struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_CLOSE)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &channel_number)
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel = lookup_channel(table,
 						   channel_number);
@@ -1483,26 +1431,20 @@ handle_channel_close(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_CLOSE message");
 }
 
-void
+static void
 handle_open_confirm(struct channel_table *table,
-		    struct lsh_string *packet)
+		    struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t local_channel_number;
   uint32_t remote_channel_number;  
   uint32_t window_size;
   uint32_t max_packet;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_OPEN_CONFIRMATION)
-      && parse_uint32(&buffer, &local_channel_number)
-      && parse_uint32(&buffer, &remote_channel_number)
-      && parse_uint32(&buffer, &window_size)
-      && parse_uint32(&buffer, &max_packet)
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &local_channel_number)
+      && parse_uint32(buffer, &remote_channel_number)
+      && parse_uint32(buffer, &window_size)
+      && parse_uint32(buffer, &max_packet)
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel =
 	lookup_channel_reserved(table,
@@ -1534,12 +1476,10 @@ handle_open_confirm(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_OPEN_CONFIRMATION message.");
 }
 
-void
+static void
 handle_open_failure(struct channel_table *table,
-		    struct lsh_string *packet)
+		    struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   uint32_t reason;
 
@@ -1549,15 +1489,11 @@ handle_open_failure(struct channel_table *table,
   const uint8_t *language;
   uint32_t language_length;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_OPEN_FAILURE)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_uint32(&buffer, &reason)
-      && parse_string(&buffer, &length, &msg)
-      && parse_string(&buffer, &language_length, &language)
-      && parse_eod(&buffer))
+  if (parse_uint32(buffer, &channel_number)
+      && parse_uint32(buffer, &reason)
+      && parse_string(buffer, &length, &msg)
+      && parse_string(buffer, &language_length, &language)
+      && parse_eod(buffer))
     {
       struct ssh_channel *channel =
 	lookup_channel_reserved(table,
@@ -1585,21 +1521,15 @@ handle_open_failure(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_OPEN_FAILURE message.");
 }
 
-void
+static void
 handle_channel_success(struct channel_table *table,
-		       struct lsh_string *packet)
+		       struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   struct ssh_channel *channel;
       
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_SUCCESS)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_eod(&buffer)
+  if (parse_uint32(buffer, &channel_number)
+      && parse_eod(buffer)
       && (channel = lookup_channel(table, channel_number)))
     {
       if (object_queue_is_empty(&channel->pending_requests))
@@ -1618,21 +1548,15 @@ handle_channel_success(struct channel_table *table,
     PROTOCOL_ERROR(table->e, "Invalid CHANNEL_SUCCESS message");
 }
 
-void
+static void
 handle_channel_failure(struct channel_table *table,
-		       struct lsh_string *packet)
+		       struct simple_buffer *buffer)
 {
-  struct simple_buffer buffer;
-  unsigned msg_number;
   uint32_t channel_number;
   struct ssh_channel *channel;
   
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_FAILURE)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_eod(&buffer)
+  if (parse_uint32(buffer, &channel_number)
+      && parse_eod(buffer)
       && (channel = lookup_channel(table, channel_number)))
     {
       if (object_queue_is_empty(&channel->pending_requests))
@@ -1736,66 +1660,69 @@ init_channel(struct ssh_channel *channel)
   object_queue_init(&channel->active_requests);
 }
 
-void
+/* Returns zero if message type is unimplemented */
+int
 channel_packet_handler(struct channel_table *table,
-		       struct lsh_string *packet)
+		       uint32_t length, const uint8_t *packet)
 {
-  uint8_t msg;
-  
-  assert(lsh_string_length(packet) > 0);
+  struct simple_buffer buffer;
 
-  msg = lsh_string_data(packet)[0];
+  simple_buffer_init(&buffer, length, packet);
+  unsigned msg;
+
+  if (!parse_uint8(&buffer, &msg))
+    fatal("Internal error.\n");
+  
   trace("channel_packet_handler, packet type %i\n", msg);
   
   switch (msg)
     {
     default:
-      A_WRITE(table->write,
-	      format_unimplemented(lsh_string_sequence_number(packet)));
-      break;
+      return 0;
     case SSH_MSG_GLOBAL_REQUEST:
-      handle_global_request(table, packet);
+      handle_global_request(table, &buffer);
       break;
     case SSH_MSG_REQUEST_SUCCESS:
-      handle_global_success(table, packet);
+      handle_global_success(table, &buffer);
       break;
     case SSH_MSG_REQUEST_FAILURE:
-      handle_global_failure(table, packet);
+      handle_global_failure(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_OPEN:
-      handle_channel_open(table, packet);
+      handle_channel_open(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_OPEN_CONFIRMATION:
-      handle_open_confirm(table, packet);
+      handle_open_confirm(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_OPEN_FAILURE:
-      handle_open_failure(table, packet);
+      handle_open_failure(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_WINDOW_ADJUST:
-      handle_adjust_window(table, packet);
+      handle_adjust_window(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_DATA:
-      handle_channel_data(table, packet);
+      handle_channel_data(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_EXTENDED_DATA:
-      handle_channel_extended_data(table, packet);
+      handle_channel_extended_data(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_EOF:
-      handle_channel_eof(table, packet);
+      handle_channel_eof(table, &buffer);
       break;
     case SSH_MSG_CHANNEL_CLOSE:
-      handle_channel_close(table, packet);       
+      handle_channel_close(table, &buffer);       
       break;
     case SSH_MSG_CHANNEL_REQUEST:
-      handle_channel_request(table, packet); 
+      handle_channel_request(table, &buffer); 
       break;
     case SSH_MSG_CHANNEL_SUCCESS:
-      handle_channel_success(table, packet); 
+      handle_channel_success(table, &buffer); 
       break;
     case SSH_MSG_CHANNEL_FAILURE:
-      handle_channel_failure(table, packet); 
+      handle_channel_failure(table, &buffer); 
       break;
     }
+  return 1;
 }
 
 struct lsh_string *
