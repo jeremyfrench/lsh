@@ -54,11 +54,8 @@
 #include "environ.h"
 #include "format.h"
 #include "interact.h"
-#include "io.h"
-#include "io_commands.h"
 #include "gateway.h"
 #include "gateway_commands.h"
-#include "handshake.h"
 #include "lsh_string.h"
 #include "randomness.h"
 #include "reaper.h"
@@ -249,7 +246,7 @@ make_connection_write_handler(struct connection *connection)
 }
 
 static struct connection *
-make_connection(int fd)
+make_connection(int fd, struct exception_handler *e)
 {
   NEW(connection, self);
   init_resource(&self->super, kill_connection);
@@ -261,7 +258,7 @@ make_connection(int fd)
   self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
 				      CONNECTION_WRITE_THRESHOLD);
 
-  self->table = make_channel_table(make_connection_write_handler(self));
+  self->table = make_channel_table(make_connection_write_handler(self), e);
 
   return self;
 }
@@ -640,6 +637,8 @@ main_argp =
        (status . "int *")))
 */
 
+/* FIXME: Figure out what kind of exceptions we really need to handle.
+   Currently, we should handle EXC_FINISH_READ. */
 static void
 do_lsh_default_handler(struct exception_handler *s,
 		       const struct exception *e)
@@ -743,7 +742,7 @@ fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
       io_set_nonblocking(pipe[0]);
       
       reaper_handle(child, make_transport_exit_callback());
-      connection = make_connection(pipe[0]);
+      connection = make_connection(pipe[0], e);
 
       gc_global(&connection->super);
       return connection;
