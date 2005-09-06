@@ -309,7 +309,10 @@ parse_groups(struct tokenizer *self)
 	groups = n;
       }
       /* Name is optional */
-      groups->name = parse_word(self);
+      if (self->type == TOK_STRING)
+	groups->name = parse_word(self);
+      else
+	groups->name = NULL;
       groups->settings = NULL;
       groups->hosts = NULL;
       
