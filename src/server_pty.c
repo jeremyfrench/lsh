@@ -41,7 +41,6 @@
 #include "server_pty.h"
 
 #include "channel.h"
-#include "connection.h"
 #include "format.h"
 #include "lsh_string.h"
 #include "parse.h"
