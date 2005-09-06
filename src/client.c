@@ -43,7 +43,6 @@
 #include "abstract_io.h"
 #include "channel.h"
 #include "channel_commands.h"
-#include "connection.h"
 #include "environ.h"
 #include "format.h"
 #include "interact.h"
@@ -1164,13 +1163,14 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
+#if 0
 #if WITH_TCP_FORWARD
       if (options->remote_forward)
 	client_add_action(options,
 			  make_install_fix_channel_open_handler
 			  (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
 #endif /* WITH_TCP_FORWARD */
-
+#endif
       /* Add shell action */
       if (options->start_shell)
 	client_add_action(options, client_shell_session(options));
