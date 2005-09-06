@@ -1,3 +1,10 @@
+2005-09-06  Niels Möller  <niels@s3.kth.se>
+
+	* src/parse_config.c (parse_groups): Made group name optional.
+
+	* src/lsh-decode-key.c (lsh_decode_key): Removed redundant
+	"lsh-decode-key:" prefix from messages.
+
 2005-07-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c (init_client_options): Use gc_global for the
