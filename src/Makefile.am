@@ -35,25 +35,29 @@ generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 bootstrap: $(generated_sources) $(dist_classes)
 	(cd spki && $(MAKE) bootstrap)
 
-# Old files client_keyexchange.c connection.c handshake.c
+# Old files:
+#
+# client_keyexchange.c client_userauth.c connection.c connection_commands.c
+# debug.c gateway_commands.c handshake.c io_commands.c
+# read_packet.c socks.c tcpforward.c tcpforward_commands.c write_packet.c
 
 liblsh_a_SOURCES = abstract_io.c \
 	algorithms.c alist.c atoms.c \
 	channel.c channel_commands.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c \
-	client_pty.c client_session.c client_userauth.c client_x11.c \
+	client_pty.c client_session.c client_x11.c \
 	combinators.c command.c compress.c \
-	parse_config.c connection_commands.c \
+	parse_config.c \
 	crypto.c \
 	daemon.c \
-	debug.c dh_exchange.c \
+	dh_exchange.c \
 	dsa.c \
 	encrypt.c \
 	exception.c \
 	format.c gc.c \
-	gateway.c gateway_channel.c gateway_commands.c \
-	interact.c io.c io_commands.c \
+	gateway.c gateway_channel.c \
+	interact.c io.c \
 	keyexchange.c \
 	list.c \
 	lock_file.c \
@@ -61,21 +65,20 @@ liblsh_a_SOURCES = abstract_io.c \
 	pkcs5.c \
 	queue.c \
 	randomness.c \
-	read_data.c read_file.c read_line.c read_packet.c \
+	read_data.c read_file.c read_line.c \
 	reaper.c resource.c \
 	rsa.c \
 	server.c \
 	server_pty.c server_session.c \
 	server_x11.c \
 	service_read.c \
-	sexp.c socks.c \
+	sexp.c \
 	spki.c srp_exchange.c \
 	ssh_read.c ssh_write.c \
 	string_buffer.c suspend.c \
-	tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c \
-	werror.c write_buffer.c write_packet.c \
+	werror.c write_buffer.c \
 	xalloc.c xauth.c zlib.c
 
 liblsh_a_LIBADD = @LIBOBJS@
