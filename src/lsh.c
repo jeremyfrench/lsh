@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998, 1999, 2000 Niels Möller
+ * Copyright (C) 1998, 1999, 2000, 2005 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -44,6 +44,7 @@
 #include "spki/parse.h"
 
 #include "alist.h"
+#include "arglist.h"
 #include "atoms.h"
 #include "channel.h"
 #include "charset.h"
@@ -275,6 +276,7 @@ make_connection(int fd, struct exception_handler *e)
        (home . "const char *")
        
        ;; (with_gateway . int)
+       (transport_args . "struct arglist")
        ))
 */
 
@@ -286,6 +288,7 @@ make_options(struct exception_handler *handler,
   NEW(lsh_options, self);
   const char *home = getenv(ENV_HOME);
   struct randomness *r = make_user_random(home);
+  const char *transport_program;
   
   init_client_options(&self->super, r, handler, exit_code);
 
@@ -294,6 +297,12 @@ make_options(struct exception_handler *handler,
   self->with_gateway = 0;
 #endif
 
+  arglist_init(&self->transport_args);
+
+  /* Set argv[0] */
+  GET_FILE_ENV(transport_program, LSH_TRANSPORT);
+  arglist_push(&self->transport_args, transport_program);
+  
   return self;
 }
 
@@ -317,25 +326,23 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_DH 0x206
 #define OPT_SRP 0x207
 
-#define OPT_STDIN 0x210
-#define OPT_STDOUT 0x211
-#define OPT_STDERR 0x212
-
-#define OPT_FORK_STDIO 0x213
+#define OPT_HOSTKEY_ALGORITHM 0x210
 
 static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-#if 0
-  /* Most of these options should be passed on to lsh-transport. */
+
+  /* Options passed on to lsh-transport. */
   
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
+#if 0
   { "publickey", OPT_PUBLICKEY, NULL, 0,
     "Try publickey user authentication (default).", 0 },
   { "no-publickey", OPT_PUBLICKEY | ARG_NOT, NULL, 0,
     "Don't try publickey user authentication.", 0 },
   { "host-db", OPT_HOST_DB, "Filename", 0, "By default, ~/.lsh/host-acls", 0},
+#endif
   { "sloppy-host-authentication", OPT_SLOPPY, NULL, 0,
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
@@ -343,6 +350,7 @@ main_options[] =
   { "capture-to", OPT_CAPTURE, "File", 0,
     "When a new hostkey is received, append an ACL expressing trust in the key. "
     "In sloppy mode, the default is ~/.lsh/captured_keys.", 0 },
+#if 0
 #if WITH_SRP
   { "srp-keyexchange", OPT_SRP, NULL, 0, "Enable experimental SRP support.", 0 },
   { "no-srp-keyexchange", OPT_SRP | ARG_NOT, NULL, 0, "Disable experimental SRP support (default).", 0 },
@@ -353,6 +361,12 @@ main_options[] =
 
   { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
 #endif
+
+  { "crypto", 'c', "Algorithm", 0, "", 0 },
+  { "compression", 'z', "Algorithm",
+    OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
+  { "mac", 'm', "Algorithm", 0, "", 0 },
+  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHM, "Algorithm", 0, "", 0 }, 
   
   /* Actions */
 #if 0
@@ -554,28 +568,50 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
 
       break;
-#if 0
+
     case 'i':
-      self->identity = arg;
+      arglist_push(&self->transport_args, "--identity");
+      arglist_push(&self->transport_args, arg);
       break;
 
-    CASE_FLAG(OPT_PUBLICKEY, with_publickey);
+#if 0
+      CASE_FLAG(OPT_PUBLICKEY, with_publickey);
 
     case OPT_HOST_DB:
       self->known_hosts = arg;
       break;
-      
+#endif
     case OPT_SLOPPY:
-      self->sloppy = 1;
+      arglist_push(&self->transport_args, "--sloppy-host-authentication");
       break;
 
     case OPT_STRICT:
-      self->sloppy = 0;
+      arglist_push(&self->transport_args, "--strict-host-authentication");
       break;
 
     case OPT_CAPTURE:
-      self->capture = arg;
+      arglist_push(&self->transport_args, "--capture-to");
+      arglist_push(&self->transport_args, arg);
       break;
+
+    case 'c':
+      arglist_push(&self->transport_args, "-c");
+      arglist_push(&self->transport_args, arg);
+      break;
+
+    case 'm':
+      arglist_push(&self->transport_args, "-m");
+      arglist_push(&self->transport_args, arg);
+      break;
+
+    case 'z':
+      if (!arg)
+	arglist_push(&self->transport_args, "-z");
+      else
+	arglist_push_optarg(&self->transport_args, "-z", arg);
+      break;
+
+#if 0
 
     CASE_FLAG(OPT_DH, with_dh_keyexchange);
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
@@ -746,17 +782,36 @@ fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
   else
     {
       /* Child process */
-      const char *program;
-
-      GET_FILE_ENV(program, LSH_TRANSPORT);
-
+      char **argv;
+      
       close(pipe[0]);
       dup2(pipe[1], STDIN_FILENO);
       dup2(pipe[1], STDOUT_FILENO);
       close(pipe[1]);
 
-      execl(program, program, "-v", "--trace", "--debug",
-	    "-p", options->super.port, options->super.target, NULL);
+      if (verbose_flag)
+	arglist_push(&options->transport_args, "-v");
+      if (quiet_flag)
+	arglist_push(&options->transport_args, "-q");	
+      if (debug_flag)
+	arglist_push(&options->transport_args, "--debug");
+      if (trace_flag)
+	arglist_push(&options->transport_args, "--trace");
+      
+      arglist_push(&options->transport_args, "-p");
+      arglist_push(&options->transport_args, options->super.port);
+      arglist_push(&options->transport_args, options->super.target);
+      
+      argv = (char **) options->transport_args.argv;
+      {
+	fprintf(stderr, "argc = %d\n", options->transport_args.argc);
+	
+	int i;
+	for (i = 0; argv[i]; i++)
+	  fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
+      }
+      verbose("Starting %z.\n", argv[0]);
+      execv(argv[0], argv);
       werror("fork_lsh_transport: exec failed: %e\n", errno);
       _exit(EXIT_FAILURE);
     }
