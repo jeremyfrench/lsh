@@ -190,6 +190,9 @@
 #define SSH_TTY_OP_OSPEED  129
 #define SSH_TTY_OP_RESERVED 160
 
+/* Default port number, in host byte order */
+#define SSH_DEFAULT_PORT 22
+
 /* Limits */
 
 #define SSH_MAX_LINE 255
