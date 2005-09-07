@@ -292,7 +292,6 @@ io_read_file_raw(int fd, uint32_t guess);
 void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);
-void io_init_fd(int fd, int shared);
 
 struct lsh_fd *
 make_lsh_fd(int fd, enum io_type type, const char *label,
