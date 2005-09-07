@@ -1,3 +1,8 @@
+2005-09-07  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/functions.sh: Fixed typo in definition of
+	LSH_TRANSPORT and friends.
+
 2005-09-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (oop_read_service): Adapted to channel_packet_handler
