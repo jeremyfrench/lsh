@@ -1414,16 +1414,15 @@ io_set_close_on_exec(int fd)
 }
 
 
-/* *All* file descripters handled by the backend should have the
-   close-on-exec flag set, and all but shared stdio descriptors should
+/* With the exception of stdio filedescriptors, all file descripters
+   handled by the backend should have the close-on-exec flag set and
    use non-blocking mode. */
 
-void io_init_fd(int fd, int shared)
+static void
+io_init_fd(int fd)
 {
   io_set_close_on_exec(fd);
-
-  if (!shared)
-    io_set_nonblocking(fd);
+  io_set_nonblocking(fd);
 }
 
 struct lsh_fd *
@@ -1434,7 +1433,8 @@ make_lsh_fd(int fd, enum io_type type, const char *label,
 
   nfiles++;
   /* NOTE: Relies on order of the enum constants. */
-  io_init_fd(fd, type >= IO_STDIO);
+  if (type < IO_STDIO)
+    io_init_fd(fd);
 
   init_resource(&self->super, do_kill_fd);
 
@@ -1477,7 +1477,7 @@ io_connect(struct sockaddr *remote,
 
   trace("io_connect: Connecting using fd %i\n", s);
   
-  io_init_fd(s, 0);
+  io_init_fd(s);
 
 #if 0
   if (local  &&  bind(s, (struct sockaddr *)local, sizeof *local) < 0)
