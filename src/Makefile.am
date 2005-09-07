@@ -42,7 +42,7 @@ bootstrap: $(generated_sources) $(dist_classes)
 # read_packet.c socks.c tcpforward.c tcpforward_commands.c write_packet.c
 
 liblsh_a_SOURCES = abstract_io.c \
-	algorithms.c alist.c atoms.c \
+	algorithms.c alist.c arglist.c atoms.c \
 	channel.c channel_commands.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c \
