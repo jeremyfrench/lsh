@@ -1,3 +1,8 @@
+2005-09-07  Niels Möller  <niels@s3.kth.se>
+
+	* doc/lsh.texinfo (sexp): Updated documentation on sexp-conv
+	--hash. 
+
 2005-09-06  Niels Möller  <niels@s3.kth.se>
 
 	* src/parse_config.c (parse_groups): Made group name optional.
