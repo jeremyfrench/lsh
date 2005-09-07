@@ -1,5 +1,31 @@
 2005-09-07  Niels Möller  <niels@s3.kth.se>
 
+	* src/testsuite/functions.sh (run_lsh): For the time being, don't
+	use -z (it's not implemented at the server side).
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added arglist.h.
+
+	* src/lsh.c: Accept more options, which are passed on to the
+	lsh-transport program.
+
+	* src/lsh-transport.c: Use algorithms_argp, to accept algorithm
+	selection options.
+
+	* src/io.c (make_lsh_fd): Set neither the non-blocking nor the
+	close-on-exec flag on stdio file descriptors.
+	(io_init_fd): Made static, and removed argument.
+
+	* src/arglist.c, src/arglist.h: New files.
+
+	* src/testsuite/functions.sh: Use --background, not --daemon
+	--no-syslog, when starting lshd.
+
+	* src/ssh.h (SSH_DEFAULT_PORT): New constant.
+
+	* src/lshd.c: Option handling. Current options: -p, -h,
+	--daemonic, --background, --enable-core and --pid-file. Handle
+	SIGHUP. 
+
 	* src/testsuite/functions.sh: Fixed typo in definition of
 	LSH_TRANSPORT and friends.
 
