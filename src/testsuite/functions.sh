@@ -122,12 +122,13 @@ spawn_lshd () {
     return 1
 }
 
+# FIXME: Enable -z, when implemented on the server side.
 run_lsh () {
     cmd="$1"
     shift
     echo "$cmd" | HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt \
 	--sloppy-host-authentication \
-	--capture-to /dev/null -z -p $PORT "$@" localhost
+	--capture-to /dev/null -p $PORT "$@" localhost
 
 }
 
