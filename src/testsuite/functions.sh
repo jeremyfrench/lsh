@@ -96,11 +96,11 @@ spawn_lshd () {
     # local delay
 
     # Note that --daemon not only forks into the background, it also changes
-    # the cwd, uses syslog, etc.
+    # the cwd, uses syslog, etc. So we use --background instead.
     
     HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
 	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
-	--pid-file $PIDFILE --daemon --no-syslog "$@" || return 1
+	--pid-file $PIDFILE --background "$@" || return 1
     
     # lshd should release its port after receiving HUP, but we may get
     # timing problems when the next lshd process tries to bind the
