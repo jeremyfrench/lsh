@@ -42,6 +42,7 @@
 #include "algorithms.h"
 #include "crypto.h"
 #include "environ.h"
+#include "daemon.h"
 #include "format.h"
 #include "io.h"
 #include "keyexchange.h"
@@ -345,15 +346,51 @@ lshd_port_accept(oop_source *source UNUSED,
   return OOP_CONTINUE;
 }
 
-static struct resource_list *
-open_ports(struct configuration *config, int port_number)
+/* FIXME: Should use getaddrinfo, and should allow multiple ports and
+   services. At the UI, given interfaces can include explicit port,
+   and the -p options gives one or more default ports. */
+static int
+open_ports(struct configuration *config, struct resource_list *resources,
+	   const char *portid)
 {
-  struct resource_list *ports = make_resource_list();
   struct sockaddr_in sin;
   struct lshd_port *port;
   oop_source *source;
   int yes = 1;
   int s;
+  /* In network byte order */
+  short port_number;
+
+  if (!portid)
+    {
+      struct servent *se = getservbyname("ssh", "tcp");
+      port_number = se ? se->s_port : htons(SSH_DEFAULT_PORT);
+    }
+  else
+    {
+      char *end;
+      unsigned long n;
+
+      if (!portid[0])
+	{
+	  werror("Port number is empty.\n");
+	  return 0;
+	}
+      n = strtoul(portid, &end, 10);
+      if (end[0] == '\0')
+	port_number = htons(n);
+      else
+	{
+	  struct servent *se = getservbyname(portid, "tcp");
+	  if (!se)
+	    {
+	      werror("Port `%s' not found.\n", portid);
+	      return 0;
+	    }
+
+	  port_number = se->s_port;
+	}
+    }
 
   source = config->super.oop;
 
@@ -361,7 +398,7 @@ open_ports(struct configuration *config, int port_number)
   if (s < 0)
     {
       werror("socket failed: %e\n", errno);
-      return NULL;
+      return 0;
     }
 
   io_set_nonblocking(s);
@@ -373,26 +410,25 @@ open_ports(struct configuration *config, int port_number)
   memset(&sin, 0, sizeof(sin));
   sin.sin_family = AF_INET;
   sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  sin.sin_port = htons(port_number);
+  sin.sin_port = port_number;
 
   if (bind(s, &sin, sizeof(sin)) < 0)
     {
       werror("bind failed: %e\n", errno);
-      return NULL;
+      return 0;
     }
 
   if (listen(s, 256) < 0)
     {
       werror("listen failed: %e\n", errno);
-      return NULL;
+      return 0;
     }
   port = make_lshd_port(config, s);
-  remember_resource(ports, &port->super);
+  remember_resource(resources, &port->super);
 
   source->on_fd(source, s, OOP_READ, lshd_port_accept, port);
 
-  gc_global(&ports->super);
-  return ports;
+  return 1;
 }
 
 static struct configuration *
@@ -442,12 +478,139 @@ make_configuration(const char *hostkey, oop_source *source)
   return self;
 }
 
+
+/* GABA:
+   (class
+     (name pid_file_resource)
+     (super resource)
+     (vars
+       (file . "const char *")))
+*/
+
+static void
+do_kill_pid_file(struct resource *s)
+{
+  CAST(pid_file_resource, self, s);
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      if (unlink(self->file) < 0)
+	werror("Unlinking pidfile failed %e\n", errno);
+    }
+}
+
+static struct resource *
+make_pid_file_resource(const char *file)
+{
+  NEW(pid_file_resource, self);
+  init_resource(&self->super, do_kill_pid_file);
+  self->file = file;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name sighup_close_callback)
+     (super lsh_callback)
+     (vars
+       (resource object resource)))
+*/
+
+static void
+do_sighup_close_callback(struct lsh_callback *s)
+{
+  CAST(sighup_close_callback, self, s);
+  
+  werror("SIGHUP received.\n");
+  KILL_RESOURCE(self->resource);
+}
+
+static struct lsh_callback *
+make_sighup_close_callback(struct resource *resource)
+{
+  NEW(sighup_close_callback, self);
+  self->super.f = do_sighup_close_callback;
+  self->resource = resource;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name lshd_options)
+     (vars
+       (port . "char *")
+       (hostkey . "char *")
+
+       (daemonic . int)
+       (background . int)
+       (corefile . int)
+       (pid_file . "const char *")
+       ; -1 means use pid file iff we're in daemonic mode
+       (use_pid_file . int)))
+*/
+
+static struct lshd_options *
+make_lshd_options(void)
+{
+  NEW(lshd_options, self);
+
+  /* Default behaviour is to lookup the "ssh" service, and fall back
+   * to port 22 if that fails. */
+  self->port = NULL;
+
+  /* FIXME: This should use sysconfdir */  
+  self->hostkey = "/etc/lsh_host_key";
+
+  self->daemonic = 0;
+  self->background = 0;
+
+  /* FIXME: Make the default a configure time option? */
+  self->pid_file = "/var/run/lshd.pid";
+  self->use_pid_file = -1;
+  self->corefile = 0;
+  
+  return self;
+}
+
 /* Option parsing */
 
 const char *argp_program_version
 = "lshd (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
 
 const char *argp_program_bug_address = BUG_ADDRESS;
+
+enum {
+  OPT_NO = 0x400,
+  OPT_INTERFACE = 0x201,
+
+  OPT_DAEMONIC = 0x205,
+  OPT_PIDFILE = 0x206,
+  OPT_NO_PIDFILE = (OPT_PIDFILE | OPT_NO),
+  OPT_CORE = 0x207,
+  OPT_BACKGROUND = 0x208,
+};
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "interface", OPT_INTERFACE, "interface", 0,
+    "Listen on this network interface.", 0 }, 
+  { "port", 'p', "Port", 0, "Listen on this port.", 0 },
+  { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
+
+  { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
+  { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, and redirect stdio to /dev/null, chdir to /, and use syslog.", 0 },
+  { "background", OPT_BACKGROUND, NULL, 0, "Run in the background.", 0 },
+  { "pid-file", OPT_PIDFILE, "file name", 0, "Create a pid file. When running in daemonic mode, "
+    "the default is /var/run/lshd.pid.", 0 },
+  { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
+  { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
+  
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
 
 static const struct argp_child
 main_argp_children[] =
@@ -456,9 +619,66 @@ main_argp_children[] =
   { NULL, 0, NULL, 0}
 };
 
+static error_t
+main_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST(lshd_options, self, state->input);
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = NULL;
+      break;
+
+    case ARGP_KEY_END:
+      if (self->daemonic && self->background)
+	argp_error(state, "The options --background and --daemonic are "
+		   "mutually exclusive.");
+      break;
+
+    case OPT_INTERFACE:
+      werror("Ignoring --interface option; using localhost only.\n");
+      break;
+
+    case 'p':
+      /* FIXME: Interpret multiple -p:s as a request to listen on
+       * several ports. */
+      self->port = arg;
+      break;
+
+    case 'h':
+      self->hostkey = arg;
+      break;
+
+    case OPT_DAEMONIC:
+      self->daemonic = 1;
+      break;
+
+    case OPT_BACKGROUND:
+      self->background = 1;
+      break;
+
+    case OPT_PIDFILE:
+      self->pid_file = arg;
+      self->use_pid_file = 1;
+      break;
+
+    case OPT_NO_PIDFILE:
+      self->use_pid_file = 0;
+      break;
+
+    case OPT_CORE:
+      self->corefile = 1;
+      break;      
+    }
+  return 0;
+}
+      
 static const struct argp
 main_argp =
-{ NULL, NULL,
+{ main_options, main_argp_parser,
   NULL,
   "Server for the ssh-2 protocol.",
   main_argp_children,
@@ -469,15 +689,72 @@ int
 main(int argc, char **argv)
 {
   oop_source *source;
-  argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
+  struct lshd_options *options = make_lshd_options();
+  struct configuration *configuration;
+  struct resource_list *resources = make_resource_list();;
+
+  argp_parse(&main_argp, argc, argv, 0, NULL, options);
+  
+  if (!options->corefile && !daemon_disable_core())
+    {
+      werror("Disabling of core dumps failed.\n");
+      return EXIT_FAILURE;
+    }
+
+  if (options->daemonic)
+    {
+      werror("--daemonic not yet implemented.\n");
+      return EXIT_FAILURE;
+    }
 
   source = io_init();
-
-  werror("Listening on port 4711\n");
-  if (!open_ports(make_configuration("testsuite/key-1.private", source),
-		  4711))
+  
+  configuration = make_configuration(options->hostkey, source);
+  
+  if (!open_ports(configuration, resources, options->port))
     return EXIT_FAILURE;
 
+  if (options->background)
+    {
+      /* Just put process into the background. */
+      switch (fork())
+	{
+	case 0:
+	  /* Child */
+	  trace("forked into background. New pid: %i.\n", getpid());
+	  break;
+              
+	case -1:
+	  /* Error */
+	  werror("fork failed %e\n", errno);
+	  break;
+
+	default:
+	  /* Parent */
+	  /* FIXME: Ideally, we should wait until the child has
+	     created its pid-file. */
+	  _exit(EXIT_SUCCESS);
+	}
+    }
+  
+  if (options->use_pid_file)
+    {
+      if (daemon_pidfile(options->pid_file))
+	remember_resource(resources, 
+			  make_pid_file_resource(options->pid_file));
+      else
+	{
+	  werror("lshd seems to be running already.\n");
+	  return EXIT_FAILURE;
+	}
+    }
+
+  /* FIXME: We need a mechanism to exit when we have closed our ports
+     in response to SIGHUP, and all connections have died. */
+
+  io_signal_handler(SIGHUP,
+		    make_sighup_close_callback(&resources->super));
+  
   /* Ignore status from child processes */
   signal(SIGCHLD, SIG_IGN);
 
