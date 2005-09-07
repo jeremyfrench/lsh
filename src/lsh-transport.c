@@ -93,8 +93,11 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
      (name lsh_transport_config)
      (super transport_context)
      (vars
-       (tty object interact)
+       (algorithms object algorithms_options)
+       (kex_algorithms object int_list)
 
+       (tty object interact)
+       
        (sloppy . int)
        (capture_file . "const char *")
        (capture_fd . int)
@@ -141,6 +144,8 @@ make_lsh_transport_config(oop_source *oop)
     }
   
   self->super.algorithms = all_symmetric_algorithms();
+  self->algorithms = make_algorithms_options(self->super.algorithms);
+
   self->signature_algorithms = all_signature_algorithms(self->super.random);
 
   self->tty = make_unix_interact();
@@ -149,13 +154,10 @@ make_lsh_transport_config(oop_source *oop)
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
 	    &make_client_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
 				     &self->host_db->super)->super);
-  self->super.kexinit
-    = make_simple_kexinit(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
-			  default_hostkey_algorithms(),
-			  default_crypto_algorithms(self->super.algorithms),
-			  default_mac_algorithms(self->super.algorithms),
-			  default_compression_algorithms(self->super.algorithms),
-			  make_int_list(0, -1));
+  self->kex_algorithms =
+    make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1);
+  
+  self->super.kexinit = NULL;
 
   self->sloppy = 0;
   self->capture_file = NULL;
@@ -438,7 +440,7 @@ lsh_connect(struct lsh_transport_config *config)
   hints.ai_family = PF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  verbose("Connecting to %s:%s....\n", config->target, config->port);
+  verbose("Connecting to %z:%z....\n", config->target, config->port);
   
   err = getaddrinfo(config->target, config->port, &hints, &list);
   if (err)
@@ -924,7 +926,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = self->algorithms;
+      state->child_inputs[1] = NULL;
       break;
 
     case ARGP_KEY_NO_ARGS:
@@ -941,6 +944,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
+      self->super.kexinit
+	= make_simple_kexinit(self->kex_algorithms,
+			      self->algorithms->hostkey_algorithms,
+			      self->algorithms->crypto_algorithms,
+			      self->algorithms->mac_algorithms,
+			      self->algorithms->compression_algorithms,
+			      make_int_list(0, -1));
+
       self->requested_service
 	= self->userauth ? "ssh-userauth" : self->service;
 
@@ -1010,6 +1021,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 static const struct argp_child
 main_argp_children[] =
 {
+  { &algorithms_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -1031,7 +1043,7 @@ main(int argc, char **argv)
 {
   struct lsh_transport_config *config;
   struct oop_source *source = io_init();
-  
+
   config = make_lsh_transport_config(source);
   if (!config)
     return EXIT_FAILURE;
