@@ -928,12 +928,13 @@ fingerprints. The fingerprint of a key (or any sexp, for that matter) is
 simply the hash of its canonical representation. For example,
 
 @example
-sexp-conv --raw-hash </etc/lsh_host_key.pub
+sexp-conv --hash </etc/lsh_host_key.pub
 @end example
 
-Unfortunately, this flavour of fingerprints is different from the ssh
+This flavour of fingerprints is different from the ssh
 fingerprint convention, which is based on a hash of the key expressed in
-ssh wire format.
+ssh wire format. To produce ssh standard fingerprints, use
+@samp{lsh-export-key --fingerprint}.
 
 @node  Converting keys,  , sexp, Getting started
 @comment  node-name,  next,  previous,  up
