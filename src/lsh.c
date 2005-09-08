@@ -341,8 +341,8 @@ main_options[] =
     "Try publickey user authentication (default).", 0 },
   { "no-publickey", OPT_PUBLICKEY | ARG_NOT, NULL, 0,
     "Don't try publickey user authentication.", 0 },
-  { "host-db", OPT_HOST_DB, "Filename", 0, "By default, ~/.lsh/host-acls", 0},
 #endif
+  { "host-db", OPT_HOST_DB, "Filename", 0, "By default, ~/.lsh/host-acls", 0},
   { "sloppy-host-authentication", OPT_SLOPPY, NULL, 0,
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
@@ -576,11 +576,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
 #if 0
       CASE_FLAG(OPT_PUBLICKEY, with_publickey);
-
-    case OPT_HOST_DB:
-      self->known_hosts = arg;
-      break;
 #endif
+    case OPT_HOST_DB:
+      arglist_push(&self->transport_args, "--host-db");
+      arglist_push(&self->transport_args, arg);
+      break;
+
     case OPT_SLOPPY:
       arglist_push(&self->transport_args, "--sloppy-host-authentication");
       break;
@@ -803,6 +804,7 @@ fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
       arglist_push(&options->transport_args, options->super.target);
       
       argv = (char **) options->transport_args.argv;
+#if 0
       {
 	fprintf(stderr, "argc = %d\n", options->transport_args.argc);
 	
@@ -810,6 +812,7 @@ fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
 	for (i = 0; argv[i]; i++)
 	  fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
       }
+#endif
       verbose("Starting %z.\n", argv[0]);
       execv(argv[0], argv);
       werror("fork_lsh_transport: exec failed: %e\n", errno);
