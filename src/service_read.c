@@ -59,6 +59,7 @@
        (length . uint32_t)
 
        (read_status . "enum service_read_status")
+       ; Zero if we haven't processed the header yet
        (packet_length . uint32_t)
        (seqno . uint32_t)))
 */
@@ -133,50 +134,56 @@ service_read_packet(struct service_read_state *self, int fd,
 		    uint32_t *seqno,
 		    uint32_t *length, const uint8_t **packet)
 {
-  if (self->length < SERVICE_HEADER_SIZE)
-    {
-      int res;
-      
-      if (fd < 0)
-	return self->read_status;
-
-      res = read_some(self, fd, SERVICE_READ_AHEAD);
-
-      fd = -1;
-
-      if (res == 0)
-	{
-	  if (self->length == 0)
-	    return SERVICE_READ_EOF;
-	  else
-	    {
-	      *msg = "Unexpected EOF";
-	      return SERVICE_READ_PROTOCOL_ERROR;
-	    }
-	}
-      else if (res < 0)
-	{
-	  if (errno == EWOULDBLOCK)
-	    return SERVICE_READ_PUSH;
-
-	  return SERVICE_READ_IO_ERROR;
-	}
-      if (self->length < SERVICE_HEADER_SIZE)
-	return self->read_status;
-    }
-  assert(self->length >= SERVICE_HEADER_SIZE);
-
   if (self->packet_length == 0)
-    {
+    {  
       const uint8_t *header;
 
-      /* Process header */
+      if (self->length < SERVICE_HEADER_SIZE)
+	{
+	  int res;
+      
+	  if (fd < 0)
+	    return self->read_status;
+
+	  res = read_some(self, fd, SERVICE_READ_AHEAD);
+
+	  fd = -1;
+
+	  if (res == 0)
+	    {
+	      if (self->length == 0)
+		return SERVICE_READ_EOF;
+	      else
+		{
+		  *msg = "Unexpected EOF";
+		  return SERVICE_READ_PROTOCOL_ERROR;
+		}
+	    }
+	  else if (res < 0)
+	    {
+	      if (errno == EWOULDBLOCK)
+		return SERVICE_READ_PUSH;
+
+	      return SERVICE_READ_IO_ERROR;
+	    }
+	  if (self->length < SERVICE_HEADER_SIZE)
+	    return self->read_status;
+	}
+
+      /* Got packet header. Parse it. */      
+      assert(self->length >= SERVICE_HEADER_SIZE);
+
       header = lsh_string_data(self->input_buffer) + self->start;
 
       self->seqno = READ_UINT32(header);
       self->packet_length = READ_UINT32(header + 4);
 
-      if (self->packet_length > SSH_MAX_PACKET)
+      if (!self->packet_length)
+	{
+	  *msg = "Received empty packet";
+	  return SERVICE_READ_PROTOCOL_ERROR;	  
+	}
+      else if (self->packet_length > SSH_MAX_PACKET)
 	{
 	  *msg = "Packet too large";
 	  return SERVICE_READ_PROTOCOL_ERROR;
