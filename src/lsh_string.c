@@ -344,8 +344,10 @@ lsh_string_read(struct lsh_string *s, uint32_t start,
   assert(length);
   ASSERT_ROOM(s, start, length);
 
-  res = read(fd, s->data + start, length);
-
+  do
+    res = read(fd, s->data + start, length);
+  while (res < 0 && errno == EINTR);
+  
   assert(!s->data[s->length]);
 
   return res;
