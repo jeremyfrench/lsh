@@ -54,6 +54,12 @@
 #include "parse.h"
 #include "xalloc.h"
 
+static void
+werror_format(const char *format, ...);
+
+static const char *packet_types[0x100] =
+#include "packet_types.h"
+;
 
 /* Global flags */
 int trace_flag = 0;
@@ -358,7 +364,7 @@ werror_hexdump(uint32_t length, const uint8_t *data)
 {
   uint32_t i = 0;
   
-  werror("(size %i = 0x%xi)\n", length, length);
+  werror_format("(size %i = 0x%xi)\n", length, length);
 
   for (i = 0; i<length; i+= 16)
     {
@@ -417,15 +423,19 @@ werror_paranoia_putc(uint8_t c)
     }
 }
 
-void
-werror_vformat(const char *f, va_list args)
+static void
+werror_title(void)
 {
   if (program_name)
     {
       werror_write(strlen(program_name), program_name);
       werror_write(2, ": ");
-    }
-  
+    }  
+}
+
+static void
+werror_vformat(const char *f, va_list args)
+{
   while (*f)
     {
       if (*f == '%')
@@ -574,6 +584,18 @@ werror_vformat(const char *f, va_list args)
 
 		break;
 	      }
+	    case 'T':
+	      {
+		int type = va_arg(args, int);
+		const char *name;
+		
+		assert(type >= 0);
+		assert(type < sizeof(packet_types));
+		name = packet_types[type];
+
+		werror_write(strlen(name), name);
+		break;
+	      }
 	    case 'z':
 	      {
 		char *s = va_arg(args, char *);
@@ -630,6 +652,7 @@ werror(const char *format, ...)
    * werror()-messages should be displayed. */
   if (verbose_flag || !quiet_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
@@ -653,6 +676,7 @@ trace(const char *format, ...)
 
   if (trace_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
@@ -666,6 +690,7 @@ debug(const char *format, ...)
 
   if (debug_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
@@ -679,6 +704,7 @@ verbose(const char *format, ...)
 
   if (verbose_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
@@ -695,6 +721,7 @@ fatal(const char *format, ...)
 {
   va_list args;
 
+  werror_title();
   va_start(args, format);
   werror_vformat(format, args);
   va_end(args);
@@ -721,6 +748,7 @@ die(const char *format, ...)
 {
   va_list args;
 
+  werror_title();
   va_start(args, format);  
   werror_vformat(format, args);
   va_end(args);

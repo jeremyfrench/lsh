@@ -61,6 +61,7 @@ void set_error_syslog(const char *id);
  * %s  uint32_t length, uint8_t *data
  * %S  lsh_string *s
  * %t  The type of an struct lsh_object *
+ * %T  The type of an ssh message (int)
  *
  * Modifiers:
  *
@@ -70,8 +71,6 @@ void set_error_syslog(const char *id);
  * u  Input is in utf-8; convert to local charset
  */
 
-
-void werror_vformat(const char *f, va_list args);
 
 void werror(const char *format, ...);
 void trace(const char *format, ...);
