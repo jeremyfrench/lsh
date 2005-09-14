@@ -135,21 +135,45 @@ transport_read_new_keys(struct transport_read_state *self,
      (name transport_write_state)
      (super ssh_write_state)
      (vars     
+       ; The preferred packet size, and amount of data we try to
+       ; collect actually writing anything.
+       (threshold . uint32_t)
+       ; Amount of unimportant data at end of buffer
+       (ignore . uint32_t)
        (mac object mac_instance)
        (crypto object crypto_instance)
        (deflate object compress_instance)
        (seqno . uint32_t)))
 */
 
+/* Error codes are negative */
+enum transport_write_status
+{
+  /* I/O error (see errno) */
+  TRANSPORT_WRITE_IO_ERROR = -1,
+  /* Buffer grew too large */
+  TRANSPORT_WRITE_OVERFLOW = -2,
+  /* All buffered data (except ignore data) written successfully. */
+  TRANSPORT_WRITE_COMPLETE = 1,
+  /* Buffered data still pending; call transport_write_flush. */
+  TRANSPORT_WRITE_PENDING = 2
+};
+
+enum transport_write_flag
+{
+  TRANSPORT_WRITE_FLAG_PUSH = 1,
+  TRANSPORT_WRITE_FLAG_IGNORE = 2,
+};
+
 struct transport_write_state *
 make_transport_write_state(void);
 
-enum ssh_write_status
+enum transport_write_status
 transport_write_packet(struct transport_write_state *self,
-		       int fd, enum ssh_write_flag flags,
+		       int fd, enum transport_write_flag flags,
 		       struct lsh_string *packet, struct randomness *random);
 
-enum ssh_write_status
+enum transport_write_status
 transport_write_line(struct transport_write_state *self,
 		     int fd,
 		     struct lsh_string *line);
@@ -162,7 +186,7 @@ transport_write_new_keys(struct transport_write_state *self,
 
 /* Attempt to send pending data, and maybe add an extra SSH_MSG_IGNORE
    packet */
-enum ssh_write_status
+enum transport_write_status
 transport_write_flush(struct transport_write_state *self,
 		      int fd, struct randomness *random);
 
@@ -175,6 +199,7 @@ transport_write_flush(struct transport_write_state *self,
        (random object randomness)
        (algorithms object alist)
        (kexinit object make_kexinit)
+       ;; FIXME: Use global_oop_source instead.
        (oop . "oop_source *")))
 */
 
@@ -267,7 +292,7 @@ transport_close(struct transport_connection *self, int flush);
 
 void
 transport_send_packet(struct transport_connection *connection,
-		      enum ssh_write_flag flags, struct lsh_string *packet);
+		      enum transport_write_flag flags, struct lsh_string *packet);
 
 void
 transport_write_pending(struct transport_connection *connection, int pending);
