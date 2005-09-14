@@ -46,7 +46,7 @@ do_channel_open_command(struct command *s,
 			struct exception_handler *e)
 {
   CAST_SUBTYPE(channel_open_command, self, s);
-  CAST(channel_table, table, x);
+  CAST_SUBTYPE(channel_table, table, x);
   struct lsh_string *request;
   struct ssh_channel *channel;
 
@@ -76,10 +76,9 @@ do_channel_open_command(struct command *s,
       /* FIXME: Set up channel->connection here? If we do that,
        * perhaps we need not pass the connection to NEW_CHANNEL. */
       channel->open_continuation = c;
-      channel->e = e;
       register_channel(table, index, channel, 0);
 
-      A_WRITE(table->write, request);
+      CHANNEL_TABLE_WRITE(table, request);
     }
 }
 
@@ -99,7 +98,7 @@ do_channel_request_command(struct command *s,
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
-  A_WRITE(channel->table->write, request);
+  CHANNEL_TABLE_WRITE(channel->table, request);
 }
 
 void
@@ -118,7 +117,7 @@ do_channel_global_command(struct command *s,
     object_queue_add_tail(&table->pending_global_requests,
 			  &make_command_context(c, e)->super);
 
-  A_WRITE(table->write, request);
+  CHANNEL_TABLE_WRITE(table, request);
 }
 
 void
@@ -129,7 +128,7 @@ do_install_global_request_handler(struct command_2 *s,
 				  struct exception_handler *e UNUSED)
 {
   CAST(install_info, self, s);
-  CAST(channel_table, table, a1);
+  CAST_SUBTYPE(channel_table, table, a1);
   CAST_SUBTYPE(global_request, handler, a2);
 
   assert(handler);
@@ -151,7 +150,7 @@ do_install_channel_open_handler(struct command_2 *s,
 				struct exception_handler *e UNUSED)
 {
   CAST(install_info, self, s);
-  CAST(channel_table, table, a1);
+  CAST_SUBTYPE(channel_table, table, a1);
   CAST_SUBTYPE(channel_open, handler, a2);
 
   assert(handler);
@@ -185,7 +184,7 @@ do_install_fix_global_request_handler(struct command *s,
 				      struct exception_handler *e UNUSED)
 {
   CAST(install_global_request_handler, self, s);
-  CAST(channel_table, table, x);
+  CAST_SUBTYPE(channel_table, table, x);
 
   trace("Installing fix global request handler for '%a'\n", self->name);
   
@@ -228,7 +227,7 @@ do_install_fix_channel_open_handler(struct command *s,
 				    struct exception_handler *e UNUSED)
 {
   CAST(install_channel_open_handler, self, s);
-  CAST(channel_table, table, x);
+  CAST_SUBTYPE(channel_table, table, x);
 
   trace("Installing fix channel open handler for type '%a'\n", self->name);
   
