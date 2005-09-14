@@ -24,7 +24,7 @@
 #ifndef LSH_SSH_WRITE_H_INCLUDED
 #define LSH_SSH_WRITE_H_INCLUDED
 
-#include "queue.h"
+#include "lsh.h"
 
 #define GABA_DECLARE
 # include "ssh_write.h.x"
@@ -36,52 +36,44 @@
      (vars
        (buffer string)
        (start . uint32_t)
-       (length . uint32_t)
-       ; The preferred packet size, and amount of data we try to
-       ; collect actually writing anything.
-       (threshold . uint32_t)
-       ; Amount of unimportant data at end of buffer
-       (ignore . uint32_t)))
+       (length . uint32_t)))
 */
 
-/* Error codes are negative */
-enum ssh_write_status
-{
-  /* I/O error (see errno) */
-  SSH_WRITE_IO_ERROR = -1,
-  /* Buffer grew too large */
-  SSH_WRITE_OVERFLOW = -2,
-  /* All buffered data (except ignore data) written successfully. */
-  SSH_WRITE_COMPLETE = 1,
-  /* Buffered data still pending; call ssh_write_flush. */
-  SSH_WRITE_PENDING
-};
-
-enum ssh_write_flag
-{
-  SSH_WRITE_FLAG_PUSH = 1,
-  SSH_WRITE_FLAG_IGNORE = 2,
-};
 
 void
 init_ssh_write_state(struct ssh_write_state *self,
-		     uint32_t buffer_size, uint32_t threshold);
+		     uint32_t buffer_size);
 
 struct ssh_write_state *
-make_ssh_write_state(uint32_t buffer_size, uint32_t threshold);
+make_ssh_write_state(uint32_t buffer_size);
 
-/* If fd = -1, add data to buffer, don't write anything. Otherwise,
-   attempt to write data if we have more than threshold, or the push flag is set. */
-enum ssh_write_status
+/* Adds data to the buffer. Returns 1 on success, 0 if there's no
+   space. In the latter case, the buffer is unmodified. */
+int
+ssh_write_enqueue(struct ssh_write_state *self,
+		  uint32_t length, const uint8_t *data);
+
+/* Attempts to write some data. Data that cannot be written
+   immediately is buffered. If to_write is non-zero, it gives the
+   desired block size. On success, returns the amount of data actually
+   written (and not just added to the buffer). On failure, returns 0
+   and sets errno.
+
+   EOVERFLOW is used to indicate that the buffer is full, and if this
+   happens, data may or may not have been written, so the state of the
+   object is not well defined. */
+uint32_t
 ssh_write_data(struct ssh_write_state *self,
-	       int fd, enum ssh_write_flag flags,
+	       int fd, uint32_t to_write,
 	       uint32_t length, const uint8_t *data);
+
+/* Try write some of the buffered data. Buffer must be non-empty. On
+   success, returns amount written. On error, returns 0 and sets
+   errno. to_write have the same meaning as for ssh_write_data. */
+uint32_t
+ssh_write_flush(struct ssh_write_state *self, int fd, uint32_t to_write);
 
 uint32_t
 ssh_write_available(const struct ssh_write_state *self);
-
-/* Try write some more data */
-enum ssh_write_status
-ssh_write_flush(struct ssh_write_state *self, int fd);
 
 #endif /* LSH_SSH_WRITE_H_INCLUDED */
