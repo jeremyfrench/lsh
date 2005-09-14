@@ -43,10 +43,6 @@
 
 #include "transport.c.x"
 
-static const char *packet_types[0x100] =
-#include "packet_types.h"
-;
-
 /* Maximum time for keyexchange to complete */
 #define TRANSPORT_TIMEOUT_KEYEXCHANGE (10 * 60)
 
@@ -277,7 +273,7 @@ transport_process_packet(struct transport_connection *connection,
   data = lsh_string_data(packet);
   msg = data[0];
 
-  debug("Received %z (%i) message\n", packet_types[msg], msg);
+  debug("Received %T (%i) message, length %i\n", msg, msg, length);
   
   /* Messages of type IGNORE, DISCONNECT and DEBUG are always
      acceptable. */
@@ -309,8 +305,7 @@ transport_process_packet(struct transport_connection *connection,
       if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
 	  || msg >= SSH_FIRST_USERAUTH_GENERIC)
 	{
-	  werror("Unexpected %z (%i) message during key exchange.\n",
-		 packet_types[msg], msg);
+	  werror("Unexpected %T (%i) message during key exchange.\n", msg, msg);
 	  transport_protocol_error(connection,
 				   "Unexpected message during key exchange");
 	}
@@ -350,7 +345,7 @@ transport_process_packet(struct transport_connection *connection,
 		&& connection->packet_handler)
 	return connection->packet_handler(connection, seqno, length, data);
       else
-	transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+	transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH,
 			      format_unimplemented(seqno));
       break;
     }
@@ -560,7 +555,7 @@ oop_write_ssh(oop_source *source UNUSED,
 	      int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
-  enum ssh_write_status status;
+  enum transport_write_status status;
 
   assert(event == OOP_WRITE);
   assert(fd == connection->ssh_output);
@@ -569,16 +564,16 @@ oop_write_ssh(oop_source *source UNUSED,
   switch(status)
     {
     default:
-    case SSH_WRITE_OVERFLOW:
+    case TRANSPORT_WRITE_OVERFLOW:
       abort();
-    case SSH_WRITE_PENDING:
+    case TRANSPORT_WRITE_PENDING:
       /* More to write */
       break;
-    case SSH_WRITE_COMPLETE:
+    case TRANSPORT_WRITE_COMPLETE:
       transport_stop_write(connection);
       break;
       
-    case SSH_WRITE_IO_ERROR:
+    case TRANSPORT_WRITE_IO_ERROR:
       if (errno != EWOULDBLOCK)
 	{
 	  werror("Write failed: %e\n", errno);
@@ -646,11 +641,11 @@ transport_stop_write(struct transport_connection *connection)
 /* A NULL packets means to push out the buffered data. */
 void
 transport_send_packet(struct transport_connection *connection,
-		      enum ssh_write_flag flags,
+		      enum transport_write_flag flags,
 		      struct lsh_string *packet)
 {
   struct transport_write_state *writer;
-  enum ssh_write_status status;
+  enum transport_write_status status;
 
   if (!connection->super.alive)
     {
@@ -668,18 +663,18 @@ transport_send_packet(struct transport_connection *connection,
 				   connection->ctx->random);
   switch (status)
     {
-    case SSH_WRITE_OVERFLOW:
+    case TRANSPORT_WRITE_OVERFLOW:
       werror("Remote peer not responsive. Disconnecting.\n");
       transport_close(connection, 0);
       break;
-    case SSH_WRITE_IO_ERROR:
+    case TRANSPORT_WRITE_IO_ERROR:
       werror("Write failed: %e\n", errno);
       transport_close(connection, 0);
       break;
-    case SSH_WRITE_PENDING:
+    case TRANSPORT_WRITE_PENDING:
       transport_start_write(connection);
       break;
-    case SSH_WRITE_COMPLETE:
+    case TRANSPORT_WRITE_COMPLETE:
       transport_stop_write(connection);
       break;
     }
@@ -693,7 +688,7 @@ transport_disconnect(struct transport_connection *connection,
     werror("Disconnecting: %z\n", msg);
   
   if (reason)
-    transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+    transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH,
 			  format_disconnect(reason, msg, ""));
 
   transport_close(connection, 1);
@@ -730,7 +725,7 @@ transport_send_kexinit(struct transport_connection *connection)
   
   s = format_kexinit(kex);
   connection->kex.literal_kexinit[is_server] = lsh_string_dup(s); 
-  transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, s);
+  transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH, s);
 
   /* NOTE: This feature isn't fully implemented, as we won't tell
    * the selected key exchange method if the guess was "right". */
@@ -739,7 +734,7 @@ transport_send_kexinit(struct transport_connection *connection)
       s = kex->first_kex_packet;
       kex->first_kex_packet = NULL;
 
-      transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, s);
+      transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH, s);
     }
 
   transport_timeout(connection,
@@ -755,7 +750,7 @@ transport_keyexchange_finish(struct transport_connection *connection,
 {
   int first = !connection->session_id;
 
-  transport_send_packet(connection, SSH_WRITE_FLAG_PUSH, format_newkeys());
+  transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH, format_newkeys());
 
   if (first)
     connection->session_id = exchange_hash;
@@ -791,7 +786,7 @@ transport_handshake(struct transport_connection *connection,
 		       const uint8_t *line))
 {
   int is_server = connection->ctx->is_server;
-  enum ssh_write_status status;
+  enum transport_write_status status;
   
   connection->kex.version[is_server] = version;
   status = transport_write_line(connection->writer,
