@@ -28,6 +28,10 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <unistd.h>
+
+#include <sys/uio.h>
+
 #include "ssh_write.h"
 
 #include "lsh_string.h"
@@ -38,93 +42,60 @@
 # include "ssh_write.h.x"
 #undef GABA_DEFINE
 
+/* Pass at most this amount of data at once to write/writev */
+#define WRITE_MAX 0x4000
+
 void
 init_ssh_write_state(struct ssh_write_state *self,
-		     uint32_t buffer_size, uint32_t threshold)
+		     uint32_t buffer_size)
 {
   self->buffer = lsh_string_alloc(buffer_size);
-  self->start = self->length = self->ignore = 0;
-  self->threshold = threshold;
+  self->start = self->length = 0;
 }
 
 struct ssh_write_state *
-make_ssh_write_state(uint32_t buffer_size, uint32_t threshold)
+make_ssh_write_state(uint32_t buffer_size)
 {
   NEW(ssh_write_state, self);
-  init_ssh_write_state(self, buffer_size, threshold);
+  init_ssh_write_state(self, buffer_size);
   return self;
 }
 
-static uint32_t
-select_write_size(uint32_t length, uint32_t ignore, uint32_t threshold)
+uint32_t
+ssh_write_flush(struct ssh_write_state *self, int fd, uint32_t to_write)
 {
-  if (length >= 8 * threshold)
-    return 8 * threshold;
-  else if (length >= threshold)
-    return threshold;
-
-  if (ignore)
-    {
-      /* Select a nice size in the interval length - ignore, length.
-	 For now, prefer lengths that end with as many zeros as
-	 possible */
-
-      uint32_t no_ignore = length - ignore;
-      uint32_t mask = ~0;
-
-      while ((length & (mask << 1)) >= no_ignore)
-	mask <<= 1;
-
-      length = length & mask;            
-    }
-  return length;
-}
-  
-enum ssh_write_status
-ssh_write_flush(struct ssh_write_state *self, int fd)
-{
-  const uint8_t *data;
-  uint32_t length;
+  const uint8_t *buffer;
   int res;
 
-  if (self->length <= self->ignore)
-    return SSH_WRITE_COMPLETE;
+  if (!to_write)
+    to_write = MIN(self->length, WRITE_MAX);
 
-  length = select_write_size(self->length, self->ignore, self->threshold);  
-  data = lsh_string_data(self->buffer);
+  assert(to_write > 0);
+  assert(to_write <= self->length);
+  
+  buffer = lsh_string_data(self->buffer) + self->start;
 
   do
-    res = write(fd, data + self->start, length);
+    res = write(fd, buffer, to_write);
   while (res < 0 && errno == EINTR);
   
   if (res < 0)
-    /* Let caller check for EWOULDBLOCK, if approproate */
-    return SSH_WRITE_IO_ERROR;
+    return 0;
 
-#if 0
-  trace("ssh_write: Wrote 0x%xi bytes.\n", res);
-#endif
-  assert(res > 0);
   self->start += res;
   self->length -= res;
-
-  if (self->length <= self->ignore)
-    {
-      self->ignore = self->length;
-      return SSH_WRITE_COMPLETE;
-    }
-  return SSH_WRITE_PENDING;
+  
+  return res;
 }
 
-static enum ssh_write_status
-enqueue(struct ssh_write_state *self,
-	enum ssh_write_flag flags,
-	uint32_t length, const uint8_t *data)
+int
+ssh_write_enqueue(struct ssh_write_state *self,
+		  uint32_t length, const uint8_t *data)
 {      
   uint32_t size = lsh_string_length(self->buffer);
 
   if (length + self->length > size)
-    return SSH_WRITE_OVERFLOW;
+    return 0;
   if (length + self->length + self->start > size)
     {
       lsh_string_move(self->buffer, 0, self->length, self->start);
@@ -135,104 +106,98 @@ enqueue(struct ssh_write_state *self,
 		   length, data);
   self->length += length;
 
-  if (flags & SSH_WRITE_FLAG_IGNORE)
-    self->ignore += length;
-  else
-    self->ignore = 0;
-
-  if (self->length <= self->ignore)
-    return SSH_WRITE_COMPLETE;
-  else
-    return SSH_WRITE_PENDING;
+  return 1;
 }
 
-enum ssh_write_status
+uint32_t
 ssh_write_data(struct ssh_write_state *self,
-	       int fd, enum ssh_write_flag flags,
+	       int fd, uint32_t to_write,
 	       uint32_t length, const uint8_t *data)
 {
-  if (fd < 0)
-    return enqueue(self, flags, length, data);
-
-  if ( (flags & SSH_WRITE_FLAG_PUSH)
-       || length + self->length >= self->threshold)
+  const uint8_t *buffer;
+  uint32_t done;
+  
+  if (!to_write)
     {
-      /* Try a write call right away */
-      uint32_t to_write;
-      const uint8_t *buffer;
-      uint32_t ignore;
+      to_write = self->length + length;
+      if (to_write > WRITE_MAX)
+	to_write = WRITE_MAX;
+    }
+
+  assert(to_write > 0);
+
+  buffer = lsh_string_data(self->buffer) + self->start;
+
+  if (to_write <= self->length)
+    {
       int res;
+      do
+	res = write(fd, buffer, to_write);
+      while (res < 0 && errno == EINTR);
+
+      if (res < 0)
+	return 0;
       
-      if (flags & SSH_WRITE_FLAG_IGNORE)
-	ignore = self->ignore + length;
-      else
-	ignore = 0;
+      self->length -= res;
+      self->start += res;
 
-      to_write = select_write_size(self->length + length, ignore, self->threshold);
+      done = res;
+    }
+  else if (self->length == 0)
+    {
+      int res;
+      do
+	res = write(fd, data, to_write);
+      while (res < 0 && errno == EINTR);
 
-      /* Can happen only if both SSH_WRITE_FLAG_IGNORE and
-	 SSH_WRITE_FLAG_PUSH is set */
-      if (!to_write)
-	return enqueue(self, flags, length, data);	
+      if (res < 0)
+	return 0;
+      
+      length -= res;
+      data += res;
 
-      buffer = lsh_string_data(self->buffer) + self->start;
-
-      if (to_write <= self->length)
-	{
-	  do
-	    res = write(fd, buffer, to_write);
-	  while (res < 0 && errno == EINTR);
-
-	  if (res < 0)
-	    return SSH_WRITE_IO_ERROR;
-
-	  self->length -= res;
-	  self->start += res;
-	}
-      else if (self->length == 0)
-	{
-	  do
-	    res = write(fd, data, to_write);
-	  while (res < 0 && errno == EINTR);
-
-	  if (res < 0)
-	    return SSH_WRITE_IO_ERROR;
-	  length -= res;
-	  data += res;
-	}
-      else
-	{
-	  struct iovec iv[2];
-	  iv[0].iov_base = (char *) buffer;
-	  iv[0].iov_len = self->length;
-	  iv[1].iov_base = (char *) data;
-	  iv[1].iov_len = to_write - self->length;
-	  uint32_t done;
+      done = res;
+    }
+  else
+    {
+      struct iovec iv[2];
+      int res;
+      iv[0].iov_base = (char *) buffer;
+      iv[0].iov_len = self->length;
+      iv[1].iov_base = (char *) data;
+      iv[1].iov_len = to_write - self->length;
 	  
-	  do
-	    res = writev(fd, iv, 2);
-	  while (res < 0 && errno == EINTR);
+      do
+	res = writev(fd, iv, 2);
+      while (res < 0 && errno == EINTR);
 
-	  if (res < 0)
-	    return SSH_WRITE_IO_ERROR;
+      if (res < 0)
+	return 0;
 
-	  done = res;
-	  if (done < self->length)
-	    {
-	      self->length -= done;
-	      self->start += done;
-	    }
-	  else
-	    {
-	      done -= self->length;
-	      self->length = self->start = self->ignore = 0;
+      done = res;
+      if (done < self->length)
+	{
+	  self->length -= done;
+	  self->start += done;
+	}
+      else
+	{
+	  uint32_t data_done = done - self->length;
+	  self->length = self->start = 0;
 
-	      data += done;
-	      length -= done;
-	    }
+	  data += data_done;
+	  length -= data_done;
 	}
     }
-  return enqueue(self, flags, length, data);
+  assert(done > 0);
+  
+  if (length && !ssh_write_enqueue(self, length, data))
+    {
+      errno = EOVERFLOW;
+      return 0;
+    }
+
+  return done;    
 }      
 
 uint32_t
