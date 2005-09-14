@@ -28,6 +28,7 @@
 #endif
 
 #include <assert.h>
+#include <errno.h>
 
 #include "transport.h"
 
@@ -56,14 +57,126 @@ struct transport_write_state *
 make_transport_write_state(void)
 {
   NEW(transport_write_state, self);
-  init_ssh_write_state(&self->super,
-		       TRANSPORT_BUFFER_SIZE, TRANSPORT_THRESHOLD);
+  init_ssh_write_state(&self->super, TRANSPORT_BUFFER_SIZE);
+  self->threshold = TRANSPORT_THRESHOLD;
+  self->ignore = 0;
+
   self->mac = NULL;
   self->crypto = NULL;
   self->deflate = NULL;
   self->seqno = 0;
 
   return self;
+}
+
+static uint32_t
+select_write_size(uint32_t length, uint32_t ignore, uint32_t threshold)
+{
+  if (length >= 8 * threshold)
+    return 8 * threshold;
+  else if (length >= threshold)
+    return threshold;
+
+  if (ignore)
+    {
+      /* Select a nice size in the interval length - ignore, length.
+	 For now, prefer lengths that end with as many zeros as
+	 possible */
+
+      uint32_t no_ignore = length - ignore;
+      uint32_t mask = ~0;
+
+      while ((length & (mask << 1)) >= no_ignore)
+	mask <<= 1;
+
+      length = length & mask;            
+    }
+  return length;
+}
+
+static enum transport_write_status
+update_status(struct transport_write_state *self, uint32_t done)
+{
+  if (done > 0)
+    {
+      if (self->super.length > self->ignore)
+	/* FIXME: One could keep track of the push mark, and
+	   return TRANSPORT_WRITE_COMPLETE when there's ignore
+	   data and unpushed data in the buffer. */
+	return TRANSPORT_WRITE_PENDING;
+      else
+	{
+	  if (self->super.length < self->ignore)
+	    self->ignore = self->super.length;
+	    
+	  return TRANSPORT_WRITE_COMPLETE;
+	}
+    }
+  else switch(errno)
+    {
+    case EWOULDBLOCK:
+      return TRANSPORT_WRITE_PENDING;
+    case EOVERFLOW:
+      return TRANSPORT_WRITE_OVERFLOW;
+    default:
+      return TRANSPORT_WRITE_IO_ERROR;
+    }
+}
+
+static enum transport_write_status
+write_data(struct transport_write_state *self, int fd,
+	   enum transport_write_flag flags,
+	   uint32_t length, const uint8_t *data)
+{
+  assert(fd >= 0);
+
+  if (flags & TRANSPORT_WRITE_FLAG_IGNORE)
+    self->ignore = self->ignore + length;
+  else
+    self->ignore = 0;
+
+  if (! (flags & TRANSPORT_WRITE_FLAG_PUSH)
+      && length + self->super.length < self->threshold)
+    {
+    enqueue:
+      /* Just enqueue the data */
+      if (!ssh_write_enqueue(&self->super, length, data))
+	return TRANSPORT_WRITE_OVERFLOW;
+      else
+	return TRANSPORT_WRITE_COMPLETE;
+    }
+  else
+    {
+      /* Try a write call right away */
+      uint32_t to_write;
+      uint32_t done;
+      
+      to_write = select_write_size(self->super.length + length, self->ignore, self->threshold);
+      if (!to_write)
+	goto enqueue;
+
+      done = ssh_write_data(&self->super, fd, to_write,
+			    length, data);
+
+      return update_status(self, done);
+    }
+}
+
+static enum transport_write_status
+write_flush(struct transport_write_state *self, int fd)
+{
+  uint32_t to_write;
+  uint32_t done;
+  
+  if (self->super.length <= self->ignore)
+    return TRANSPORT_WRITE_COMPLETE;
+
+  to_write = select_write_size(self->super.length, self->ignore, self->threshold);  
+
+  assert(to_write > 0);
+  done = ssh_write_flush(&self->super, fd, to_write);
+
+  return update_status(self, done);
 }
 
 static struct lsh_string *
@@ -86,17 +199,17 @@ make_ignore_packet(struct transport_write_state *self,
   return packet;
 }
 
-enum ssh_write_status
+enum transport_write_status
 transport_write_packet(struct transport_write_state *self,
-		       int fd, enum ssh_write_flag flags,
+		       int fd, enum transport_write_flag flags,
 		       struct lsh_string *packet, struct randomness *random)
 {
   uint32_t length;
-  enum ssh_write_status status;
+  enum transport_write_status status;
 
   assert(lsh_string_length(packet) > 0);
   if (lsh_string_data(packet)[0] == SSH_MSG_IGNORE)
-    flags |= SSH_WRITE_FLAG_IGNORE;
+    flags |= TRANSPORT_WRITE_FLAG_IGNORE;
 
   packet = encrypt_packet(packet,
 			  self->deflate,
@@ -107,10 +220,10 @@ transport_write_packet(struct transport_write_state *self,
 
   length = lsh_string_length(packet);
   
-  if ( (flags == SSH_WRITE_FLAG_PUSH) && self->crypto
-       && (length + self->super.length) < self->super.threshold)
+  if ( (flags == TRANSPORT_WRITE_FLAG_PUSH) && self->crypto
+       && (length + self->super.length) < self->threshold)
     {
-      status = ssh_write_data(&self->super, fd, 0, STRING_LD(packet));
+      status = write_data(self, fd, 0, STRING_LD(packet));
       lsh_string_free(packet);
 
       if (status < 0)
@@ -118,46 +231,45 @@ transport_write_packet(struct transport_write_state *self,
 
       packet = make_ignore_packet(self, TRANSPORT_PADDING_SIZE, random);
 
-      flags |= SSH_WRITE_FLAG_IGNORE;
+      flags |= TRANSPORT_WRITE_FLAG_IGNORE;
     }
 
-  status = ssh_write_data(&self->super, fd, flags, STRING_LD(packet));
+  status = write_data(self, fd, flags, STRING_LD(packet));
   lsh_string_free(packet);
 
   return status;
 }
 
-enum ssh_write_status
+enum transport_write_status
 transport_write_line(struct transport_write_state *self,
 		     int fd,
 		     struct lsh_string *line)
 {
-  enum ssh_write_status status;
-  status = ssh_write_data(&self->super, fd, 0, STRING_LD(line));
+  enum transport_write_status status;
+  status = write_data(self, fd, TRANSPORT_WRITE_FLAG_PUSH, STRING_LD(line));
   lsh_string_free(line);
   return status;
 }
 
-enum ssh_write_status
+enum transport_write_status
 transport_write_flush(struct transport_write_state *self,
 		      int fd, struct randomness *random)
 {
-  if (!self->super.ignore && self->crypto
-      && self->super.length < self->super.threshold)
+  if (!self->ignore && self->crypto
+      && self->super.length < self->threshold)
     {
-      enum ssh_write_status status;
+      enum transport_write_status status;
       struct lsh_string *packet;
 
       packet = make_ignore_packet(self, TRANSPORT_PADDING_SIZE, random);
-      status = ssh_write_data(&self->super, fd,
-			      SSH_WRITE_FLAG_IGNORE, STRING_LD(packet));
+      status = write_data(self, fd, TRANSPORT_WRITE_FLAG_IGNORE, STRING_LD(packet));
       lsh_string_free(packet);
 
       if (status < 0)
 	return status;
     }
       
-  return ssh_write_flush(&self->super, fd);
+  return write_flush(self, fd);
 }
 
 void
