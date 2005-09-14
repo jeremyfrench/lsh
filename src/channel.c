@@ -165,7 +165,7 @@ format_open_confirmation(struct ssh_channel *channel,
 #undef CONFIRM_ARGS
 }
 
-struct lsh_string *
+static struct lsh_string *
 format_open_failure(uint32_t channel, uint32_t reason,
 		    const char *msg, const char *language)
 {
@@ -173,13 +173,13 @@ format_open_failure(uint32_t channel, uint32_t reason,
 		    channel, reason, msg, language);
 }
 
-struct lsh_string *
+static struct lsh_string *
 format_channel_success(uint32_t channel)
 {
   return ssh_format("%c%i", SSH_MSG_CHANNEL_SUCCESS, channel);
 }
 
-struct lsh_string *
+static struct lsh_string *
 format_channel_failure(uint32_t channel)
 {
   return ssh_format("%c%i", SSH_MSG_CHANNEL_FAILURE, channel);
