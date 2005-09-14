@@ -63,51 +63,40 @@ struct channel_request_info
 #include "channel.h.x"
 #undef GABA_DECLARE
 
-/* Channels are indexed by local channel number in some array. This
- * index is not stored in the channel struct. When sending messages on
- * the channel, it is identified by the *remote* sides index number,
- * and this number must be stored. */
+/* Channels are indexed by local channel number in some array. When
+   sending messages on the channel, it is identified by the *remote*
+   side's index number, and this number must be stored. */
 
-#define CHANNEL_DATA 0
-#define CHANNEL_STDERR_DATA 1
+enum channel_data_type {
+  CHANNEL_DATA = 0,
+  CHANNEL_STDERR_DATA = 1,
+};
 
-#define CHANNEL_SENT_CLOSE 1
-#define CHANNEL_RECEIVED_CLOSE 2
-#define CHANNEL_SENT_EOF 4
-#define CHANNEL_RECEIVED_EOF 8
+enum channel_flag {
+  CHANNEL_SENT_CLOSE = 1,
+  CHANNEL_RECEIVED_CLOSE = 2,
+  CHANNEL_SENT_EOF = 4,
+  CHANNEL_RECEIVED_EOF = 8,
 
-/* Normally, this flag is set, and we initiate channel close as soon
- * as we have both sent and received SSH_MSG_CHANNEL_EOF. Clearing
- * this flag keeps the channel open. */
+  /* This flags means that we don't expect any more data from the other
+     end, and that we don't want to wait for an SSH_MSG_CHANNEL_EOF
+     before closing the channel. */
+  CHANNEL_NO_WAIT_FOR_EOF = 0x10
+};
 
-#define CHANNEL_CLOSE_AT_EOF 0x10
-
-/* This flags means that we don't expect any more data from the other
- * end, and that we don't want to wait for an SSH_MSG_CHANNEL_EOF
- * before closing the channel. */
-
-#define CHANNEL_NO_WAIT_FOR_EOF 0x20
-
+/* FIXME: Inherit resource */
 /* GABA:
    (class
      (name ssh_channel)
-     (super flow_controlled)
+     (super resource)
      (vars
        ; Remote channel number 
-       (channel_number . uint32_t)
-
-       ; Where to pass errors. This is used for two different
-       ; purposes: If opening the channel fails, EXC_CHANNEL_OPEN is
-       ; raised. Once the channel is open, this handler is used for
-       ; EXC_FINISH_CHANNEL and EXC_FINISH_PENDING. If the channel was
-       ; opened on the peer's request, the connection's exception
-       ; handler is a parent of the channel's. But that is not true in
-       ; general.
+       (local_channel_number . uint32_t)
+       (remote_channel_number . uint32_t)
+       
+       ; If opening the channel fails, EXC_CHANNEL_OPEN is raised with
+       ; this handler.       
        (e object exception_handler)
-
-       ; Resources associated with the channel. This object is also
-       ; put onto the connections resource list.
-       (resources object resource_list)
        
        ; NOTE: The channel's maximum packet sizes refer to the packet
        ; payload, i.e. the DATA string in SSH_CHANNEL_DATA and
@@ -128,22 +117,24 @@ struct channel_request_info
        
        (flags . int)
 
-       ; Number of files connected to this channel. For instance,
-       ; stdout and stderr can be multiplexed on the same channel. We
-       ; should not close the channel until we have got an EOF on both
-       ; sources.
-       (sources . int)
+       ; Number of sources connected to this channel. We should not
+       ; send CHANNEL_EOF until we have got EOF on all sources (e.g.
+       ; stdout and stderr)
+       (sources . unsigned)
 
+       ; Number of sinks connected to the channel. We should not send
+       ; CHANNEL_CLOSE until we have received CHANNEL_EOF and all
+       ; buffered data have been written to the sinks. NOTE: A pending
+       ; exit-status/exit-signal message to be sent or received is
+       ; also book-keeped as a sink.       
+       (sinks . unsigned)
+       
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
        (receive method void "int type" "struct lsh_string *data")
 
        ; Called when we are allowed to send more data on the channel.
        ; Implies that the send_window_size is non-zero. 
        (send_adjust method void "uint32_t increment")
-
-       ; Called when the channel is closed.
-       ; Used by client_session and gateway_channel.
-       (close method void)
 
        ; Called when eof is received on the channel (or when it is
        ; closed, whatever happens first).
@@ -190,17 +181,14 @@ struct channel_request_info
 /* GABA:
    (class
      (name channel_table)
+     (super resource)
      (vars
        ; Communication with the transport layer
-       (e object exception_handler)
-       (write object abstract_write)
+       (write method void "struct lsh_string *")
 
        ; The chained connection, when using a gateway.
        ; FIXME: Move to a sub-class? 
        (chain object channel_table)
-       
-       ; Contains the resource lists for all channels
-       (resources object resource_list)
        
        ; Channels are indexed by local number
        (channels space (object ssh_channel) used_channels)
@@ -258,6 +246,11 @@ struct channel_request_info
        ; died, and don't allow any new channels to be opened.
        (pending_close . int)))
 */
+
+#define CHANNEL_TABLE_WRITE(table, s) ((table)->write((table), (s)))
+
+void
+channel_pending_close(struct channel_table *table);
 
 /* SSH_MSG_GLOBAL_REQUEST */
 
@@ -353,20 +346,24 @@ struct channel_request name =                                   \
 static void do_##name
 
 void
-init_channel(struct ssh_channel *channel);
+init_channel(struct ssh_channel *channel,
+	     void (*kill)(struct resource *));
 
-struct channel_table *
-make_channel_table(struct abstract_write *write,
-		   struct exception_handler *e);
+void
+init_channel_table(struct channel_table *table,
+		   void (*kill)(struct resource *),
+		   void (*write)(struct channel_table *, struct lsh_string *));
 
+void
+kill_channels(struct channel_table *table);
+		   
 int
 alloc_channel(struct channel_table *table);
 void
 dealloc_channel(struct channel_table *table, int i);
 
 void
-use_channel(struct channel_table *table,
-	    uint32_t local_channel_number);
+use_channel(struct ssh_channel *channel);
 
 void
 register_channel(struct channel_table *table,
@@ -374,34 +371,14 @@ register_channel(struct channel_table *table,
 		 struct ssh_channel *channel,
 		 int take_into_use);
 
+/* FIXME: Make static? */
 struct ssh_channel *
 lookup_channel(struct channel_table *table, uint32_t i);
 struct ssh_channel *
 lookup_channel_reserved(struct channel_table *table, uint32_t i);
 
-struct abstract_write *make_channel_write(struct ssh_channel *channel);
-struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
-						   uint32_t type);
-
-struct io_callback *
-make_channel_read_data(struct ssh_channel *channel);
-struct io_callback *
-make_channel_read_stderr(struct ssh_channel *channel);
-
-struct lsh_string *format_global_failure(void);
-struct lsh_string *format_global_success(void);
-
-struct lsh_string *format_open_failure(uint32_t channel, uint32_t reason,
-				       const char *msg, const char *language);
-struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
-					    uint32_t channel_number,
-					    const char *format, ...);
-
-struct lsh_string *format_channel_success(uint32_t channel);
-struct lsh_string *format_channel_failure(uint32_t channel);
-
-struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
-					 uint32_t add);
+void
+channel_adjust_rec_window(struct ssh_channel *channel, uint32_t written);
 
 void
 channel_start_receive(struct ssh_channel *channel,
@@ -436,8 +413,14 @@ format_global_request(int type, int want_reply,
 struct lsh_string *format_channel_close(struct ssh_channel *channel);
 struct lsh_string *format_channel_eof(struct ssh_channel *channel);
 
-void channel_close(struct ssh_channel *channel);
-void channel_eof(struct ssh_channel *channel);
+void
+channel_eof(struct ssh_channel *channel);
+
+void
+channel_close(struct ssh_channel *channel);
+
+void
+channel_maybe_close(struct ssh_channel *channel);
 
 struct lsh_callback *
 make_channel_read_close_callback(struct ssh_channel *channel);
@@ -449,14 +432,14 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
 				  struct exception_handler *parent,
 				  const char *context);
 
-struct lsh_string *
+void
 channel_transmit_data(struct ssh_channel *channel,
-		      struct lsh_string *data);
+		      uint32_t length, const uint8_t *data);
 
-struct lsh_string *
+void
 channel_transmit_extended(struct ssh_channel *channel,
 			  uint32_t type,
-			  struct lsh_string *data);
+			  uint32_t length, const uint8_t *data);
 
 int
 channel_packet_handler(struct channel_table *table,
