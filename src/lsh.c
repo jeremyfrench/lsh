@@ -76,17 +76,14 @@
 #define CONNECTION_WRITE_THRESHOLD 1000
 #define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
 
-oop_source *global_oop_source;
-
 /* GABA:
    (class
      (name connection)
-     (super resource)
+     (super channel_table)
      (vars
        (transport . int)
        (reader object service_read_state)
-       (writer object ssh_write_state)
-       (table object channel_table)))
+       (writer object ssh_write_state)))
 */
 
 /* FIXME: Duplicates code in lshd-connection */
@@ -95,45 +92,53 @@ static void
 kill_connection(struct resource *s)
 {
   CAST(connection, self, s);
-  werror("kill_connection\n");
-  if (self->transport >= 0)
-    close(self->transport);
-  exit(EXIT_FAILURE);
+  if (self->super.super.alive)
+    {
+      werror("kill_connection\n");
+
+      self->super.super.alive = 0;      
+
+      kill_channels(&self->super);
+      io_close_fd(self->transport);
+      self->transport = -1;
+    }
 }
 
 static void
 write_packet(struct connection *connection,
 	     struct lsh_string *packet)
 {
-  /* FIXME: Go to sleep if ssh_write_data returns 0? */
-  enum ssh_write_status status;
-
-  packet = ssh_format("%i%S",
-		      lsh_string_sequence_number(packet),
-		      packet);
+  uint32_t done;
+  int msg;
+  uint32_t seqno;
   
-  status = ssh_write_data(connection->writer,
-			  connection->transport, SSH_WRITE_FLAG_PUSH, 
-			  STRING_LD(packet));
+  assert(lsh_string_length(packet) > 0);
+  msg = lsh_string_data(packet)[0];
+  trace("Writing packet of type %T (%i)\n", msg, msg);
+  debug("packet contents: %xS\n", packet);
+
+  seqno = lsh_string_sequence_number(packet);
+  packet = ssh_format("%i%fS", seqno, packet);
+  
+  done = ssh_write_data(connection->writer,
+			connection->transport, 0, 
+			STRING_LD(packet));
   lsh_string_free(packet);
 
-  switch (status)
+  /* FIXME: Check if we're filling up the buffer; if so we must stop
+     channels from sending more data. */
+  if (done > 0 || errno == EWOULDBLOCK)
     {
-    case SSH_WRITE_IO_ERROR:
+      if (connection->writer->length)
+	{
+	  /* FIXME: Install a write callback */
+	  werror("write_packet: ssh_write_data couldn't write all data.\n");
+	}
+    }
+  else
+    {
       werror("write_packet: Write failed: %e\n", errno);
       exit(EXIT_FAILURE);
-    case SSH_WRITE_OVERFLOW:
-      werror("write_packet: Buffer full\n", errno);
-      exit(EXIT_FAILURE);
-
-    case SSH_WRITE_PENDING:
-      /* FIXME: Implement some flow control. Or use some different
-	 writer with unbounded buffers? Or use totally blocking
-	 writes? */
-      werror("write_packet: ssh_write_data returned SSH_WRITE_PENDING.\n");
-      break;
-    case SSH_WRITE_COMPLETE:
-      break;
     }
 }
 
@@ -203,7 +208,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	    disconnect(self,
 		       "lshd-connection received a transport or userauth layer packet");
 
-	  else if (!channel_packet_handler(self->table, length, packet))
+	  else if (!channel_packet_handler(&self->super, length, packet))
 	    write_packet(self, format_unimplemented(seqno));	    
 	}
     }
@@ -217,45 +222,27 @@ service_start_read(struct connection *self)
 			   oop_read_service, self);  
 }
 
-/* GABA:
-   (class
-     (name connection_write)
-     (super abstract_write)
-     (vars
-       (connection object connection)))
-*/
-
 static void
-write_handler(struct abstract_write *s, struct lsh_string *packet)
+do_write_packet(struct channel_table *s, struct lsh_string *packet)
 {
-  CAST(connection_write, self, s);
+  CAST(connection, self, s);
 
-  write_packet(self->connection, packet);
-}
-
-static struct abstract_write *
-make_connection_write_handler(struct connection *connection)
-{
-  NEW(connection_write, self);
-  self->super.write = write_handler;
-  self->connection = connection;
-  return &self->super;
+  write_packet(self, packet);
 }
 
 static struct connection *
-make_connection(int fd, struct exception_handler *e)
+make_connection(int fd)
 {
   NEW(connection, self);
-  init_resource(&self->super, kill_connection);
+  init_channel_table(&self->super, kill_connection, do_write_packet);
+
+  io_register_fd(fd, "lsh transport connection");
 
   self->transport = fd;
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE,
-				      CONNECTION_WRITE_THRESHOLD);
-
-  self->table = make_channel_table(make_connection_write_handler(self), e);
+  self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE);
 
   return self;
 }
@@ -749,7 +736,7 @@ make_transport_exit_callback(void)
 }
 
 static struct connection *
-fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
+fork_lsh_transport(struct lsh_options *options)
 {
   int pipe[2];
   pid_t child;
@@ -772,12 +759,11 @@ fork_lsh_transport(struct lsh_options *options, struct exception_handler *e)
       /* Parent process */
       struct connection *connection;
       close(pipe[1]);
-      io_set_nonblocking(pipe[0]);
       
       reaper_handle(child, make_transport_exit_callback());
-      connection = make_connection(pipe[0], e);
+      connection = make_connection(pipe[0]);
 
-      gc_global(&connection->super);
+      gc_global(&connection->super.super);
       return connection;
     }
   else
@@ -833,7 +819,7 @@ main(int argc, char **argv, const char** envp)
     = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
 			       HANDLER_CONTEXT);
 
-  global_oop_source = io_init();
+  io_init();
   reaper_init();
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -851,7 +837,7 @@ main(int argc, char **argv, const char** envp)
   envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
-  connection = fork_lsh_transport(options, handler);
+  connection = fork_lsh_transport(options);
   if (!connection)
     exit(EXIT_FAILURE);
 
@@ -859,11 +845,16 @@ main(int argc, char **argv, const char** envp)
     FOR_OBJECT_QUEUE(&options->super.actions, n)
       {
 	CAST_SUBTYPE(command, action, n);
-	COMMAND_CALL(action, connection->table, &discard_continuation, handler);
+	COMMAND_CALL(action, connection, &discard_continuation, handler);
       }
   }
   
   io_run();
+
+  /* FIXME: This isn't right; we must associate the resources with the
+     connection instead. The options may have been garbage collected
+     by now. */
+  KILL_RESOURCE_LIST(options->super.resources);
 
   /* Close all files and other resources associated with the backend. */
   io_final();
