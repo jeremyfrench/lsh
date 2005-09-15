@@ -44,7 +44,6 @@
 # include "transport_forward.h.x"
 #undef GABA_DEFINE
 
-#define FORWARD_WRITE_THRESHOLD 1000
 #define FORWARD_WRITE_BUFFER_SIZE (3 * SSH_MAX_PACKET)
 
 static void
@@ -209,40 +208,32 @@ forward_stop_read(struct transport_forward *self)
 static void *
 oop_write_service(oop_source *source UNUSED,
 		  int fd, oop_event event, void *state)
-{
+{  
   CAST_SUBTYPE(transport_forward, self, (struct lsh_object *) state);
-  enum ssh_write_status status;
-
+  uint32_t done;
+  
   assert(fd == self->service_out);
   assert(event == OOP_WRITE);
 
-  status = ssh_write_flush(self->service_writer, self->service_out);
-  switch(status)
+  done = ssh_write_flush(self->service_writer, self->service_out, 0);
+  if (done > 0)
     {
-    case SSH_WRITE_IO_ERROR:
+      if (!self->service_writer->length)
+	forward_stop_write(self);
+
+      if (ssh_write_available(self->service_writer) > SSH_MAX_PACKET + 8)
+	transport_start_read(&self->super);
+    }
+  else if (errno != EWOULDBLOCK)
+    {
+      if (errno == EOVERFLOW)
+	werror("Buffer full from ssh_write_flush! Should not happen.\n");
+	
       transport_disconnect(&self->super,
 			   SSH_DISCONNECT_BY_APPLICATION,
 			   "Connection to service layer failed.");
-      break;
-    case SSH_WRITE_OVERFLOW:
-      werror("Overflow from ssh_write_flush! Should not happen.\n");
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Service layer not responsive.");
-      break;
-    case SSH_WRITE_PENDING:
-      /* If we have space for a new packet, make sure we keep reading
-	 transport packets. */
-      if (ssh_write_available(self->service_writer) > SSH_MAX_PACKET + 8)
-	transport_start_read(&self->super);
-
-      break;
-
-    case SSH_WRITE_COMPLETE:
-      forward_stop_write(self);
-      transport_start_read(&self->super);
-      break;
     }
+
   return OOP_CONTINUE;
 }
 
@@ -300,31 +291,25 @@ forward_event_handler(struct transport_connection *connection,
       break;
 
     case TRANSPORT_EVENT_PUSH:
-      if (self->service_out >= 0)
+      if (self->service_out >= 0 && self->service_writer->length > 0)
 	{
-	  enum ssh_write_status status;
+	  uint32_t done = ssh_write_flush(self->service_writer, self->service_out, 0);
 
-	  status = ssh_write_flush(self->service_writer, self->service_out);
-
-	  switch(status)
+	  if (done > 0 || errno == EWOULDBLOCK)
 	    {
-	    case SSH_WRITE_IO_ERROR:
+	      if (self->service_writer->length)
+		forward_start_write(self);
+	      else
+		forward_stop_write(self);
+	    }
+	  else
+	    {
+	      if (errno == EOVERFLOW)
+		werror("Buffer full from ssh_write_flush! Should not happen.\n");
+	
 	      transport_disconnect(&self->super,
 				   SSH_DISCONNECT_BY_APPLICATION,
 				   "Connection to service layer failed.");
-	      break;
-	    case SSH_WRITE_OVERFLOW:
-	      werror("Overflow from ssh_write_flush! Should not happen.\n");
-	      transport_disconnect(&self->super,
-				   SSH_DISCONNECT_BY_APPLICATION,
-				   "Service layer not responsive.");
-	      break;
-	    case SSH_WRITE_PENDING:
-	      forward_start_write(self);
-
-	    case SSH_WRITE_COMPLETE:
-	      forward_stop_write(self);
-	      break;
 	    }
 	}
     }
@@ -337,47 +322,41 @@ forward_packet_handler(struct transport_connection *connection,
 		       uint32_t seqno, uint32_t length, const uint8_t *packet)
 {
   CAST_SUBTYPE(transport_forward, self, connection);
-
-  enum ssh_write_status status;
   uint8_t header[8];
-
+  uint32_t done;
+  
   assert(length > 0);
   
-  if (ssh_write_available(self->service_writer) < length + 8)
+  if (ssh_write_available(self->service_writer) < length + sizeof(header))
     return 0;
 
   WRITE_UINT32(header, seqno);
   WRITE_UINT32(header + 4, length);
 
-  status = ssh_write_data(self->service_writer,
+  /* FIXME: Avoid pushing out the header */
+  done = ssh_write_data(self->service_writer,
+			self->service_out, 0,
+			sizeof(header), header);
+  if (done > 0 || errno == EWOULDBLOCK)
+    done = ssh_write_data(self->service_writer,
 			  self->service_out, 0,
-			  sizeof(header), header);
-  if (status >= 0)
-    status = ssh_write_data(self->service_writer,
-			    self->service_out, SSH_WRITE_FLAG_PUSH,
-			    length, packet);
+			  length, packet);
 
-  switch (status)
+  if (done > 0 || errno == EWOULDBLOCK)
     {
-    case SSH_WRITE_IO_ERROR:
+      if (self->service_writer->length)
+	forward_start_write(self);
+      else
+	forward_stop_write(self);
+    }
+  else
+    {
+      if (errno == EOVERFLOW)
+	werror("Buffer full from ssh_write_flush! Should not happen.\n");
+
       transport_disconnect(&self->super,
 			   SSH_DISCONNECT_BY_APPLICATION,
 			   "Connection to service layer failed.");
-      break;
-    case SSH_WRITE_OVERFLOW:
-      werror("Overflow when sending packet to service layer! Should not happen.\n");
-      transport_disconnect(&self->super,
-			   SSH_DISCONNECT_BY_APPLICATION,
-			   "Service layer not responsive.");
-      break;
-    case SSH_WRITE_PENDING:
-      forward_start_write(self);
-      
-      break;
-    case SSH_WRITE_COMPLETE:
-      forward_stop_write(self);
-      
-      break;
     }
   return 1;
 }
@@ -392,8 +371,7 @@ transport_forward_setup(struct transport_forward *self,
   self->service_reader = make_service_read_state();
   
   self->service_out = service_out;
-  self->service_writer = make_ssh_write_state(FORWARD_WRITE_BUFFER_SIZE,
-					      FORWARD_WRITE_THRESHOLD);
+  self->service_writer = make_ssh_write_state(FORWARD_WRITE_BUFFER_SIZE);
   
   self->super.event_handler = forward_event_handler;
   self->super.packet_handler = forward_packet_handler;
