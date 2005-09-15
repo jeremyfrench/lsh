@@ -928,6 +928,7 @@ write_raw(int fd, uint32_t length, const uint8_t *data)
   return 1;
 }
 
+#if 0
 /* For fd:s in blocking mode. */
 const struct exception *
 read_raw(int fd, uint32_t length, uint8_t *data)
@@ -959,6 +960,7 @@ read_raw(int fd, uint32_t length, uint8_t *data)
     }
   return NULL;
 }
+#endif
 
 struct lsh_string *
 io_read_file_raw(int fd, uint32_t guess)
@@ -2376,7 +2378,6 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 
 const struct exception finish_read_exception =
 STATIC_EXCEPTION(EXC_FINISH_READ, "Stop reading");
-#endif
 
 const struct exception finish_io_exception =
 STATIC_EXCEPTION(EXC_FINISH_IO, "Stop i/o");
@@ -2400,6 +2401,7 @@ make_io_exception(uint32_t type, struct lsh_fd *fd, int error, const char *msg)
   return &self->super;
 }
 
+#endif
 
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
