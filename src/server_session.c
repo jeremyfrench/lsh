@@ -39,6 +39,7 @@
 #include "server_session.h"
 
 #include "channel_commands.h"
+#include "channel_io.h"
 #include "environ.h"
 #include "format.h"
 #include "lsh_process.h"
@@ -63,9 +64,6 @@
      (name server_session)
      (super ssh_channel)
      (vars
-       ; User information
-       ;; (user object lsh_user)
-
        (initial_window . uint32_t)
 
        ; Resource to kill when the channel is closed. 
@@ -84,26 +82,72 @@
        ; FIXME: Currently not implemented.
        (client string)
        
-       ; Child process's stdio 
-       (in object lsh_fd)
-       (out object lsh_fd)
-
-       ; err may be NULL, if there's no separate stderr channel.
-       ; This happens if we use a pty, and the bash workaround is used.
-       (err object lsh_fd)))
+       ; Child process stdio
+       (in struct channel_write_state)
+       (out struct channel_read_state)
+       (err struct channel_read_state)))
 */
 
-/* Receive channel data */
 static void
-do_receive(struct ssh_channel *c,
+do_kill_server_session(struct resource *s)
+{  
+  CAST(server_session, self, s);
+  if (self->super.super.alive)
+    {
+      trace("do_kill_server_session\n");
+
+      self->super.super.alive = 0;
+
+      if (self->process)
+	KILL_RESOURCE(&self->process->super);
+
+      if (self->pty)
+	KILL_RESOURCE(&self->pty->super);
+      
+      /* Doesn't use channel_write_state_close, since the channel is
+	 supposedly dead already. */
+      io_close_fd(self->in.fd);
+      self->in.fd = -1;
+
+      channel_read_state_close(&self->out);
+      channel_read_state_close(&self->err);
+
+      io_close_fd(self->out.fd);
+      self->out.fd = -1;
+
+      io_close_fd(self->err.fd);
+      self->err.fd = -1;
+    }
+}
+
+/* Receive channel data */
+
+static void *
+oop_write_stdin(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
+{
+  CAST_SUBTYPE(server_session, session, (struct lsh_object *) state);
+
+  assert(event == OOP_WRITE);
+  assert(fd == session->in.fd);
+
+  channel_io_flush(&session->super, &session->in);
+  return OOP_CONTINUE;
+}
+
+static void
+do_receive(struct ssh_channel *s,
 	   int type, struct lsh_string *data)
 {
-  CAST(server_session, closure, c);
+  CAST(server_session, session, s);
 
   switch(type)
     {
     case CHANNEL_DATA:
-      A_WRITE(&closure->in->write_buffer->super, data);
+      channel_io_write(&session->super, &session->in,
+		       oop_write_stdin,
+		       STRING_LD(data));
+
       break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
@@ -114,6 +158,44 @@ do_receive(struct ssh_channel *c,
     }
 }
 
+static void *
+oop_read_stdout(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
+{
+  CAST(server_session, session, (struct lsh_object *) state);
+  uint32_t done;
+  
+  assert(fd == session->out.fd);
+  assert(event == OOP_READ);
+
+  done = channel_io_read(&session->super, &session->out);
+
+  if (done > 0)
+    channel_transmit_data(&session->super,
+			  done, lsh_string_data(session->out.buffer));
+
+  return OOP_CONTINUE;
+}
+
+static void *
+oop_read_stderr(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
+{
+  CAST(server_session, session, (struct lsh_object *) state);
+  uint32_t done;
+  
+  assert(fd == session->err.fd);
+  assert(event == OOP_READ);
+
+  done = channel_io_read(&session->super, &session->err);
+
+  if (done > 0)
+    channel_transmit_extended(&session->super, SSH_EXTENDED_DATA_STDERR,
+			      done, lsh_string_data(session->err.buffer));
+
+  return OOP_CONTINUE;
+}
+
 /* We may send more data */
 static void
 do_send_adjust(struct ssh_channel *s,
@@ -121,21 +203,8 @@ do_send_adjust(struct ssh_channel *s,
 {
   CAST(server_session, session, s);
 
-  /* FIXME: Perhaps it's better to just check the read pointers, and
-   * not bother with the alive-flags? */
-  if (session->out->super.alive)
-    {
-      assert(session->out->read);
-
-      lsh_oop_register_read_fd(session->out);
-    }
-  
-  if (session->err && session->err->super.alive)
-    {
-      assert(session->err->read);
-  
-      lsh_oop_register_read_fd(session->err);
-    }
+  channel_io_start_read(&session->super, &session->out, oop_read_stdout);
+  channel_io_start_read(&session->super, &session->err, oop_read_stderr);
 }
 
 static void
@@ -144,8 +213,16 @@ do_eof(struct ssh_channel *channel)
   CAST(server_session, session, channel);
 
   trace("server_session.c: do_eof\n");
-  
-  close_fd_write(session->in);
+
+  if (session->pty)
+    {
+      static const uint8_t eof[1] = { 4 }; /* ^D */
+      channel_io_write(channel, &session->in,
+		     oop_write_stdin, sizeof(eof), eof);
+    }
+
+  if (!session->in.state->length)
+    channel_write_state_close(&session->super, &session->in);
 }
 
 struct ssh_channel *
@@ -154,10 +231,12 @@ make_server_session(uint32_t initial_window,
 {
   NEW(server_session, self);
 
-  init_channel(&self->super);
-
+  init_channel(&self->super, do_kill_server_session);
+  
+  /* FIXME: More proper initialization */
+  self->in.fd = self->out.fd = self->err.fd = -1;
+  
   self->initial_window = initial_window;
-
   /* We don't want to receive any data before we have forked some
    * process to receive it. */
   self->super.rec_window_size = 0;
@@ -166,7 +245,7 @@ make_server_session(uint32_t initial_window,
   self->super.rec_max_packet = SSH_MAX_PACKET;
   self->super.request_types = request_types;
 
-  /* Note: We don't need a close handler; the channels resource list
+  /* Note: We don't need a close handler; the channel's resource list
    * is taken care of automatically. */
   
   self->process = NULL;
@@ -174,11 +253,7 @@ make_server_session(uint32_t initial_window,
   self->pty = NULL;
   self->term = NULL;
   self->client = NULL;
-  
-  self->in = NULL;
-  self->out = NULL;
-  self->err = NULL;
-  
+    
   return &self->super;
 }
 
@@ -277,9 +352,9 @@ do_exit_shell(struct exit_callback *c, int signaled,
     {
       verbose("server_session.c: Sending %a message on channel %i\n",
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
-	      channel->channel_number);
+	      channel->remote_channel_number);
       
-      A_WRITE(channel->table->write,
+      CHANNEL_TABLE_WRITE(channel->table,
 	      (signaled
 	       ? format_exit_signal(channel, core, value)
 	       : format_exit(channel, value)) );
@@ -288,13 +363,12 @@ do_exit_shell(struct exit_callback *c, int signaled,
        * data has been sent. In particular, we don't wait for EOF from
        * the client, most clients never sends that. */
       
-      channel->flags |= (CHANNEL_NO_WAIT_FOR_EOF | CHANNEL_CLOSE_AT_EOF);
-      
-      if (channel->flags & CHANNEL_SENT_EOF)
-	{
-	  /* We have sent EOF already, so initiate close */
-	  channel_close(channel);
-	}
+      channel->flags |= CHANNEL_NO_WAIT_FOR_EOF;
+
+      /* This message counts as one "sink" (bad name, right) */
+      assert(channel->sinks);
+      if (!--channel->sinks)
+	channel_maybe_close(channel);
     }
 }
 
@@ -420,14 +494,14 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
+#define SERVER_READ_BUFFER_SIZE 0x4000
+
 static int
 spawn_process(struct server_session *session,
 	      /* All information but the fd:s should be filled in
 	       * already */
 	      struct spawn_info *info)
 {
-  struct lsh_callback *read_close_callback;
-
   assert(!session->process);
 
   if (session->pty && !make_pty(session->pty,
@@ -447,65 +521,32 @@ spawn_process(struct server_session *session,
   if (!session->process)
     return 0;
 
-  /* Close callback for stderr and stdout */
-  read_close_callback
-    = make_channel_read_close_callback(&session->super);
+  /* One extra character, to make sure we can send a final ^D. */
+  init_channel_write_state(&session->in, info->in[1], session->initial_window + 1);
+  init_channel_read_state(&session->out, info->out[0], SERVER_READ_BUFFER_SIZE);
+  io_register_fd(info->in[1], "process stdin");
+  io_register_fd(info->out[0], "process stdout");
 
-  session->in
-    = io_write(make_lsh_fd
-	       (info->in[1], session->pty ? IO_PTY : IO_NORMAL,
-		"child stdin",
-		make_channel_io_exception_handler(&session->super,
-						  "Child stdin: ", 0,
-						  &default_exception_handler,
-						  HANDLER_CONTEXT)),
-	       SSH_MAX_PACKET, NULL);
-
-  /* Flow control */
-  session->in->write_buffer->report = &session->super.super;
-
-  /* FIXME: Should we really use the same exception handler,
-   * which will close the channel on read errors, or is it
-   * better to just send EOF on read errors? */
-  session->out
-    = io_read(make_lsh_fd
-	      (info->out[0], IO_NORMAL, "child stdout",
-	       make_channel_io_exception_handler(&session->super,
-						 "Child stdout: ", 1,
-						 &default_exception_handler,
-						 HANDLER_CONTEXT)),
-	      make_channel_read_data(&session->super),
-	      read_close_callback);
-  session->err
-    = ( (info->err[0] != -1)
-	? io_read(make_lsh_fd
-		  (info->err[0], IO_NORMAL, "child stderr",
-		   make_channel_io_exception_handler(&session->super,
-						     "Child stderr: ", 0,
-						     &default_exception_handler,
-						     HANDLER_CONTEXT)),
-		  make_channel_read_stderr(&session->super),
-		  read_close_callback)
-	: NULL);
+  if (info->err[0] < 0)
+    {
+      session->err.fd = -1;
+      session->err.buffer = NULL;
+    }
+  else
+    {
+      init_channel_read_state(&session->err, info->err[0], SERVER_READ_BUFFER_SIZE);
+      io_register_fd(info->err[0], "process stderr");
+    }
 
   session->super.receive = do_receive;
   session->super.send_adjust = do_send_adjust;
   session->super.eof = do_eof;
+  
+  session->super.sources += 2;
 
-  /* Make sure that the process and it's stdio is cleaned up if
-   * the channel or connection dies. */
-  remember_resource(session->super.resources, &session->process->super);
-
-  /* FIXME: How to do this properly if in and out may use the same
-   * fd? */
-  remember_resource(session->super.resources, &session->in->super);
-  remember_resource(session->super.resources, &session->out->super);
-  if (session->err)
-    remember_resource(session->super.resources, &session->err->super);
-
-  /* Don't close channel immediately at EOF, as we want to
-   * get a chance to send exit-status or exit-signal. */
-  session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+  /* One reference for stdin, and one for the exit-status/exit-signal
+     message */
+  session->super.sinks += 2;
 
   channel_start_receive(&session->super, session->initial_window);
 
@@ -796,7 +837,6 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
 	   * on the master pty? */
 	  session->term = term;
 	  session->pty = pty;
-	  remember_resource(channel->resources, &pty->super);
 
 	  verbose(" ... granted.\n");
 	  debug("pty master fd: %i\n", pty->master);
@@ -839,8 +879,8 @@ do_window_change_request(struct channel_request *c UNUSED,
       static const struct exception winch_request_failed =
 	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "window-change request failed: No pty");
 
-      if (session->pty && session->in && session->in->super.alive
-          && tty_setwinsize(session->in->fd, &dims))
+      if (session->pty && session->in.fd >= 0
+          && tty_setwinsize(session->in.fd, &dims))
         /* Success. Rely on the terminal driver sending SIGWINCH */
         COMMAND_RETURN(s, channel);
       else
@@ -856,6 +896,7 @@ window_change_request_handler =
 
 #endif /* WITH_PTY_SUPPORT */
 
+#if 0
 #if WITH_X11_FORWARD
 
 /* FIXME: We must delay the handling of any shell request until
@@ -912,3 +953,4 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
 }
 
 #endif /* WITH_X11_FORWARD */
+#endif
