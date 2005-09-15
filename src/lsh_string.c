@@ -109,9 +109,6 @@ struct lsh_string
 #if DEBUG_ALLOC
   struct lsh_string_header header;
 #endif
-  /* Attached to read packets. Used only for generating proper
-     SSH_MSG_UNIMPLEMENTED replies. */
-  uint32_t sequence_number;
   /* NOTE: The allocated size may be larger than the string length. */
   uint32_t length; 
   uint8_t data[1];
@@ -136,18 +133,6 @@ const char *
 lsh_get_cstring(const struct lsh_string *s)
 {
   return (s && !memchr(s->data, '\0', s->length) ? s->data : NULL);
-}
-
-uint32_t
-lsh_string_sequence_number(const struct lsh_string *s)
-{
-  return s->sequence_number;
-}
-
-void
-lsh_string_set_sequence_number(struct lsh_string *s, uint32_t n)
-{
-  s->sequence_number = n;
 }
 
 void
@@ -515,7 +500,6 @@ lsh_string_alloc(uint32_t length)
 
   s->length = length;
   s->data[length] = '\0';
-  s->sequence_number = 0;
   
   return s;
 }

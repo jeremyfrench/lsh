@@ -92,13 +92,6 @@ int
 lsh_string_prefixp(const struct lsh_string *prefix,
 		       const struct lsh_string *s);
 
-uint32_t
-lsh_string_sequence_number(const struct lsh_string *s);
-
-void
-lsh_string_set_sequence_number(struct lsh_string *s, uint32_t n);
-
-
 void
 lsh_string_putc(struct lsh_string *s, uint32_t i, uint8_t c);
 
