@@ -1,3 +1,182 @@
+2005-09-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added channel_io. Removed
+	channel_forward.c, client_pty.c, client_x11.c, gateway.c,
+	gateway_channel.c and server_x11.c, which are currently not working.
+
+	* src/transport_forward.c: Updated for changes to ssh_write.c.
+
+	* src/server_session.c (class server_session): Use
+	channel_write_state and channel_read_state instead of lsh_fd
+	objects.
+	(do_kill_server_session): New method.
+	(oop_write_stdin): New function.
+	(do_receive): Use channel_io_write.
+	(oop_read_stdout, oop_read_stderr): New functions.
+	(do_send_adjust): Use channel_io_start_read.
+	(do_eof): Send ^D if stdin is a pty. Call
+	channel_write_state_close if there's no buffered data. 
+	(do_exit_shell): Use channel_maybe_close.
+	(spawn_process): Rewrote i/o setup.
+	(x11_request_handler): #if:ed out x11 support for now.
+
+	* src/lshd.c (lshd_service_request_handler, lshd_packet_handler):
+	Use TRANSPORT_WRITE_FLAG_PUSH, not SSH_WRITE_FLAG_PUSH.
+
+	* src/lshd-connection.c (class connection): Inherit channel_table,
+	not resource.
+	(kill_connection): Check the alive flag, and don't call exit here.
+	(write_packet): Reintroduced connection argument. Use
+	KILL_RESOURCE on errors. Make sure the packet is deallocated.
+	(disconnect): Use KILL_RESOURCE, rather than exit.
+	(do_write_packet): This is now a method of the channel_table class.
+	(make_connection): Deleted exception_handler argument. Call
+	io_register_fd. Disabled pty support for now.
+	(do_exc_lshd_connection_handler): Deleted.
+
+	* src/lsh.c (class connection): Inherit channel_table, not resource.
+	(kill_connection): Check the alive flag, and don't call exit here.
+	(write_packet): Adapted to changes to ssh_write.c. Make sure the
+	packet is deallocated.
+	(do_write_packet): This is now a method of the channel_table class.
+	(make_connection): Deleted exception handler argument.
+	(fork_lsh_transport): Deleted exception handler argument. Don't
+	call io_set_nonblocking here.
+
+	* src/lsh-transport.c: Updated for changes to
+	transport_write.c/ssh_write.c.
+
+	* src/io.c: Deleted HAVE_POLL conditionals. #if:ed out most of the
+	old i/o code.
+	(global_oop_source, global_nfiles): Renamed, was source and
+	nfiles.
+	(io_register_fd, io_close_fd): New functions.
+	(io_init): Reverted back to returning void.
+
+	* src/client_pty.c (do_client_winch_handler): Use
+	CHANNEL_TABLE_WRITE, not A_WRITE.
+
+	* src/client_session.c (class client_session): Renamed, was
+	client_session_channel. Use channel_read_state and
+	channel_write_state instead of lsh_fd objects. 
+	(do_kill_client_session): New method.
+	(oop_write_stdout, oop_write_stderr): New functions.
+	(do_client_session_close): Deleted method.
+	(do_client_session_eof): Updated to use channel_write_state_close.	
+	(do_receive): Use channel_io_write.
+	(oop_read_stdin): New function.
+	(do_send_adjust): Use channel_io_start_read.
+	(command client_start_io): Rewritten.
+	(make_client_session_channel): Don't set up a close handler.
+	Rewritten i/o setup. Take fd:s rather than lsh_fd objects as
+	argument.
+
+	* src/client.c (do_exit_status, do_exit_signal): DEcrement the
+	sinks counter.
+	(class detach_callback): #if:ed out.
+	(make_client_start_session): Deleted wrapper function.
+	(client_maybe_pty): #if:ed out pty support for now.
+	(client_maybe_x11): #if:ed out x11 support for now.
+	(make_client_session): Adapted to changed make_client_session_channel.
+
+	* src/channel_commands.c: Use CHANNEL_TABLE_WRITE instead of
+	A_WRITE. Use CAST_SUBTYPE when casting to class channel_table.
+
+	* src/transport.c: Updated for changes to
+	transport_write.c/ssh_write.c.
+
+	* src/channel.c (format_open_failure, format_channel_success) 
+	(format_channel_failure): Made static.
+
+	* src/channel.h (enum channel_data_type): New enum.
+	(enum channel_flag): Use an enum to define the channel flags.
+	(CHANNEL_CLOSE_AT_EOF): Deleted.
+	(class ssh_channel): Inherit resource, not flow_controlled. New
+	attribute local_channel_number. Renamed channel_number to
+	remote_channel_number. Deleted resource list and close method.
+	New attribute sinks.
+	(class channel_table): Inherit resource. Changed attribute write
+	to a method. Deleted resource list. 
+	(CHANNEL_TABLE_WRITE): New method.
+
+	* src/channel.c (PROTOCOL_ERROR): Redefine macro (kind of kludgy).
+	(channel_pending_close, channel_finished): New functions, replacing the
+	EXC_FINISH_PENDING and EXC_FINISH_CHANNEL exceptions.
+	(format_global_failure, format_global_success) 
+	(format_open_confirmation, prepare_window_adjust): Made static.
+	(class exc_finish_channel_handler): Deleted.
+	(do_exc_finish_channel_handler, make_exc_finish_channel_handler):
+	Deleted.
+	(init_channel_table): Replaces make_channel_table. New arguments
+	write and kill.
+	(kill_channels): New function.
+	(use_channel): Removed argument local_channel_number.
+	(register_channel): Don't set up any exception handler. Initialize
+	channel->local_channel_number. 
+	(lookup_channel, lookup_channel_reserved): Added asserts.
+	(channel_adjust_rec_window): New function. Replaces
+	adjust_rec_window.
+	(channel_maybe_close): New function.
+	(handle_channel_eof, channel_eof): Use channel_maybe_close.
+	(handle_channel_close, handle_open_failure, channel_close): Use
+	channel_finished. 
+	(channel_transmit_data, channel_transmit_extended): Send the data,
+	rather than returning a formatted packet.
+
+	* src/channel_io.h, src/channel_io.c: New files.
+
+2005-09-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_write.c (make_transport_write_state): Initialize
+	ingore and threshold.
+	(select_write_size): New function, moved from ssh_write.c.
+	(update_status, write_data, write_flush): New functions, replacing
+	code in ssh_write.c.
+	(transport_write_packet, transport_write_line)
+	(transport_write_flush): Updated to changes in ssh_write_state. 
+
+	* src/transport.h (class transport_write_state): New attributes
+	threshold and ignore, moved from class ssh_write_state.
+	(enum transport_write_status): New status constants, replaces enum
+	ssh_write_status.
+	(enum transport_write_flag): New flags, replaces ssh_write_flag.
+
+	* src/ssh_write.c (init_ssh_write_state, make_ssh_write_state):
+	Deleted threshold argument.
+	(select_write_size): Moved to transport_write.c.
+	(ssh_write_flush): Return amount of data actually written rather
+	than buffered. New
+	argument to_write with the preferred write size.
+	(ssh_write_enqueue): Renamed and made non-static. Old name was enqueue.
+	(ssh_write_data): Rewritten, doesn't handle ignore packets. New
+	argument to_write, and returns amount of data actually written
+	rather than buffered.
+
+	* src/ssh_write.h (class ssh_write_state): Removed attributes
+	threshold and ignore (moved to class transport_write_state).
+	(enum ssh_write_status): Deleted.
+
+	* src/lsh_string.c (lsh_string_read): Loop on EINTR.
+
+2005-09-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/service_read.c (service_read_packet): Check if
+	self->packet_length is zero first. Fixes bug when reading small
+	packets.
+
+	* src/werror.c (werror_format): Made static. Don't write program
+	name.
+	(werror_hexdump): Use werror_format, to avoid redundant program
+	name output.
+	(werror_title): New function. Updated all users of werror_vformat
+	to use it.
+	(werror_vformat): Don't write program name. New specifier %T.
+	(packet_types): Include this generated array here, used for %T.
+
+2005-09-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c: Pass on --host-db option to lsh-transport.
+
 2005-09-07  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh (run_lsh): For the time being, don't
