@@ -68,8 +68,8 @@
 #define DEFAULT_ESCAPE_CHAR '~'
 #define DEFAULT_SOCKS_PORT 1080
 
-
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name detach_callback)
      (super lsh_callback)
@@ -79,7 +79,7 @@
        (exit_status . "int *")))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name detach_resource)
      (super resource)
@@ -173,7 +173,9 @@ make_detach_callback(int *exit_status)
 
    return &self->super;
 }
+#endif
 
+/* FIXME: Move to client_session.c? */
 /* GABA:
    (class
      (name exit_handler)
@@ -198,12 +200,16 @@ do_exit_status(struct channel_request *c,
       && parse_eod(args))
     {
       verbose("client.c: Receiving exit-status %i on channel %i\n",
-	      status, channel->channel_number);
+	      status, channel->remote_channel_number);
 
       *closure->exit_status = status;
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
-      
+
+      assert(channel->sinks);
+      channel->sinks--;
+      /* FIXME: We should probably call channel_maybe_close in some way. */      
+
       COMMAND_RETURN(s, channel);
     }
   else
@@ -248,6 +254,10 @@ do_exit_signal(struct channel_request *c,
       
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
+
+      assert(channel->sinks);
+      channel->sinks--;
+      /* FIXME: We should probably call channel_maybe_close in some way. */      
 
       COMMAND_RETURN(s, channel);
     }
@@ -566,18 +576,12 @@ client_options[] =
           (client_start_io (request session)))))
 */
 
-static struct command *
-make_client_start_session(struct command *request)
-{
-  CAST_SUBTYPE(command, r, client_start_session(request));
-  return r;
-}
-
 static void
 client_maybe_pty(struct client_options *options,
 		 int default_pty,
 		 struct object_queue *q)
 {
+#if 0
 #if WITH_PTY_SUPPORT
   int with_pty = options->with_pty;
   if (with_pty < 0)
@@ -605,12 +609,14 @@ client_maybe_pty(struct client_options *options,
 	werror("lsh: No tty available.\n");
     }
 #endif
+#endif
 }
 
 static void
 client_maybe_x11(struct client_options *options,
 		 struct object_queue *q)
 {
+#if 0
   if (options->with_x11)
     {
       char *display = getenv(ENV_DISPLAY);
@@ -628,6 +634,7 @@ client_maybe_x11(struct client_options *options,
       else
 	werror("Can't find any local X11 display to forward.\n");
     }
+#endif
 }
 
 /* Create an interactive session */
@@ -646,7 +653,7 @@ client_shell_session(struct client_options *options)
       client_maybe_x11(options, &session_requests);
   
       object_queue_add_tail(&session_requests,
-			    &make_client_start_session(&request_shell.super)->super);
+			    &client_start_session(&request_shell.super)->super);
   
       {
 	CAST_SUBTYPE(command, r,
@@ -673,7 +680,7 @@ client_subsystem_session(struct client_options *options,
 		   make_start_session
 		   (make_open_session_command(session),
 		    make_object_list(1,
-				     make_client_start_session
+				     client_start_session
 				     (make_subsystem_request(subsystem)),
 				     -1)));
       return r;
@@ -702,7 +709,7 @@ client_command_session(struct client_options *options,
       client_maybe_x11(options, &session_requests);
 
       object_queue_add_tail(&session_requests,
-			    &make_client_start_session(make_exec_request(command))->super);
+			    &client_start_session(make_exec_request(command))->super);
       {
 	CAST_SUBTYPE(command, r,
 		     make_start_session
@@ -863,16 +870,14 @@ make_client_session(struct client_options *options)
   int in;
   int out;
   int err;
-  enum io_type in_type = IO_NORMAL;
-  enum io_type out_type = IO_NORMAL;
-  enum io_type err_type = IO_NORMAL;
   
   int is_tty = 0;
   struct ssh_channel *session;
   
   struct escape_info *escape = NULL;
+#if 0
   struct lsh_callback *detach_cb = NULL;
-  
+#endif
   debug("lsh.c: Setting up stdin\n");
 
   if (options->stdin_file)
@@ -885,7 +890,6 @@ make_client_session(struct client_options *options)
       else 
 	{
 	  in = STDIN_FILENO;
-	  in_type = IO_STDIO;
 	  is_tty = isatty(STDIN_FILENO);
 	  
 	  options->used_stdin = 1;
@@ -930,10 +934,8 @@ make_client_session(struct client_options *options)
   if (options->stdout_file)
     out = open(options->stdout_file, O_WRONLY | O_CREAT, 0666);
   else
-    {
-      out_type = IO_STDIO;
-      out = STDOUT_FILENO;
-    }
+    out = STDOUT_FILENO;
+
   if (out < 0)
     {
       werror("lsh: Can't open stdout %e\n", errno);
@@ -946,46 +948,39 @@ make_client_session(struct client_options *options)
   if (options->stderr_file)
     err = open(options->stderr_file, O_WRONLY | O_CREAT, 0666);
   else
-    {
-      err_type = IO_STDERR;
-      err = STDERR_FILENO;
-    }
+    err = STDERR_FILENO;
+
   if (err < 0) 
     {
       werror("lsh: Can't open stderr!\n");
-      close(in);
-      close(out);
       return NULL;
     }
 
+#if 0
   if (options->detach_end) /* Detach? */
     detach_cb = make_detach_callback(options->exit_code);  
+#endif
 
   /* Clear options */
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
 
-  session = make_client_session_channel
-    (io_read(make_lsh_fd(in, in_type, "client stdin", options->handler),
-	     NULL, NULL),
-     io_write(make_lsh_fd(out, out_type, "client stdout", options->handler),
-	      BLOCK_SIZE, 
-	      detach_cb),
-     io_write(make_lsh_fd(err, err_type, "client stderr", options->handler),
-	      BLOCK_SIZE, NULL),
-     escape,
-     WINDOW_SIZE,
-     options->exit_code);
+  session = make_client_session_channel(in, out, err,
+					escape,
+					WINDOW_SIZE,
+					options->exit_code);
   
+#if 0
   if (options->detach_end)
     {
       remember_resource(session->resources, make_detach_resource(detach_cb));
       options->detach_end = 0;
     }
+#endif
 
-  /* The channel won't get registered in any other resource_list until
-   * later, so we must register it here to be able to clean up
-   * properly if the connection fails early. */
-  remember_resource(options->resources, &session->resources->super);
+  /* The channel won't get registered in anywhere else until later, so
+   * we must register it here to be able to clean up properly if the
+   * connection fails early. */
+  remember_resource(options->resources, &session->super);
   
   return session;
 }
@@ -1175,12 +1170,13 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       if (options->start_shell)
 	client_add_action(options, client_shell_session(options));
 
+#if 0
       if (options->used_x11)
 	client_add_action(options,
 			  make_install_fix_channel_open_handler
 			  (ATOM_X11,
 			   &channel_open_x11));
-      
+#endif 
       /* Install suspend-handler */
       suspend_install_handler();
       break;

@@ -95,13 +95,11 @@ struct command *make_open_session_command(struct ssh_channel *session);
 extern struct channel_request_command request_shell;
 #define REQUEST_SHELL (&request_shell.super.super)
 
-extern struct command client_io;
-#define CLIENT_START_IO (&client_io.super)
+extern struct command client_start_io;
+#define CLIENT_START_IO (&client_start_io.super)
 
 struct ssh_channel *
-make_client_session_channel(struct lsh_fd *in,
-			    struct lsh_fd *out,
-			    struct lsh_fd *err,
+make_client_session_channel(int in, int out, int err,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status);
