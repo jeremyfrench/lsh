@@ -212,7 +212,7 @@ lsh_transport_event_handler(struct transport_connection *connection,
       assert(self->state == STATE_HANDSHAKE);
 
       transport_send_packet(
-	connection, SSH_WRITE_FLAG_PUSH,
+	connection, TRANSPORT_WRITE_FLAG_PUSH,
 	ssh_format("%c%z", SSH_MSG_SERVICE_REQUEST,
 		   config->requested_service));
 
@@ -351,7 +351,7 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 				       "Invalid USERAUTH_FAILURE message");
 	  }
 	default:
-	  transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+	  transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH,
 				format_unimplemented(seqno));	  
 	}
       break;
@@ -394,13 +394,13 @@ start_userauth(struct lsh_transport_connection *self)
 
       lsh_string_free(signed_data);
 
-      transport_send_packet(&self->super.super, SSH_WRITE_FLAG_PUSH,
+      transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			    request);
     }
   else
     {
       /* Find out whether or not password authentication is supported. */
-      transport_send_packet(&self->super.super, SSH_WRITE_FLAG_PUSH,
+      transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			    ssh_format("%c%z%z%a",
 				       SSH_MSG_USERAUTH_REQUEST,
 				       config->user,
@@ -1042,9 +1042,11 @@ int
 main(int argc, char **argv)
 {
   struct lsh_transport_config *config;
-  struct oop_source *source = io_init();
 
-  config = make_lsh_transport_config(source);
+  io_init();
+
+  /* FIXME: Use the global source, instead of passing it as an argument */
+  config = make_lsh_transport_config(global_oop_source);
   if (!config)
     return EXIT_FAILURE;
   
