@@ -26,11 +26,11 @@
 #endif
 
 #include <assert.h>
-#include <stdlib.h>
 
 #include "arglist.h"
 
 #include "werror.h"
+#include "xalloc.h"
 
 #define DEFAULT_SIZE 10
 
@@ -39,16 +39,13 @@ arglist_init(struct arglist *args)
 {
   args->size = DEFAULT_SIZE;
   args->argc = 0;
-  args->argv = malloc(args->size * sizeof(args->argv[0]));
-
-  if (!args->argv)
-    fatal("Memory exhausted.\n");
+  args->argv = lsh_space_alloc(args->size * sizeof(args->argv[0]));
 }
 
 void
 arglist_clear(struct arglist *args)
 {
-  free(args->argv);
+  lsh_space_free(args->argv);
   args->argv = NULL;
 }
 
@@ -59,9 +56,8 @@ arglist_push(struct arglist *args, const char *s)
   if (args->argc + 1 == args->size)
     {
       unsigned n = 2 * args->size;
-      void *p = realloc(args->argv, n * sizeof(args->argv[0]));
-      if (!p)
-	fatal("Memory exhausted.\n");
+      void *p = lsh_space_realloc(args->argv, n * sizeof(args->argv[0]));
+
       args->size = n;
       args->argv = p;
     }
@@ -70,7 +66,7 @@ arglist_push(struct arglist *args, const char *s)
 }
 
 /* Pushes the catenation of option and argument (this memory is
-   leaked). Needed for options with an optinal argument. */
+   leaked). Needed for options with an optional argument. */
 void
 arglist_push_optarg(struct arglist *args,
 		    const char *opt, const char *arg)
