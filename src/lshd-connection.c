@@ -48,22 +48,27 @@
 
 #include "lshd-connection.c.x"
 
-oop_source *global_oop_source;
-
 /* GABA:
    (class
      (name connection)
-     (super resource)
+     (super channel_table)
      (vars
-       (reader object service_read_state)
-       (table object channel_table)))
+       (reader object service_read_state)))
 */
 
 static void
-kill_connection(struct resource *s UNUSED)
+kill_connection(struct resource *s)
 {
-  werror("kill_connection\n");
-  exit(EXIT_FAILURE);
+  CAST(connection, self, s);
+  if (self->super.super.alive)
+    {
+      trace("kill_connection\n");
+
+      self->super.super.alive = 0;      
+  
+      kill_channels(&self->super);
+      io_close_fd(STDIN_FILENO);
+    }
 }
 
 /* Modifies the iv in place */
@@ -99,37 +104,45 @@ blocking_writev(int fd, struct iovec *iv, size_t n)
 
 /* NOTE: Uses blocking mode. Doesn't set any sequence number. */
 static void
-write_packet(struct lsh_string *packet)
+write_packet(struct connection *self, struct lsh_string *packet)
 {
   uint32_t length;
+  const uint8_t *data;
   uint8_t header[8];
   struct iovec iv[2];
   
   length = lsh_string_length(packet);
-  
+  data = lsh_string_data(packet);
+
+  assert(length > 0);
+  trace("Writing packet of type %T (%i)\n", data[0], data[0]);
+  debug("packet contents: %xs\n", length, data);
+
   WRITE_UINT32(header, 0);
   WRITE_UINT32(header + 4, length);
   
   iv[0].iov_base = header;
   iv[0].iov_len = sizeof(header);
-  iv[1].iov_base = (char *) lsh_string_data(packet);
+  iv[1].iov_base = (char *) data;
   iv[1].iov_len = length;
 
   if (!blocking_writev(STDOUT_FILENO, iv, 2))
     {
       werror("write_packet: Write failed: %e\n", errno);
-      exit(EXIT_FAILURE);      
+      KILL_RESOURCE(&self->super.super);
     }
+
+  lsh_string_free(packet);
 }
 		  
 static void
-disconnect(const char *msg)
+disconnect(struct connection *self, const char *msg)
 {
   werror("disconnecting: %z.\n", msg);
 
-  write_packet(format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
-				 msg, ""));
-  exit(EXIT_FAILURE);
+  write_packet(self, format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
+				       msg, ""));
+  KILL_RESOURCE(&self->super.super);
 }
 
 static void
@@ -178,20 +191,20 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 
 	case SERVICE_READ_COMPLETE:
 	  if (!length)
-	    disconnect("lshd-connection received an empty packet");
+	    disconnect(self, "lshd-connection received an empty packet");
 
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_USERAUTH_GENERIC)
 	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-	    disconnect("lshd-connection received a transport layer packet");
+	    disconnect(self, "lshd-connection received a transport layer packet");
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
 	    {
 	      /* Ignore */
 	    }
-	  else if (!channel_packet_handler(self->table, length, packet))
-	    write_packet(format_unimplemented(seqno));
+	  else if (!channel_packet_handler(&self->super, length, packet))
+	    write_packet(self, format_unimplemented(seqno));
 	}
     }
 }
@@ -206,32 +219,30 @@ service_start_read(struct connection *self)
 
 
 static void
-do_write_handler(struct abstract_write *s UNUSED, struct lsh_string *packet)
+do_write_packet(struct channel_table *s, struct lsh_string *packet)
 {
-  write_packet(packet);
+  CAST(connection, self, s);
+  write_packet(self, packet);
 }
 
-static struct abstract_write
-write_handler = { STATIC_HEADER, do_write_handler };
-
 static struct connection *
-make_connection(struct exception_handler *e)
+make_connection(void)
 {
   NEW(connection, self);
-  init_resource(&self->super, kill_connection);
-  
+  init_channel_table(&self->super, kill_connection, do_write_packet);
+
+  io_register_fd(STDIN_FILENO, "transport read fd");
+
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  self->table = make_channel_table(&write_handler, e);
-
-  /* FIXME: Always enables X11 */
-  ALIST_SET(self->table->channel_types, ATOM_SESSION,
+  /* FIXME: Never enables X11 or pty */
+  ALIST_SET(self->super.channel_types, ATOM_SESSION,
 	    &make_open_session(
-	      make_alist(3,
+	      make_alist(1,
 			 ATOM_SHELL, &shell_request_handler,
-			 ATOM_PTY_REQ, &pty_request_handler,
-			 ATOM_X11_REQ, &x11_request_handler, -1))->super);
+			 /* ATOM_PTY_REQ, &pty_request_handler, */
+			 /* ATOM_X11_REQ, &x11_request_handler, */ -1))->super);
 
   return self;
 }
@@ -260,46 +271,31 @@ main_argp =
   NULL, NULL
 };
 
-/* FIXME: What kind of exceptions do we really need to handle? */
-static void
-do_exc_lshd_connection_handler(struct exception_handler *self,
-			       const struct exception *e)
-{
-  if (e->type & EXC_IO)
-    {
-      CAST_SUBTYPE(io_exception, exc, e);
-      
-      werror("%z, (errno = %i)\n", e->msg, exc->error);
-    }
-  else
-    EXCEPTION_RAISE(self->parent, e);
-}
-
-static struct exception_handler lshd_connection_exception_handler
-= STATIC_EXCEPTION_HANDLER(do_exc_lshd_connection_handler, &default_exception_handler);
 
 int
 main(int argc, char **argv)
 {
   struct connection *connection;
+#if 0
   fprintf(stderr, "argc = %d\n", argc);
   {
     int i;
     for (i = 0; i < argc; i++)
       fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
   }
-      
+#endif
   argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
 
-  global_oop_source = io_init();
+  io_init();
   reaper_init();
 
   werror("Started connection service\n");
   
-  connection = make_connection(&lshd_connection_exception_handler);
-  gc_global(&connection->super);
+  connection = make_connection();
+  gc_global(&connection->super.super);
 
   io_run();
-  
+
+  verbose("Exiting.\n");
   return EXIT_SUCCESS;
 }
