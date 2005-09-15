@@ -93,13 +93,6 @@ void exception_raise(struct exception_handler *e,
 #define EXC_IO_LISTEN 0x2009
 #define EXC_IO_CLOSE 0x200A
 
-/* Authorization errors */
-#define EXC_AUTH 0x4000
-#define EXC_USERAUTH 0x4001
-
-/* Implies an exception struct with a reply packet in it. */
-#define EXC_USERAUTH_SPECIAL 0x4002
-
 /* Services */
 #define EXC_SERVICE 0x8000
 #define EXC_GLOBAL_REQUEST 0x8001
@@ -107,23 +100,6 @@ void exception_raise(struct exception_handler *e,
 
 /* Use subtypes for the different error codes? */
 #define EXC_CHANNEL_OPEN 0x8003
-
-/* Closing down things */
-#define EXC_FINISH 0x10000
-
-/* Close a channel */
-#define EXC_FINISH_CHANNEL 0x10001
-
-/* Stop reading on some fd */
-#define EXC_FINISH_READ 0x10002
-
-/* Close the connection immediately */
-#define EXC_FINISH_IO 0x10003
-
-/* Put the connection into pending-close mode,
- * i.e. don't open any new channels, and close it
- * as soon as all channels are gone. */
-#define EXC_FINISH_PENDING 0x10004
 
 /* DNS errors */
 #define EXC_RESOLVE 0x20001
