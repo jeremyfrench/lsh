@@ -33,9 +33,13 @@
 #if DEBUG_ALLOC
 #define lsh_free debug_free
 #define lsh_malloc debug_malloc
+#define lsh_realloc debug_realloc
 
 void *
 debug_malloc(size_t real_size);
+
+void *
+debug_realloc(void *m, size_t real_size);
 
 void
 debug_free(const void *m);
@@ -69,6 +73,7 @@ struct lsh_object *
 lsh_object_clone(struct lsh_object *o);
 
 void *lsh_space_alloc(size_t size);
+void *lsh_space_realloc(void *p, size_t size);
 void lsh_space_free(const void *p);
 
 #if DEBUG_ALLOC
