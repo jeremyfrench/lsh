@@ -306,22 +306,12 @@ alloc_channel(struct channel_table *table)
   if (i == table->allocated_channels) 
     {
       uint32_t new_size = table->allocated_channels * 2;
-      struct ssh_channel **new_channels;
-      uint8_t *new_in_use;
 
-      new_channels = lsh_space_alloc(sizeof(struct ssh_channel *)
-				     * new_size);
-      memcpy(new_channels, table->channels,
-	     sizeof(struct ssh_channel *) * table->used_channels);
-      lsh_space_free(table->channels);
-      table->channels = new_channels;
+      table->channels
+	= lsh_space_realloc(table->channels,
+			    sizeof(struct ssh_channel *) * new_size);
 
-      /* FIXME: Use realloc(). */
-      new_in_use = lsh_space_alloc(new_size);
-      memcpy(new_in_use, table->in_use, table->used_channels);
-      lsh_space_free(table->in_use);
-      table->in_use = new_in_use;
-
+      table->in_use = lsh_space_realloc(table->in_use, new_size);
       table->allocated_channels = new_size;
     }
 
@@ -387,7 +377,6 @@ register_channel(struct channel_table *table,
     use_channel(channel);
 }
 
-/* FIXME: Move the reserved flag into the channel class? */
 struct ssh_channel *
 lookup_channel(struct channel_table *table, uint32_t i)
 {
@@ -476,20 +465,23 @@ make_request_status(void)
 */
 
 static void 
-send_global_request_responses(struct channel_table *table, 
-			      struct object_queue *q)
+send_global_request_responses(struct channel_table *table)
 {
-   for (;;)
-     {
-       CAST(request_status, n, object_queue_peek_head(q));
-       if (!n || (n->status < 0))
-	 break;
+  struct object_queue *q = &table->active_global_requests;
+
+  assert(!object_queue_is_empty(q));
+
+  for (;;)
+    {
+      CAST(request_status, n, object_queue_peek_head(q));
+      if (!n || (n->status < 0))
+	break;
  
       object_queue_remove_head(q);
 
       CHANNEL_TABLE_WRITE(table, (n->status
-			   ? format_global_success()
-			   : format_global_failure()));
+				  ? format_global_success()
+				  : format_global_failure()));
     }
 }
 
@@ -498,14 +490,11 @@ do_global_request_response(struct command_continuation *s,
 			   struct lsh_object *x UNUSED)
 {
   CAST(global_request_continuation, self, s);
-  struct object_queue *q = &self->table->active_global_requests;
 
   assert(self->active->status == -1);
-  assert(!object_queue_is_empty(q));
-	  
   self->active->status = 1;
 
-  send_global_request_responses(self->table, q);
+  send_global_request_responses(self->table);
 }
 
 static struct command_continuation *
@@ -539,14 +528,10 @@ do_exc_global_request_handler(struct exception_handler *c,
   CAST(global_request_exception_handler, self, c);
   if (e->type == EXC_GLOBAL_REQUEST)
     {
-      struct object_queue *q = &self->table->active_global_requests;
-      
       assert(self->active->status == -1);
-      assert(!object_queue_is_empty(q));
-
       self->active->status = 0;
   
-      send_global_request_responses(self->table, q);
+      send_global_request_responses(self->table);
     }
   else
     EXCEPTION_RAISE(c->parent, e);
@@ -688,11 +673,12 @@ handle_global_failure(struct channel_table *table,
        (active object request_status)))
 */
 
-/* FIXME: Queue argument is unnecessary */
 static void
-send_channel_request_responses(struct ssh_channel *channel,
-			       struct object_queue *q)
+send_channel_request_responses(struct ssh_channel *channel)
 {
+  struct object_queue *q = &channel->active_requests;
+  assert(!object_queue_is_empty(q));
+
   for (;;)
     {
       CAST(request_status, n, object_queue_peek_head(q));
@@ -713,15 +699,12 @@ do_channel_request_response(struct command_continuation *s,
 			    struct lsh_object *x UNUSED)
 {
   CAST(channel_request_continuation, self, s);
-  struct object_queue *q = &self->channel->active_requests;
 
   trace("do_channel_request_response\n");
   assert(self->active->status == -1);
-  assert(!object_queue_is_empty(q));
-	  
   self->active->status = 1;
 
-  send_channel_request_responses(self->channel, q);
+  send_channel_request_responses(self->channel);
 }
 
 static struct command_continuation *
@@ -756,14 +739,10 @@ do_exc_channel_request_handler(struct exception_handler *c,
   CAST(channel_request_exception_handler, self, c);
   if (e->type == EXC_CHANNEL_REQUEST)
     {
-      struct object_queue *q = &self->channel->active_requests;
-
       assert(self->active->status == -1);
-      assert(!object_queue_is_empty(q));
-      
       self->active->status = 0;
       
-      send_channel_request_responses(self->channel, q);
+      send_channel_request_responses(self->channel);
     }
   else
     EXCEPTION_RAISE(c->parent, e);
@@ -787,24 +766,6 @@ make_channel_request_exception_handler(struct ssh_channel *channel,
   return &self->super;
 }
 
-/* FIXME: Inline in caller */
-static int
-parse_channel_request(struct simple_buffer *buffer,
-		      uint32_t *channel_number,
-		      struct channel_request_info *info)
-{
-  if (parse_uint32(buffer, channel_number)
-      && parse_string(buffer,
-		      &info->type_length, &info->type_data)
-      && parse_boolean(buffer, &info->want_reply))
-    {
-      info->type = lookup_atom(info->type_length, info->type_data);
-      return 1;
-    }
-  else
-    return 0;
-}
-
 static void
 handle_channel_request(struct channel_table *table,
 		       struct simple_buffer *buffer)
@@ -812,14 +773,16 @@ handle_channel_request(struct channel_table *table,
   struct channel_request_info info;
   uint32_t channel_number;
   
-  if (parse_channel_request(buffer, &channel_number, &info))
+  if (parse_uint32(buffer, &channel_number)
+      && parse_string(buffer,
+		      &info.type_length, &info.type_data)
+      && parse_boolean(buffer, &info.want_reply))
     {
-      struct ssh_channel *channel = lookup_channel(table, channel_number);
+      struct ssh_channel *channel;
+      info.type = lookup_atom(info.type_length, info.type_data);
 
-      /* NOTE: We can't free packet yet, because it is not yet fully
-       * parsed. There may be some more arguments, which are parsed by
-       * the CHANNEL_REQUEST method below. */
-
+      channel = lookup_channel(table, channel_number);
+      
       if (channel)
 	{
 	  struct channel_request *req = NULL;
@@ -996,32 +959,6 @@ make_exc_channel_open_handler(struct channel_table *table,
   return &self->super;
 }
 
-/* FIXME: Inline in caller */
-static int
-parse_channel_open(struct simple_buffer *buffer,
-		   struct channel_open_info *info)
-{
-  if (parse_string(buffer, &info->type_length, &info->type_data)
-      && parse_uint32(buffer, &info->remote_channel_number)
-      && parse_uint32(buffer, &info->send_window_size)
-      && parse_uint32(buffer, &info->send_max_packet))
-    {
-      info->type = lookup_atom(info->type_length, info->type_data);
-
-      /* We don't support larger packets than the default,
-       * SSH_MAX_PACKET. */
-      if (info->send_max_packet > SSH_MAX_PACKET)
-	{
-	  werror("do_channel_open: The remote end asked for really large packets.\n");
-	  info->send_max_packet = SSH_MAX_PACKET;
-	}
-
-      return 1;
-    }
-  else
-    return 0;
-}
-
 static void
 handle_channel_open(struct channel_table *table,
 		    struct simple_buffer *buffer)
@@ -1030,13 +967,23 @@ handle_channel_open(struct channel_table *table,
 
   trace("handle_channel_open\n");
   
-  if (parse_channel_open(buffer, &info))
-    {
+  if (parse_string(buffer, &info.type_length, &info.type_data)
+      && parse_uint32(buffer, &info.remote_channel_number)
+      && parse_uint32(buffer, &info.send_window_size)
+      && parse_uint32(buffer, &info.send_max_packet))
+  {
       struct channel_open *open = NULL;
 
-      /* NOTE: We can't free the packet yet, as the buffer is passed
-       * to the CHANNEL_OPEN method later. */
+      info.type = lookup_atom(info.type_length, info.type_data);
 
+      /* We don't support larger packets than the default,
+       * SSH_MAX_PACKET. */
+      if (info.send_max_packet > SSH_MAX_PACKET)
+	{
+	  werror("handle_channel_open: The remote end asked for really large packets.\n");
+	  info.send_max_packet = SSH_MAX_PACKET;
+	}
+      
       if (table->pending_close)
 	{
 	  /* We are waiting for channels to close. Don't open any new ones. */
