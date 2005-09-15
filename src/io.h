@@ -39,6 +39,15 @@
 #include "resource.h"
 #include "write_buffer.h"
 
+extern oop_source *global_oop_source;
+
+void
+io_register_fd(int fd, const char *label);
+
+void
+io_close_fd(int fd);
+
+
 enum io_type {
   IO_NORMAL = 0,
 
@@ -226,13 +235,14 @@ make_io_exception(uint32_t type, struct lsh_fd *fd, int error, const char *msg);
 extern const struct exception finish_read_exception;
 extern const struct exception finish_io_exception;
 
-oop_source *
+void
 io_init(void);
 
 void
 io_final(void);
 
-void io_run(void);
+void
+io_run(void);
 
 void
 lsh_oop_register_read_fd(struct lsh_fd *fd);

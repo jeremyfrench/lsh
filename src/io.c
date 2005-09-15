@@ -33,16 +33,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_POLL
-# if HAVE_POLL_H
-#  include <poll.h>
-# elif HAVE_SYS_POLL_H
-#  include <sys/poll.h>
-# endif
-#else
-# include "jpoll.h"
-#endif
-
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -63,13 +53,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-/* Workaround for some version of FreeBSD. */
-#ifdef POLLRDNORM
-# define MY_POLLIN (POLLIN | POLLRDNORM)
-#else /* !POLLRDNORM */
-# define MY_POLLIN POLLIN
-#endif /* !POLLRDNORM */
-
 #define GABA_DEFINE
 #include "io.h.x"
 #undef GABA_DEFINE
@@ -85,8 +68,9 @@ static oop_source_sys *global_oop_sys = NULL;
 #if WITH_LIBOOP_SIGNAL_ADAPTER
 static oop_adapter_signal *global_oop_signal = NULL;
 #endif
-static oop_source *source = NULL;
-static unsigned nfiles = 0;
+oop_source *global_oop_source = NULL;
+static unsigned global_nfiles = 0;
+
 
 /* OOP Callbacks */
 static void *
@@ -110,9 +94,9 @@ lsh_oop_register_signal(struct lsh_signal_handler *handler)
   trace("lsh_oop_register_signal: signal: %i, handler: %t\n",
 	handler->signum, handler);
   
-  assert(source);
+  assert(global_oop_source);
   if (handler->super.alive)
-    source->on_signal(source, handler->signum,
+    global_oop_source->on_signal(global_oop_source, handler->signum,
 		      lsh_oop_signal_callback, handler);
 }
 
@@ -122,12 +106,13 @@ lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
   trace("lsh_oop_cancel_signal: signal: %i, handler: %t\n",
 	handler->signum, handler);
 
-  assert(source);
+  assert(global_oop_source);
   if (handler->super.alive)
-    source->cancel_signal(source, handler->signum,
+    global_oop_source->cancel_signal(global_oop_source, handler->signum,
 			  lsh_oop_signal_callback, handler);
 }
 
+#if 0
 static void *
 lsh_oop_fd_read_callback(oop_source *s UNUSED, int fileno,
 			 oop_event event, void *data)
@@ -152,12 +137,12 @@ lsh_oop_register_read_fd(struct lsh_fd *fd)
   trace("lsh_oop_register_read_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
-  assert(source);
+  assert(global_oop_source);
   if (fd->super.alive && !fd->want_read)
     {
       assert(fd->read);
       
-      source->on_fd(source, fd->fd, OOP_READ, lsh_oop_fd_read_callback, fd);
+      global_oop_source->on_fd(global_oop_source, fd->fd, OOP_READ, lsh_oop_fd_read_callback, fd);
       fd->want_read = 1;
     }
 }
@@ -168,10 +153,10 @@ lsh_oop_cancel_read_fd(struct lsh_fd *fd)
   trace("lsh_oop_cancel_read_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
-  assert(source);
+  assert(global_oop_source);
   if (fd->super.alive)
     {
-      source->cancel_fd(source, fd->fd, OOP_READ);
+      global_oop_source->cancel_fd(global_oop_source, fd->fd, OOP_READ);
       fd->want_read = 0;
     }
 }
@@ -200,12 +185,12 @@ lsh_oop_register_write_fd(struct lsh_fd *fd)
   trace("lsh_oop_register_write_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
-  assert(source);
+  assert(global_oop_source);
   if (fd->super.alive && !fd->want_write)
     {
       assert(fd->write);
       
-      source->on_fd(source, fd->fd, OOP_WRITE, lsh_oop_fd_write_callback, fd);
+      global_oop_source->on_fd(global_oop_source, fd->fd, OOP_WRITE, lsh_oop_fd_write_callback, fd);
       fd->want_write = 1;
     }
 }
@@ -216,13 +201,14 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
   trace("lsh_oop_cancel_write_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
 
-  assert(source);
+  assert(global_oop_source);
   if (fd->super.alive)
     {
-      source->cancel_fd(source, fd->fd, OOP_WRITE);
+      global_oop_source->cancel_fd(global_oop_source, fd->fd, OOP_WRITE);
       fd->want_write = 0;
     }
 }
+#endif
 
 static void *
 lsh_oop_time_callback(oop_source *source UNUSED,
@@ -245,22 +231,22 @@ lsh_oop_time_callback(oop_source *source UNUSED,
 static void
 lsh_oop_register_callout(struct lsh_callout *callout)
 {
-  assert(source);
+  assert(global_oop_source);
   trace("lsh_oop_register_callout: action: %t\n",
         callout->action);
 
   if (callout->super.alive)
-    source->on_time(source, callout->when, lsh_oop_time_callback, callout);
+    global_oop_source->on_time(global_oop_source, callout->when, lsh_oop_time_callback, callout);
 }
 
 static void
 lsh_oop_cancel_callout(struct lsh_callout *callout)
 {
-  assert(source);
+  assert(global_oop_source);
   trace("lsh_oop_cancel_callout: action: %t\n",
         callout->action);
   if (callout->super.alive)
-    source->cancel_time(source, callout->when, lsh_oop_time_callback, callout);
+    global_oop_source->cancel_time(global_oop_source, callout->when, lsh_oop_time_callback, callout);
 }
 
 static void *
@@ -269,7 +255,7 @@ lsh_oop_stop_callback(oop_source *source UNUSED,
 {
   trace("lsh_oop_stop_callback\n");
   
-  if (!nfiles)
+  if (!global_nfiles)
     /* An arbitrary non-NULL value stops oop_sys_run. */
     return OOP_HALT;
   else
@@ -279,17 +265,66 @@ lsh_oop_stop_callback(oop_source *source UNUSED,
 static void
 lsh_oop_stop(void)
 {
-  assert(source);
+  assert(global_oop_source);
   trace("lsh_oop_stop\n");
-  source->on_time(source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
+  global_oop_source->on_time(global_oop_source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
 }
 
 static void
 lsh_oop_cancel_stop(void)
 {
-  assert(source);
+  assert(global_oop_source);
   trace("lsh_oop_cancel_stop\n");
-  source->cancel_time(source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
+  global_oop_source->cancel_time(global_oop_source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
+}
+
+/* Increments the count of active files, and sets the non-blocking and
+   close-on-exec if appropriate. */
+void
+io_register_fd(int fd, const char *label)
+{
+  trace("io_register_fd: fd %i: %z\n", fd, label);
+
+  if (fd > STDERR_FILENO)
+    {
+      io_set_close_on_exec(fd);
+      io_set_nonblocking(fd);      
+    }
+  global_nfiles++;
+}
+
+/* Closes an fd registered as above. Stdio fiel descriptors are
+   treated specially. */
+void
+io_close_fd(int fd)
+{  
+  if (fd < 0)
+    return;
+
+  trace("io_close_fd: fd = %i\n", fd);
+
+  /* FIXME: Update count of active files */
+  global_oop_source->cancel_fd(global_oop_source, fd, OOP_READ);
+  global_oop_source->cancel_fd(global_oop_source, fd, OOP_WRITE);
+
+  if (fd == STDERR_FILENO)
+    /* Do nothing */
+    ;
+  else if (close(fd) < 0)
+    werror("Closing fd %i failed: %e.\n", fd, errno);
+  
+  else if (fd <= STDOUT_FILENO)
+    {
+      int null = open("/dev/null", O_RDWR);
+      if (null < 0)
+	fatal("Failed to open /dev/null!\n");
+      if (null != fd)
+	fatal("Failed to map stdio fd %i to /dev/null.\n", fd);
+    }
+
+  assert(global_nfiles);
+  if (!--global_nfiles)
+    lsh_oop_stop();
 }
 
 /* For debugging */
@@ -309,7 +344,7 @@ list_files(void)
 }
 #endif
 
-oop_source *
+void
 io_init(void)
 {
   struct sigaction pipe;
@@ -331,18 +366,16 @@ io_init(void)
   global_oop_signal = oop_signal_new(oop_sys_source(global_oop_sys));
   if (!global_oop_signal)
     fatal("Failed to initialize liboop oop_signal.\n");
-  source = oop_signal_source(global_oop_signal);
+  global_oop_source = oop_signal_source(global_oop_signal);
 #else
-  source = oop_sys_source(global_oop_sys);
+  global_oop_source = oop_sys_source(global_oop_sys);
 #endif
-  
-  return source;
 }
 
 void
 io_final(void)
 {
-  assert(source);
+  assert(global_oop_source);
   gc_final();
 
   /* The final gc may have closed some files, and called lsh_oop_stop.
@@ -350,7 +383,7 @@ io_final(void)
   lsh_oop_cancel_stop();
 
   /* There mustn't be any outstanding callbacks left. */
-  assert(nfiles == 0);
+  assert(global_nfiles == 0);
   
 #if WITH_LIBOOP_SIGNAL_ADAPTER
   oop_signal_delete(global_oop_signal);
@@ -358,7 +391,7 @@ io_final(void)
 #endif
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
-  source = NULL;
+  global_oop_source = NULL;
 }
 
 void
@@ -461,6 +494,7 @@ io_callout(struct lsh_callback *action, unsigned seconds)
   return &self->super;
 }
 
+#if 0
 /* Read-related callbacks */
 
 static void
@@ -712,7 +746,7 @@ do_write_callback(struct io_callback *s UNUSED,
 
 static struct io_callback io_write_callback =
 { STATIC_HEADER, do_write_callback };
-
+#endif
 
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
@@ -728,7 +762,7 @@ make_listen_value(struct lsh_fd *fd,
   return self;
 }
 
-
+#if 0
 /* Listen callback */
 
 /* GABA:
@@ -790,7 +824,7 @@ make_listen_callback(struct command *c,
 
 /* Connect callback */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name io_connect_callback)
      (super io_callback)
@@ -838,7 +872,6 @@ make_connect_callback(struct command_continuation *c)
   return &self->super;
 }
 
-
 /* This function is called if a connection this file somehow depends
  * on disappears. For instance, the connection may have spawned a
  * child process, and this file may be the stdin of that process. */
@@ -870,6 +903,7 @@ do_exc_io_handler(struct exception_handler *self,
   EXCEPTION_RAISE(self->parent, x);
   return;
 }
+#endif
 
 
 /* These functions are used by werror and friends */
@@ -1425,13 +1459,14 @@ io_init_fd(int fd)
   io_set_nonblocking(fd);
 }
 
+#if 0
 struct lsh_fd *
 make_lsh_fd(int fd, enum io_type type, const char *label,
 	    struct exception_handler *e)
 {
   NEW(lsh_fd, self);
 
-  nfiles++;
+  global_nfiles++;
   /* NOTE: Relies on order of the enum constants. */
   if (type < IO_STDIO)
     io_init_fd(fd);
@@ -1455,13 +1490,15 @@ make_lsh_fd(int fd, enum io_type type, const char *label,
   gc_global(&self->super);
   return self;
 }
+#endif
 
 unsigned
 io_nfiles(void)
 {
-  return nfiles;
+  return global_nfiles;
 }
 
+#if 0
 /* Some code is taken from Thomas Bellman's tcputils. */
 struct lsh_fd *
 io_connect(struct sockaddr *remote,
@@ -1541,7 +1578,7 @@ make_connect_list_state(void)
   return self;
 }
 
-/* GABA:
+/* ;; GABA:
    (class
      (name connect_list_callback)
      (super io_callback)
@@ -1671,7 +1708,6 @@ io_connect_list(struct connect_list_state *state,
   return &state->super;
 }
 
-
 struct lsh_fd *
 io_bind_sockaddr(struct sockaddr *local,
 		 socklen_t length,
@@ -1760,7 +1796,7 @@ io_listen_list(struct addr_queue *addresses,
       return NULL;
     }
 }
-
+#endif
 
 /* AF_LOCAL sockets */
 
@@ -1935,6 +1971,7 @@ lsh_pushd(const char *directory,
   return old_cd;
 }
 
+#if 0
 
 struct lsh_fd *
 io_bind_local(struct local_info *info,
@@ -2106,7 +2143,7 @@ io_write(struct lsh_fd *fd,
 }
 
 /* Used e.g. for the key capture-file. Never closed. */
-/* GABA:
+/* ;; GABA:
    (class
      (name write_only_file)
      (super abstract_write)
@@ -2195,8 +2232,8 @@ close_fd(struct lsh_fd *fd)
 		fatal("Failed to map stdio fd %i to /dev/null.\n", fd->fd);
 	    }
 	}
-      assert(nfiles);
-      if (!--nfiles)
+      assert(global_nfiles);
+      if (!--global_nfiles)
 	lsh_oop_stop();
     }
   else
@@ -2288,7 +2325,7 @@ close_fd_write(struct lsh_fd *fd)
  * be a parent to the connection related exception handlers, as for
  * instance the protocol error handler will raise the EXC_FINISH_READ
  * exception. */
-/* GABA:
+/* ;; GABA:
    (class
      (name exc_finish_read_handler)
      (super exception_handler)
@@ -2339,6 +2376,7 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 
 const struct exception finish_read_exception =
 STATIC_EXCEPTION(EXC_FINISH_READ, "Stop reading");
+#endif
 
 const struct exception finish_io_exception =
 STATIC_EXCEPTION(EXC_FINISH_IO, "Stop i/o");
