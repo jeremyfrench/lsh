@@ -39,14 +39,16 @@ bootstrap: $(generated_sources) $(dist_classes)
 #
 # client_keyexchange.c client_userauth.c connection.c connection_commands.c
 # debug.c gateway_commands.c handshake.c io_commands.c
-# read_packet.c socks.c tcpforward.c tcpforward_commands.c write_packet.c
+# read_packet.c socks.c channel_forward.c tcpforward.c tcpforward_commands.c write_packet.c
+# gateway.c gateway_channel.c
+# client_x11.c server_x11.c client_pty.c 
 
 liblsh_a_SOURCES = abstract_io.c \
 	algorithms.c alist.c arglist.c atoms.c \
-	channel.c channel_commands.c channel_forward.c \
+	channel.c channel_commands.c channel_io.c \
 	charset.c \
 	client.c client_escape.c \
-	client_pty.c client_session.c client_x11.c \
+	client_session.c \
 	combinators.c command.c compress.c \
 	parse_config.c \
 	crypto.c \
@@ -56,7 +58,6 @@ liblsh_a_SOURCES = abstract_io.c \
 	encrypt.c \
 	exception.c \
 	format.c gc.c \
-	gateway.c gateway_channel.c \
 	interact.c io.c \
 	keyexchange.c \
 	list.c \
@@ -70,7 +71,6 @@ liblsh_a_SOURCES = abstract_io.c \
 	rsa.c \
 	server.c \
 	server_pty.c server_session.c \
-	server_x11.c \
 	service_read.c \
 	sexp.c \
 	spki.c srp_exchange.c \
