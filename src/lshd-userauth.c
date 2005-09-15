@@ -82,10 +82,9 @@ format_userauth_pk_ok(int algorithm,
 
 /* We use blocking i/o through out. */
 static struct lsh_string *
-read_packet(void)
+read_packet(uint32_t *seqno)
 {
   uint8_t header[HEADER_SIZE];
-  uint32_t seqno;
   uint32_t length;
   struct lsh_string *packet;
   uint32_t done;
@@ -108,7 +107,7 @@ read_packet(void)
       done += res;
     }
   
-  seqno = READ_UINT32(header);
+  *seqno = READ_UINT32(header);
   length = READ_UINT32(header + 4);
 
   if (length > SSH_MAX_PACKET)
@@ -139,7 +138,8 @@ read_packet(void)
 static void
 write_packet(struct lsh_string *packet)
 {
-  packet = ssh_format("%i%fS", lsh_string_sequence_number(packet), packet);
+  /* Sequence number not supported */  
+  packet = ssh_format("%i%fS", 0, packet);
 
   if (!write_raw(STDOUT_FILENO, STRING_LD(packet)))
     die("write_packet: write failed: %e\n", errno);
@@ -390,11 +390,12 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
       unsigned msg_number;
       uint32_t user_length;
       const uint8_t *user_utf8;
-      
+      uint32_t seqno;
+
       int service;
       int method;
       
-      packet = read_packet();
+      packet = read_packet(&seqno);
       
       werror("handle_userauth: Received packet.\n");
       simple_buffer_init(&buffer, STRING_LD(packet));
@@ -405,8 +406,7 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
       /* All supported methods use a single USERAUTH_REQUEST */
       if (msg_number != SSH_MSG_USERAUTH_REQUEST)
 	{
-	  write_packet(format_unimplemented(
-			 lsh_string_sequence_number(packet)));
+	  write_packet(format_unimplemented(seqno));
 	  lsh_string_free(packet);
 	  continue;
 	}
