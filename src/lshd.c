@@ -217,7 +217,7 @@ lshd_service_request_handler(struct transport_forward *self,
 	      close(pipe[1]);
 	      io_set_nonblocking(pipe[0]);
 
-	      transport_send_packet(&self->super, SSH_WRITE_FLAG_PUSH,
+	      transport_send_packet(&self->super, TRANSPORT_WRITE_FLAG_PUSH,
 				    format_service_accept(name_length, name));
 
 	      /* Setup forwarding. Replaces event_handler and packet_handler. */
@@ -277,7 +277,7 @@ lshd_packet_handler(struct transport_connection *connection,
 	 the corresponding service is started, we reply with
 	 UNIMPLEMENTED, not DISCONNECT. */
 	 
-      transport_send_packet(connection, SSH_WRITE_FLAG_PUSH,
+      transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH,
 			    format_unimplemented(seqno));
     }
   
@@ -688,7 +688,6 @@ main_argp =
 int
 main(int argc, char **argv)
 {
-  oop_source *source;
   struct lshd_options *options = make_lshd_options();
   struct configuration *configuration;
   struct resource_list *resources = make_resource_list();;
@@ -707,9 +706,9 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  source = io_init();
+  io_init();
   
-  configuration = make_configuration(options->hostkey, source);
+  configuration = make_configuration(options->hostkey, global_oop_source);
   
   if (!open_ports(configuration, resources, options->port))
     return EXIT_FAILURE;
