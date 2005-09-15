@@ -110,15 +110,14 @@ write_packet(struct connection *connection,
 {
   uint32_t done;
   int msg;
-  uint32_t seqno;
   
   assert(lsh_string_length(packet) > 0);
   msg = lsh_string_data(packet)[0];
   trace("Writing packet of type %T (%i)\n", msg, msg);
   debug("packet contents: %xS\n", packet);
 
-  seqno = lsh_string_sequence_number(packet);
-  packet = ssh_format("%i%fS", seqno, packet);
+  /* Sequence number not supported */
+  packet = ssh_format("%i%fS", 0, packet);
   
   done = ssh_write_data(connection->writer,
 			connection->transport, 0, 
@@ -657,8 +656,6 @@ main_argp =
        (status . "int *")))
 */
 
-/* FIXME: Figure out what kind of exceptions we really need to handle.
-   Currently, we should handle EXC_FINISH_READ. */
 static void
 do_lsh_default_handler(struct exception_handler *s,
 		       const struct exception *e)
@@ -676,7 +673,6 @@ do_lsh_default_handler(struct exception_handler *s,
     switch(e->type)
       {
       case EXC_RESOLVE:
-      case EXC_USERAUTH:
       case EXC_GLOBAL_REQUEST:
       case EXC_CHANNEL_REQUEST:
       case EXC_CHANNEL_OPEN:
