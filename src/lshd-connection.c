@@ -51,7 +51,7 @@
 /* GABA:
    (class
      (name connection)
-     (super channel_table)
+     (super ssh_connection)
      (vars
        (reader object service_read_state)))
 */
@@ -66,7 +66,7 @@ kill_connection(struct resource *s)
 
       self->super.super.alive = 0;      
   
-      kill_channels(&self->super);
+      KILL_RESOURCE(&self->super.resources->super);
       io_close_fd(STDIN_FILENO);
     }
 }
@@ -136,12 +136,11 @@ write_packet(struct connection *self, struct lsh_string *packet)
 }
 		  
 static void
-disconnect(struct connection *self, const char *msg)
+disconnect(struct connection *self, uint32_t reason, const char *msg)
 {
   werror("disconnecting: %z.\n", msg);
 
-  write_packet(self, format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
-				       msg, ""));
+  write_packet(self, format_disconnect(reason, msg, ""));
   KILL_RESOURCE(&self->super.super);
 }
 
@@ -191,13 +190,15 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 
 	case SERVICE_READ_COMPLETE:
 	  if (!length)
-	    disconnect(self, "lshd-connection received an empty packet");
+	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
+		       "lshd-connection received an empty packet");
 
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_USERAUTH_GENERIC)
 	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-	    disconnect(self, "lshd-connection received a transport layer packet");
+	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
+		       "lshd-connection received a transport layer packet");
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
 	    {
@@ -219,17 +220,24 @@ service_start_read(struct connection *self)
 
 
 static void
-do_write_packet(struct channel_table *s, struct lsh_string *packet)
+do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
 {
   CAST(connection, self, s);
   write_packet(self, packet);
+}
+
+static void
+do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
+{
+  CAST(connection, self, s);
+  disconnect(self, reason, msg);  
 }
 
 static struct connection *
 make_connection(void)
 {
   NEW(connection, self);
-  init_channel_table(&self->super, kill_connection, do_write_packet);
+  init_ssh_connection(&self->super, kill_connection, do_write_packet, do_disconnect);
 
   io_register_fd(STDIN_FILENO, "transport read fd");
 
