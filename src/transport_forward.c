@@ -93,7 +93,8 @@ transport_forward_close(struct transport_forward *self)
     {
       oop_source *source = self->super.ctx->oop;
 
-     if (self->service_read_active)
+      /* FIXME: Use io_close_fd */
+      if (self->service_read_active)
 	source->cancel_fd(source, self->service_in, OOP_READ);
 
       if (self->service_in != self->service_out)
