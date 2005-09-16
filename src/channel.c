@@ -628,6 +628,9 @@ handle_channel_request(struct ssh_connection *connection,
       && parse_boolean(buffer, &info.want_reply))
     {
       struct ssh_channel *channel;
+      trace("handle_channel_request: Request type `%ps' on channel %i\n",
+	    info.type_length, info.type_data, channel_number);
+
       info.type = lookup_atom(info.type_length, info.type_data);
 
       channel = lookup_channel(connection, channel_number);
@@ -936,6 +939,8 @@ handle_adjust_window(struct ssh_connection *connection,
     SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_WINDOW_ADJUST message.");
 }
 
+/* FIXME: Pass length, pointer to receive, to avoid unnecessary
+   allocation and copying. */
 static void
 handle_channel_data(struct ssh_connection *connection,
 		    struct simple_buffer *buffer)
@@ -1348,13 +1353,17 @@ channel_close(struct ssh_channel *channel)
 void
 channel_maybe_close(struct ssh_channel *channel)
 {
-  if (channel->flags & CHANNEL_SENT_CLOSE)
-    return;
+  trace("channel_maybe_close: flags = %xi, sources = %i, sinks = %i.\n",
+	channel->flags, channel->sources, channel->sinks);
 
-  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_NO_WAIT_FOR_EOF)))
-    return;
-
-  if ( (channel->flags & CHANNEL_SENT_EOF) && !channel->sources && !channel->sinks)
+  /* We need not check channel->sources; that's done by the code that
+     sends CHANNEL_EOF and sets the corresponding flag. We should
+     check channel->sinks, unless CHANNEL_NO_WAIT_FOR_EOF is set. */
+  if (!(channel->flags & CHANNEL_SENT_CLOSE)
+      && (channel->flags & CHANNEL_SENT_EOF)
+      && ((channel->flags & CHANNEL_NO_WAIT_FOR_EOF)
+	  || ((channel->flags & CHANNEL_RECEIVED_EOF)
+	      && !channel->sinks)))
     channel_close(channel);      
 }
 
@@ -1375,7 +1384,7 @@ channel_eof(struct ssh_channel *channel)
       verbose("Sending EOF on channel %i\n", channel->remote_channel_number);
 
       channel->flags |= CHANNEL_SENT_EOF;
-      SSH_CONNECTION_WRITE(channel->connection, format_channel_eof(channel) );
+      SSH_CONNECTION_WRITE(channel->connection, format_channel_eof(channel));
 
       channel_maybe_close(channel);
     }
