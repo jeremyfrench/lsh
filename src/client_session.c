@@ -150,6 +150,7 @@ do_receive(struct ssh_channel *s,
     default:
       fatal("Internal error!\n");
     }
+  lsh_string_free(data);
 }
 
 /* Reading stdin */
