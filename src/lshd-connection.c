@@ -247,8 +247,9 @@ make_connection(void)
   /* FIXME: Never enables X11 or pty */
   ALIST_SET(self->super.channel_types, ATOM_SESSION,
 	    &make_open_session(
-	      make_alist(1,
+	      make_alist(2,
 			 ATOM_SHELL, &shell_request_handler,
+			 ATOM_EXEC, &exec_request_handler,
 			 /* ATOM_PTY_REQ, &pty_request_handler, */
 			 /* ATOM_X11_REQ, &x11_request_handler, */ -1))->super);
 
