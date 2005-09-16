@@ -151,11 +151,11 @@ do_receive(struct ssh_channel *s,
       break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
-      lsh_string_free(data);
       break;
     default:
       fatal("Internal error!\n");
     }
+  lsh_string_free(data);
 }
 
 static void *
@@ -367,8 +367,8 @@ do_exit_shell(struct exit_callback *c, int signaled,
 
       /* This message counts as one "sink" (bad name, right) */
       assert(channel->sinks);
-      if (!--channel->sinks)
-	channel_maybe_close(channel);
+      channel->sinks--;
+      channel_maybe_close(channel);
     }
 }
 
