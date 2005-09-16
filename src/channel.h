@@ -28,26 +28,10 @@
 
 #include "alist.h"
 #include "command.h"
+#include "connection.h"
 #include "parse.h"
 #include "server_pty.h"
 #include "write_buffer.h"
-
-struct channel_table;
-
-struct channel_open_info
-{
-  uint32_t type_length;
-
-  /* NOTE: This is a pointer into the packet, so if it is needed later
-   * it must be copied. */
-  const uint8_t *type_data;
-  
-  int type;
-
-  uint32_t remote_channel_number;
-  uint32_t send_window_size;
-  uint32_t send_max_packet;
-};
 
 struct channel_request_info
 {
@@ -108,7 +92,7 @@ enum channel_flag {
        (send_window_size . uint32_t)
        (send_max_packet . uint32_t)
 
-       (table object channel_table)
+       (connection object ssh_connection)
        
        (request_types object alist)
 
@@ -169,151 +153,7 @@ enum channel_flag {
 #define CHANNEL_OPEN_FAILURE(s) \
 ((s)->open_failure((s)))
 
-/* Values used in the in_use array. */
-#define CHANNEL_FREE 0
-#define CHANNEL_RESERVED 1
-#define CHANNEL_IN_USE 2
 
-/* FIXME: If/when lsh is more clearly separated into transport and
-   service layer, this class ought to be renamed to ssh_connection,
-   since it is the core of the implementation of the "ssh-connection"
-   service. */
-/* GABA:
-   (class
-     (name channel_table)
-     (super resource)
-     (vars
-       ; Communication with the transport layer
-       (write method void "struct lsh_string *")
-
-       ; The chained connection, when using a gateway.
-       ; FIXME: Move to a sub-class? 
-       (chain object channel_table)
-       
-       ; Channels are indexed by local number
-       (channels space (object ssh_channel) used_channels)
-       
-       ; Global requests that we support
-       (global_requests object alist)
-       ; Channel types that we can open
-       (channel_types object alist)
-
-       ; Used for unknown requests unknown channel types.
-       (open_fallback object channel_open)
-       
-       ; Allocation of local channel numbers is managed using the same
-       ; method as is traditionally used for allocation of unix file 
-       ; descriptors.
-
-       ; Channel numbers can be reserved before there is any actual
-       ; channel assigned to them. So the channels table is not enough
-       ; for keeping track of which numbers are in use.
-       (in_use space uint8_t)
-
-       ; Allocated size of the arrays.
-       (allocated_channels . uint32_t)
-
-       ; Number of entries in the arrays that are in use and
-       ; initialized.
-       (used_channels . uint32_t)
-
-       ; The smallest channel number that is likely to be free
-       (next_channel . uint32_t)
-
-       ; Number of currently allocated channel numbers.
-       (channel_count . uint32_t)
-       
-       (max_channels . uint32_t) ; Max number of channels allowed 
-
-       ; Forwarded TCP ports. FIXME: Do we really need two of them?
-       (local_ports struct object_queue)
-       (remote_ports struct object_queue)
-
-       ; Used if we're currently forwarding X11
-       ; To support several screens at the same time,
-       ; this should be replaced with a list, analogous to
-       ; the remote_ports list above.
-       (x11_display object client_x11_display)
-       
-       ; Global requests that we have received, and should reply to
-       ; in the right order
-       (active_global_requests struct object_queue)
-
-       ; Queue of global requests that we expect replies on.
-       (pending_global_requests struct object_queue)
-       
-       ; If non-zero, close connection after all active channels have
-       ; died, and don't allow any new channels to be opened.
-       (pending_close . int)))
-*/
-
-#define CHANNEL_TABLE_WRITE(table, s) ((table)->write((table), (s)))
-
-void
-channel_pending_close(struct channel_table *table);
-
-/* SSH_MSG_GLOBAL_REQUEST */
-
-/* GABA:
-   (class
-     (name global_request)
-     (vars
-       (handler method void "struct channel_table *table"
-                            "uint32_t type"
-			    ; want-reply is needed only by
-			    ; do_gateway_global_request.
-                            "int want_reply"
-                            "struct simple_buffer *args"
-			    "struct command_continuation *c"
-			    "struct exception_handler *e")))
-*/
-
-#define GLOBAL_REQUEST(r, table, t, w, a, n, e) \
-((r)->handler((r), (table), (t), (w), (a), (n), (e)))
-
-/* SSH_MSG_CHANNEL_OPEN */
-  
-/* Raised if opening of a channel fails. Used both on the client and
- * the server side.*/
-/* GABA:
-   (class
-     (name channel_open_exception)
-     (super exception)
-     (vars
-       (error_code . uint32_t)))
-*/
-
-struct exception *
-make_channel_open_exception(uint32_t error_code, const char *msg);
-
-
-/* GABA:
-   (class
-     (name channel_open)
-     (vars
-       (handler method void
-                "struct channel_table *table"
-		"struct channel_open_info *info"
-                "struct simple_buffer *data"
-                "struct command_continuation *c"
-		"struct exception_handler *e")))
-*/
-
-#define CHANNEL_OPEN(o, t, i, d, r, e) \
-((o)->handler((o), (t), (i), (d), (r), (e)))
-
-#define DEFINE_CHANNEL_OPEN(name)			\
-static void do_##name(struct channel_open *s,		\
-		      struct channel_table *table,	\
-		      struct channel_open_info *info,	\
-		      struct simple_buffer *args,	\
-		      struct command_continuation *c,	\
-		      struct exception_handler *e);	\
-							\
-struct channel_open name =				\
-{ STATIC_HEADER, do_##name };				\
-							\
-static void do_##name
 
 /* SSH_MSG_CHANNEL_REQUEST */
 
@@ -350,32 +190,16 @@ init_channel(struct ssh_channel *channel,
 	     void (*kill)(struct resource *));
 
 void
-init_channel_table(struct channel_table *table,
-		   void (*kill)(struct resource *),
-		   void (*write)(struct channel_table *, struct lsh_string *));
-
-void
-kill_channels(struct channel_table *table);
-		   
-int
-alloc_channel(struct channel_table *table);
-void
-dealloc_channel(struct channel_table *table, int i);
-
-void
-use_channel(struct ssh_channel *channel);
-
-void
-register_channel(struct channel_table *table,
+register_channel(struct ssh_connection *table,
 		 uint32_t local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use);
 
 /* FIXME: Make static? */
 struct ssh_channel *
-lookup_channel(struct channel_table *table, uint32_t i);
+lookup_channel(struct ssh_connection *table, uint32_t i);
 struct ssh_channel *
-lookup_channel_reserved(struct channel_table *table, uint32_t i);
+lookup_channel_reserved(struct ssh_connection *table, uint32_t i);
 
 void
 channel_adjust_rec_window(struct ssh_channel *channel, uint32_t written);
@@ -442,7 +266,7 @@ channel_transmit_extended(struct ssh_channel *channel,
 			  uint32_t length, const uint8_t *data);
 
 int
-channel_packet_handler(struct channel_table *table,
+channel_packet_handler(struct ssh_connection *table,
 		       uint32_t length, const uint8_t *packet);
 
 #endif /* LSH_CHANNEL_H_INCLUDED */
