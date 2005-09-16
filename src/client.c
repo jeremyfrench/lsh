@@ -208,7 +208,7 @@ do_exit_status(struct channel_request *c,
 
       assert(channel->sinks);
       channel->sinks--;
-      /* FIXME: We should probably call channel_maybe_close in some way. */      
+      channel_maybe_close(channel);
 
       COMMAND_RETURN(s, channel);
     }
@@ -257,7 +257,7 @@ do_exit_signal(struct channel_request *c,
 
       assert(channel->sinks);
       channel->sinks--;
-      /* FIXME: We should probably call channel_maybe_close in some way. */      
+      channel_maybe_close(channel);
 
       COMMAND_RETURN(s, channel);
     }
