@@ -270,7 +270,7 @@ make_server_session(uint32_t initial_window,
 
 static void
 do_open_session(struct channel_open *s,
-		struct channel_table *table UNUSED,
+		struct ssh_connection *connection UNUSED,
 		struct channel_open_info *info UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
@@ -354,7 +354,7 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
 	      channel->remote_channel_number);
       
-      CHANNEL_TABLE_WRITE(channel->table,
+      SSH_CONNECTION_WRITE(channel->connection,
 	      (signaled
 	       ? format_exit_signal(channel, core, value)
 	       : format_exit(channel, value)) );

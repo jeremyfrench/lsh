@@ -43,7 +43,7 @@
        ; and create a channel open request by calling
        ; prepare_channel_open.
        (new_channel method "struct ssh_channel *"
-                    "struct channel_table *table"
+                    "struct ssh_connection *table"
                     "uint32_t local_channel_number"
                     "struct lsh_string **request")))
 */
@@ -84,7 +84,7 @@ void do_channel_request_command(struct command *s,
      (super command)
      (vars
        (format_request method "struct lsh_string *"
-                       "struct channel_table *table"
+                       "struct ssh_connection *table"
 		       "struct command_continuation **c")))
 */
 

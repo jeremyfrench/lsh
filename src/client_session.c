@@ -83,7 +83,7 @@ do_kill_client_session(struct resource *s)
       io_close_fd(self->err.fd);
       self->err.fd = -1;
 
-      channel_pending_close(self->super.table);
+      ssh_connection_pending_close(self->super.connection);
     }
 }
 
