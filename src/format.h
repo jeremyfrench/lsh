@@ -76,7 +76,21 @@
  * "u" (as in unsigned). Used with bignums, to use unsigned-only
  * number format. */
 
-struct lsh_string *ssh_format(const char *format, ...);
+#if DEBUG_ALLOC && __GNUC__
+
+struct lsh_string *
+ssh_format_clue(const char *clue, const char *format, ...);
+
+#define ssh_format(format, ...) \
+ssh_format_clue(__FILE__ ":" STRING_LINE, format, ## __VA_ARGS__)
+
+#else /* !DEBUG_ALLOC */
+
+struct lsh_string *
+ssh_format(const char *format, ...);
+
+#endif /* !DEBUG_ALLOC */
+
 uint32_t ssh_format_length(const char *format, ...);
 void ssh_format_write(const char *format,
 		      struct lsh_string *buffer, uint32_t pos, ...);

@@ -38,7 +38,13 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct lsh_string *ssh_format(const char *format, ...)
+
+struct lsh_string *
+#if DEBUG_ALLOC && __GNUC__
+ssh_format_clue(const char *clue, const char *format, ...)
+#else /* !DEBUG_ALLOC */
+ssh_format(const char *format, ...)
+#endif
 {
   va_list args;
   uint32_t length;
@@ -49,8 +55,12 @@ struct lsh_string *ssh_format(const char *format, ...)
   va_end(args);
 
 #if DEBUG_ALLOC
-  packet = lsh_string_alloc_clue(length, format);
-#else
+#if __GNUC__
+  packet = lsh_string_alloc_clue(length, clue);
+#else /* DEBUG_ALLOC && !__GNUC__ */
+  packet = lsh_string_alloc_clue(format, clue);
+#endif  
+#else /* !DEBUG_ALLOC */
   packet = lsh_string_alloc(length);
 #endif
   
