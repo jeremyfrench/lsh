@@ -847,6 +847,10 @@ main(int argc, char **argv, const char** envp)
   if (!connection)
     exit(EXIT_FAILURE);
 
+  /* Contains session channels to be opened. */
+  remember_resource(connection->super.resources,
+		    &options->super.resources->super);
+		    
   {
     FOR_OBJECT_QUEUE(&options->super.actions, n)
       {
@@ -856,14 +860,6 @@ main(int argc, char **argv, const char** envp)
   }
   
   io_run();
-
-  /* FIXME: This isn't right; we must associate the resources with the
-     connection instead. The options may have been garbage collected
-     by now. */
-  KILL_RESOURCE_LIST(options->super.resources);
-
-  /* Close all files and other resources associated with the backend. */
-  io_final();
   
   /* FIXME: Perhaps we have to reset the stdio file descriptors to
    * blocking mode? */
