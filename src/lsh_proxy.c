@@ -804,8 +804,6 @@ int main(int argc, char **argv)
   }
   
   io_run();
-
-  io_final();
   
   return 0;
 }

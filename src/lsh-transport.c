@@ -1056,7 +1056,6 @@ main(int argc, char **argv)
     return EXIT_FAILURE;
 
   io_run();
-  io_final();
 
   return EXIT_SUCCESS;
 }

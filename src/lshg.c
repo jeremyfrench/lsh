@@ -347,9 +347,6 @@ main(int argc, char **argv, const char** envp)
   }
 
   io_run();
-
-  /* Close all files and other resources associated with the backend. */
-  io_final();
   
   return exit_code;
 }
