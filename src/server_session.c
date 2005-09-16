@@ -136,8 +136,8 @@ oop_write_stdin(oop_source *source UNUSED,
 }
 
 static void
-do_receive(struct ssh_channel *s,
-	   int type, struct lsh_string *data)
+do_receive(struct ssh_channel *s, int type,
+	   uint32_t length, const uint8_t *data)
 {
   CAST(server_session, session, s);
 
@@ -146,7 +146,7 @@ do_receive(struct ssh_channel *s,
     case CHANNEL_DATA:
       channel_io_write(&session->super, &session->in,
 		       oop_write_stdin,
-		       STRING_LD(data));
+		       length, data);
 
       break;
     case CHANNEL_STDERR_DATA:
@@ -155,7 +155,6 @@ do_receive(struct ssh_channel *s,
     default:
       fatal("Internal error!\n");
     }
-  lsh_string_free(data);
 }
 
 static void *

@@ -114,7 +114,8 @@ enum channel_flag {
        (sinks . unsigned)
        
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
-       (receive method void "int type" "struct lsh_string *data")
+       (receive method void "int type"
+		"uint32_t length" "const uint8_t *data")
 
        ; Called when we are allowed to send more data on the channel.
        ; Implies that the send_window_size is non-zero. 
@@ -136,8 +137,8 @@ enum channel_flag {
        
 */
 
-#define CHANNEL_RECEIVE(s, t, d) \
-((s)->receive((s), (t), (d)))
+#define CHANNEL_RECEIVE(s, t, l, d) \
+((s)->receive((s), (t), (l), (d)))
 
 #define CHANNEL_SEND_ADJUST(s, i) ((s)->send_adjust((s), (i)))
      
