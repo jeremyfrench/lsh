@@ -215,7 +215,7 @@ lshd_service_request_handler(struct transport_forward *self,
 	    {
 	      /* Parent process */
 	      close(pipe[1]);
-	      io_set_nonblocking(pipe[0]);
+	      io_register_fd(pipe[0], "lshd service pipe");
 
 	      transport_send_packet(&self->super, TRANSPORT_WRITE_FLAG_PUSH,
 				    format_service_accept(name_length, name));
@@ -297,12 +297,11 @@ static void
 kill_port(struct resource *s)
 {
   CAST(lshd_port, self, s);
-  oop_source *source = self->config->super.oop;
   if (self->super.alive)
     {
       self->super.alive = 0;
-      source->cancel_fd(source, self->fd, OOP_WRITE);
-      close(self->fd);
+      io_close_fd(self->fd);
+      self->fd = -1;
     }
 };
 
@@ -311,6 +310,8 @@ make_lshd_port(struct configuration *config, int fd)
 {
   NEW(lshd_port, self);
   init_resource(&self->super, kill_port);
+
+  io_register_fd(fd, "lshd listen port");
   self->config = config;
   self->fd = fd;
 
