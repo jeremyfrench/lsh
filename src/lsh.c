@@ -79,7 +79,7 @@
 /* GABA:
    (class
      (name connection)
-     (super channel_table)
+     (super ssh_connection)
      (vars
        (transport . int)
        (reader object service_read_state)
@@ -98,7 +98,8 @@ kill_connection(struct resource *s)
 
       self->super.super.alive = 0;      
 
-      kill_channels(&self->super);
+      KILL_RESOURCE_LIST(self->super.resources);
+
       io_close_fd(self->transport);
       self->transport = -1;
     }
@@ -142,14 +143,16 @@ write_packet(struct connection *connection,
 }
 
 static void
-disconnect(struct connection *connection, const char *msg)
+disconnect(struct connection *connection, uint32_t reason, const char *msg)
 {
   werror("disconnecting: %z.\n", msg);
 
   write_packet(connection,
-	       format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
-				 msg, ""));
-  exit(EXIT_FAILURE);
+	       format_disconnect(reason, msg, ""));
+
+  /* FIXME: If the write buffer is full, the disconnect message will
+     likely be lost. */
+  KILL_RESOURCE(&connection->super.super);
 }
 
 static void
@@ -197,14 +200,14 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 
 	case SERVICE_READ_COMPLETE:
 	  if (!length)
-	    disconnect(self,
+	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
 		       "lshd-connection received an empty packet");
 
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
 	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-	    disconnect(self,
+	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
 		       "lshd-connection received a transport or userauth layer packet");
 
 	  else if (!channel_packet_handler(&self->super, length, packet))
@@ -222,18 +225,25 @@ service_start_read(struct connection *self)
 }
 
 static void
-do_write_packet(struct channel_table *s, struct lsh_string *packet)
+do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
 {
   CAST(connection, self, s);
 
   write_packet(self, packet);
 }
 
+static void
+do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
+{
+  CAST(connection, self, s);
+  disconnect(self, reason, msg);  
+}
+
 static struct connection *
 make_connection(int fd)
 {
   NEW(connection, self);
-  init_channel_table(&self->super, kill_connection, do_write_packet);
+  init_ssh_connection(&self->super, kill_connection, do_write_packet, do_disconnect);
 
   io_register_fd(fd, "lsh transport connection");
 
