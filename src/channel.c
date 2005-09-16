@@ -939,67 +939,76 @@ handle_adjust_window(struct ssh_connection *connection,
     SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_WINDOW_ADJUST message.");
 }
 
-/* FIXME: Pass length, pointer to receive, to avoid unnecessary
-   allocation and copying. */
+/* Common processing for ordinary and "extended" data. */
+static int
+receive_data_common(struct ssh_channel *channel,
+		    int type, uint32_t length, const uint8_t *data)
+{
+  if (channel->receive
+      && !(channel->flags & (CHANNEL_RECEIVED_EOF
+			     | CHANNEL_RECEIVED_CLOSE)))
+    {
+      if (channel->flags & CHANNEL_SENT_CLOSE)
+	{
+	  werror("Ignoring data on channel which is closing\n");
+	  return 1;
+	}
+      else
+	{
+	  if (length > channel->rec_max_packet)
+	    {
+	      werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
+	      length = channel->rec_max_packet;
+	    }
+
+	  if (length > channel->rec_window_size)
+	    {
+	      /* Truncate data to fit window */
+	      werror("Channel data overflow. Extra data ignored.\n");
+	      debug("   (type = %i, data->length=%i, rec_window_size=%i).\n",
+		    type, length, channel->rec_window_size);
+
+	      length = channel->rec_window_size;
+	    }
+
+	  if (!length)
+	    {
+	      /* Ignore data packet */
+	      return 1;
+	    }
+	  channel->rec_window_size -= length;
+
+	  CHANNEL_RECEIVE(channel, type, length, data);
+	}
+      return 1;
+    }
+  else
+    return 0;
+}
+
 static void
 handle_channel_data(struct ssh_connection *connection,
 		    struct simple_buffer *buffer)
 {
   uint32_t channel_number;
-  struct lsh_string *data;
+  uint32_t length;
+  const uint8_t *data;
   
   if (parse_uint32(buffer, &channel_number)
-      && ( (data = parse_string_copy(buffer)) )
+      && parse_string(buffer, &length, &data)
       && parse_eod(buffer))
     {
-      struct ssh_channel *channel = lookup_channel(connection, channel_number);
+      struct ssh_channel *channel
+	= lookup_channel(connection, channel_number);
 
-      if (channel && channel->receive
-	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
-				 | CHANNEL_RECEIVED_CLOSE)))
+      if (channel)
 	{
-	  if (channel->flags & CHANNEL_SENT_CLOSE)
-	    {
-	      lsh_string_free(data);
-	      werror("Ignoring data on channel which is closing\n");
-	      return;
-	    }
-	  else
-	    {
-	      uint32_t length = lsh_string_length(data);
-              if (length > channel->rec_max_packet)
-                {
-                  werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
-		  lsh_string_trunc(data, channel->rec_max_packet);
-                }
-
-	      if (length > channel->rec_window_size)
-		{
-		  /* Truncate data to fit window */
-		  werror("Channel data overflow. Extra data ignored.\n");
-		  debug("   (data->length=%i, rec_window_size=%i).\n", 
-			length, channel->rec_window_size);
-
-		  lsh_string_trunc(data, channel->rec_window_size);
-		}
-
-	      if (!length)
-		{
-		  /* Ignore data packet */
-		  lsh_string_free(data);
-		  return;
-		}
-	      channel->rec_window_size -= length;
-
-	      CHANNEL_RECEIVE(channel, CHANNEL_DATA, data);
-	    }
+	  if (!receive_data_common(channel, CHANNEL_DATA,
+				   length, data))
+	    werror("Data on closed channel %i\n", channel_number);
 	}
       else
-	{
-	  werror("Data on closed or non-existant channel %i\n",
-		 channel_number);
-	  lsh_string_free(data);
-	}
+	werror("Data on non-existant channel %i\n", channel_number);
     }
   else
     SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_DATA message.");
@@ -1011,75 +1020,32 @@ handle_channel_extended_data(struct ssh_connection *connection,
 {
   uint32_t channel_number;
   uint32_t type;
-  struct lsh_string *data;
+  uint32_t length;
+  const uint8_t *data;
   
   if (parse_uint32(buffer, &channel_number)
       && parse_uint32(buffer, &type)
-      && ( (data = parse_string_copy(buffer)) )
+      && parse_string(buffer, &length, &data)
       && parse_eod(buffer))
     {
-      struct ssh_channel *channel = lookup_channel(connection, channel_number);
-
-      if (channel && channel->receive
-	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
-				 | CHANNEL_RECEIVED_CLOSE)))
+      struct ssh_channel *channel
+	= lookup_channel(connection, channel_number);
+      
+      if (channel)
 	{
-	  if (channel->flags & CHANNEL_SENT_CLOSE)
-	    {
-	      lsh_string_free(data);
-	      werror("Ignoring extended data on channel which is closing\n");
-	      return;
-	    }
-	  else
-	    {
-	      uint32_t length = lsh_string_length(data);
-              if (length > channel->rec_max_packet)
-                {
-                  werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
-		  lsh_string_trunc(data, channel->rec_max_packet);
-                }
-
-	      if (length > channel->rec_window_size)
-		{
-		  /* Truncate data to fit window */
-		  werror("Channel extended data overflow. "
-			 "Extra data ignored.\n");
-		  debug("   (data->length=%i, rec_window_size=%i).\n", 
-			length, channel->rec_window_size);
-
-		  lsh_string_trunc(data, channel->rec_window_size);
-		}
-	      
-	      if (!length)
-		{
-		  /* Ignore data packet */
-		  lsh_string_free(data);
-		  return;
-		}
-
-	      channel->rec_window_size -= length;
-
-	      switch(type)
-		{
-		case SSH_EXTENDED_DATA_STDERR:
-		  CHANNEL_RECEIVE(channel, CHANNEL_STDERR_DATA, data);
-		  break;
-		default:
-		  werror("Unknown type %i of extended data.\n",
-			 type);
-		  lsh_string_free(data);
-		}
-	    }
-	}
+	  if (type != SSH_EXTENDED_DATA_STDERR)
+	    werror("Unknown type %i of extended data.\n", type);
+	    
+	  else if (!receive_data_common(channel, CHANNEL_STDERR_DATA,
+					length, data))
+	    werror("Extended data on closed channel %i\n", channel_number);
+	}      
       else
-	{
-	  werror("Extended data on closed or non-existant channel %i\n",
-		 channel_number);
-	  lsh_string_free(data);
-	}
+	werror("Extended data on non-existant channel %i\n", channel_number);
     }
   else
-    SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_EXTENDED_DATA message.");
+    SSH_CONNECTION_ERROR(connection,
+			 "Invalid CHANNEL_EXTENDED_DATA message.");
 }
 
 static void
