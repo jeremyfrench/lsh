@@ -249,7 +249,6 @@ int main(int argc, char **argv)
   A_WRITE(options->dest, srp_gen(options));
   
   io_run();
-  io_final();
   
   return EXIT_SUCCESS;
 }
