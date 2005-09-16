@@ -1,4 +1,46 @@
+2005-09-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added connection.c again.
+
+	* src/lsh.h: Declare struct ssh_channel.
+
+	* src/lsh.c: Updated for channel_table->ssh_connection renaming.
+	(disconnect): New argument for the reason code.
+	(do_disconnect): New method.
+	* src/lshd-connection.c: Analogous changes.
+
+	* src/channel_commands.c, src/channel_commands.h,
+	src/client.c,src/client_session.c, src/server_session.c: Updated
+	for channel_table->ssh_connection renaming.
+
+	* src/channel.c: Code moved to connection.c. Updated for
+	channel_table->ssh_connection renaming.
+
+	* src/connection.c (init_ssh_connection) 
+	(ssh_connection_alloc_channel, ssh_connection_dealloc_channel) 
+	(ssh_connection_use_channel, ssh_connection_pending_close): Moved
+	functions here, from channel.c. They used to be called
+	init_channel_table, alloc_channel, dealloc_channel, use_channel
+	and channel_pending_close.
+
+	* src/connection.h: Moved the channel_table from channels.h to
+	this file, and renamed the class ssh_connection. Deleted old
+	version of this class.
+
 2005-09-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c (alloc_channel): Use lsh_space_realloc.
+	(send_global_request_responses): Deleted q argument. Updated callers.
+	(send_channel_request_responses): Likewise.
+	(parse_channel_request): Deleted function. Merged in
+	handle_channel_request.
+	(parse_channel_open): Deleted function. Merged in
+	handle_channel_open.
+	
+	* src/xalloc.c (debug_realloc, xrealloc, lsh_space_realloc): New functions.
+	(lsh_space_alloc) [!DEBUG_ALLOC]: Use xalloc.
+
+	* src/arglist.c: Use lsh_space_alloc, lsh_space_realloc and lsh_space_free.
 
 	* src/Makefile.am (liblsh_a_SOURCES): Added channel_io. Removed
 	channel_forward.c, client_pty.c, client_x11.c, gateway.c,
