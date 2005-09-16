@@ -239,9 +239,6 @@ void
 io_init(void);
 
 void
-io_final(void);
-
-void
 io_run(void);
 
 void

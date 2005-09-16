@@ -373,9 +373,17 @@ io_init(void)
 }
 
 void
-io_final(void)
+io_run(void)
 {
-  assert(global_oop_source);
+  void *res = oop_sys_run(global_oop_sys);
+
+  /* We need liboop-0.8, OOP_ERROR is not defined in liboop-0.7. */
+
+  if (res == OOP_ERROR)
+    werror("oop_sys_run %e\n", errno);
+
+  trace("io_run: Cleaning up\n");
+
   gc_final();
 
   /* The final gc may have closed some files, and called lsh_oop_stop.
@@ -392,19 +400,6 @@ io_final(void)
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
   global_oop_source = NULL;
-}
-
-void
-io_run(void)
-{
-  void *res = oop_sys_run(global_oop_sys);
-
-  /* We need liboop-0.8, OOP_ERROR is not defined in liboop-0.7. */
-
-  if (res == OOP_ERROR)
-    werror("oop_sys_run %e\n", errno);
-
-  trace("io_run: Exiting\n");
 }
 
 
