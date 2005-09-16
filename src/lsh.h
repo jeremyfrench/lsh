@@ -97,6 +97,9 @@ lsh_string_free(const struct lsh_string *packet);
 /* abstract_io.h */
 struct abstract_write;
 
+/* channel.h */
+struct ssh_channel;
+
 /* client_x11.c */
 struct client_x11_display;
 
