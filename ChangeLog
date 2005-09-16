@@ -1,3 +1,47 @@
+2005-09-16  Niels Möller  <niels@s3.kth.se>
+
+	* src/server_session.c (do_exit_shell): Call
+	channel_maybe_close unconditionally.
+	(do_receive): Deallocate the packet.
+
+	* src/lshd.c (kill_port): Use io_close_fd.
+	(lshd_service_request_handler, make_lshd_port): Use
+	io_register_fd.
+
+	* src/lshd-connection.c (make_connection): Enable the "exec"
+	request on session channels.
+
+	* src/lsh.c (main): Put the resources generating by options
+	processing on the connection's resource list.
+
+	* src/lsh-export-key.c (sexp_to_ssh2_key): Due to the new debug
+	macrology of ssh_format, it no longer works to use ssh_format in
+	an argument of itself. So assign the fingerptint hash to a
+	variable before use.
+
+	* src/io.c (io_final): Deleted function.
+	(io_run): Cleanup processing, previously done by io_final.
+	* src/lsh-transport.c (main): No longer calls io_final.
+	* src/srp-gen.c (main): Likewise.
+
+	* src/format.h (ssh_format) [DEBUG_ALLOC]: If __GNUC__ is defined,
+	define as a varargs macro, calling ssh_format_clue with file and
+	line number as the first argument.
+	* src/format.c (ssh_format) [DEBUG_ALLOC]: Use the supplied clue.
+
+	* src/client_session.c (do_receive): Deallocate packet.
+
+	* src/client.c (do_exit_status, do_exit_signal): Call
+	channel_maybe_close.
+
+	* src/channel_io.c (channel_write_state_close): Call
+	channel_maybe_close unconditionally.
+
+	* src/channel.c (handle_channel_request): Added trace message with
+	request type.
+	(channel_maybe_close): Ignore channel->sinks counter, when
+	CHANNEL_NO_WAIT_FOR_EOF is set.
+
 2005-09-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Added connection.c again.
@@ -26,6 +70,31 @@
 	* src/connection.h: Moved the channel_table from channels.h to
 	this file, and renamed the class ssh_connection. Deleted old
 	version of this class.
+
+2005-09-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/unix_random.c (do_device_source): Use the read system call
+	directly, not the read_raw function.
+
+	* src/lshd-userauth.c (read_packet): New argument for seqno
+	pointer. 
+	(write_packet): Don't use lsh_string_sequence_number.
+	(handle_userauth): Likewise. Use the new argument to read_packet
+	instead.
+
+	* src/lsh_string.c (struct lsh_string): Deleted sequence_number.
+	(lsh_string_sequence_number, lsh_string_set_sequence_number):
+	Deleted functions. 
+
+	* src/lsh.c (write_packet): Don't use lsh_string_sequence_number.
+	(do_lsh_default_handler): Don't handle EXC_USERAUTH.
+
+	* src/io.c (read_raw, finish_io_exception, make_io_exception):
+	#if:ed out.
+
+	* src/exception.h (EXC_AUTH, EXC_USERAUTH, EXC_USERAUTH_SPECIAL,
+	EXC_FINISH, EXC_FINISH_CHANNEL, EXC_FINISH_READ, EXC_FINISH_IO,
+	EXC_FINISH_PENDING): Deleted unused exception types.
 
 2005-09-15  Niels Möller  <nisse@lysator.liu.se>
 
