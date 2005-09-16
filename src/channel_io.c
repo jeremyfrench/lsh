@@ -168,9 +168,8 @@ channel_write_state_close(struct ssh_channel *channel,
   file->fd = -1;
   
   assert(channel->sinks);
-  
-  if (!--channel->sinks)
-    channel_maybe_close(channel);
+  channel->sinks--;
+  channel_maybe_close(channel);
 }
 
 void
