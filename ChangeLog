@@ -1,3 +1,27 @@
+2005-09-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_read.c (decode_packet): Implemented inflating.
+
+	* src/encrypt.c (encrypt_packet): Adapted to new CODEC interface.
+
+	* src/zlib.c (class zlib_instance): Deleted attributes max and
+	rate.
+	(estimate_size, estimate_update): Deleted functions.
+	(do_zlib): Adapted to new CODEC interface, and simplified
+	significantly. 
+	(make_zlib_instance): Don't initialize max and rate.
+
+	* src/compress.h (class compress_instance): Changed interface for
+	the CODEC method. Output storage is a string and a start offset,
+	input is length and pointer.
+
+	* src/lshd.c (lshd_service_request_handler): Don't call
+	io_register_fd on the service pipe here; it's the responsibility
+	of the transport_forward class.
+
+	* src/transport_forward.c (transport_forward_close): Use io_close_fd.
+	(transport_forward_setup): Use io_register_fd.
+
 2005-09-16  Niels Möller  <niels@s3.kth.se>
 
 	* src/server_session.c (do_exit_shell): Call
