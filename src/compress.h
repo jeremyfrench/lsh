@@ -36,12 +36,15 @@
     (class 
        (name compress_instance)
        (vars
-         (codec method (string)
-         		"struct lsh_string *data" "int free")))
+         ;; Output size is limited to the length(outpu) - start -1
+	 ;; Returns length of generated output, or zero on error.
+         (codec method uint32_t
+         	       "struct lsh_string *output" "uint32_t offset"
+		       "uint32_t length" "const uint8_t *input")))
 */
 
-#define CODEC(instance, packet, free) \
-((instance)->codec((instance), (packet), (free)))
+#define CODEC(instance, o, s, l, i) \
+((instance)->codec((instance), (o), (s), (l), (i)))
 
 #define COMPRESS_DEFLATE 0
 #define COMPRESS_INFLATE 1
