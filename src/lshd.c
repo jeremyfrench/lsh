@@ -215,7 +215,6 @@ lshd_service_request_handler(struct transport_forward *self,
 	    {
 	      /* Parent process */
 	      close(pipe[1]);
-	      io_register_fd(pipe[0], "lshd service pipe");
 
 	      transport_send_packet(&self->super, TRANSPORT_WRITE_FLAG_PUSH,
 				    format_service_accept(name_length, name));
