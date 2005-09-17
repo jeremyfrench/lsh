@@ -31,7 +31,9 @@
 #include "compress.h"
 #include "format.h"
 #include "lsh_string.h"
-
+#include "ssh.h"
+/* FIXME: Could write new packet into the output buffer, without
+   freeing and allocating new strings. */
 struct lsh_string *
 encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
 	       struct crypto_instance *crypt, struct mac_instance *mac,
@@ -51,9 +53,16 @@ encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
   /* Deflate, pad, mac, encrypt. */
   if (compress)
     {
-      packet = CODEC(compress, packet, 1);
-      assert(packet);
-      length = lsh_string_length(packet);      
+      struct lsh_string *n = lsh_string_alloc(SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ);
+
+      length = CODEC(compress, n, 0,
+		     lsh_string_length(packet), lsh_string_data(packet));
+
+      assert(length > 0);
+      lsh_string_trunc(n, length);
+
+      lsh_string_free(packet);
+      packet = n;
     }
 
   block_size = crypt ? crypt->block_size : 8;
