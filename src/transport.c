@@ -76,6 +76,8 @@ init_transport_connection(struct transport_connection *self,
   self->ssh_input = ssh_input;
   self->reader = make_transport_read_state();
   self->read_active = 0;
+  
+  /* One extra byte needed for inflate */
   self->read_packet = lsh_string_alloc(SSH_MAX_PACKET + 1);
   self->retry_length = 0;
   self->retry_seqno = 0;
