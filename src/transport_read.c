@@ -245,7 +245,7 @@ decode_packet(struct transport_read_state *self,
      copying at the end.
 
      FIXME: But for simplixity, that's not yet implemented, we do
-     everythin in place and copy at the end. */
+     everything in place and copy at the end. */
 
   if (self->crypto && crypt_left > 0)
     CRYPT(self->crypto, crypt_left,
@@ -276,11 +276,12 @@ decode_packet(struct transport_read_state *self,
   /* Reset for next header */
   self->total_length = 0;
 
-  if (self->inflate)
-    fatal("Inflating not yet implemented.\n");
-
   *seqno = self->seqno++;
-  lsh_string_write(output, 0, *length, data);
+  
+  if (self->inflate)
+    *length = CODEC(self->inflate, output, 0, *length, data);
+  else
+    lsh_string_write(output, 0, *length, data);
 
   return TRANSPORT_READ_COMPLETE;
 }
