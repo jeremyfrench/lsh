@@ -34,6 +34,7 @@
 #include "nettle/macros.h"
 
 #include "format.h"
+#include "io.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -91,19 +92,11 @@ transport_forward_close(struct transport_forward *self)
 {
   if (self->service_in >= 0)
     {
-      oop_source *source = self->super.ctx->oop;
-
-      /* FIXME: Use io_close_fd */
-      if (self->service_read_active)
-	source->cancel_fd(source, self->service_in, OOP_READ);
+      io_close_fd(self->service_in);
 
       if (self->service_in != self->service_out)
-	close(self->service_in);
+	io_close_fd(self->service_out);
 
-      if (self->service_write_active)
-	source->cancel_fd(source, self->service_out, OOP_WRITE);
-
-      close(self->service_out);
       self->service_in = self->service_out = -1;
     }
 }
@@ -370,13 +363,17 @@ transport_forward_setup(struct transport_forward *self,
 
   self->service_in = service_in;
   self->service_reader = make_service_read_state();
-  
+
   self->service_out = service_out;
   self->service_writer = make_ssh_write_state(FORWARD_WRITE_BUFFER_SIZE);
   
   self->super.event_handler = forward_event_handler;
   self->super.packet_handler = forward_packet_handler;
 
+  io_register_fd(service_in, "transport service read pipe");
+  if (service_out != service_in)
+    io_register_fd(service_out, "transport service write pipe");
+    
   forward_start_read(self);
 }
 
