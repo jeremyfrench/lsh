@@ -183,6 +183,8 @@ channel_io_write(struct ssh_channel *channel,
   done = ssh_write_data(file->state, file->fd, 0, length, data);
   if (done > 0 || errno == EWOULDBLOCK)
     {
+      channel_adjust_rec_window(channel, done);
+
       if (file->state->length)
 	channel_io_start_write(channel, file, f);
       else
