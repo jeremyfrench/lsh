@@ -131,7 +131,9 @@ oop_write_stdin(oop_source *source UNUSED,
   assert(event == OOP_WRITE);
   assert(fd == session->in.fd);
 
-  channel_io_flush(&session->super, &session->in);
+  if (channel_io_flush(&session->super, &session->in) != CHANNEL_IO_OK)
+    channel_write_state_close(&session->super, &session->in);
+
   return OOP_CONTINUE;
 }
 
@@ -144,9 +146,10 @@ do_receive(struct ssh_channel *s, int type,
   switch(type)
     {
     case CHANNEL_DATA:
-      channel_io_write(&session->super, &session->in,
-		       oop_write_stdin,
-		       length, data);
+      if (channel_io_write(&session->super, &session->in,
+			   oop_write_stdin,
+			   length, data) != CHANNEL_IO_OK)
+	channel_write_state_close(&session->super, &session->in);
 
       break;
     case CHANNEL_STDERR_DATA:
@@ -167,9 +170,10 @@ oop_read_stdout(oop_source *source UNUSED,
   assert(fd == session->out.fd);
   assert(event == OOP_READ);
 
-  done = channel_io_read(&session->super, &session->out);
+  if (channel_io_read(&session->super, &session->out, &done) != CHANNEL_IO_OK)
+    channel_read_state_close(&session->out);
 
-  if (done > 0)
+  else if (done > 0)
     channel_transmit_data(&session->super,
 			  done, lsh_string_data(session->out.buffer));
 
@@ -186,9 +190,10 @@ oop_read_stderr(oop_source *source UNUSED,
   assert(fd == session->err.fd);
   assert(event == OOP_READ);
 
-  done = channel_io_read(&session->super, &session->err);
+  if (channel_io_read(&session->super, &session->err, &done) != CHANNEL_IO_OK)
+    channel_read_state_close(&session->err);
 
-  if (done > 0)
+  else if (done > 0)
     channel_transmit_extended(&session->super, SSH_EXTENDED_DATA_STDERR,
 			      done, lsh_string_data(session->err.buffer));
 
@@ -216,8 +221,10 @@ do_eof(struct ssh_channel *channel)
   if (session->pty)
     {
       static const uint8_t eof[1] = { 4 }; /* ^D */
-      channel_io_write(channel, &session->in,
-		     oop_write_stdin, sizeof(eof), eof);
+      if (channel_io_write(channel, &session->in,
+			   oop_write_stdin, sizeof(eof), eof) != CHANNEL_IO_OK)
+
+	channel_write_state_close(&session->super, &session->in);	
     }
 
   if (!session->in.state->length)
