@@ -73,10 +73,10 @@ do_kill_client_session(struct resource *s)
 
       self->super.super.alive = 0;
 
-      /* Doesn't use channel_write_state_close, since the channel is
-	 supposedly dead already. */
       channel_read_state_close(&self->in);
 
+      /* Doesn't use channel_write_state_close, since the channel is
+	 supposedly dead already. */
       io_close_fd(self->out.fd);
       self->out.fd = -1;
 
@@ -109,7 +109,9 @@ oop_write_stdout(oop_source *source UNUSED,
   assert(event == OOP_WRITE);
   assert(fd == session->out.fd);
 
-  channel_io_flush(&session->super, &session->out);
+  if (channel_io_flush(&session->super, &session->out) != CHANNEL_IO_OK)
+    channel_write_state_close(&session->super, &session->out);
+  
   return OOP_CONTINUE;
 }
 
@@ -122,12 +124,13 @@ oop_write_stderr(oop_source *source UNUSED,
   assert(event == OOP_WRITE);
   assert(fd == session->err.fd);
 
-  channel_io_flush(&session->super, &session->err);
+  if (channel_io_flush(&session->super, &session->err) != CHANNEL_IO_OK)
+    channel_write_state_close(&session->super, &session->err);
+  
   return OOP_CONTINUE;
 }
 
 
-/* FIXME: Use length, pointer instead of a string */
 /* Receive channel data */
 static void
 do_receive(struct ssh_channel *s, int type,
@@ -138,14 +141,18 @@ do_receive(struct ssh_channel *s, int type,
   switch(type)
     {
     case CHANNEL_DATA:
-      channel_io_write(&session->super, &session->out,
-		       oop_write_stdout,
-		       length, data);
+      if (channel_io_write(&session->super, &session->out,
+			   oop_write_stdout,
+			   length, data) != CHANNEL_IO_OK)
+	channel_write_state_close(&session->super, &session->out);
+
       break;
     case CHANNEL_STDERR_DATA:
-      channel_io_write(&session->super, &session->err,
-		       oop_write_stderr,
-		       length, data);
+      if (channel_io_write(&session->super, &session->err,
+			   oop_write_stderr,
+			   length, data) != CHANNEL_IO_OK)
+	channel_write_state_close(&session->super, &session->err);
+
       break;
     default:
       fatal("Internal error!\n");
@@ -165,9 +172,10 @@ oop_read_stdin(oop_source *source UNUSED,
   assert(fd == session->in.fd);
   assert(event == OOP_READ);
 
-  done = channel_io_read(&session->super, &session->in);
+  if (channel_io_read(&session->super, &session->in, &done) != CHANNEL_IO_OK)
+    channel_read_state_close(&session->in);
 
-  if (done > 0)
+  else if (done > 0)
     {
       /* FIXME: Look for escape char */
       channel_transmit_data(&session->super,
