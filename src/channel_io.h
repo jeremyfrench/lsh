@@ -28,6 +28,14 @@
 
 struct ssh_channel;
 
+enum channel_io_status
+{
+  /* Includes the case that we're out of window space. */
+  CHANNEL_IO_OK = 0,
+  CHANNEL_IO_EOF,
+  CHANNEL_IO_ERROR,
+};
+
 #define GABA_DECLARE
 # include "channel_io.h.x"
 #undef GABA_DECLARE
@@ -48,9 +56,9 @@ init_channel_read_state(struct channel_read_state *self, int fd,
 void
 channel_read_state_close(struct channel_read_state *file);
 
-uint32_t
+enum channel_io_status
 channel_io_read(struct ssh_channel *channel,
-		struct channel_read_state *file);
+		struct channel_read_state *file, uint32_t *done);
 
 void
 channel_io_start_read(struct ssh_channel *channel,
@@ -76,13 +84,13 @@ void
 channel_write_state_close(struct ssh_channel *channel,
 			  struct channel_write_state *file);
 
-void
+enum channel_io_status
 channel_io_write(struct ssh_channel *channel,
 		 struct channel_write_state *file,
 		 oop_call_fd *f,
 		 uint32_t length, const uint8_t *data);
 
-void
+enum channel_io_status
 channel_io_flush(struct ssh_channel *channel,
 		 struct channel_write_state *file);
 
@@ -90,7 +98,7 @@ void
 channel_io_start_write(struct ssh_channel *channel,
 		       struct channel_write_state *file, oop_call_fd *f);
 
-void
+enum channel_io_status
 channel_io_stop_write(struct ssh_channel *channel,
 		      struct channel_write_state *file);
 

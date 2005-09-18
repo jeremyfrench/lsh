@@ -59,17 +59,9 @@ channel_read_state_close(struct channel_read_state *file)
   file->fd = -1;
 }
 
-/* Returns amount of data read into the read buffer. It returns 0 if
-   one of the following happens:
-
-   * There's no more window space on the channel. Reading is stopped.
-
-   * The read returned EOF. Calls channel_eof if appropriate.
-
-   * There's a read error. The channel is closed. */
-uint32_t
+enum channel_io_status
 channel_io_read(struct ssh_channel *channel,
-		struct channel_read_state *file)
+		struct channel_read_state *file, uint32_t *done)
 {
   uint32_t to_read;
   int res;
@@ -102,8 +94,8 @@ channel_io_read(struct ssh_channel *channel,
     {
       /* Out of window space, so stop reading. */
       channel_io_stop_read(file);
-
-      return 0;
+      *done = 0;
+      return CHANNEL_IO_OK;
     }
 
   res = lsh_string_read(file->buffer, 0, file->fd, to_read);
@@ -111,26 +103,29 @@ channel_io_read(struct ssh_channel *channel,
   if (res < 0)
     {
       werror("reading on channel fd %d failed: %e.\n", file->fd, errno);
-      channel_read_state_close(file);
 
       channel_close(channel);
-      return 0;
+      return CHANNEL_IO_ERROR;
     }
   else if (res == 0)
     {
-      channel_read_state_close(file);
+      assert(channel->sources);
       if (!--channel->sources)
 	channel_eof(channel);
+
+      *done = 0;
+      return CHANNEL_IO_EOF;
     }
 
-  return res;
+  *done = res;
+  return CHANNEL_IO_OK;
 }
 
 void
 channel_io_start_read(struct ssh_channel *channel,
 		      struct channel_read_state *file, oop_call_fd *f)
 {
-  if (!file->active)
+  if (file->fd >= 0 && !file->active)
     {
       file->active = 1;
       global_oop_source->on_fd(global_oop_source, file->fd,
@@ -172,7 +167,7 @@ channel_write_state_close(struct ssh_channel *channel,
   channel_maybe_close(channel);
 }
 
-void
+enum channel_io_status
 channel_io_write(struct ssh_channel *channel,
 		 struct channel_write_state *file,
 		 oop_call_fd *f,
@@ -186,20 +181,23 @@ channel_io_write(struct ssh_channel *channel,
       channel_adjust_rec_window(channel, done);
 
       if (file->state->length)
-	channel_io_start_write(channel, file, f);
+	{
+	  channel_io_start_write(channel, file, f);
+	  return CHANNEL_IO_OK;
+	}
       else
-	channel_io_stop_write(channel, file);
+	return channel_io_stop_write(channel, file);
     }
   else
     {
       werror("write failed on channel write fd %d: %e.\n", file->fd, errno);
-      channel_write_state_close(channel, file);
 
       channel_close(channel);
+      return CHANNEL_IO_ERROR;
     }
 }
 
-void
+enum channel_io_status
 channel_io_flush(struct ssh_channel *channel,
 		 struct channel_write_state *file)
 {
@@ -208,15 +206,16 @@ channel_io_flush(struct ssh_channel *channel,
     {
       channel_adjust_rec_window(channel, done);
       if (!file->state->length)
-	channel_io_stop_write(channel, file);
+	return channel_io_stop_write(channel, file);
     }
   else if (errno != EWOULDBLOCK)
     {
       werror("Write failed on channel write fd %d: %e.\n", file->fd, errno);
-      channel_write_state_close(channel, file);
 
       channel_close(channel);
+      return CHANNEL_IO_ERROR;
     }
+  return CHANNEL_IO_OK;      
 }
 
 void
@@ -231,16 +230,15 @@ channel_io_start_write(struct ssh_channel *channel,
     }
 }
 
-void
+enum channel_io_status
 channel_io_stop_write(struct ssh_channel *channel,
-		       struct channel_write_state *file)
+		      struct channel_write_state *file)
 {
   if (file->active)
     {
       file->active = 0;
       global_oop_source->cancel_fd(global_oop_source, file->fd, OOP_WRITE);
     }
-  if (channel->flags & CHANNEL_RECEIVED_EOF)
-    channel_write_state_close(channel, file);
-}
 
+  return (channel->flags & CHANNEL_RECEIVED_EOF) ? CHANNEL_IO_EOF : CHANNEL_IO_OK;
+}
