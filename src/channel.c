@@ -268,8 +268,8 @@ channel_adjust_rec_window(struct ssh_channel *channel, uint32_t written)
 {
   /* NOTE: The channel object (referenced as a flow-control callback)
    * may live longer than the actual channel. */
-  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE
-			   | CHANNEL_SENT_CLOSE)))
+  if (written && ! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE
+				      | CHANNEL_SENT_CLOSE)))
     SSH_CONNECTION_WRITE(channel->connection, prepare_window_adjust(channel, written));
 }
 
