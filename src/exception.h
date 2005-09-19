@@ -26,6 +26,14 @@
 
 #include "lsh.h"
 
+enum exception_type
+{
+  EXC_IO_ERROR = 1,	/* Subtype is errno */
+  EXC_GLOBAL_REQUEST,
+  EXC_CHANNEL_REQUEST,
+  EXC_CHANNEL_OPEN
+};
+
 #define GABA_DECLARE
 #include "exception.h.x"
 #undef GABA_DECLARE
@@ -34,47 +42,48 @@
    (class
      (name exception)
      (vars
-       (type . uint32_t)
+       (type . int)
+       (subtype . int)
        (msg . "const char *")))
 */
 
-#define STATIC_EXCEPTION(type, name) \
-{ STATIC_HEADER, (type), (name) }
+#define STATIC_EXCEPTION(type, subtype, msg) \
+{ STATIC_HEADER, (type), (subtype), (msg) }
 
 /* GABA:
    (class
      (name exception_handler)
      (vars
        (raise method void "const struct exception *")
-       (parent object exception_handler)
 
        ; Provide some context for debugging unhandled exceptions
        (context . "const char *")))
 */
 
+#define HANDLER_CONTEXT   (__FILE__ ":" STRING_LINE)
+
+#if DEBUG_TRACE
 void exception_raise(struct exception_handler *e,
 		     const struct exception *h,
 		     const char *context);
-
-#if DEBUG_TRACE
 #  define EXCEPTION_RAISE(h, e) exception_raise((h), (e), HANDLER_CONTEXT)
 #else /* !DEBUG_TRACE */
 #  define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
 #endif /* !DEBUG_TRACE */
 
-/* NOTE: This is pretty useless, as it requires that the parent be
- * static as well. Used only for the default_exception_handler and
- * ignore_exception_handler, and perhaps some others with NULL parent.
- * */
-#define STATIC_EXCEPTION_HANDLER(r, p) \
-{ STATIC_HEADER, (r), (p), __FILE__ ":" STRING_LINE ": Static" }
-
-
-#define HANDLER_CONTEXT   (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)
-
+#define DEFINE_EXCEPTION_HANDLER(name)				\
+static void							\
+do_##name(struct exception_handler *e,				\
+	  const struct exception *x);				\
+								\
+struct exception_handler name =					\
+{ STATIC_HEADER, do_##name, __FILE__ ":" STRING_LINE};	\
+								\
+static void							\
+do_##name
 
 /* Exception types. */
-
+#if 0
 /* FIXME: This is an inappropriate name, as this exception type is
  * used for all events that should result in a disconnect message. */
 
@@ -111,11 +120,12 @@ void exception_raise(struct exception_handler *e,
 #define EXC_PAUSE_START_READ 0x100002
 
 #define EXC_ALL (~0)
+#endif
 
-extern struct exception_handler default_exception_handler;
 extern struct exception_handler ignore_exception_handler;
 
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name report_exception_info)
      (vars
@@ -135,10 +145,12 @@ struct exception_handler *
 make_report_exception_handler(const struct report_exception_info *info,
 			      struct exception_handler *parent,
 			      const char *context);
+#endif
 
 struct exception *
-make_simple_exception(uint32_t type, const char *msg);
+make_exception(int type, int subtype, const char *msg);
 
+#if 0
 /* Create a simple exception handler, with no internal state */
 struct exception_handler *
 make_exception_handler(void (*raise)(struct exception_handler *s,
@@ -147,7 +159,7 @@ make_exception_handler(void (*raise)(struct exception_handler *s,
 		       const char *context);
 
 /* A protocol exception, that normally terminates the connection */
-/* GABA:
+/* ;;GABA:
    (class
      (name protocol_exception)
      (super exception)
@@ -182,5 +194,6 @@ make_protocol_exception(uint32_t reason, const char *msg);
         (reason) };	\
   EXCEPTION_RAISE((e), &_exc.super);		\
 }
+#endif
 
 #endif /* LSH_EXCEPTION_H_INCLUDED */
