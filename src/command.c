@@ -116,9 +116,10 @@ gaba_apply(struct lsh_object *f,
 {
   CAST_SUBTYPE(command, cf, f);
   struct gaba_continuation c =
-  { { STATIC_HEADER, do_gaba_continuation }, NULL };
+  { { STACK_HEADER, do_gaba_continuation }, NULL };
 
-  COMMAND_CALL(cf, x, &c.super, &default_exception_handler);
+  /* NOTE: Uses a NULL exception handler */
+  COMMAND_CALL(cf, x, &c.super, NULL);
 
   assert(c.value);
   
@@ -534,7 +535,8 @@ make_catch_handler_info(uint32_t mask, uint32_t value,
   return self;
 }
 
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name catch_handler)
      (super exception_handler)
@@ -580,7 +582,7 @@ make_catch_handler(struct catch_handler_info *info,
   return &self->super;
 }
 
-/* GABA:
+/* ;; GABA:
    (class
      (name catch_apply)
      (super command)
@@ -621,7 +623,7 @@ make_catch_apply(struct catch_handler_info *info,
  *
  * FIXME: This duplicates most of the catch command. */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name catch_report_apply)
      (super command)
@@ -667,6 +669,7 @@ do_catch_report_collect(struct command *s,
   COMMAND_RETURN(c,
 		 make_catch_report_apply(self->info, body));
 }
+#endif
 
 /* Protecting resources.
  *
@@ -680,7 +683,8 @@ do_catch_report_collect(struct command *s,
      (name protect_handler)
      (super exception_handler)
      (vars
-       (resource object resource)))
+       (resource object resource)
+       (parent object exception_handler)))
 */
 
 static void
@@ -691,7 +695,7 @@ do_exc_protect_handler(struct exception_handler *s,
   
   KILL_RESOURCE(self->resource);
   
-  EXCEPTION_RAISE(self->super.parent, e);
+  EXCEPTION_RAISE(self->parent, e);
 }
 
 static struct exception_handler *
@@ -701,9 +705,9 @@ make_protect_exception_handler(struct resource *resource,
 {
   NEW(protect_handler, self);
   self->super.raise = do_exc_protect_handler;
-  self->super.parent = e;
   self->super.context = context;
 
+  self->parent = e;
   self->resource = resource;
 
   return &self->super;
