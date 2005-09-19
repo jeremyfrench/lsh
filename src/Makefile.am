@@ -39,13 +39,15 @@ bootstrap: $(generated_sources) $(dist_classes)
 #
 # client_keyexchange.c client_userauth.c connection_commands.c
 # debug.c gateway_commands.c handshake.c io_commands.c
-# read_packet.c socks.c channel_forward.c tcpforward.c tcpforward_commands.c write_packet.c
+# read_packet.c socks.c tcpforward.c tcpforward_commands.c write_packet.c
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c 
 
+# Obsoleted files:
+
 liblsh_a_SOURCES = abstract_io.c \
 	algorithms.c alist.c arglist.c atoms.c \
-	channel.c channel_commands.c channel_io.c \
+	channel.c channel_commands.c channel_io.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c \
 	client_session.c \
