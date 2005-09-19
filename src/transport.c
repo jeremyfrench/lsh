@@ -81,11 +81,14 @@ init_transport_connection(struct transport_connection *self,
   self->read_packet = lsh_string_alloc(SSH_MAX_PACKET + 1);
   self->retry_length = 0;
   self->retry_seqno = 0;
-  
+  io_register_fd(ssh_input, "transport read fd");
+
   self->ssh_output = ssh_output;
   self->writer = make_transport_write_state();
   self->write_active = 0;
   self->write_margin = SSH_MAX_TRANSPORT_RESPONSE;
+  if (ssh_output != ssh_input)
+    io_register_fd(ssh_output, "transport write fd");
 
   self->closing = 0;
   self->event_handler = event;
@@ -127,26 +130,18 @@ transport_timeout_close(struct lsh_callback *s)
 void
 transport_connection_kill(struct transport_connection *connection)
 {
-  oop_source *source = connection->ctx->oop;
   if (connection->expire)
     {
       KILL_RESOURCE(connection->expire);
       connection->expire = NULL;
     }
       
-  if (connection->ssh_input >= 0)
-    {
-      transport_stop_read(connection);
-      if (connection->ssh_input != connection->ssh_output)
-	close (connection->ssh_input);
-      connection->ssh_input = -1;
-    }
-  if (connection->ssh_output >= 0)
-    {
-      source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
-      close(connection->ssh_output);
-      connection->ssh_output = -1;
-    }
+  io_close_fd(connection->ssh_input);
+
+  if (connection->ssh_output != connection->ssh_input)
+    io_close_fd(connection->ssh_output);
+  
+  connection->ssh_input = connection->ssh_output = -1;
 }
 
 /* We close the connection when we either have sent a DISCONNECT
@@ -170,10 +165,10 @@ transport_connection_kill(struct transport_connection *connection)
 void
 transport_close(struct transport_connection *connection, int flush)
 {
+  trace("transport_close\n");
+
   if (connection->super.alive && !connection->closing)
     {
-      oop_source *source = connection->ctx->oop;
-
       /* FIXME: Is the return value from the event handler really useful? */
       connection->closing
 	= connection->event_handler(connection, TRANSPORT_EVENT_CLOSE);
@@ -183,30 +178,28 @@ transport_close(struct transport_connection *connection, int flush)
 	  KILL_RESOURCE(connection->expire);
 	  connection->expire = NULL;
 	}
+
+      if (connection->ssh_input != connection->ssh_output)
+	io_close_fd (connection->ssh_input);
       
-      if (connection->ssh_input >= 0)
-	{
-	  transport_stop_read(connection);
-	  if (connection->ssh_input != connection->ssh_output)
-	    close (connection->ssh_input);
-	  connection->ssh_input = -1;
+      connection->ssh_input = -1;
+
+      if (flush && connection->write_active)
+	connection->closing++;
+      else
+	{	      
+	  io_close_fd(connection->ssh_output);
+	  connection->ssh_output = -1;
 	}
-      if (connection->ssh_output >= 0)
-	{
-	  if (flush && connection->write_active)
-	    connection->closing++;
-	  else
-	    {	      
-	      source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
-	      close(connection->ssh_output);
-	      connection->ssh_output = -1;
-	    }
-	}
+
       if (connection->closing)
-	/* Stay open for a while, to allow buffers to drain. */
-	transport_timeout(connection,
-			  TRANSPORT_TIMEOUT_CLOSE,
-			  transport_timeout_close);
+	{
+	  /* Stay open for a while, to allow buffers to drain. */
+	  transport_timeout(connection,
+			    TRANSPORT_TIMEOUT_CLOSE,
+			    transport_timeout_close);
+	  trace("transport_close: Waiting for buffers to drain.\n");
+	}
       else
 	KILL_RESOURCE(&connection->super);	
     }
@@ -521,15 +514,16 @@ transport_start_read(struct transport_connection *connection)
 {
   if (!connection->read_active)
     {
-      oop_source *source = connection->ctx->oop;
       connection->read_active = 1;
 
       if (connection->retry_length)
 	/* Arrange to have the packet handler called from the main
 	   event loop. */
-	source->on_time(source, OOP_TIME_NOW, oop_timer_retry, connection);
+	global_oop_source->on_time(global_oop_source,
+				   OOP_TIME_NOW, oop_timer_retry, connection);
       else
-	source->on_fd(source, connection->ssh_input, OOP_READ, oop_read_ssh, connection);
+	global_oop_source->on_fd(global_oop_source, connection->ssh_input,
+				 OOP_READ, oop_read_ssh, connection);
     }
 }
 
@@ -537,8 +531,8 @@ void
 transport_stop_read(struct transport_connection *connection)
 {
   connection->read_active = 0;
-  oop_source *source = connection->ctx->oop;
-  source->cancel_fd(source, connection->ssh_input, OOP_READ);  
+  global_oop_source->cancel_fd(global_oop_source,
+			       connection->ssh_input, OOP_READ);  
 }
 
 /* Returns 1 if the write buffer is close to full */ 
@@ -591,12 +585,10 @@ transport_start_write(struct transport_connection *connection)
 {
   if (!connection->write_active)
     {
-      oop_source *source = connection->ctx->oop;
-
       connection->write_active = 1;
       
-      source->on_fd(source, connection->ssh_output,
-		    OOP_WRITE, oop_write_ssh, connection);
+      global_oop_source->on_fd(global_oop_source, connection->ssh_output,
+			       OOP_WRITE, oop_write_ssh, connection);
     }
   
   if (connection->kex.write_state == KEX_STATE_INIT
@@ -610,11 +602,10 @@ transport_stop_write(struct transport_connection *connection)
 {
   if (connection->write_active)
     {
-      oop_source *source = connection->ctx->oop;
-
       connection->write_active = 0;
 
-      source->cancel_fd(source, connection->ssh_output, OOP_WRITE);
+      global_oop_source->cancel_fd(global_oop_source,
+				   connection->ssh_output, OOP_WRITE);
       if (connection->closing)
 	{
 	  close(connection->ssh_output);
