@@ -43,7 +43,8 @@ bootstrap: $(generated_sources) $(dist_classes)
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c 
 
-# Obsoleted files:
+# Obsoleted files: read_data.c read_file.c read_line.c
+
 
 liblsh_a_SOURCES = abstract_io.c \
 	algorithms.c alist.c arglist.c atoms.c \
@@ -69,7 +70,6 @@ liblsh_a_SOURCES = abstract_io.c \
 	pkcs5.c \
 	queue.c \
 	randomness.c \
-	read_data.c read_file.c read_line.c \
 	reaper.c resource.c \
 	rsa.c \
 	server.c \
