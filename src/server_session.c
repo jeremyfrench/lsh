@@ -276,11 +276,11 @@ make_server_session(uint32_t initial_window,
 
 static void
 do_open_session(struct channel_open *s,
-		struct ssh_connection *connection UNUSED,
+		struct ssh_connection *connection,
 		struct channel_open_info *info UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
-		struct exception_handler *e)
+		struct exception_handler *e UNUSED)
 {
   CAST(open_session, self, s);
 
@@ -293,7 +293,7 @@ do_open_session(struct channel_open *s,
     }
   else
     {
-      PROTOCOL_ERROR(e, "trailing garbage in open message");
+      SSH_CONNECTION_ERROR(connection, "trailing garbage in open message");
     }
 }
 
@@ -618,12 +618,13 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   struct env_value env[5];
   
   static const struct exception shell_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Shell request failed");
 
   trace("shell_request_handler\n");
   if (!parse_eod(args))
     {
-      PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
+      SSH_CONNECTION_ERROR(channel->connection,
+			   "Invalid shell CHANNEL_REQUEST message.");
       return;
     }
     
@@ -655,7 +656,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   CAST(server_session, session, channel);
 
   static const struct exception exec_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Exec request failed");
   
   uint32_t command_len;
   const uint8_t *command;
@@ -663,7 +664,8 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   if (!(parse_string(args, &command_len, &command)
 	&& parse_eod(args)))
     {
-      PROTOCOL_ERROR(e, "Invalid exec CHANNEL_REQUEST message.");
+      SSH_CONNECTION_ERROR(channel->connection,
+			   "Invalid exec CHANNEL_REQUEST message.");
       return;
     }
     
@@ -743,8 +745,8 @@ do_spawn_subsystem(struct channel_request *s,
   CAST(subsystem_request, self, s);
   CAST(server_session, session, channel);
 
-  static struct exception subsystem_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Subsystem request failed");
+  static const struct exception subsystem_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Subsystem request failed");
 
   const uint8_t *name;
   uint32_t name_length;
@@ -753,7 +755,8 @@ do_spawn_subsystem(struct channel_request *s,
       
   if (! (parse_string(args, &name_length, &name) && parse_eod(args)))
     {
-      PROTOCOL_ERROR(e, "Invalid subsystem CHANNEL_REQUEST message.");
+      SSH_CONNECTION_ERROR(channel->connection,
+			   "Invalid subsystem CHANNEL_REQUEST message.");
       return;
     }
   
@@ -809,14 +812,13 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
       struct command_continuation *s,
       struct exception_handler *e)
 {
+  CAST(server_session, session, channel);
   struct lsh_string *term = NULL;
 
-  static struct exception pty_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
+  static const struct exception pty_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "pty request failed");
 
   struct pty_info *pty = make_pty_info();
-  
-  CAST(server_session, session, channel);
 
   verbose("Client requesting a tty...\n");
 
@@ -855,7 +857,7 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
   else
     {
       werror("Invalid pty request.\n");
-      PROTOCOL_ERROR(e, "Invalid pty request.");
+      SSH_CONNECTION_ERROR(channel->connection, "Invalid pty request.");
     }
   /* Cleanup for failure cases. */
   lsh_string_free(term);
@@ -871,8 +873,8 @@ do_window_change_request(struct channel_request *c UNUSED,
 			 struct command_continuation *s,
 			 struct exception_handler *e)
 {
-  struct terminal_dimensions dims;
   CAST(server_session, session, channel);
+  struct terminal_dimensions dims;
 
   verbose("Receiving window-change request...\n");
 
@@ -883,7 +885,8 @@ do_window_change_request(struct channel_request *c UNUSED,
       && parse_eod(args))
     {
       static const struct exception winch_request_failed =
-	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "window-change request failed: No pty");
+	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0,
+			 "window-change request failed: No pty");
 
       if (session->pty && session->in.fd >= 0
           && tty_setwinsize(session->in.fd, &dims))
@@ -893,7 +896,8 @@ do_window_change_request(struct channel_request *c UNUSED,
         EXCEPTION_RAISE(e, &winch_request_failed);
     }
   else
-    PROTOCOL_ERROR(channel->e, "Invalid window-change request.");
+    SSH_CONNECTION_ERROR(channel->connection,
+			 "Invalid window-change request.");
 }
 
 struct channel_request
@@ -915,7 +919,9 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
       struct command_continuation *c,
       struct exception_handler *e)
 {
-  static struct exception x11_request_failed =
+  CAST(server_session, session, channel);
+
+  static const struct exception x11_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "x11-req failed");
 
   const uint8_t *protocol;
@@ -924,8 +930,6 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
   uint32_t cookie_length;
   uint32_t screen;
   unsigned single;
-  
-  CAST(server_session, session, channel);
 
   verbose("Client requesting x11 forwarding...\n");
 
@@ -954,7 +958,7 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
   else
     {
       werror("Invalid x11 request.\n");
-      PROTOCOL_ERROR(e, "Invalid x11 request.");
+      SSH_CONNECTION_ERROR(channel->connection, "Invalid x11 request.");
     }
 }
 
