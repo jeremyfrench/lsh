@@ -369,34 +369,29 @@ make_global_request_response(struct ssh_connection *connection,
        (active object request_status)))
 */
 
-/* NOTE: We handle *only* EXC_GLOBAL_REQUEST */
+/* All exceptions are treated as a failure. */
 static void 
 do_exc_global_request_handler(struct exception_handler *c,
 			      const struct exception *e)
 {
   CAST(global_request_exception_handler, self, c);
-  if (e->type == EXC_GLOBAL_REQUEST)
-    {
-      assert(self->active->status == -1);
-      self->active->status = 0;
-  
-      send_global_request_responses(self->connection);
-    }
-  else
-    EXCEPTION_RAISE(c->parent, e);
+
+  assert(self->active->status == -1);
+  self->active->status = 0;
+
+  werror("Denying global request: %z\n", e->msg);
+  send_global_request_responses(self->connection);
 }
 
 static struct exception_handler *
 make_global_request_exception_handler(struct ssh_connection *connection,
 				      struct request_status *active,
-				      struct exception_handler *h,
 				      const char *context)
 {
   NEW(global_request_exception_handler, self);
 
   self->super.raise = do_exc_global_request_handler;
   self->super.context = context;
-  self->super.parent = h;
   self->active = active;
   self->connection = connection;
   return &self->super;
@@ -413,7 +408,6 @@ handle_global_request(struct ssh_connection *connection,
       && parse_boolean(buffer, &want_reply))
     {
       struct global_request *req = NULL;
-      struct command_continuation *c = &discard_continuation;
 
       if (name && connection->global_requests)
 	{
@@ -429,6 +423,7 @@ handle_global_request(struct ssh_connection *connection,
 	}
       else
 	{
+	  struct command_continuation *c;
 	  struct exception_handler *e;
 	  if (want_reply)
 	    {
@@ -438,18 +433,14 @@ handle_global_request(struct ssh_connection *connection,
 				    &a->super);
 	      
 	      c = make_global_request_response(connection, a);
-	      e = make_global_request_exception_handler(connection, a, &default_exception_handler,
+	      e = make_global_request_exception_handler(connection, a,
 							HANDLER_CONTEXT);
 	    }
 	  else
 	    {
 	      /* We should ignore failures. */
-	      static const struct report_exception_info global_req_ignore =
-		STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_GLOBAL_REQUEST,
-					     "Ignored:");
-	      
-	      e = make_report_exception_handler(&global_req_ignore,
-						&default_exception_handler, HANDLER_CONTEXT);
+	      c = &discard_continuation;
+	      e = &ignore_exception_handler;
 	    }
 	  GLOBAL_REQUEST(req, connection, name, want_reply, buffer, c, e);
 	}
@@ -481,7 +472,7 @@ handle_global_success(struct ssh_connection *connection,
 }
 
 struct exception global_request_exception =
-STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "Global request failed");
+STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, 0, "Global request failed");
 
 static void
 handle_global_failure(struct ssh_connection *connection,
@@ -580,33 +571,28 @@ make_channel_request_response(struct ssh_channel *channel,
        (active object request_status)))
 */
 
-/* NOTE: We handle *only* EXC_CHANNEL_REQUEST */
+/* All exceptions are treated as a failure. */
 static void 
 do_exc_channel_request_handler(struct exception_handler *c,
 			       const struct exception *e)
 {
   CAST(channel_request_exception_handler, self, c);
-  if (e->type == EXC_CHANNEL_REQUEST)
-    {
-      assert(self->active->status == -1);
-      self->active->status = 0;
-      
-      send_channel_request_responses(self->channel);
-    }
-  else
-    EXCEPTION_RAISE(c->parent, e);
+
+  assert(self->active->status == -1);
+  self->active->status = 0;
+
+  werror("Denying channel request: %z\n", e->msg);
+  send_channel_request_responses(self->channel);
 }
 
 static struct exception_handler *
 make_channel_request_exception_handler(struct ssh_channel *channel,
 				       struct request_status *active,
-				       struct exception_handler *h,
 				       const char *context)
 {
   NEW(channel_request_exception_handler, self);
 
   self->super.raise = do_exc_channel_request_handler;
-  self->super.parent = h;
   self->super.context = context;
 
   self->channel = channel;
@@ -638,8 +624,6 @@ handle_channel_request(struct ssh_connection *connection,
       if (channel)
 	{
 	  struct channel_request *req = NULL;
-	  struct command_continuation *c = &discard_continuation;
-	  struct exception_handler *e = channel->e;
 
 	  if (info.type && channel->request_types)
 	    {
@@ -652,6 +636,8 @@ handle_channel_request(struct ssh_connection *connection,
 	  
 	  if (req)
 	    {
+	      struct command_continuation *c;
+	      struct exception_handler *e;
 	      if (info.want_reply)
 		{
 		  struct request_status *a = make_request_status();
@@ -660,18 +646,14 @@ handle_channel_request(struct ssh_connection *connection,
 					&a->super);
 
 		  c = make_channel_request_response(channel, a);
-		  e = make_channel_request_exception_handler(channel, a, e, HANDLER_CONTEXT);
+		  e = make_channel_request_exception_handler(channel, a,
+							     HANDLER_CONTEXT);
 		}
 	      else
 		{
 		  /* We should ignore failures. */
-		  static const struct report_exception_info
-		    channel_req_ignore =
-		    STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_REQUEST,
-						 "Ignored:");
-		  
-		  e = make_report_exception_handler(&channel_req_ignore,
-						    e, HANDLER_CONTEXT);
+		  c = &discard_continuation;
+		  e = &ignore_exception_handler;
 		}
 	      
 	      CHANNEL_REQUEST(req, channel, &info, buffer, c, e);
@@ -769,38 +751,29 @@ do_exc_channel_open_handler(struct exception_handler *s,
 			    const struct exception *e)
 {
   CAST(exc_channel_open_handler, self, s);
+  struct ssh_connection *connection = self->connection;
+  uint32_t error_code = (e->type == EXC_CHANNEL_OPEN)
+    ? e->subtype : SSH_OPEN_RESOURCE_SHORTAGE;
 
-  switch (e->type)
-    {
-    case EXC_CHANNEL_OPEN:
-      {
-	CAST_SUBTYPE(channel_open_exception, exc, e);
-	struct ssh_connection *connection = self->connection;
-	
-	assert(connection->in_use[self->local_channel_number]);
-	assert(!connection->channels[self->local_channel_number]);
+  assert(connection->in_use[self->local_channel_number]);
+  assert(!connection->channels[self->local_channel_number]);
 
-	ssh_connection_dealloc_channel(connection, self->local_channel_number);
-	
-        SSH_CONNECTION_WRITE(connection,
-		     format_open_failure(self->remote_channel_number,
-					 exc->error_code, e->msg, ""));
-	break;
-      }
-    default:
-      EXCEPTION_RAISE(self->super.parent, e);
-    }      
+  ssh_connection_dealloc_channel(connection, self->local_channel_number);
+
+  werror("Denying channel open: %z\n", e->msg);
+  
+  SSH_CONNECTION_WRITE(connection,
+		       format_open_failure(self->remote_channel_number,
+					   error_code, e->msg, ""));
 }
 
 static struct exception_handler *
 make_exc_channel_open_handler(struct ssh_connection *connection,
 			      uint32_t local_channel_number,
 			      uint32_t remote_channel_number,
-			      struct exception_handler *parent,
 			      const char *context)
 {
   NEW(exc_channel_open_handler, self);
-  self->super.parent = parent;
   self->super.raise = do_exc_channel_open_handler;
   self->super.context = context;
   
@@ -894,7 +867,6 @@ handle_channel_open(struct ssh_connection *connection,
 			   make_exc_channel_open_handler(connection,
 							 local_number,
 							 info.remote_channel_number,
-							 &default_exception_handler,
 							 HANDLER_CONTEXT));
 
 	    }
@@ -1279,7 +1251,7 @@ handle_channel_failure(struct ssh_connection *connection,
       else
 	{
 	  static const struct exception channel_request_exception =
-	    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Channel request failed");
+	    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Channel request failed");
 
 	  CAST_SUBTYPE(command_context, ctx,
 		       object_queue_remove_head(&channel->pending_requests));
