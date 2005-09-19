@@ -40,6 +40,7 @@
 
 #include "exception.c.x"
 
+#if 0
 static void
 do_default_handler(struct exception_handler *ignored UNUSED,
 		   const struct exception *e)
@@ -49,15 +50,17 @@ do_default_handler(struct exception_handler *ignored UNUSED,
 
 struct exception_handler default_exception_handler =
 STATIC_EXCEPTION_HANDLER(do_default_handler, NULL);
+#endif
 
-static void
-do_ignore_exception_handler(struct exception_handler *self UNUSED,
-			    const struct exception *e UNUSED)
-{}
+DEFINE_EXCEPTION_HANDLER(ignore_exception_handler)
+     (struct exception_handler *self UNUSED,
+      const struct exception *e)
+{
+  trace("Ignoring exception: %z (type %i:%i)\n",
+	e->msg, e->type, e->subtype);
+}
 
-struct exception_handler ignore_exception_handler =
-STATIC_EXCEPTION_HANDLER(do_ignore_exception_handler, NULL);
-
+#if 0
 struct exception_handler *
 make_exception_handler(void (*raise)(struct exception_handler *s,
 				     const struct exception *x),
@@ -85,7 +88,7 @@ make_report_exception_info(uint32_t mask, uint32_t value,
   return self;
 }
 
-/* GABA:
+/* ;;GABA:
    (class
      (name report_exception_handler)
      (super exception_handler)
@@ -120,16 +123,20 @@ make_report_exception_handler(const struct report_exception_info *info,
 
   return &self->super;
 }
+#endif
 
-struct exception *make_simple_exception(uint32_t type, const char *msg)
+struct exception *
+make_exception(int type, int subtype, const char *msg)
 {
   NEW(exception, e);
   e->type = type;
+  e->subtype = subtype;
   e->msg = msg;
 
   return e;
 }
 
+#if 0
 /* Reason == 0 means disconnect without sending any disconnect
  * message. */
 
@@ -161,14 +168,16 @@ make_protocol_exception(uint32_t reason, const char *msg)
 
   return &self->super;
 }
+#endif
 
 #if DEBUG_TRACE
-void exception_raise(struct exception_handler *h,
-		     const struct exception *e,
-		     const char *context)
+void
+exception_raise(struct exception_handler *h,
+		const struct exception *e,
+		const char *context)
 {
-  trace ("%z: Raising exception %z (type %i), using handler installed by %z\n",
-	 context, e->msg, e->type, h->context);
+  trace ("%z: Raising exception %z (type %i:%i), using handler installed by %z\n",
+	 context, e->msg, e->type, e->subtype, h->context);
   h->raise(h, e);
 }
 #endif /* DEBUG_TRACE */
