@@ -52,8 +52,6 @@
 #ifndef LSH_TRANSPORT_H_INCLUDED
 #define LSH_TRANSPORT_H_INCLUDED
 
-#include <oop.h>
-
 #include "compress.h"
 #include "crypto.h"
 #include "keyexchange.h"
@@ -198,9 +196,7 @@ transport_write_flush(struct transport_write_state *self,
        (is_server . int)
        (random object randomness)
        (algorithms object alist)
-       (kexinit object make_kexinit)
-       ;; FIXME: Use global_oop_source instead.
-       (oop . "oop_source *")))
+       (kexinit object make_kexinit)))
 */
 
 /* Use primarily for the key exchange method */
