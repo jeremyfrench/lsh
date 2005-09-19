@@ -185,14 +185,14 @@ make_detach_callback(int *exit_status)
 */
 
 static void
-do_exit_status(struct channel_request *c,
+do_exit_status(struct channel_request *s,
 	       struct ssh_channel *channel,
 	       struct channel_request_info *info,
 	       struct simple_buffer *args,
-	       struct command_continuation *s,
-	       struct exception_handler *e)
+	       struct command_continuation *c,
+	       struct exception_handler *e UNUSED)
 {
-  CAST(exit_handler, closure, c);
+  CAST(exit_handler, self, s);
   uint32_t status;
 
   if (!info->want_reply
@@ -202,7 +202,7 @@ do_exit_status(struct channel_request *c,
       verbose("client.c: Receiving exit-status %i on channel %i\n",
 	      status, channel->remote_channel_number);
 
-      *closure->exit_status = status;
+      *self->exit_status = status;
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
@@ -210,22 +210,22 @@ do_exit_status(struct channel_request *c,
       channel->sinks--;
       channel_maybe_close(channel);
 
-      COMMAND_RETURN(s, channel);
+      COMMAND_RETURN(c, channel);
     }
   else
     /* Invalid request */
-    PROTOCOL_ERROR(e, "Invalid exit-status message");
+    SSH_CONNECTION_ERROR(channel->connection, "Invalid exit-status message");
 }
 
 static void
-do_exit_signal(struct channel_request *c,
+do_exit_signal(struct channel_request *s,
 	       struct ssh_channel *channel,
 	       struct channel_request_info *info,
 	       struct simple_buffer *args,
-	       struct command_continuation *s,
-	       struct exception_handler *e)
+	       struct command_continuation *c,
+	       struct exception_handler *e UNUSED)
 {
-  CAST(exit_handler, closure, c);
+  CAST(exit_handler, self, s);
 
   uint32_t signal;
   int core;
@@ -246,7 +246,7 @@ do_exit_signal(struct channel_request *c,
       /* FIXME: What exit status should be returned when the remote
        * process dies violently? */
 
-      *closure->exit_status = 7;
+      *self->exit_status = 7;
 
       werror("Remote process was killed by signal: %ups %z\n",
 	     length, msg,
@@ -259,11 +259,11 @@ do_exit_signal(struct channel_request *c,
       channel->sinks--;
       channel_maybe_close(channel);
 
-      COMMAND_RETURN(s, channel);
+      COMMAND_RETURN(c, channel);
     }
   else
     /* Invalid request */
-    PROTOCOL_ERROR(e, "Invalid exit-signal message");
+    SSH_CONNECTION_ERROR(channel->connection, "Invalid exit-signal message");
 }
 
 struct channel_request *
