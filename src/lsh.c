@@ -672,36 +672,19 @@ do_lsh_default_handler(struct exception_handler *s,
 {
   CAST(lsh_default_handler, self, s);
 
-  if (e->type & EXC_IO)
-    {
-      CAST_SUBTYPE(io_exception, exc, e);
-      *self->status = EXIT_FAILURE;
-      
-      werror("%z, (errno = %i)\n", e->msg, exc->error);
-    }
-  else
-    switch(e->type)
-      {
-      case EXC_RESOLVE:
-      case EXC_GLOBAL_REQUEST:
-      case EXC_CHANNEL_REQUEST:
-      case EXC_CHANNEL_OPEN:
+  if (e->type == EXC_IO_ERROR)
+    werror("%z, (errno = %i)\n", e->msg, e->subtype);
 
-	werror("%z\n", e->msg);
-	*self->status = EXIT_FAILURE;
-	break;
-      default:
-	*self->status = EXIT_FAILURE;
-	EXCEPTION_RAISE(self->super.parent, e);
-      }
+  else
+    werror("%z\n", e->msg);
+
+  *self->status = EXIT_FAILURE;
 }
 
 static struct exception_handler *
-make_lsh_default_handler(int *status, struct exception_handler *parent,
-			 const char *context)
+make_lsh_default_handler(int *status, const char *context)
 {
   NEW(lsh_default_handler, self);
-  self->super.parent = parent;
   self->super.raise = do_lsh_default_handler;
   self->super.context = context;
 
@@ -822,8 +805,7 @@ main(int argc, char **argv, const char** envp)
   int lsh_exit_code = 17;
 
   struct exception_handler *handler
-    = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
-			       HANDLER_CONTEXT);
+    = make_lsh_default_handler(&lsh_exit_code, HANDLER_CONTEXT);
 
   io_init();
   reaper_init();
