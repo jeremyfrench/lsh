@@ -283,7 +283,7 @@ lsh_oop_cancel_stop(void)
 void
 io_register_fd(int fd, const char *label)
 {
-  trace("io_register_fd: fd %i: %z\n", fd, label);
+  trace("io_register_fd: fd = %i: %z\n", fd, label);
 
   if (fd > STDERR_FILENO)
     {
