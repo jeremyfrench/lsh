@@ -1,4 +1,37 @@
+2005-09-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel_forward.c: Rewrote to use channel_io.c.
+
+2005-09-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_session.c (oop_write_stdin, do_receive, do_eof): Call
+	channel_write_state_close on EOF and error.
+	(oop_read_stdout, oop_read_stderr): Call channel_read_state_close
+	on EOF and error.
+
+	* src/client_session.c (oop_write_stdout, oop_write_stderr): Call
+	channel_write_state_close on EOF and error.
+	(do_receive): Likewise.
+	(oop_read_stdin): Call channel_read_state_close on EOF and error.
+
+	* src/channel.c (channel_adjust_rec_window): Check that written > 0.
+
+	* src/channel_io.c (channel_io_read): Return an enum
+	channel_io_status. Don't call channel_read_state_close on error;
+	leave that up to the caller.
+	(channel_io_start_read): Check that file->fd is valid.
+	(channel_io_write, channel_io_flush): Return an enum
+	channel_io_status. Don't call channel_write_state_close on error;
+	leave that up to the caller.
+	(channel_io_stop_write): Return CHANNEL_IO_EOF if all data has
+	been written.
+
+	* src/channel_io.h (enum channel_io_status): New enum.
+
 2005-09-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel_io.c (channel_io_write): Call
+	channel_adjust_rec_window.
 
 	* src/transport_read.c (decode_packet): Implemented inflating.
 
