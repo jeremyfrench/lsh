@@ -80,8 +80,8 @@ kill_lshd_connection(struct resource *s)
   CAST(transport_forward, self, s);
   if (self->super.super.alive)
     {
-      transport_forward_kill(self);
       self->super.super.alive = 0;
+      transport_forward_kill(self);
     }
 }
 
@@ -109,17 +109,6 @@ lshd_event_handler(struct transport_connection *connection,
     }
   return 0;
 }
-
-static struct transport_forward *
-make_lshd_connection(struct configuration *config, int input, int output)
-{
-  struct transport_forward *self
-    = make_transport_forward(kill_lshd_connection,
-			     &config->super,
-			     input, output,
-			     lshd_event_handler);
-  return self;
-};
 
 static void
 lshd_line_handler(struct transport_connection *connection,
@@ -337,7 +326,9 @@ lshd_port_accept(oop_source *source UNUSED,
       return OOP_CONTINUE;
     }
 
-  connection = make_lshd_connection(self->config, s, s);
+  connection = make_transport_forward(kill_lshd_connection,
+				      &self->config->super, s, s,
+				      lshd_event_handler);
   gc_global(&connection->super.super);
 
   transport_handshake(&connection->super, make_string("SSH-2.0-lshd-ng"),
@@ -355,7 +346,7 @@ open_ports(struct configuration *config, struct resource_list *resources,
 {
   struct sockaddr_in sin;
   struct lshd_port *port;
-  oop_source *source;
+
   int yes = 1;
   int s;
   /* In network byte order */
@@ -392,8 +383,6 @@ open_ports(struct configuration *config, struct resource_list *resources,
 	}
     }
 
-  source = config->super.oop;
-
   s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0)
     {
@@ -426,13 +415,14 @@ open_ports(struct configuration *config, struct resource_list *resources,
   port = make_lshd_port(config, s);
   remember_resource(resources, &port->super);
 
-  source->on_fd(source, s, OOP_READ, lshd_port_accept, port);
+  global_oop_source->on_fd(global_oop_source, s,
+			   OOP_READ, lshd_port_accept, port);
 
   return 1;
 }
 
 static struct configuration *
-make_configuration(const char *hostkey, oop_source *source)
+make_configuration(const char *hostkey)
 {
   NEW(configuration, self);
   static const char *services[3];
@@ -452,7 +442,6 @@ make_configuration(const char *hostkey, oop_source *source)
     }
 
   self->super.algorithms = all_symmetric_algorithms();
-  self->super.oop = source;
 
   self->keys = make_alist(0, -1);
   if (!read_host_key(hostkey,
@@ -708,7 +697,7 @@ main(int argc, char **argv)
 
   io_init();
   
-  configuration = make_configuration(options->hostkey, global_oop_source);
+  configuration = make_configuration(options->hostkey);
   
   if (!open_ports(configuration, resources, options->port))
     return EXIT_FAILURE;
