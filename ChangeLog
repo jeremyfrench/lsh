@@ -1,5 +1,7 @@
 2005-09-19  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/Makefile.am (liblsh_a_SOURCES): Readded channel_forward.c.
+
 	* src/channel_forward.c: Rewrote to use channel_io.c.
 
 2005-09-18  Niels Möller  <nisse@lysator.liu.se>
