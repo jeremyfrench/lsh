@@ -225,6 +225,7 @@ DEFINE_COMMAND(forward_start_io_command)
   COMMAND_RETURN(c, channel);  
 }
 
+#if 0
 /* FIXME: Arrange so that the forwarded socket is closed if
    EXC_CHANNEL_OPEN is caught. And write some docs. */
 static const struct report_exception_info forward_open_report =
@@ -233,3 +234,4 @@ STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN,
 
 struct catch_report_collect catch_channel_open
 = STATIC_CATCH_REPORT(&forward_open_report);
+#endif
