@@ -123,11 +123,10 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
 */
 
 static struct lsh_transport_config *
-make_lsh_transport_config(oop_source *oop)
+make_lsh_transport_config(void)
 {
   NEW(lsh_transport_config, self);
   self->super.is_server = 0;
-  self->super.oop = oop;
 
   self->home = getenv(ENV_HOME);
   if (!self->home)
@@ -1045,8 +1044,7 @@ main(int argc, char **argv)
 
   io_init();
 
-  /* FIXME: Use the global source, instead of passing it as an argument */
-  config = make_lsh_transport_config(global_oop_source);
+  config = make_lsh_transport_config();
   if (!config)
     return EXIT_FAILURE;
   

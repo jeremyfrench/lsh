@@ -181,9 +181,9 @@ forward_start_read(struct transport_forward *self)
 {
   if (!self->service_read_active)
     {
-      oop_source *source = self->super.ctx->oop;
       self->service_read_active = 1;
-      source->on_fd(source, self->service_in, OOP_READ, oop_read_service, self);
+      global_oop_source->on_fd(global_oop_source, self->service_in,
+			       OOP_READ, oop_read_service, self);
     }
 }
 
@@ -192,10 +192,9 @@ forward_stop_read(struct transport_forward *self)
 {
   if (self->service_read_active)
     {
-      oop_source *source = self->super.ctx->oop;
-
       self->service_read_active = 0;
-      source->cancel_fd(source, self->service_in, OOP_READ);
+      global_oop_source->cancel_fd(global_oop_source,
+				   self->service_in, OOP_READ);
     }
 }
 
@@ -236,10 +235,9 @@ forward_start_write(struct transport_forward *self)
 {
   if (!self->service_write_active)
     {
-      oop_source *source = self->super.ctx->oop;
-
       self->service_write_active = 1;
-      source->on_fd(source, self->service_out, OOP_WRITE, oop_write_service, self);
+      global_oop_source->on_fd(global_oop_source, self->service_out,
+			       OOP_WRITE, oop_write_service, self);
     }
 }
 
@@ -248,10 +246,9 @@ forward_stop_write(struct transport_forward *self)
 {
   if (self->service_write_active)
     {
-      oop_source *source = self->super.ctx->oop;
-
       self->service_write_active = 0;
-      source->cancel_fd(source, self->service_out, OOP_WRITE);
+      global_oop_source->cancel_fd(global_oop_source,
+				   self->service_out, OOP_WRITE);
     }
 }
 
@@ -376,4 +373,3 @@ transport_forward_setup(struct transport_forward *self,
     
   forward_start_read(self);
 }
-
