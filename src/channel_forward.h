@@ -27,6 +27,7 @@
 #define LSH_CHANNEL_FORWARD_H_INCLUDED
 
 #include "channel.h"
+#include "channel_io.h"
 
 #define GABA_DECLARE
 #include "channel_forward.h.x"
@@ -37,15 +38,17 @@
      (name channel_forward)
      (super ssh_channel)
      (vars
-       (socket object lsh_fd)))
+       ; We have to be careful, since both structs use the same fd
+       (read struct channel_read_state)
+       (write struct channel_write_state)))
 */
 
 void
 init_channel_forward(struct channel_forward *self,
-		     struct lsh_fd *socket, uint32_t initial_window);
+		     int fd, uint32_t initial_window);
 
 struct channel_forward *
-make_channel_forward(struct lsh_fd *socket, uint32_t initial_window);
+make_channel_forward(int fd, uint32_t initial_window);
 
 void
 channel_forward_start_io(struct channel_forward *channel_forward);
@@ -53,8 +56,8 @@ channel_forward_start_io(struct channel_forward *channel_forward);
 void
 channel_forward_start_io_read(struct channel_forward *channel);
 
-extern struct command start_io_command;
-#define START_IO (&start_io_command.super)
+extern struct command forward_start_io_command;
+#define FORWARD_START_IO (&forward_start_io_command.super)
 
 extern struct catch_report_collect catch_channel_open;
 #define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super)
