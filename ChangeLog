@@ -1,3 +1,62 @@
+2005-09-19  Niels Möller  <niels@s3.kth.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed read_data.c
+	read_file.c read_line.c.
+
+	* src/lsh-transport.c: Use global_oop_source.
+
+	* src/lshd.c: Use global_oop_source.
+	(make_lshd_connection): Deleted redundant function.
+
+	* src/transport.c: Use global_oop_source.
+	(init_transport_connection): Call io_register_fd.
+	(transport_connection_kill, transport_close): Call io_close_fd.
+	
+	* src/transport_forward.c: Use global_oop_source.
+
+	* src/transport.h (class transport_context): Deleted attribute
+	oop. global_oop_source should be used instead.
+
+	* src/server_session.c: Adapted to new simpler exception
+	abstraction. Use SSH_CONNECTION_ERROR.
+
+	* acinclude.m4 (LSH_GCC_FUNCTION_NAME): Deleted.
+	* configure.ac: Don't use LSH_GCC_FUNCTION_NAME.
+
+	* src/lsh_string.h (lsh_string_alloc) [DEBUG_ALLOC]: Don't use
+	FUNCTION_NAME.
+
+	* src/lsh.c (do_lsh_default_handler): Adapted to new simpler
+	exception abstraction.
+
+	* src/io.c (io_register_fd): Improved trace message.
+
+	* src/command.c (gaba_apply): Mark continuation with STACK_HEADER.
+	#if:ed out some old exception-related functions.
+	(class protect_handler): New parent attribute (used to be in the
+	super class).
+
+	* src/client.c (do_exit_status, do_exit_signal): Use
+	SSH_CONNECTION_ERROR. 
+
+	* src/channel_forward.c (catch_channel_open): #if:ed out.
+
+	* src/channel.c (do_exc_global_request_handler) 
+	(make_global_request_exception_handler, handle_global_request) 
+	(do_exc_channel_request_handler) 
+	(make_channel_request_exception_handler, handle_channel_request) 
+	(do_exc_channel_open_handler, make_exc_channel_open_handler) 
+	(handle_channel_open, handle_channel_failure): Adapted to new
+	simpler exception abstraction.
+
+	* src/exception.c: #if:ed out old code.
+
+	* src/exception.h: Simplified exception class. Now an exception
+	consistd of a type, a subtype, and a message, but no class
+	hierarchy and no type masks. Exception handlers don't have parents
+	by default.
+	(DEFINE_EXCEPTION_HANDLER): New macro.
+
 2005-09-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Readded channel_forward.c.
@@ -58,6 +117,16 @@
 	(transport_forward_setup): Use io_register_fd.
 
 2005-09-16  Niels Möller  <niels@s3.kth.se>
+
+	* src/channel.c (receive_data_common): New function, with
+	processing and checks common for handle_channel_data and
+	handle_channel_extended_data. Invoke CHANNEL_RECEIVE with length
+	and pointer, avoiding allocation fo an extra copy.
+	(handle_channel_data, handle_channel_extended_data): Use it.
+
+	* src/channel.h (class ssh_channel): Changed the CHANNEL_RECEIVE
+	method to take a length and pointer, rather than an lsh_string.
+	Updated method implementations.
 
 	* src/server_session.c (do_exit_shell): Call
 	channel_maybe_close unconditionally.
