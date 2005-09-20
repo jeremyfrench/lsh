@@ -174,19 +174,8 @@ struct channel_open_info
   uint32_t send_max_packet;
 };
 
-/* Raised if opening of a channel fails. Used both on the client and
- * the server side.*/
-/* GABA:
-   (class
-     (name channel_open_exception)
-     (super exception)
-     (vars
-       (error_code . uint32_t)))
-*/
-
 struct exception *
 make_channel_open_exception(uint32_t error_code, const char *msg);
-
 
 /* GABA:
    (class
