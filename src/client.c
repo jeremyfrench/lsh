@@ -40,7 +40,6 @@
 
 #include "client.h"
 
-#include "abstract_io.h"
 #include "channel.h"
 #include "channel_commands.h"
 #include "environ.h"
@@ -693,7 +692,6 @@ client_command_session(struct client_options *options,
       return make_start_session(
 	make_open_session_command(session),
 	queue_to_list_and_kill(&session_requests));
-      }
     }
   
   return NULL;
