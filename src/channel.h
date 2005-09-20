@@ -33,6 +33,22 @@
 #include "server_pty.h"
 #include "write_buffer.h"
 
+enum channel_event
+{
+  /* We receieved a CHANNEL_OPEN_CONFIRMATION. */
+  CHANNEL_EVENT_CONFIRM = 1,
+#if 0
+  /* We received a CHANNEL_OPEN_FAILURE. */
+  CHANNEL_EVENT_DENY,
+#endif
+  /* We received a CHANNEL_EOF or CHANNEL_CLOSE. */
+  CHANNEL_EVENT_EOF,
+  /* Local buffers are full. Stop sending data. */
+  CHANNEL_EVENT_STOP,
+  /* Start sending again (subject to the current send window size). */
+  CHANNEL_EVENT_START,
+};
+
 struct channel_request_info
 {
   uint32_t type_length;
@@ -78,10 +94,6 @@ enum channel_flag {
        (local_channel_number . uint32_t)
        (remote_channel_number . uint32_t)
        
-       ; If opening the channel fails, EXC_CHANNEL_OPEN is raised with
-       ; this handler.       
-       (e object exception_handler)
-       
        ; NOTE: The channel's maximum packet sizes refer to the packet
        ; payload, i.e. the DATA string in SSH_CHANNEL_DATA and
        ; SSH_MSG_CHANNEL_EXTENDED_DATA.
@@ -121,12 +133,10 @@ enum channel_flag {
        ; Implies that the send_window_size is non-zero. 
        (send_adjust method void "uint32_t increment")
 
-       ; Called when eof is received on the channel (or when it is
-       ; closed, whatever happens first).
-       (eof method void)
+       (event method void "enum channel_event")
   
-       ; Reply from SSH_MSG_CHANNEL_OPEN_REQUEST
-       (open_continuation object command_continuation)
+       ; Pass on responce from CHANNEL_OPEN
+       (channel_open_context object command_context)
 
        ; Queue of channel requests that we expect replies on
        (pending_requests struct object_queue)
@@ -145,8 +155,8 @@ enum channel_flag {
 #define CHANNEL_CLOSE(s) \
 ((s)->close((s)))
 
-#define CHANNEL_EOF(s) \
-((s)->eof((s)))
+#define CHANNEL_EVENT(s, t) \
+((s)->event((s), (t)))
 
 #define CHANNEL_OPEN_CONFIRM(s) \
 ((s)->open_confirm((s)))
@@ -188,7 +198,8 @@ static void do_##name
 
 void
 init_channel(struct ssh_channel *channel,
-	     void (*kill)(struct resource *));
+	     void (*kill)(struct resource *),
+	     void (*event)(struct ssh_channel *, enum channel_event));
 
 void
 register_channel(struct ssh_connection *table,
