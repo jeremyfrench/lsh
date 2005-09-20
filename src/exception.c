@@ -38,8 +38,6 @@
 #include "exception.h.x"
 #undef GABA_DEFINE
 
-#include "exception.c.x"
-
 #if 0
 static void
 do_default_handler(struct exception_handler *ignored UNUSED,
