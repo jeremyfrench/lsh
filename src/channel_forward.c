@@ -57,37 +57,6 @@ do_kill_channel_forward(struct resource *s)
     }
 }
 
-#define FORWARD_READ_BUFFER_SIZE 0x4000
-
-void
-init_channel_forward(struct channel_forward *self,
-		     int socket, uint32_t initial_window)
-{
-  init_channel(&self->super, do_kill_channel_forward);
-
-  /* The rest of the callbacks are not set up until
-   * channel_forward_start_io. */
-
-  self->super.rec_window_size = initial_window;
-
-  /* FIXME: Make maximum packet size configurable. */
-  self->super.rec_max_packet = SSH_MAX_PACKET;
-
-  init_channel_read_state(&self->read, socket, FORWARD_READ_BUFFER_SIZE);
-  init_channel_write_state(&self->write, socket, initial_window);
-
-  io_register_fd(socket, "forwarded socket");
-}
-
-struct channel_forward *
-make_channel_forward(int socket, uint32_t initial_window)
-{
-  NEW(channel_forward, self);
-  init_channel_forward(self, socket, initial_window);
-  
-  return self;
-}
-
 static void
 channel_forward_shutdown(struct channel_forward *self)
 {
@@ -158,15 +127,6 @@ do_channel_forward_send_adjust(struct ssh_channel *s,
   channel_io_start_read(&self->super, &self->read, oop_read_socket);
 }
 
-static void
-do_channel_forward_eof(struct ssh_channel *s)
-{
-  CAST_SUBTYPE(channel_forward, self, s);
-
-  if (!self->write.state->length)
-    channel_forward_shutdown(self);
-}
-
 /* NOTE: Because this function is called by
  * do_open_forwarded_tcpip_continuation, the same restrictions apply.
  * I.e we can not assume that the channel is completely initialized
@@ -177,7 +137,6 @@ channel_forward_start_io(struct channel_forward *self)
 {
   self->super.receive = do_channel_forward_receive;
   self->super.send_adjust = do_channel_forward_send_adjust;
-  self->super.eof = do_channel_forward_eof;
 
   self->super.sources++;
   self->super.sinks ++;
@@ -204,6 +163,62 @@ channel_forward_start_io_read(struct channel_forward *channel)
   channel->socket->write_buffer->report = &channel->super.super;
 }
 #endif
+
+static void
+do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
+{
+  CAST_SUBTYPE(channel_forward, self, s);
+
+  switch(event)
+    {
+    case CHANNEL_EVENT_CONFIRM:
+      channel_forward_start_io(self);
+      break;
+    case CHANNEL_EVENT_EOF:
+      if (!self->write.state->length)
+	channel_forward_shutdown(self);
+      break;
+    case CHANNEL_EVENT_STOP:
+      channel_io_stop_read(&self->read);
+      break;
+    case CHANNEL_EVENT_START:
+      if (self->super.send_window_size)
+	channel_io_start_read(&self->super, &self->read, oop_read_socket);
+      break;
+    }
+}
+
+#define FORWARD_READ_BUFFER_SIZE 0x4000
+
+void
+init_channel_forward(struct channel_forward *self,
+		     int socket, uint32_t initial_window)
+{
+  init_channel(&self->super,
+	       do_kill_channel_forward, do_channel_forward_event);
+
+  /* The rest of the callbacks are not set up until
+   * channel_forward_start_io. */
+
+  self->super.rec_window_size = initial_window;
+
+  /* FIXME: Make maximum packet size configurable. */
+  self->super.rec_max_packet = SSH_MAX_PACKET;
+
+  init_channel_read_state(&self->read, socket, FORWARD_READ_BUFFER_SIZE);
+  init_channel_write_state(&self->write, socket, initial_window);
+
+  io_register_fd(socket, "forwarded socket");
+}
+
+struct channel_forward *
+make_channel_forward(int socket, uint32_t initial_window)
+{
+  NEW(channel_forward, self);
+  init_channel_forward(self, socket, initial_window);
+  
+  return self;
+}
 
 /* Used by the party requesting tcp forwarding, i.e. when a socket is
  * already open, and we have asked the other end to forward it. Takes
