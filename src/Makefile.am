@@ -38,16 +38,15 @@ bootstrap: $(generated_sources) $(dist_classes)
 # Old files:
 #
 # client_keyexchange.c client_userauth.c connection_commands.c
-# debug.c gateway_commands.c handshake.c io_commands.c
+# debug.c gateway_commands.c handshake.c
 # read_packet.c socks.c tcpforward.c tcpforward_commands.c write_packet.c
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c 
 
-# Obsoleted files: read_data.c read_file.c read_line.c
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c
 
 
-liblsh_a_SOURCES = abstract_io.c \
-	algorithms.c alist.c arglist.c atoms.c \
+liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	channel.c channel_commands.c channel_io.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c \
@@ -62,7 +61,7 @@ liblsh_a_SOURCES = abstract_io.c \
 	encrypt.c \
 	exception.c \
 	format.c gc.c \
-	interact.c io.c \
+	interact.c io.c  io_commands.c \
 	keyexchange.c \
 	list.c \
 	lock_file.c \
@@ -81,7 +80,7 @@ liblsh_a_SOURCES = abstract_io.c \
 	string_buffer.c suspend.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c \
-	werror.c write_buffer.c \
+	werror.c \
 	xalloc.c xauth.c zlib.c
 
 liblsh_a_LIBADD = @LIBOBJS@
@@ -134,8 +133,8 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 # remove them from LIBS. The only libraries really needed for lshg is
 # liboop and perhaps libXau.
 
-lshg_SOURCES = lshg.c dummy.c
-lshg_LDADD = liblsh.a @LIBARGP@
+# lshg_SOURCES = lshg.c dummy.c
+# lshg_LDADD = liblsh.a @LIBARGP@
 
 lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
 	transport_forward.c server_keyexchange.c
