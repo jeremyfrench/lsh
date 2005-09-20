@@ -44,7 +44,6 @@
 #include "format.h"
 #include "lsh_process.h"
 #include "lsh_string.h"
-#include "read_data.h"
 #include "reaper.h"
 #include "server_pty.h"
 #include "server_x11.h"
