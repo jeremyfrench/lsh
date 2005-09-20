@@ -93,6 +93,7 @@ DEFINE_COMMAND(options2info)
 /* GABA:
    (expr
      (name make_lshg_connect)
+     (storage static)
      (params
        (resource object resource)
        (actions object object_list))
