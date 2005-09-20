@@ -39,7 +39,7 @@ bootstrap: $(generated_sources) $(dist_classes)
 #
 # client_keyexchange.c client_userauth.c connection_commands.c
 # debug.c gateway_commands.c handshake.c
-# read_packet.c socks.c tcpforward.c tcpforward_commands.c write_packet.c
+# read_packet.c socks.c tcpforward.c write_packet.c
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c 
 
@@ -78,6 +78,7 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	spki.c srp_exchange.c \
 	ssh_read.c ssh_write.c \
 	string_buffer.c suspend.c \
+	tcpforward_commands.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c \
 	werror.c \
