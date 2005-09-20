@@ -190,17 +190,16 @@ handle_kexinit(struct kexinit_state *self,
 	       struct alist *algorithms, int is_server)
 {
   int kex_algorithm_atom;
-
   int parameter[KEX_PARAMETERS];
-
-  struct kexinit *msg = parse_kexinit(length, packet);
-
+  struct kexinit *msg;
   int i;
 
   verbose("Received KEXINIT message. Key exchange initated.\n");
 
   assert(self->read_state == KEX_STATE_INIT);
-  
+  self->read_state = KEX_STATE_IN_PROGRESS;
+
+  msg = parse_kexinit(length, packet);
   if (!msg)
     return "Invalid KEXINIT message";
 
@@ -223,16 +222,12 @@ handle_kexinit(struct kexinit_state *self,
       /* Use this algorithm */
       kex_algorithm_atom
 	= LIST(self->kexinit[0]->kex_algorithms)[0];
-
-      self->read_state = KEX_STATE_IN_PROGRESS;
     }
   else
     {
+      /* Wrong guess */
       if (msg->first_kex_packet_follows)
-	{
-	  /* Wrong guess */
-	  self->read_state = KEX_STATE_IGNORE;
-	}
+	self->read_state = KEX_STATE_IGNORE;
 
       /* FIXME: Ignores that some keyexchange algorithms require
        * certain features of the host key algorithms. */
