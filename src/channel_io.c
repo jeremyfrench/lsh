@@ -113,6 +113,8 @@ channel_io_read(struct ssh_channel *channel,
       if (!--channel->sources)
 	channel_eof(channel);
 
+      channel_io_stop_read(file);
+
       *done = 0;
       return CHANNEL_IO_EOF;
     }
