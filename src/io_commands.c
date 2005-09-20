@@ -111,6 +111,7 @@ oop_io_port_accept(oop_source *source UNUSED,
   return OOP_CONTINUE;  
 }
 
+/* (listen_tcp callback port) */
 DEFINE_COMMAND2(listen_tcp_command)
      (struct command_2 *self UNUSED,
       struct lsh_object *a1,
@@ -118,8 +119,8 @@ DEFINE_COMMAND2(listen_tcp_command)
       struct command_continuation *c,
       struct exception_handler *e)
 {
-  CAST(address_info, a, a1);
-  CAST_SUBTYPE(command, callback, a2);
+  CAST_SUBTYPE(command, callback, a1);
+  CAST(address_info, a, a2);
   struct sockaddr *addr;
   socklen_t addr_length;
   struct io_port *port;
