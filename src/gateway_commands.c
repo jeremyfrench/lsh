@@ -279,7 +279,7 @@ DEFINE_COMMAND2(gateway_accept)
 
 /* GABA:
    (expr
-     (name gateway_setup)
+     (name make_gateway_setup)
      (params
        (local object local_info))
      (expr
@@ -291,14 +291,3 @@ DEFINE_COMMAND2(gateway_accept)
 	       ;; prog1, to delay binding until we're connected.
 	       (bind_local (prog1 local connection)) )))))
 */
-
-struct command *
-make_gateway_setup(struct local_info *local)
-{
-  CAST_SUBTYPE(command, res,
-	       gateway_setup(local));
-
-  trace("make_gateway_setup\n");
-
-  return res;
-}
