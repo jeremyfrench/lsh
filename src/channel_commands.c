@@ -75,7 +75,7 @@ do_channel_open_command(struct command *s,
     {
       /* FIXME: Set up channel->connection here? If we do that,
        * perhaps we need not pass the connection to NEW_CHANNEL. */
-      channel->open_continuation = c;
+      channel->channel_open_context = make_command_context(c, e);
       register_channel(connection, index, channel, 0);
 
       SSH_CONNECTION_WRITE(connection, request);
