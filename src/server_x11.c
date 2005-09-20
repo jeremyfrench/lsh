@@ -132,6 +132,7 @@ DEFINE_COMMAND(open_forwarded_x11)
 /* GABA:
    (expr
      (name server_x11_callback)
+     (storage static)
      (params
        (table object channel_table))
      (expr
