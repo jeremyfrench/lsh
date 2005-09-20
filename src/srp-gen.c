@@ -75,7 +75,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (H const object hash_algorithm)
        
        (file string)
-       (dest object abstract_write)
+       (dest . int)
 
        (name . "const char *")
        (passwd string)
@@ -95,7 +95,7 @@ make_srp_gen_options(struct exception_handler *e)
   self->G = make_ssh_ring_srp_1();
   self->H = &crypto_sha1_algorithm;
   self->file = NULL;
-  self->dest = NULL;
+  self->dest = -1
 
   USER_NAME_FROM_ENV(self->name);
   self->passwd = NULL;
@@ -146,16 +146,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  {
 	    const char *cfile = lsh_get_cstring(self->file);
 
-	    self->dest = io_write_file(cfile,
-				       O_CREAT | O_EXCL | O_WRONLY,
-				       0600, self->e);
-	    if (!self->dest)
+	    self->dest = open(cfile, O_CREAT | O_EXCL | O_WRONLY, 0600);
+	    if (!self->dest < 0)
 	      argp_failure(state, EXIT_FAILURE, errno,
 			   "Could not open '%s'.", cfile);
 	  }
 	else
 	  {
-	    self->dest = make_io_write_file(STDOUT_FILENO, self->e);
+	    self->dest = STDOUT_FILENO;
 	  }
       }
       
@@ -241,14 +239,20 @@ int main(int argc, char **argv)
   struct srp_gen_options *options
     = make_srp_gen_options(&exc_handler);
 
+  struct lsh_string *generator;
+  
   io_init();
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  /* FIXME: Use write_raw instead. */
-  A_WRITE(options->dest, srp_gen(options));
+  generator = srp_gen(options);
   
-  io_run();
+  /* FIXME: Use write_raw instead. */
+  if (!write_raw(options->dest, STRING_LD(generator)))
+    {
+      werror("Write failed: %e\n", errno);
+      return EXIT_FAILURE;
+    }    
   
   return EXIT_SUCCESS;
 }
