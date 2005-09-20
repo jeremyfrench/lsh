@@ -29,6 +29,7 @@
 enum exception_type
 {
   EXC_IO_ERROR = 1,	/* Subtype is errno */
+  EXC_RESOLVE,
   EXC_GLOBAL_REQUEST,
   EXC_CHANNEL_REQUEST,
   EXC_CHANNEL_OPEN
