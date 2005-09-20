@@ -47,23 +47,6 @@ io_register_fd(int fd, const char *label);
 void
 io_close_fd(int fd);
 
-
-enum io_type {
-  IO_NORMAL = 0,
-
-  /* The type IO_PTY is the master side of a pty pair. It is handled
-     specially by close_fd_write. */
-  IO_PTY = 1,
-
-  /* Stdio file desciptors are special, because they're in blocking
-     mode, and when closed, we must open /dev/null to avoid accidental
-     reuse of the special fd:s. */
-  IO_STDIO = 2,
-  
-  /* Blocking mode, and never closed. */
-  IO_STDERR = 3,
-};
-
 /* Max number of simultaneous connection attempts */
 #define CONNECT_ATTEMPTS_LIMIT 3
 
@@ -81,94 +64,6 @@ enum io_type {
 
 #define LSH_CALLBACK(c) ((c)->f((c)))
 
-/* The fd io callback is a closure, in order to support different
- * reading styles (buffered and consuming). Also used for writing. */
-
-/* GABA:
-   (class
-     (name io_callback)
-     (vars
-       (f method void "struct lsh_fd *fd")))
-*/
-
-#define IO_CALLBACK(c, fd) ((c)->f((c), (fd)))
-
-/* GABA:
-   (class
-     (name lsh_fd)
-     (super resource)
-     (vars
-       (fd . int)
-       ; PTY:s need special treatment, as shutdown doesn't work.
-       (type . "enum io_type")
-       
-       ; For debugging purposes
-       (label . "const char *")
-       
-       ; Used for raising i/o-exceptions.
-       (e object exception_handler)
-       
-       ; User's close callback
-       (close_callback object lsh_callback)
-
-       (want_read . int)
-       ; Called if poll indicates that data can be read. 
-       (read object io_callback)
-
-       (want_write . int)
-       ; Called if poll indicates that data can be written.
-       (write object io_callback)
-
-       ; NOTE: We could put write_buffer inside the write callback, 
-       ; but it seems simpler to keep it here, as it must be taken into
-       ; account for proper closing of fd:s.
-       
-       (write_buffer object write_buffer)))
-*/
-
-#define FD_READ(fd) IO_CALLBACK((fd)->read, (fd))
-#define FD_WRITE(fd) IO_CALLBACK((fd)->write, (fd))
-
-/* Returns the number of open files. */
-unsigned
-io_nfiles(void);
-
-/* Used for read handlers like read_line and read_packet that
- * processes a little data at a time, possibly replacing the handler
- * and leaving some data for the new one. */
-
-/* GABA:
-   (class
-     (name io_buffered_read)
-     (super io_callback)
-     (vars
-       (buffer_size . uint32_t)
-       (handler object read_handler)))
-*/
-
-struct io_callback *
-make_buffered_read(uint32_t buffer_size,
-		   struct read_handler *handler);
-
-/* Used for read handlers like read_data, that know how much data they
- * can consume. */
-
-/* GABA:
-   (class
-     (name io_consuming_read)
-     (super io_callback)
-     (vars
-       (query method uint32_t)
-       ; Returns the maximum number of octets that
-       ; can be consumed immediately.
-       (consumer object abstract_write)))
-*/
-
-#define READ_QUERY(r) ((r)->query((r)))
-
-void init_consuming_read(struct io_consuming_read *self,
-			 struct abstract_write *consumer);
-
 /* Passed to the listen callback, and to other functions and commands
  * dealing with addresses. */
 /* GABA:
@@ -179,12 +74,14 @@ void init_consuming_read(struct io_consuming_read *self,
        ; a dns name.
        (ip string)
        ; The port number here is always in host byte order
-       (port . uint32_t))) */
+       (port . uint32_t)))
+*/
 
+#if 0
 /* Used for listening and connecting to local sockets.
  * Both strings have to be NUL-terminated. */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name local_info)
      (vars
@@ -195,63 +92,29 @@ void init_consuming_read(struct io_consuming_read *self,
 struct local_info *
 make_local_info(struct lsh_string *directory,
 		struct lsh_string *name);
-     
-/* Returned by listen. And also by connect, so this is an improper name.
- * Functions related to AF_UNIX sockets leave the peer field as NULL. */
+#endif
+
+/* Passed to the listen callback. Note that the fd here isn't
+   registered anywhere, so it must be taken care of immedietely, or
+   risk being leaked. */
 /* GABA:
    (class
      (name listen_value)
      (vars
-       (fd object lsh_fd)
-       (peer object address_info)
-       (local object address_info)))
+       (fd . int)
+       (peer object address_info)))
 */
 
 struct listen_value *
-make_listen_value(struct lsh_fd *fd,
-		  struct address_info *peer,
-		  struct address_info *local);
+make_listen_value(int fd,
+		  struct address_info *peer);
 
-/* I/O exceptions */
-/* GABA:
-   (class
-     (name io_exception)
-     (super exception)
-     (vars
-       ; NULL if no fd was involved
-       (fd object lsh_fd)
-       ; errno code, or zero if not available
-       (error . int))))
-*/
-
-/* If msg is NULL, it is derived from errno */
-struct exception *
-make_io_exception(uint32_t type, struct lsh_fd *fd, int error, const char *msg);
-
-/* Used in cases where the fd and errno are not available */
-#define STATIC_IO_EXCEPTION(type, name) \
-{ { STATIC_HEADER, (type), (name) }, NULL, 0}
-
-extern const struct exception finish_read_exception;
-extern const struct exception finish_io_exception;
 
 void
 io_init(void);
 
 void
 io_run(void);
-
-void
-lsh_oop_register_read_fd(struct lsh_fd *fd);
-
-void
-lsh_oop_cancel_read_fd(struct lsh_fd *fd);
-
-void
-lsh_oop_register_write_fd(struct lsh_fd *fd);
-
-void
-lsh_oop_cancel_write_fd(struct lsh_fd *fd);
 
 struct resource *
 io_signal_handler(int signum,
@@ -300,16 +163,8 @@ void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);
 
-struct lsh_fd *
-make_lsh_fd(int fd, enum io_type type, const char *label,
-	    struct exception_handler *e);
-
-struct exception_handler *
-make_exc_finish_read_handler(struct lsh_fd *fd,
-			     struct exception_handler *parent,
-			     const char *context);
-
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name connect_list_state)
      (super resource)
@@ -365,40 +220,7 @@ struct io_callback *
 make_listen_callback(struct command *c,
 		     struct exception_handler *e);
 
-struct lsh_fd *io_read_write(struct lsh_fd *fd,
-			     struct io_callback *read,
-			     uint32_t block_size,
-			     struct lsh_callback *close_callback);
-
-struct lsh_fd *io_read(struct lsh_fd *fd,
-		       struct io_callback *read,
-		       struct lsh_callback *close_callback);
-
-struct lsh_fd *io_write(struct lsh_fd *fd,
-			uint32_t block_size,
-			struct lsh_callback *close_callback);
-
-/* Close the fd right away. */
-void close_fd(struct lsh_fd *fd);
-
-/* Stop reading from the fd, and close it as soon as the buffer
- * is completely written. */
-void close_fd_nicely(struct lsh_fd *fd);
-
-/* Stop reading, but if the fd has a write callback, keep it open. */
-void
-close_fd_read(struct lsh_fd *fd);
-
-void
-close_fd_write(struct lsh_fd *fd);
-
-struct abstract_write *
-make_io_write_file(int fd, struct exception_handler *e);
-
-struct abstract_write *
-io_write_file(const char *fname, int flags,
-	      int mode,
-	      struct exception_handler *e);
+#endif
 
 int
 lsh_make_pipe(int *fds);
@@ -411,8 +233,6 @@ struct lsh_string *
 lsh_popen_read(const char *program, const char **argv, int in,
 	       unsigned guess);
 
-int
-lsh_copy_file(int src, int dst);
 
 /* Temporarily changing the current directory. */
 
@@ -430,26 +250,8 @@ lsh_popd(int old_cd, const char *directory);
 /* Socket workaround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
 
-/* There's an how++ missing in the af_unix shutdown implementation of
- * some linux versions. Try an ugly workaround. */
-#ifdef linux
-
-/* From src/linux/include/net/sock.h */
-#define RCV_SHUTDOWN	1
-#define SEND_SHUTDOWN	2
-
-#define SHUT_RD_UNIX RCV_SHUTDOWN
-#define SHUT_WR_UNIX SEND_SHUTDOWN
-#define SHUT_RD_WR_UNIX (RCV_SHUTDOWN | SEND_SHUTDOWN)
-
-#else /* !linux */
-
-/* Don't know how to work around the broken shutdown. So disable it
- * completely. */
-
 #define SHUTDOWN_UNIX(fd, how) 0
 
-#endif /* !linux */
 #endif /* !SHUTDOWN_WORKS_WITH_UNIX_SOCKETS */
 
 #ifndef SHUTDOWN_UNIX
