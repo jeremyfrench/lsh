@@ -565,17 +565,6 @@ client_options[] =
          (open_session connection)))))
 */
 
-/* Requests a shell or command, and connects the channel to our stdio. */
-/* GABA:
-   (expr
-     (name client_start_session)
-     (params
-       (request object command))
-     (expr
-       (lambda (session)
-          (client_start_io (request session)))))
-*/
-
 static void
 client_maybe_pty(struct client_options *options,
 		 int default_pty,
@@ -652,16 +641,11 @@ client_shell_session(struct client_options *options)
       client_maybe_pty(options, 1, &session_requests);
       client_maybe_x11(options, &session_requests);
   
-      object_queue_add_tail(&session_requests,
-			    &client_start_session(&request_shell.super)->super);
+      object_queue_add_tail(&session_requests, &request_shell.super.super);
   
-      {
-	CAST_SUBTYPE(command, r,
-		     make_start_session
-		     (make_open_session_command(session),
-		      queue_to_list_and_kill(&session_requests)));
-	return r;
-      }
+      return make_start_session(
+	make_open_session_command(session),
+	queue_to_list_and_kill(&session_requests));
     }
   else
     return NULL;
@@ -675,17 +659,12 @@ client_subsystem_session(struct client_options *options,
   struct ssh_channel *session = make_client_session(options);
   
   if (session)
-    {
-      CAST_SUBTYPE(command, r,
-		   make_start_session
-		   (make_open_session_command(session),
-		    make_object_list(1,
-				     client_start_session
-				     (make_subsystem_request(subsystem)),
-				     -1)));
-      return r;
-    }
-  
+    return make_start_session(
+      make_open_session_command(session),
+      make_object_list(1,
+		       &make_subsystem_request(subsystem)->super,
+		       -1));
+
   return NULL;
 }
 
@@ -709,13 +688,11 @@ client_command_session(struct client_options *options,
       client_maybe_x11(options, &session_requests);
 
       object_queue_add_tail(&session_requests,
-			    &client_start_session(make_exec_request(command))->super);
-      {
-	CAST_SUBTYPE(command, r,
-		     make_start_session
-		     (make_open_session_command(session),
-		      queue_to_list_and_kill(&session_requests)));
-	return r;
+			    &make_exec_request(command)->super);
+
+      return make_start_session(
+	make_open_session_command(session),
+	queue_to_list_and_kill(&session_requests));
       }
     }
   
