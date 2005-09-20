@@ -33,7 +33,6 @@
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
-#include "read_data.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
