@@ -1,3 +1,53 @@
+2005-09-20  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/conv-1-test, src/testsuite/conv-2-test,
+	src/testsuite/conv-3-test, src/testsuite/export-1-test,
+	src/testsuite/lsh-cat-test, src/testsuite/lshg-cat-2-test,
+	src/testsuite/lshg-cat-test: Remove test.out1 before the test.
+	
+	* src/testsuite/login-auth-test: Reversed role of test.out1 and
+	test.out2. The latter is the reference data. Remove test.out1
+	before the test.
+
+	* src/tcpforward_commands.c (forward_local_port): Sketched new
+	version for improved channel open framework.
+
+	* src/server_session.c (do_server_session_event): New event
+	handler, replaces do_eof.
+	(spawn_process): If we have a non-zero send_window_size, start
+	reading stdout and stderr right away.
+
+	* src/connection.h (channel_open_exception): Deleted class.
+
+	* src/client_session.c (do_client_session_event): New event
+	handler. Replaces do_client_session_eof. Starts i/o on
+	CHANNEL_EVENT_CONFIRM. This change implies we we now enable i/o
+	before we have sent any shell or exec request.
+
+	* src/client.c (class client_start_session): Deleted.
+	(client_shell_session): Don't use client_start_session. No
+	CAST_SUBTYPE needed when calling make_start_session.
+	(client_command_session): Likewise.
+	(client_subsystem_session): Likewise.
+
+	* src/channel_forward.c (do_channel_forward_event): New event
+	handler. Replaces do_channel_forward_eof. Calls
+	channel_forward_start_io_read on CHANNEL_EVENT_CONFIRM.
+
+	* src/channel_commands.c (do_channel_open_command): Set
+	channel_open_context.
+
+	* src/channel.c (make_channel_open_exception): Use make_exception.
+	(handle_channel_eof): Generate CHANNEL_EVENT_EOF.
+	(handle_open_confirm): Use channel_open_context. Generate
+	CHANNEL_EVENT_CONFIRM.
+	(handle_open_failure): Use channel_open_context.
+	(init_channel): New argument event.
+
+	* src/channel.h (enum channel_event): New enum.
+	(class ssh_channel): Attributes open_continuation and e replaced
+	by channel_open_context. Method eof replaced by new method event.
+
 2005-09-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Compile io_commands.c.
