@@ -98,7 +98,7 @@ make_escape_info(uint8_t escape)
   return self;
 }
 
-/* GABA:
+/* ;; GABA:
    (class
      (name escape_handler)
      (super abstract_write_pipe)
@@ -152,6 +152,7 @@ escape_dispatch(struct escape_info *info,
   return 0;
 }
 
+#if 0
 static void
 do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 {
@@ -288,3 +289,4 @@ make_handle_escape(struct escape_info *info, struct abstract_write *next)
   
   return &self->super.super;
 }
+#endif
