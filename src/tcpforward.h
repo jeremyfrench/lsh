@@ -33,6 +33,11 @@
 #include "tcpforward.h.x"
 #undef GABA_DECLARE
 
+/* FIXME: Rename? */
+struct command *
+forward_local_port(struct address_info *local,
+		   struct address_info *target);
+
 /* GABA:
    (class
      (name forwarded_port)
@@ -44,6 +49,7 @@
        
        (listen object address_info)))
 */
+#if 0
 
 /* GABA:
    (class
@@ -102,4 +108,5 @@ make_tcpip_forward_hook(void);
 struct command *
 make_socks_server(struct address_info *local);
 
+#endif
 #endif /* LSH_TCPFORWARD_H_INCLUDED */
