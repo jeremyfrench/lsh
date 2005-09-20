@@ -1,3 +1,36 @@
+2005-09-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Compile io_commands.c.
+
+	* src/io_commands.c (class io_port): New class.
+	(listen_tcp_command): New command.
+
+	* src/srp-gen.c (main): Use write_raw.
+	(main_argp_parser): Don't use io_write_file.
+
+	* src/io.h (enum io_type, class io_callback, class lsh_fd)
+	(io_buffered_read, io_consuming_read, io_exception): Deleted
+	classes.
+	[!SHUTDOWN_WORKS_WITH_UNIX_SOCKETS]: Deleted workaround for old
+	linux bug.
+	(listen_value): Use a raw fd. Deleted local attribute.
+
+	* src/io.c: Deleted old code.
+	(lsh_oop_fd_read_callback, lsh_oop_register_read_fd)
+	(lsh_oop_cancel_read_fd, lsh_oop_fd_write_callback)
+	(lsh_oop_register_write_fd, lsh_oop_cancel_write_fd)
+	(list_files, do_buffered_read, make_buffered_read)
+	(do_consuming_read, init_consuming_read, do_write_callback)
+	(io_init_fd, make_lsh_fd, io_nfiles): Deleted functions.
+	(make_listen_value): Deleted local argument. Use a raw fd, not
+	struct lsh_fd.
+
+	* src/exception.h (enum exception_type): EXC_RESOLVE.
+
+	* src/exception.c: Don't include exception.c.x.
+
+	* src/client_escape.c (class escape_handler): Commented out class.
+
 2005-09-19  Niels Möller  <niels@s3.kth.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed read_data.c
