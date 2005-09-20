@@ -205,12 +205,21 @@ transport_write_packet(struct transport_write_state *self,
 		       struct lsh_string *packet, struct randomness *random)
 {
   uint32_t length;
+  uint8_t msg;
+  
   enum transport_write_status status;
 
   assert(lsh_string_length(packet) > 0);
   if (lsh_string_data(packet)[0] == SSH_MSG_IGNORE)
     flags |= TRANSPORT_WRITE_FLAG_IGNORE;
 
+  length = lsh_string_length(packet);
+  assert(length > 0);
+
+  msg = lsh_string_data(packet)[0];
+
+  trace("Sending %T (%i) message, length %i\n", msg, msg, length);
+  
   packet = encrypt_packet(packet,
 			  self->deflate,
 			  self->crypto,
