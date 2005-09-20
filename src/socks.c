@@ -550,7 +550,7 @@ DEFINE_COMMAND2(socks_handshake)
 
 /* GABA:
    (expr
-     (name forward_socks)
+     (name make_socks_server)
      (params
        (local object address_info))
      (expr
@@ -564,9 +564,3 @@ DEFINE_COMMAND2(socks_handshake)
 	     ; available.
 	     (bind (prog1 local connection)))))))
 */
-
-struct command *
-make_socks_server(struct address_info *local)
-{
-  return forward_socks(local);
-}
