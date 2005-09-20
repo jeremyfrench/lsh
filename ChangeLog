@@ -1,21 +1,84 @@
+2005-09-21  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (do_lsh_default_handler): Display errno string, for
+	i/o errors.
+	(fork_lsh_transport): Pass on -p option only if actually provided
+	on the command line.
+
+	* src/keyexchange.c (handle_kexinit): Fixed update to
+	self->read_state.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Readded tcpforward_commands.
+
+	* src/scm/gaba.scm (c-prototype, c-prototype*): New argument for
+	the storage type. Updated callers.
+	(process-expr): New storage attribute.
+
+	* src/transport_write.c (transport_write_packet): Trace call to
+	display sent message type.
+
+	* src/transport.c (transport_process_packet): USe trace, not
+	debug, for received message type.
+
+	* src/tcpforward_commands.c (open_direct_tcpip_command): New
+	command.
+	(forward_local_port): Use it. #if:ed out the old code.
+
+	* src/tcpforward.h (forward_local_port): Declare. #if:ed out the
+	rest of the declarations.
+
+	* src/socks.c (make_socks_server): Deleted wrapper function.
+	Renamed expression forward_socks -> make_socks_server.
+
+	* src/lshg.c (expr make_lshg_connect): Marked static.
+	* src/server_x11.c (expr server_x11_callback): Likewise.
+
+	* src/io_commands.c (listen_tcp_command): Reordered arguments,
+	callback comes first.
+
+	* src/gateway_commands.c (make_gateway_setup): Deleted wrapper
+	function. Renamed expression gateway_setup -> make_gateway_setup.
+
+	* src/connection.c (connection_remember): Moved command here. Use
+	CAST_SUBTYPE. Moved from...
+	* src/connection_commands.c: ... here.
+
+	* src/client.c (client_argp_parser): Enable local "-L" port
+	forwarding.
+	(expr make_start_session): Marked as static.
+
+	* src/channel_io.c (channel_io_read): Call channel_io_stop_read on eof.
+
+2005-09-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (open_session_command): New command.
+	(class session_open_command): Deleted class.
+	(new_session, make_open_session_command): Deleted functions.
+	(expr make_start_session): First argument is now the session.
+	Updated callers.
+
+	* src/channel_commands.c (do_channel_open_command): #if:ed out.
+
+	* src/channel.c (register_channel): Set up channel->connection
+	pointer. Removed corresponding code in callers.
+	(channel_open_new_v, channel_open_new_type): New functions,
+	replacing...
+	(format_channel_open_s, format_channel_open): Deleted functions.
+
+	* src/abstract_io.c, src/abstract_io.h, src/read_data.c,
+	src/read_data.h, src/read_file.c, src/read_line.c,
+	src/read_line.h, src/read_packet.c, src/read_packet.h,
+	src/write_buffer.c, src/write_buffer.h: Deleted obsolete files.
+
 2005-09-20  Niels Möller  <niels@s3.kth.se>
 
 	* src/server_session.c: Don't include read_data.h.
-
 	* src/lsh.h (struct abstract_write): Deleted declaration.
-
 	* src/keyexchange.c: Don't include abstract_io.h.
-
 	* src/io.h: Don't include abstract_io.h and write_buffer.h.
-
 	* src/client.c: Don't include abstract_io.h.
-
 	* src/channel.h: Don't include write_buffer.h.
-
 	* src/channel.c: Don't include read_data.h.
-
-	* src/abstract_io.h, src/read_data.h, src/write_buffer.h: Mark
-	obsolete.
 
 	* src/Makefile.am (class-map): Depend on .dist_classes.
 
