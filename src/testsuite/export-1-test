@@ -19,6 +19,8 @@ exec 1>&2
 
 echo "export-1-test: Testing lsh-export-key"
 
+rm -f test.out1
+
 (../lsh-export-key -s Test |tee test.out1) <<EOF
 {KDEwOnB1YmxpYy1rZXkoMzpkc2EoMTpwMTI5OgCD
 2afCziqRefQ82zv/594PDu8m3V365E1TG8DeRWNN
