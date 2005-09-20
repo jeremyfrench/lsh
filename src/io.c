@@ -112,104 +112,6 @@ lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
 			  lsh_oop_signal_callback, handler);
 }
 
-#if 0
-static void *
-lsh_oop_fd_read_callback(oop_source *s UNUSED, int fileno,
-			 oop_event event, void *data)
-{
-  CAST(lsh_fd, fd, (struct lsh_object *) data);
-
-  assert(fileno == fd->fd);
-  assert(event == OOP_READ);
-  assert(fd->super.alive);
-
-  trace("lsh_oop_fd_read_callback: fd %i: %z\n",
-	fd->fd, fd->label);
-
-  FD_READ(fd);
-
-  return OOP_CONTINUE;
-}
-
-void
-lsh_oop_register_read_fd(struct lsh_fd *fd)
-{
-  trace("lsh_oop_register_read_fd: fd: %i, %z\n",
-	fd->fd, fd->label);
-  
-  assert(global_oop_source);
-  if (fd->super.alive && !fd->want_read)
-    {
-      assert(fd->read);
-      
-      global_oop_source->on_fd(global_oop_source, fd->fd, OOP_READ, lsh_oop_fd_read_callback, fd);
-      fd->want_read = 1;
-    }
-}
-
-void
-lsh_oop_cancel_read_fd(struct lsh_fd *fd)
-{
-  trace("lsh_oop_cancel_read_fd: fd: %i, %z\n",
-	fd->fd, fd->label);
-  
-  assert(global_oop_source);
-  if (fd->super.alive)
-    {
-      global_oop_source->cancel_fd(global_oop_source, fd->fd, OOP_READ);
-      fd->want_read = 0;
-    }
-}
-
-static void *
-lsh_oop_fd_write_callback(oop_source *s UNUSED, int fileno,
-			  oop_event event, void *data)
-{
-  CAST(lsh_fd, fd, (struct lsh_object *) data);
-
-  assert(fileno == fd->fd);
-  assert(event == OOP_WRITE);
-  assert(fd->super.alive);
-  
-  trace("lsh_oop_fd_write_callback: fd %i: %z\n",
-	fd->fd, fd->label);
-
-  FD_WRITE(fd);
-
-  return OOP_CONTINUE;
-}
-
-void
-lsh_oop_register_write_fd(struct lsh_fd *fd)
-{
-  trace("lsh_oop_register_write_fd: fd: %i, %z\n",
-	fd->fd, fd->label);
-  
-  assert(global_oop_source);
-  if (fd->super.alive && !fd->want_write)
-    {
-      assert(fd->write);
-      
-      global_oop_source->on_fd(global_oop_source, fd->fd, OOP_WRITE, lsh_oop_fd_write_callback, fd);
-      fd->want_write = 1;
-    }
-}
-
-void
-lsh_oop_cancel_write_fd(struct lsh_fd *fd)
-{
-  trace("lsh_oop_cancel_write_fd: fd: %i, %z\n",
-	fd->fd, fd->label);
-
-  assert(global_oop_source);
-  if (fd->super.alive)
-    {
-      global_oop_source->cancel_fd(global_oop_source, fd->fd, OOP_WRITE);
-      fd->want_write = 0;
-    }
-}
-#endif
-
 static void *
 lsh_oop_time_callback(oop_source *source UNUSED,
                       struct timeval time UNUSED, void *data)
@@ -279,7 +181,9 @@ lsh_oop_cancel_stop(void)
 }
 
 /* Increments the count of active files, and sets the non-blocking and
-   close-on-exec if appropriate. */
+   close-on-exec if appropriate. With the exception of stdio
+   filedescriptors, all file descripters handled by the backend should
+   have the close-on-exec flag set and use non-blocking mode. */
 void
 io_register_fd(int fd, const char *label)
 {
@@ -303,7 +207,6 @@ io_close_fd(int fd)
 
   trace("io_close_fd: fd = %i\n", fd);
 
-  /* FIXME: Update count of active files */
   global_oop_source->cancel_fd(global_oop_source, fd, OOP_READ);
   global_oop_source->cancel_fd(global_oop_source, fd, OOP_WRITE);
 
@@ -327,22 +230,6 @@ io_close_fd(int fd)
     lsh_oop_stop();
 }
 
-/* For debugging */
-#if 0
-static void
-list_files(void)
-{
-  struct lsh_object *o;
-
-  for (o = gc_iterate_objects(&lsh_fd_class, NULL); o; o = gc_iterate_objects(&lsh_fd_class, o))
-    {
-      CAST(lsh_fd, fd, o);
-
-      werror("%z fd %i: %z, %xi\n", fd->super.alive ? "live" : "dead",
-	     fd->fd, fd->label, (uint32_t) o);
-    }
-}
-#endif
 
 void
 io_init(void)
@@ -489,270 +376,14 @@ io_callout(struct lsh_callback *action, unsigned seconds)
   return &self->super;
 }
 
-#if 0
-/* Read-related callbacks */
-
-static void
-do_buffered_read(struct io_callback *s,
-		 struct lsh_fd *fd)
-{
-  CAST(io_buffered_read, self, s);
-  uint8_t *buffer = alloca(self->buffer_size);
-  int res;
-
-  assert(fd->want_read);   
-
-  /* FIXME: Use a string and lsh_string_read instead? */
-  res = read(fd->fd, buffer, self->buffer_size);
-  
-  if (res < 0)
-    switch(errno)
-      {
-      case EINTR:
-	break;
-      case EWOULDBLOCK:
-	werror("io.c: read_callback: Unexpected EWOULDBLOCK\n");
-	break;
-      case EPIPE:
-	/* Getting EPIPE from read seems strange, but appearantly
-	 * it happens sometimes. */
-	werror("Unexpected EPIPE from read.\n");
-      default:
-	EXCEPTION_RAISE(fd->e, 
-			make_io_exception(EXC_IO_READ, fd,
-					  errno, NULL));
-	/* Close the fd, unless it has a write callback. */
-	close_fd_read(fd);
-	
-	break;
-      }
-  else if (res > 0)
-    {
-      uint32_t left = res;
-    
-      while (fd->super.alive && fd->read && left)
-	{
-	  uint32_t done;
-
-	  /* NOTE: What to do if want_read is false? To improve the
-	   * connection_lock mechanism, it must be possible to
-	   * temporarily stop reading, which means that fd->want_read
-	   * has to be cleared.
-	   *
-	   * But when doing this, we have to keep the data that we
-	   * have read, some of which is buffered here, on the stack,
-	   * and the rest inside the read-handler.
-	   *
-	   * There are two alternatives: Save our buffer here, or
-	   * continue looping, letting the read-handler process it
-	   * into packets. In the latter case, the ssh_connection
-	   * could keep a queue of waiting packets, but it would still
-	   * have to clear the want_read flag, to prevent that queue
-	   * from growing arbitrarily large.
-	   *
-	   * We now go with the second alternative. */
-
-	  assert(self->handler);
-
-	  /* NOTE: This call may replace self->handler */
-	  done = READ_HANDLER(self->handler, left, buffer);
-	  
-	  buffer += done;
-	  left -= done;
-
-	  if (!fd->want_read)
-	    debug("do_buffered_read: want_read = 0; handler needs a pause.\n");
-	  
-	  if (fd->want_read && !self->handler)
-	    {
-	      werror("do_buffered_read: Handler disappeared! Ignoring %i bytes\n",
-		     left);
-	      lsh_oop_cancel_read_fd(fd);
-	      return;
-	    }
-	}
-
-      if (left)
-	verbose("read_buffered: fd died, %i buffered bytes discarded\n",
-		left);
-    }
-  else
-    {
-      /* We have read EOF. Pass available == 0 to the handler */
-      assert(fd->super.alive);
-      assert(fd->read);
-      assert(fd->want_read);
-      assert(self->handler);
-
-      trace("io.c: do_buffered_read: EOF on fd %i: %z\n",
-	    fd->fd, fd->label);
-
-      /* Close the fd, unless it has a write callback. */
-      close_fd_read(fd);
-      
-      READ_HANDLER(self->handler, 0, NULL);
-    }
-	
-}
-
-struct io_callback *
-make_buffered_read(uint32_t buffer_size,
-		   struct read_handler *handler)
-{
-  NEW(io_buffered_read, self);
-
-  self->super.f = do_buffered_read;
-  self->buffer_size = buffer_size;
-  self->handler = handler;
-
-  return &self->super;
-}
-
-static void
-do_consuming_read(struct io_callback *c,
-		  struct lsh_fd *fd)
-{
-  CAST_SUBTYPE(io_consuming_read, self, c);
-  uint32_t wanted = READ_QUERY(self);
-
-  assert(fd->want_read);
-  
-  if (!wanted)
-    {
-      lsh_oop_cancel_read_fd(fd);
-    }
-  else
-    {
-      struct lsh_string *s = lsh_string_alloc(wanted);
-      int res = lsh_string_read(s, 0, fd->fd, wanted);
-
-      if (res < 0)
-	{
-	  switch(errno)
-	    {
-	    case EINTR:
-	      break;
-	    case EWOULDBLOCK:
-	      werror("io.c: read_consume: Unexpected EWOULDBLOCK\n");
-	      break;
-	    case EPIPE:
-	      /* FIXME: I don't understand why reading should return
-	       * EPIPE, but it happens occasionally under linux. Perhaps
-	       * we should treat it as EOF instead? */
-	      werror("io.c: read_consume: Unexpected EPIPE.\n");
-	      /* Fall through */
-	    default:
-	      EXCEPTION_RAISE(fd->e, 
-			      make_io_exception(EXC_IO_READ,
-						fd, errno, NULL));
-	      break;
-	    }
-	  lsh_string_free(s);
-	}
-      else if (res > 0)
-	{
-	  lsh_string_trunc(s, res);
-	  A_WRITE(self->consumer, s);
-	}
-      else
-	{
-	  trace("io.c: do_consuming_read: EOF on fd %i: %z\n",
-		fd->fd, fd->label);
-
-	  lsh_string_free(s);
-
-	  /* Close the fd, unless it has a write callback. */
-	  A_WRITE(self->consumer, NULL);
-	  close_fd_read(fd);
-	}
-    }
-}
-
-/* NOTE: Doesn't initialize the query field. That should be done in
- * the subclass's constructor. */
-void init_consuming_read(struct io_consuming_read *self,
-			 struct abstract_write *consumer)
-{
-  self->super.f = do_consuming_read;
-  self->consumer = consumer;
-}
-
-
-/* Write related callbacks */
-static void
-do_write_callback(struct io_callback *s UNUSED,
-		  struct lsh_fd *fd)
-{
-  /* CAST(io_write_callback, self, s); */
-  assert(fd->super.alive);
-  
-  if (!write_buffer_pre_write(fd->write_buffer))
-    {
-      /* Buffer is empty */
-      if (fd->write_buffer->closed)
-        close_fd_write(fd);
-      else
-	lsh_oop_cancel_write_fd(fd);
-    }
-  else
-    {
-      uint32_t size;
-      int res;
-
-      size = MIN(fd->write_buffer->end - fd->write_buffer->start,
-		 fd->write_buffer->block_size);
-      assert(size);
-  
-      res = write(fd->fd,
-		  lsh_string_data(fd->write_buffer->buffer) + fd->write_buffer->start,
-		  size);
-      if (!res)
-	fatal("Closed?");
-      if (res < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
-	    break;
-	  case EPIPE:
-	    debug("io.c: Broken pipe.\n");
-
-	    /* Fall through */
-	  default:
-#if 0
-	    /* Don't complain if it was writing the final ^D
-	     * character that failed. */
-	    if ( (fd->type == IO_PTY_CLOSED)
-		 && (fd->write_buffer->length == 1) )
-	      debug("io.c: ignoring write error, on the final ^D character\n");
-#endif
-	    werror("io.c: write failed %e\n", errno);
-	    EXCEPTION_RAISE(fd->e,
-			    make_io_exception(EXC_IO_WRITE,
-					      fd, errno, NULL));
-	    close_fd(fd);
-	    
-	    break;
-	  }
-      else
-	write_buffer_consume(fd->write_buffer, res);
-    }
-}
-
-static struct io_callback io_write_callback =
-{ STATIC_HEADER, do_write_callback };
-#endif
-
 struct listen_value *
-make_listen_value(struct lsh_fd *fd,
-		  struct address_info *peer,
-		  struct address_info *local)
+make_listen_value(int fd,
+		  struct address_info *peer)
 {
   NEW(listen_value, self);
 
   self->fd = fd;
   self->peer = peer;
-  self->local = local;
 
   return self;
 }
@@ -760,7 +391,7 @@ make_listen_value(struct lsh_fd *fd,
 #if 0
 /* Listen callback */
 
-/* GABA:
+/* ;;GABA:
    (class
      (name io_listen_callback)
      (super io_callback)
@@ -1085,6 +716,7 @@ sockaddr2info(size_t addr_len,
     }
 }
 
+#if 0
 struct address_info *
 fd2info(struct lsh_fd *fd, int side)
 {
@@ -1112,6 +744,7 @@ fd2info(struct lsh_fd *fd, int side)
   return sockaddr2info(s_len,
 		       (struct sockaddr *) &sock);
 }
+#endif
 
 #if HAVE_GETADDRINFO
 static struct addrinfo *
@@ -1445,56 +1078,6 @@ io_set_close_on_exec(int fd)
 }
 
 
-/* With the exception of stdio filedescriptors, all file descripters
-   handled by the backend should have the close-on-exec flag set and
-   use non-blocking mode. */
-
-static void
-io_init_fd(int fd)
-{
-  io_set_close_on_exec(fd);
-  io_set_nonblocking(fd);
-}
-
-#if 0
-struct lsh_fd *
-make_lsh_fd(int fd, enum io_type type, const char *label,
-	    struct exception_handler *e)
-{
-  NEW(lsh_fd, self);
-
-  global_nfiles++;
-  /* NOTE: Relies on order of the enum constants. */
-  if (type < IO_STDIO)
-    io_init_fd(fd);
-
-  init_resource(&self->super, do_kill_fd);
-
-  self->fd = fd;
-  self->type = type;
-  self->label = label;
-  
-  self->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
-  
-  self->close_callback = NULL;
-
-  self->want_read = 0;
-  self->read = NULL;
-
-  self->want_write = 0;
-  self->write = NULL;
-
-  gc_global(&self->super);
-  return self;
-}
-#endif
-
-unsigned
-io_nfiles(void)
-{
-  return global_nfiles;
-}
-
 #if 0
 /* Some code is taken from Thomas Bellman's tcputils. */
 struct lsh_fd *
@@ -1799,6 +1382,7 @@ io_listen_list(struct addr_queue *addresses,
 
 /* Requires DIRECTORY and NAME to be NUL-terminated */
 
+#if 0
 struct local_info *
 make_local_info(struct lsh_string *directory,
 		struct lsh_string *name)
@@ -1817,6 +1401,7 @@ make_local_info(struct lsh_string *directory,
     return self;
   }
 }
+#endif
 
 void
 lsh_popd(int old_cd, const char *directory)
