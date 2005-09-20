@@ -44,12 +44,36 @@
 
 #include "channel.c.x"
 
+/* Opening a new channel: There are two cases, depending on which side
+   sends the CHANNEL_OPEN_REQUEST. FIXME: This description is not yet
+   accurate. When we send it, the following steps are taken:
+
+   1. Create a new channel object of the appropriate type.
+   
+   2. Call request_channel_open. This allocates a channel number,
+      registers the object, and sends a CHANNEL_OPEN request.
+
+   3. If the remote end replies with CHANNEL_OPEN_CONFIRMATION, the
+      channel's event handler is invoked, with CHANNEL_EVENT_CONFIRM.
+      If the remote end replies with CHANNEL_OPEN_FAILURE, the channel
+      is killed.
+
+   When the other side requests a new channel, the steps are:
+
+   1. Receive CHANNEL_OPEN. Reserve a channel number, and invoke the
+      command associated with the channel type.
+
+   2. This command returns a new channel object, or raises an
+      exception.
+
+   3. Install the channel object, and reply with
+      CHANNEL_OPEN_CONFIRMATION. On error, deallocate channel number,
+      and reply with CHANNEL_OPEN_FAILURE.
+*/
 
 struct exception *
 make_channel_open_exception(uint32_t error_code, const char *msg)
 {
-  NEW(channel_open_exception, self);
-
 #define MAX_ERROR 4
   static const char *msgs[MAX_ERROR + 1] = {
     "",
@@ -62,12 +86,9 @@ make_channel_open_exception(uint32_t error_code, const char *msg)
   assert(error_code > 0);
   assert(error_code <= MAX_ERROR);
 #undef MAX_ERROR
-  
-  self->super.type = EXC_CHANNEL_OPEN;
-  self->super.msg = msg ? msg : msgs[error_code];
-  self->error_code = error_code;
 
-  return &self->super;
+  return make_exception(EXC_CHANNEL_OPEN, error_code,
+			msg ? msg : msgs[error_code]);
 }
 
 
@@ -1046,20 +1067,10 @@ handle_channel_eof(struct ssh_connection *connection,
 	      
 	      channel->flags |= CHANNEL_RECEIVED_EOF;
 	      
-	      if (channel->eof)
-		{
-		  CHANNEL_EOF(channel);
+	      CHANNEL_EVENT(channel, CHANNEL_EVENT_EOF);
 
-		  /* Should we close the channel now? */
-		  channel_maybe_close(channel);
-		}
-	      else
-		{
-		  /* By default, close the channel. */
-		  debug("No CHANNEL_EOF handler. Closing.\n"); 
-		  channel_close(channel);
-		}
-	      
+	      /* Should we close the channel now? */
+	      channel_maybe_close(channel);	      
 	    }
 	}
       else
@@ -1141,18 +1152,18 @@ handle_open_confirm(struct ssh_connection *connection,
 
       if (channel) 
 	{
-	  struct command_continuation *c = channel->open_continuation;
-	  assert(c);
-
-	  channel->open_continuation = NULL;
+	  struct command_context *ctx = channel->channel_open_context;
+	  channel->channel_open_context = NULL;
+	  assert(ctx);
 
 	  channel->remote_channel_number = remote_channel_number;
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
 
 	  ssh_connection_use_channel(connection, local_channel_number);
+	  CHANNEL_EVENT(channel, CHANNEL_EVENT_CONFIRM);
 
-	  COMMAND_RETURN(c, channel);
+	  COMMAND_RETURN(ctx->c, channel);
 	}
       else
 	{
@@ -1189,12 +1200,14 @@ handle_open_failure(struct ssh_connection *connection,
 
       if (channel)
 	{
-	  assert(channel->open_continuation);
+	  struct command_context *ctx = channel->channel_open_context;
+	  channel->channel_open_context = NULL;
+	  assert(ctx);
 	  
 	  /* FIXME: It would be nice to pass the message on. */
 	  werror("Channel open for channel %i failed: %ps\n", channel_number, length, msg);
 
-	  EXCEPTION_RAISE(channel->e,
+	  EXCEPTION_RAISE(ctx->e,
 			  make_channel_open_exception(reason, "Channel open refused by peer"));
 	  channel_finished(channel);
 	}
@@ -1330,7 +1343,8 @@ channel_eof(struct ssh_channel *channel)
 
 void
 init_channel(struct ssh_channel *channel,
-	     void (*kill)(struct resource *))
+	     void (*kill)(struct resource *),
+	     void (*event)(struct ssh_channel *, enum channel_event))
 {
   init_resource(&channel->super, kill);
 
@@ -1346,9 +1360,9 @@ init_channel(struct ssh_channel *channel,
   channel->receive = NULL;
   channel->send_adjust = NULL;
 
-  channel->eof = NULL;
+  channel->event = event;
 
-  channel->open_continuation = NULL;
+  channel->channel_open_context = NULL;
 
   object_queue_init(&channel->pending_requests);
   object_queue_init(&channel->active_requests);
