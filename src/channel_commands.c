@@ -39,6 +39,7 @@
 
 #include "channel_commands.c.x"
 
+#if 0
 void
 do_channel_open_command(struct command *s,
 			struct lsh_object *x,
@@ -81,6 +82,7 @@ do_channel_open_command(struct command *s,
       SSH_CONNECTION_WRITE(connection, request);
     }
 }
+#endif
 
 void
 do_channel_request_command(struct command *s,
