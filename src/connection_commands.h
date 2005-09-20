@@ -37,9 +37,6 @@
        (connection object ssh_connection)))
 */
 
-extern struct command_2 connection_remember;
-#define CONNECTION_REMEMBER (&connection_remember.super.super)
-
 struct command *
 make_connection_if_srp(struct command *then_f,
 		       struct command *else_f);

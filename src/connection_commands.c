@@ -38,23 +38,6 @@
 #include "connection_commands.h.x"
 #undef GABA_DEFINE
 
-/* (remember connection resource) */
-DEFINE_COMMAND2(connection_remember)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(ssh_connection, connection, a1);
-  CAST_SUBTYPE(resource, resource, a2);
-  
-  if (resource)
-    remember_resource(connection->resources, resource);
-
-  COMMAND_RETURN(c, resource);
-}
-
 
 DEFINE_COMMAND(connection_require_userauth)
      (struct command *s UNUSED, struct lsh_object *a,
