@@ -239,7 +239,8 @@ register_channel(struct ssh_connection *connection,
 
   connection->channels[local_channel_number] = channel;
   channel->local_channel_number = local_channel_number;
-
+  channel->connection = connection;
+  
   if (take_into_use)
     ssh_connection_use_channel(connection, local_channel_number);
 
@@ -724,8 +725,6 @@ do_channel_open_continue(struct command_continuation *c,
   channel->send_max_packet = self->send_max_packet;
   channel->remote_channel_number = self->remote_channel_number;
 
-  channel->connection = self->connection;
-  
   register_channel(self->connection, self->local_channel_number,
 		   channel,
 		   1);
@@ -734,7 +733,7 @@ do_channel_open_continue(struct command_continuation *c,
    * confirmation message. */
 
   SSH_CONNECTION_WRITE(self->connection,
-	       format_open_confirmation(channel, ""));
+		       format_open_confirmation(channel, ""));
 }
 
 static struct command_continuation *
@@ -1464,59 +1463,69 @@ channel_transmit_extended(struct ssh_channel *channel,
 				 type, length, data));
 }
 
-
-/* Used by do_gateway_channel_open */
-struct lsh_string *
-format_channel_open_s(struct lsh_string *type,
-		      uint32_t local_channel_number,
-		      struct ssh_channel *channel,
-		      struct lsh_string *args)
+int
+channel_open_new_v(struct ssh_connection *connection,
+		   struct ssh_channel *channel,
+		   uint32_t type_length, const uint8_t *type,
+		   const char *format, va_list args)
 {
-  check_rec_max_packet(channel);
-
-  return ssh_format("%c%S%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
-		    type, local_channel_number, 
-		    channel->rec_window_size, channel->rec_max_packet,
- 		    args);
-}
-
-struct lsh_string *
-format_channel_open(int type, uint32_t local_channel_number,
-		    struct ssh_channel *channel,
-		    const char *format, ...)
-{
-  va_list args;
+  struct lsh_string *request;
   uint32_t l1, l2;
-  struct lsh_string *packet;
-  
-#define OPEN_FORMAT "%c%a%i%i%i"
-#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type, local_channel_number, \
-  channel->rec_window_size, channel->rec_max_packet  
+  va_list args_copy;
 
+  int index = ssh_connection_alloc_channel(connection);
+  if (index < 0)
+    {
+      /* We have run out of channel numbers. */
+      werror("channel_open_new: ssh_connection_alloc_channel failed\n");
+      return 0;
+    }
+
+  register_channel(connection, index, channel, 0);
+  
   check_rec_max_packet(channel);
-
-  debug("format_channel_open: rec_window_size = %i,\n"
-	"                     rec_max_packet = %i,\n",
-	channel->rec_window_size,
-	channel->rec_max_packet);
   
+#define OPEN_FORMAT "%c%s%i%i%i"
+#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type_length, type, \
+  channel->local_channel_number, \
+  channel->rec_window_size, channel->rec_max_packet
+
+  va_copy(args_copy, args);
+
   l1 = ssh_format_length(OPEN_FORMAT, OPEN_ARGS);
   
-  va_start(args, format);
   l2 = ssh_vformat_length(format, args);
-  va_end(args);
 
-  packet = lsh_string_alloc(l1 + l2);
+  request = lsh_string_alloc(l1 + l2);
 
-  ssh_format_write(OPEN_FORMAT, packet, 0, OPEN_ARGS);
+  ssh_format_write(OPEN_FORMAT, request, 0, OPEN_ARGS);
 
-  va_start(args, format);
-  ssh_vformat_write(format, packet, l1, args);
-  va_end(args);
+  ssh_vformat_write(format, request, l1, args_copy);
+  va_end(args_copy);
 
-  return packet;
 #undef OPEN_FORMAT
 #undef OPEN_ARGS
+  
+  SSH_CONNECTION_WRITE(connection, request);
+  
+  return 1;
+}
+
+int
+channel_open_new_type(struct ssh_connection *connection,
+		      struct ssh_channel *channel,
+		      int type,
+		      const char *format, ...)
+{
+  va_list args;
+  int res;
+  
+  va_start(args, format);
+  res = channel_open_new_v(connection, channel,
+			   get_atom_length(type), get_atom_name(type),
+			   format, args);
+  va_end(args);
+  return res;
 }
 
 struct lsh_string *

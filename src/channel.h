@@ -219,16 +219,17 @@ void
 channel_start_receive(struct ssh_channel *channel,
 		      uint32_t initial_window_size);
 
-struct lsh_string *
-format_channel_open_s(struct lsh_string *type,
-		      uint32_t local_channel_number,
-		      struct ssh_channel *channel,
-		      struct lsh_string *args);
+int
+channel_open_new_v(struct ssh_connection *connection,
+		   struct ssh_channel *channel,
+		   uint32_t type_length, const uint8_t *type,
+		   const char *format, va_list args);
 
-struct lsh_string *
-format_channel_open(int type, uint32_t local_channel_number,
-		    struct ssh_channel *channel,
-		    const char *format, ...);
+int
+channel_open_new_type(struct ssh_connection *connection,
+		      struct ssh_channel *channel,
+		      int type,
+		      const char *format, ...);
 
 struct lsh_string *
 format_channel_request_i(struct channel_request_info *info,
