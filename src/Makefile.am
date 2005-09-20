@@ -142,7 +142,7 @@ lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
 lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c \
 	transport_forward.c client_keyexchange.c
 
-class-map: $(srcdir)/make-class-map $(dist_classes)
+class-map: $(srcdir)/make-class-map .dist_classes $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
 	| sort | awk -f $(srcdir)/make-class-map > $@
 
