@@ -30,7 +30,6 @@
 
 #include "keyexchange.h"
 
-#include "abstract_io.h"
 /* For filter_algorithms */
 #include "algorithms.h"
 #include "alist.h"
