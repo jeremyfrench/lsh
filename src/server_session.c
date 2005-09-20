@@ -212,23 +212,47 @@ do_send_adjust(struct ssh_channel *s,
 }
 
 static void
-do_eof(struct ssh_channel *channel)
+do_server_session_event(struct ssh_channel *channel, enum channel_event event)
 {
   CAST(server_session, session, channel);
 
-  trace("server_session.c: do_eof\n");
+  trace("server_session.c: do_event %i\n", event);
 
-  if (session->pty)
+  switch(event)
     {
-      static const uint8_t eof[1] = { 4 }; /* ^D */
-      if (channel_io_write(channel, &session->in,
-			   oop_write_stdin, sizeof(eof), eof) != CHANNEL_IO_OK)
+    case CHANNEL_EVENT_CONFIRM:
+      /* Server never opens a session channel. */
+      fatal("Internal error.\n");
 
-	channel_write_state_close(&session->super, &session->in);	
+    case CHANNEL_EVENT_EOF:
+      if (session->pty)
+	{
+	  static const uint8_t eof[1] = { 4 }; /* ^D */
+	  if (channel_io_write(channel, &session->in,
+			       oop_write_stdin, sizeof(eof), eof) != CHANNEL_IO_OK)
+
+	    channel_write_state_close(&session->super, &session->in);	
+	}
+
+      if (!session->in.state->length)
+	channel_write_state_close(&session->super, &session->in);
+      break;
+
+    case CHANNEL_EVENT_STOP:
+      channel_io_stop_read(&session->out);
+      channel_io_stop_read(&session->err);
+      break;
+
+    case CHANNEL_EVENT_START:
+      if (session->super.send_window_size)
+	{
+	  channel_io_start_read(&session->super,
+				&session->out, oop_read_stdout);
+	  channel_io_start_read(&session->super,
+				&session->err, oop_read_stderr);
+	}
+      break;
     }
-
-  if (!session->in.state->length)
-    channel_write_state_close(&session->super, &session->in);
 }
 
 struct ssh_channel *
@@ -237,11 +261,12 @@ make_server_session(uint32_t initial_window,
 {
   NEW(server_session, self);
 
-  init_channel(&self->super, do_kill_server_session);
+  init_channel(&self->super,
+	       do_kill_server_session, do_server_session_event);
   
   /* FIXME: More proper initialization */
   self->in.fd = self->out.fd = self->err.fd = -1;
-  
+
   self->initial_window = initial_window;
   /* We don't want to receive any data before we have forked some
    * process to receive it. */
@@ -253,13 +278,13 @@ make_server_session(uint32_t initial_window,
 
   /* Note: We don't need a close handler; the channel's resource list
    * is taken care of automatically. */
-  
+
   self->process = NULL;
 
   self->pty = NULL;
   self->term = NULL;
   self->client = NULL;
-    
+
   return &self->super;
 }
 
@@ -544,9 +569,14 @@ spawn_process(struct server_session *session,
       io_register_fd(info->err[0], "process stderr");
     }
 
+  if (session->super.send_window_size)
+    {
+      channel_io_start_read(&session->super, &session->out, oop_read_stdout);
+      channel_io_start_read(&session->super, &session->err, oop_read_stderr);
+    }
+  
   session->super.receive = do_receive;
   session->super.send_adjust = do_send_adjust;
-  session->super.eof = do_eof;
   
   session->super.sources += 2;
 
