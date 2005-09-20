@@ -41,10 +41,13 @@
 
 /* Forward declarations */
 
-/* FIXME: Should be static */
-struct command_2 open_direct_tcpip;
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
+#define TCPIP_WINDOW_SIZE 10000
 
+/* FIXME: Should be static */
+struct command_3 open_direct_tcpip_command;
+#define OPEN_DIRECT_TCPIP (&open_direct_tcpip_command.super.super)
+
+#if 0
 /* FIXME: Should be static */
 struct command_2 remote_listen_command;
 #define REMOTE_LISTEN (&remote_listen_command.super.super)
@@ -70,8 +73,42 @@ static struct install_info install_tcpip_forward_handler;
 /* FIXME: Should be static? */
 struct command make_tcpip_forward_handler;
 #define TCPIP_FORWARD_HANDLER (&make_tcpip_forward_handler.super)
+#endif
 
 #include "tcpforward_commands.c.x"
+
+/* (open_direct_tcpip target connection listen_value) */
+DEFINE_COMMAND3(open_direct_tcpip_command)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct lsh_object *a3,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST(address_info, target, a1);
+  CAST_SUBTYPE(ssh_connection, connection, a2);
+  CAST(listen_value, lv, a3);
+
+  struct channel_forward *channel;
+
+  channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
+  
+  if (!channel_open_new_type(connection, &channel->super, ATOM_DIRECT_TCPIP,
+			     "%S%i%S%i",
+			     target->ip, target->port,
+			     lv->peer->ip, lv->peer->port))
+			     
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
+					"Allocating a local channel number failed."));
+      KILL_RESOURCE(&channel->super.super);
+    }
+  else
+    {
+      assert(!channel->super.channel_open_context);
+      channel->super.channel_open_context = make_command_context(c, e);
+    }
+}
 
 /* GABA:
    (expr
@@ -82,20 +119,17 @@ struct command make_tcpip_forward_handler;
      (expr
        (lambda (connection)
          (connection_remember connection
-           (listen
+           (listen_tcp
 	     (lambda (peer)
-	       (forward_start_io
-	         (open_direct_tcpip target
-	                            (make_tcpip_channel connection peer))))
-	     (bind (prog1 local connection)))))))
+	       (open_direct_tcpip target connection peer))
+	     (prog1 local connection))))))
 */
 
 /* Takes a socket as argument, and returns a tcpip channel. Used by
  * the party receiving a open-tcp request, when a channel to the
  * target has been opened. */
 
-#define TCPIP_WINDOW_SIZE 10000
-
+#if 0
 /* NOTE: make_channel_forward adds the fd to the channel's resource list. */
 DEFINE_COMMAND(tcpip_connect_io_command)
      (struct command *ignored UNUSED,
@@ -118,7 +152,7 @@ DEFINE_COMMAND(tcpip_connect_io_command)
  * value as argument, and returns a channel connected to some tcpip
  * port at the other end. */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name open_tcpip_command)
      (super channel_open_command)
@@ -216,7 +250,7 @@ DEFINE_COMMAND2(open_direct_tcpip)
 
 /* Requesting remote forwarding of a port */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name remote_port_install_continuation)
      (super command_frame)
@@ -268,7 +302,7 @@ make_remote_port_install_continuation(struct remote_port *port,
  * should return a channel or NULL.
  */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name request_tcpip_forward_command)
      (super global_request_command)
@@ -377,7 +411,7 @@ make_forward_local_port(struct address_info *local,
   return res;
 }
 
-/* GABA:
+/* ;; GABA:
    (expr
      (name forward_remote_port)
      (params
@@ -448,7 +482,7 @@ STATIC_INSTALL_OPEN_HANDLER(ATOM_DIRECT_TCPIP);
 /* Server side callbacks */
 
 /* Make this non-static? */
-/* GABA:
+/* ;; GABA:
    (expr
      (name direct_tcpip_hook)
      (expr
@@ -472,7 +506,7 @@ make_direct_tcpip_hook(void)
 static struct install_info install_tcpip_forward_handler =
 STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
 
-/* GABA:
+/* ;; GABA:
    (expr
      (name tcpip_forward_hook)
      (expr
@@ -504,3 +538,4 @@ make_tcpip_forward_hook(void)
   
   return res;
 }
+#endif
