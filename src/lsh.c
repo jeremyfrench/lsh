@@ -673,7 +673,7 @@ do_lsh_default_handler(struct exception_handler *s,
   CAST(lsh_default_handler, self, s);
 
   if (e->type == EXC_IO_ERROR)
-    werror("%z, (errno = %i)\n", e->msg, e->subtype);
+    werror("%z, %e\n", e->msg, e->subtype);
 
   else
     werror("%z\n", e->msg);
@@ -773,9 +773,12 @@ fork_lsh_transport(struct lsh_options *options)
 	arglist_push(&options->transport_args, "--debug");
       if (trace_flag)
 	arglist_push(&options->transport_args, "--trace");
-      
-      arglist_push(&options->transport_args, "-p");
-      arglist_push(&options->transport_args, options->super.port);
+
+      if (options->super.port)
+	{
+	  arglist_push(&options->transport_args, "-p");
+	  arglist_push(&options->transport_args, options->super.port);
+	}
       arglist_push(&options->transport_args, options->super.target);
       
       argv = (char **) options->transport_args.argv;
