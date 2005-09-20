@@ -1,5 +1,32 @@
 2005-09-20  Niels Möller  <niels@s3.kth.se>
 
+	* src/server_session.c: Don't include read_data.h.
+
+	* src/lsh.h (struct abstract_write): Deleted declaration.
+
+	* src/keyexchange.c: Don't include abstract_io.h.
+
+	* src/io.h: Don't include abstract_io.h and write_buffer.h.
+
+	* src/client.c: Don't include abstract_io.h.
+
+	* src/channel.h: Don't include write_buffer.h.
+
+	* src/channel.c: Don't include read_data.h.
+
+	* src/abstract_io.h, src/read_data.h, src/write_buffer.h: Mark
+	obsolete.
+
+	* src/Makefile.am (class-map): Depend on .dist_classes.
+
+	* misc/make-am: Use C locale, to get files sorted in sane order.
+
+	* src/server.c: Don't include abstract_io.h, format.h, ssh.h and
+	xalloc.h. Include atoms.h
+	(class service_handler, do_service_request)
+	(make_service_request_handler, class offer_service)
+	(do_offer_service, make_offer_service): Deleted.
+	
 	* src/testsuite/conv-1-test, src/testsuite/conv-2-test,
 	src/testsuite/conv-3-test, src/testsuite/export-1-test,
 	src/testsuite/lsh-cat-test, src/testsuite/lshg-cat-2-test,
