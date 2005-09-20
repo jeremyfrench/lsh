@@ -31,7 +31,6 @@
 #include "connection.h"
 #include "parse.h"
 #include "server_pty.h"
-#include "write_buffer.h"
 
 enum channel_event
 {
@@ -41,7 +40,7 @@ enum channel_event
   /* We received a CHANNEL_OPEN_FAILURE. */
   CHANNEL_EVENT_DENY,
 #endif
-  /* We received a CHANNEL_EOF or CHANNEL_CLOSE. */
+  /* We received a CHANNEL_EOF. */
   CHANNEL_EVENT_EOF,
   /* Local buffers are full. Stop sending data. */
   CHANNEL_EVENT_STOP,
