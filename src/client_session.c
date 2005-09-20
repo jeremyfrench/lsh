@@ -87,19 +87,6 @@ do_kill_client_session(struct resource *s)
     }
 }
 
-/* Callback used when the server sends us eof */
-static void
-do_client_session_eof(struct ssh_channel *c)
-{
-  CAST(client_session, session, c);
-
-  if (!session->out.state->length)
-    channel_write_state_close(&session->super, &session->out);
-
-  if (!session->err.state->length)
-    channel_write_state_close(&session->super, &session->err);
-}  
-
 static void *
 oop_write_stdout(oop_source *source UNUSED,
 		 int fd, oop_event event, void *state)
@@ -200,6 +187,7 @@ do_send_adjust(struct ssh_channel *s,
   channel_io_start_read(&session->super, &session->in, oop_read_stdin);
 }
 
+#if 0
 /* Called when a session channel which a remote shell */
 DEFINE_COMMAND(client_start_io)
      (struct command *s UNUSED,
@@ -232,6 +220,56 @@ DEFINE_COMMAND(client_start_io)
 
   COMMAND_RETURN(c, session);
 }
+#endif
+
+static void
+do_client_session_event(struct ssh_channel *c, enum channel_event event)
+{
+  CAST(client_session, session, c);
+
+  switch(event)
+    {
+    case CHANNEL_EVENT_CONFIRM:
+      session->super.receive = do_receive;
+      session->super.send_adjust = do_send_adjust;
+
+      session->super.sources ++;
+
+      /* One reference each for stdout and stderr, and one more for the
+	 exit-status/exit-signal message */
+      session->super.sinks += 3;
+
+      /* FIXME: Setup escape handler, and raw tty? */
+      if (session->super.send_window_size)
+	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
+
+      ALIST_SET(session->super.request_types, ATOM_EXIT_STATUS,
+		&make_handle_exit_status(session->exit_status)->super);
+      ALIST_SET(session->super.request_types, ATOM_EXIT_SIGNAL,
+		&make_handle_exit_signal(session->exit_status)->super);
+
+      /* NOTE: We accept data even before we have sent any shell or
+	 exec request. FIXME: Delay this until later? */
+      channel_start_receive(&session->super,
+			    lsh_string_length(session->out.state->buffer));
+      break;
+
+    case CHANNEL_EVENT_EOF:
+      if (!session->out.state->length)
+	channel_write_state_close(&session->super, &session->out);
+
+      if (!session->err.state->length)
+	channel_write_state_close(&session->super, &session->err);
+      break;
+    case CHANNEL_EVENT_STOP:
+      channel_io_stop_read(&session->in);
+      break;
+    case CHANNEL_EVENT_START:
+      if (session->super.send_window_size)
+	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
+      break;
+    }
+}  
 
 #define CLIENT_READ_BUFFER_SIZE 0x4000
 
@@ -244,8 +282,8 @@ make_client_session_channel(int in, int out, int err,
   NEW(client_session, self);
 
   trace("make_client_session\n");
-  init_channel(&self->super, do_kill_client_session);
-
+  init_channel(&self->super, do_kill_client_session, do_client_session_event);
+  
   /* Set to initial_window in client_start_io */
   self->super.rec_window_size = 0;
 
