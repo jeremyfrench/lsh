@@ -265,7 +265,7 @@ DEFINE_COMMAND(bind_local_command)
 }
 
 
-/* GABA:
+/* ;;GABA:
    (class
      (name connect_continuation)
      (super command_continuation)
@@ -342,7 +342,7 @@ do_connect(struct address_info *a,
  *
  * (connect port connection) -> fd */
 
-/* GABA:
+/* ;;GABA:
    (class
      (name connect_port)
      (super command)
@@ -458,7 +458,7 @@ DEFINE_COMMAND(io_log_peer_command)
 
 
 
-/* GABA:
+/* ;;GABA:
    (class
      (name tcp_wrapper)
      (super command)
