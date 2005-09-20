@@ -94,9 +94,6 @@ lsh_string_free(const struct lsh_string *packet);
 
 /* Forward declarations of various structures */
 
-/* abstract_io.h */
-struct abstract_write;
-
 /* channel.h */
 struct ssh_channel;
 
