@@ -165,15 +165,15 @@
 
 (define (c-initializer* . expressions) (c-initializer expressions))
 
-(define (c-prototype return name args)
-  (c-append return indent name
+(define (c-prototype storage return name args)
+  (c-append storage (and storage " ") return indent name
 	    "("
 	    (if (null? args ) "void"
 		(c-list (c-append "," indent) args))
 	    ")"))
 
-(define (c-prototype* return name . args)
-  (c-prototype return name args))
+(define (c-prototype* storage return name . args)
+  (c-prototype storage return name args))
 
 (define (c-for var range body)
   (c-append "for(" var "=0; "
@@ -296,7 +296,7 @@
 (define (make-mark-function name vars)
   (let ((markers (map-variables make-marker vars "i")))
     (and (not (null? markers))
-	 (c-append (c-prototype* "static void" (c-append "do_" name "_mark")
+	 (c-append (c-prototype* "static" "void" (c-append "do_" name "_mark")
 				 "struct lsh_object *o"
 				 "void (*mark)(struct lsh_object *o)")
 		   indent
@@ -353,7 +353,7 @@
 (define (make-free-function name vars)
   (let ((freers (map-variables make-freer vars "i")))
     (and (not (null? freers))
-	 (c-append (c-prototype* "static void" (c-append "do_" name "_free")
+	 (c-append (c-prototype* "static" "void" (c-append "do_" name "_free")
 				 "struct lsh_object *o")
 		   indent
 		   (c-block (cons (c-append "struct " name
@@ -569,6 +569,7 @@
   
   ;; (werror "foo\n")
   (let ((name (get 'name attributes cadr))
+	(storage (get 'storage attributes cadr))
 	(globals (or (get 'globals attributes cdr) '()))
 	(params (preprocess-vars #f
 				 (or (get 'params attributes cdr) '())))
@@ -578,7 +579,8 @@
       (werror "Compiled to ~S\n" translated)
       ;; (werror "Globals: ~S\n" globals)
       ;; (werror "Params: ~S\n" params)
-      (c-append (c-prototype "static struct command *" name
+      (c-append (c-prototype storage "struct command *"
+			     name
 			     (map c-declare params))
 		indent
 		(format #f "  /* ~S */\n" translated)
