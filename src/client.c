@@ -482,8 +482,9 @@ client_options[] =
     "Program to use for reading passwords. "
     "Should be an absolute filename.", 0 },
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
-#if 0
+
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
+#if 0
   { "forward-socks", 'D', "port", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
 #endif
@@ -537,6 +538,7 @@ client_options[] =
 /* GABA:
    (expr
      (name make_start_session)
+     (storage static)
      (params
        (session object ssh_channel)
        (requests object object_list))
@@ -1178,7 +1180,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       options->with_pty = 0;
 #endif
       break;
-#if 0
+
     case 'L':
       {
 	uint32_t listen_port;
@@ -1187,7 +1189,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification `%s'.", arg);
 
-	client_add_action(options, make_forward_local_port
+	client_add_action(options, forward_local_port
 			  (make_address_info((options->with_remote_peers
 					      ? NULL
 					      : ssh_format("%lz", "127.0.0.1")),
@@ -1195,7 +1197,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 			   target));
 	break;
       }      
-
+#if 0
     case 'D':
       {
 	unsigned long socks_port = DEFAULT_SOCKS_PORT;
