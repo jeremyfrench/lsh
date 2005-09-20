@@ -73,6 +73,22 @@ struct command make_tcpip_forward_handler;
 
 #include "tcpforward_commands.c.x"
 
+/* GABA:
+   (expr
+     (name forward_local_port)
+     (params
+       (local object address_info)
+       (target object address_info))
+     (expr
+       (lambda (connection)
+         (connection_remember connection
+           (listen
+	     (lambda (peer)
+	       (forward_start_io
+	         (open_direct_tcpip target
+	                            (make_tcpip_channel connection peer))))
+	     (bind (prog1 local connection)))))))
+*/
 
 /* Takes a socket as argument, and returns a tcpip channel. Used by
  * the party receiving a open-tcp request, when a channel to the
@@ -326,7 +342,8 @@ DEFINE_COMMAND2(remote_listen_command)
 
 
 
-/* GABA:
+/* FIXME: Old */
+/* ;; GABA:
    (expr
      (name forward_local_port)
      (params
