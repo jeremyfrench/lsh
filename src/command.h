@@ -101,6 +101,8 @@ struct command *
 make_command_2_invoke(struct command_2 *f,
 		      struct lsh_object *a1);
 
+/* FIXME: Get rid of the unused first argument, like for DEFINE_COMMAND3. */
+
 #define DEFINE_COMMAND2(cname)				\
 static void						\
 do_##cname(struct command_2 *,				\
