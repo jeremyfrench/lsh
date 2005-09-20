@@ -34,10 +34,8 @@
 
 #include <oop.h>
 
-#include "abstract_io.h"
 #include "queue.h"
 #include "resource.h"
-#include "write_buffer.h"
 
 extern oop_source *global_oop_source;
 
@@ -123,9 +121,8 @@ io_signal_handler(int signum,
 struct resource *
 io_callout(struct lsh_callback *action, unsigned seconds);
 
-int blocking_read(int fd, struct read_handler *r);
-
-int get_portno(const char *service, const char *protocol);
+int
+get_portno(const char *service, const char *protocol);
 
 struct address_info *
 make_address_info(struct lsh_string *host, 
