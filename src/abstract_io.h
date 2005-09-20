@@ -26,6 +26,8 @@
 #ifndef LSH_ABSTRACT_IO_H_INCLUDED
 #define LSH_ABSTRACT_IO_H_INCLUDED
 
+#error Obsolete file
+
 #include "exception.h"
 
 #define GABA_DECLARE

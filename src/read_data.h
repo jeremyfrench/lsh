@@ -23,6 +23,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#error obsolete file
+
 #ifndef LSH_READ_DATA_H_INCLUDED
 #define LSH_READ_DATA_H_INCLUDED
 
