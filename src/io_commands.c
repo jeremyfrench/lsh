@@ -26,14 +26,154 @@
 #endif
 
 #include <assert.h>
-/* Needed only to get the error code from failed calls to io_connect */
 #include <errno.h>
+
 /* For STDIN_FILENO */
 #include <unistd.h>
 
 #include "io_commands.h"
 
 #include "command.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "io_commands.c.x"
+
+/* (listen_tcp_command address callback)
+
+   Returns a resource. The callback gets a listen-value as argument.
+*/
+
+/* GABA:
+   (class
+     (name io_port)
+     (super resource)
+     (vars
+       (fd . int)
+       (callback object command)))
+*/
+
+static void
+kill_io_port(struct resource *s)
+{
+  CAST(io_port, self, s);
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      io_close_fd(self->fd);
+      self->fd = -1;
+    }
+};
+
+static struct io_port *
+make_io_port(int fd, struct command *callback)
+{
+  NEW(io_port, self);
+  init_resource(&self->super, kill_io_port);
+
+  io_register_fd(fd, "listen port");
+
+  self->fd = fd;
+  self->callback = callback;
+
+  return self;
+}
+
+static void *
+oop_io_port_accept(oop_source *source UNUSED,
+		   int fd, oop_event event, void *state)
+{
+  CAST(io_port, self, (struct lsh_object *) state);
+
+#if WITH_IPV6
+  struct sockaddr_storage peer;
+#else
+  struct sockaddr_in peer;
+#endif
+
+  socklen_t peer_length = sizeof(peer);
+  int s;
+  
+  assert(event == OOP_READ);
+  assert(self->fd == fd);
+
+  s = accept(self->fd, (struct sockaddr *) &peer, &peer_length);
+  if (s < 0)
+    {
+      werror("accept failed, fd = %i: %e\n", self->fd, errno);
+    }
+  else
+    COMMAND_CALL(self->callback,
+		 make_listen_value(s, sockaddr2info(peer_length,
+						    (struct sockaddr *)&peer)),
+		 &discard_continuation, &ignore_exception_handler);
+
+  return OOP_CONTINUE;  
+}
+
+DEFINE_COMMAND2(listen_tcp_command)
+     (struct command_2 *self UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST(address_info, a, a1);
+  CAST_SUBTYPE(command, callback, a2);
+  struct sockaddr *addr;
+  socklen_t addr_length;
+  struct io_port *port;
+  int yes = 1;
+  int fd;
+
+  /* FIXME: Use something simpler than address_info2sockaddr, when we
+     want to handle numerical addresses only. */
+  addr = address_info2sockaddr(&addr_length, a, NULL, 0);
+  if (!addr)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
+      return;
+    }
+
+  fd = socket(addr->sa_family, SOCK_STREAM, 0);
+  
+  if (fd < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "socket failed"));
+      lsh_space_free(addr);
+      return;
+    }
+
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes)) < 0)
+    werror("setsockopt failed: %e\n", errno);
+
+  if (bind(fd, addr, addr_length) < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "bind failed"));
+      lsh_space_free(addr);
+      close(fd);
+      return;
+    }
+
+  lsh_space_free(addr);
+
+  if (listen(fd, 256) < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
+      close(fd);
+      return;
+    }    
+
+  port = make_io_port(fd, callback);
+  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
+			   oop_io_port_accept, port);
+
+  COMMAND_RETURN(c, port);
+}
+
+
+#if 0
+
 #include "connection.h"
 /* For lsh_get_cstring */
 #include "format.h"
@@ -400,3 +540,4 @@ make_tcp_wrapper(struct lsh_string *name, struct lsh_string *msg )
              (lambda (peer)
                 (start-io peer (request-forwarded-tcpip connection peer)))))
  */
+#endif
