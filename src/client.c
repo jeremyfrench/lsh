@@ -62,6 +62,9 @@
 #include "client.h.x"
 #undef GABA_DEFINE
 
+struct command_2 open_session_command;
+#define OPEN_SESSION (&open_session_command.super.super)
+
 #include "client.c.x"
 
 #define DEFAULT_ESCAPE_CHAR '~'
@@ -289,50 +292,29 @@ make_handle_exit_signal(int *exit_status)
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name session_open_command)
-     (super channel_open_command)
-     (vars
-       ; This command can only be executed once,
-       ; so we can allocate the session object in advance.
-       (session object ssh_channel)))
-*/
-
-static struct ssh_channel *
-new_session(struct channel_open_command *s,
-	    struct ssh_connection *connection,
-	    uint32_t local_channel_number,
-	    struct lsh_string **request)
+/* (open_session session connection) */
+DEFINE_COMMAND2(open_session_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(session_open_command, self, s);
-  struct ssh_channel *res;
+  CAST_SUBTYPE(ssh_channel, channel, a1);
+  CAST_SUBTYPE(ssh_connection, connection, a2);
 
-  self->session->connection = connection;
-  
-  *request = format_channel_open(ATOM_SESSION,
-				 local_channel_number,
-				 self->session, "");
-  
-  res = self->session;
-
-  /* Make sure this command can not be invoked again */
-  self->session = NULL;
-
-  return res;
+  if (!channel_open_new_type(connection, channel, ATOM_SESSION, ""))
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
+					"Allocating a local channel number failed."));
+      KILL_RESOURCE(&channel->super);
+    }
+  else
+    {
+      assert(!channel->channel_open_context);
+      channel->channel_open_context = make_command_context(c, e);
+    }
 }
-
-struct command *
-make_open_session_command(struct ssh_channel *session)
-{
-  NEW(session_open_command, self);
-  self->super.super.call = do_channel_open_command;
-  self->super.new_channel = new_session;
-  self->session = session;
-
-  return &self->super.super;
-}
-
 
 static struct lsh_string *
 do_format_shell_request(struct channel_request_command *s UNUSED,
@@ -556,12 +538,12 @@ client_options[] =
    (expr
      (name make_start_session)
      (params
-       (open_session object command)
+       (session object ssh_channel)
        (requests object object_list))
      (expr (lambda (connection)
        ((progn requests)
          ; Create a "session" channel
-         (open_session connection)))))
+         (open_session session connection)))))
 */
 
 static void
@@ -642,9 +624,8 @@ client_shell_session(struct client_options *options)
   
       object_queue_add_tail(&session_requests, &request_shell.super.super);
   
-      return make_start_session(
-	make_open_session_command(session),
-	queue_to_list_and_kill(&session_requests));
+      return make_start_session(session,
+				queue_to_list_and_kill(&session_requests));
     }
   else
     return NULL;
@@ -659,7 +640,7 @@ client_subsystem_session(struct client_options *options,
   
   if (session)
     return make_start_session(
-      make_open_session_command(session),
+      session,
       make_object_list(1,
 		       &make_subsystem_request(subsystem)->super,
 		       -1));
@@ -689,9 +670,8 @@ client_command_session(struct client_options *options,
       object_queue_add_tail(&session_requests,
 			    &make_exec_request(command)->super);
 
-      return make_start_session(
-	make_open_session_command(session),
-	queue_to_list_and_kill(&session_requests));
+      return make_start_session(session,
+				queue_to_list_and_kill(&session_requests));
     }
   
   return NULL;
