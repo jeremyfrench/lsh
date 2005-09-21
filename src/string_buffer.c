@@ -37,6 +37,8 @@
 #include "lsh_string.h"
 #include "xalloc.h"
 
+/* FIXME: Used only by io_read_file_raw, which could use something
+   much simpler. */
 struct string_node
 {
   struct string_node *prev;
