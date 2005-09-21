@@ -514,7 +514,7 @@ spawn_shell(struct spawn_info *info,
 #if 0
 
 
-/* GABA:
+/* ;; GABA:
    (class
      (name utmp_cleanup)
      (super exit_callback)
