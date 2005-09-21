@@ -528,8 +528,7 @@ make_read_socks(struct socks_connection *socks)
 
 /* (socks_handshake peer connection) */
 DEFINE_COMMAND2(socks_handshake)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)

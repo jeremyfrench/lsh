@@ -81,15 +81,12 @@ do_##cname
      (name command_2)
      (super command)
      (vars
-       (invoke method void
-	       "struct lsh_object *a1"
-	       "struct lsh_object *a2"
-	       "struct command_continuation *c"
-	       "struct exception_handler *e"))))
+       (invoke pointer
+         (function void "struct lsh_object *a1"
+			"struct lsh_object *a2"
+			"struct command_continuation *c"
+			"struct exception_handler *e"))))
 */
-
-#define COMMAND_2_INVOKE(s, a1, a2, c, e) \
-((s)->invoke((s), (a1), (a2), (c), (e)))
 
 void
 do_command_2(struct command *s,
@@ -101,12 +98,9 @@ struct command *
 make_command_2_invoke(struct command_2 *f,
 		      struct lsh_object *a1);
 
-/* FIXME: Get rid of the unused first argument, like for DEFINE_COMMAND3. */
-
 #define DEFINE_COMMAND2(cname)				\
 static void						\
-do_##cname(struct command_2 *,				\
-	   struct lsh_object *,				\
+do_##cname(struct lsh_object *,				\
 	   struct lsh_object *,				\
 	   struct command_continuation *,		\
 	   struct exception_handler *);			\

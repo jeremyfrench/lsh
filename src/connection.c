@@ -186,8 +186,7 @@ ssh_connection_pending_close(struct ssh_connection *connection)
 
 /* (remember connection resource) */
 DEFINE_COMMAND2(connection_remember)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)

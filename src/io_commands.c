@@ -113,8 +113,7 @@ oop_io_port_accept(oop_source *source UNUSED,
 
 /* (listen_tcp callback port) */
 DEFINE_COMMAND2(listen_tcp_command)
-     (struct command_2 *self UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -199,8 +198,7 @@ int deny_severity = LOG_INFO;
 
 /* (listen callback fd) */
 DEFINE_COMMAND2(listen_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -403,8 +401,7 @@ DEFINE_COMMAND(connect_list_command)
 
 /* (connect_connection connection port) */
 DEFINE_COMMAND2(connect_connection_command)
-     (struct command_2 *self UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)

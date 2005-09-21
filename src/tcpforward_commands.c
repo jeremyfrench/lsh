@@ -122,6 +122,10 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
            (listen_tcp
 	     (lambda (peer)
 	       (open_direct_tcpip target connection peer))
+	       
+	     ; NOTE: The use of prog1 is needed to delay the
+	     ; listen_tcp call until the (otherwise ignored)
+	     ; connection argument is available.
 	     (prog1 local connection))))))
 */
 
@@ -218,8 +222,7 @@ make_open_tcpip_command(int type,
 }
 
 DEFINE_COMMAND2(open_forwarded_tcpip)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
@@ -233,8 +236,7 @@ DEFINE_COMMAND2(open_forwarded_tcpip)
 }
 
 DEFINE_COMMAND2(open_direct_tcpip)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
@@ -346,8 +348,7 @@ do_format_request_tcpip_forward(struct global_request_command *s,
 
 
 DEFINE_COMMAND2(remote_listen_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)

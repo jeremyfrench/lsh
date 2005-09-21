@@ -242,8 +242,7 @@ gateway_make_connection(struct listen_value *lv,
 }
 
 DEFINE_COMMAND2(gateway_init)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -257,8 +256,7 @@ DEFINE_COMMAND2(gateway_init)
 
 /* (gateway_accept main-connection gateway-connection) */
 DEFINE_COMMAND2(gateway_accept)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)

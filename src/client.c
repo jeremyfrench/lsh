@@ -294,8 +294,7 @@ make_handle_exit_signal(int *exit_status)
 
 /* (open_session session connection) */
 DEFINE_COMMAND2(open_session_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)
