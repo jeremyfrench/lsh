@@ -142,7 +142,7 @@ do_command_2_invoke(struct command *s, struct lsh_object *a2,
 		    struct exception_handler *e)
 {
   CAST(command_2_invoke, self, s);
-  COMMAND_2_INVOKE(self->f, self->a1, a2, c, e);
+  self->f->invoke(self->a1, a2, c, e);
 }
 
 struct command *
@@ -714,8 +714,7 @@ make_protect_exception_handler(struct resource *resource,
 }
 
 DEFINE_COMMAND2(protect_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)
