@@ -427,8 +427,7 @@ make_fake_host_db(void)
 }
 
 DEFINE_COMMAND2(proxy_destination)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
+     (struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
