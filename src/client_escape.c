@@ -98,6 +98,8 @@ make_escape_info(uint8_t escape)
   return self;
 }
 
+#if 0
+
 /* ;; GABA:
    (class
      (name escape_handler)
@@ -152,7 +154,6 @@ escape_dispatch(struct escape_info *info,
   return 0;
 }
 
-#if 0
 static void
 do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 {
