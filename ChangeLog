@@ -1,5 +1,21 @@
 2005-09-21  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/command.h (class command_2): Changed invoke to be a plain
+	function pointer, not a method.
+	(COMMAND_2_INVOKE): Deleted macro.
+	(DEFINE_COMMAND2): Deleted unused first argument. Updated all
+	users.
+
+	* src/command.c (do_command_2_invoke): Don't pass self when using
+	the invoke function pointer.
+
+	* src/unix_process.c (class utmp_cleanup): Commented out class.
+
+	* src/reaper.c (reaper_handle): Added trace message.
+
+	* src/lsh_proxy.c: Deleted file. Also deleted all other proxy*.c
+	and proxy*.h files.
+
 	* src/lsh.c (do_lsh_default_handler): Display errno string, for
 	i/o errors.
 	(fork_lsh_transport): Pass on -p option only if actually provided
