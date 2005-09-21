@@ -154,6 +154,7 @@ void
 reaper_handle(pid_t pid, struct exit_callback *callback)
 {
   assert (reaper_global);
+  trace("reaper_handle: pid = %i.\n", (uint32_t) pid);
 
   ALIST_SET(reaper_global->children, pid, &callback->super);
 }
