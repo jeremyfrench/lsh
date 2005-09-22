@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Balázs Scheidler, Niels Möller
+ * Copyright (C) 1998, 2005 Balázs Scheidler, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -47,17 +47,8 @@
 
 /* Structures used to keep track of forwarded ports */
 
-static struct local_port *
-make_local_port(struct address_info *address, struct lsh_fd *socket)
-{
-  NEW(local_port, self);
-
-  self->super.listen = address;  
-  self->socket = socket;
-  return self;
-}
-
-struct remote_port *
+#if 0
+static struct remote_port *
 make_remote_port(struct address_info *listen,
 		 struct command *callback)
 {
@@ -68,45 +59,41 @@ make_remote_port(struct address_info *listen,
 
   return self;
 }
+#endif
 
-static struct forwarded_port *
-lookup_forward(struct object_queue *q,
-	       uint32_t length, const uint8_t *ip, uint32_t port)
+struct forwarded_port *
+tcpforward_lookup(struct object_queue *q,
+		  uint32_t length, const uint8_t *ip, uint32_t port)
 {
   FOR_OBJECT_QUEUE(q, n)
     {
       CAST_SUBTYPE(forwarded_port, f, n);
       
-      if ( (port == f->listen->port)
-	   && lsh_string_eq_l(f->listen->ip, length, ip) )
+      if ( (port == f->address->port)
+	   && lsh_string_eq_l(f->address->ip, length, ip) )
 	return f;
     }
   return NULL;
 }
 
-static struct local_port *
-remove_forward(struct object_queue *q, int null_ok,
-	       uint32_t length, const uint8_t *ip, uint32_t port)
+int
+tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port)
 {
   FOR_OBJECT_QUEUE(q, n)
     {
-      CAST(local_port, f, n);
+      CAST_SUBTYPE(forwarded_port, f, n);
       
-      if ( (port == f->super.listen->port)
-	   && lsh_string_eq_l(f->super.listen->ip, length, ip) )
+      if (port == f)
 	{
-	  if (null_ok || f->socket)
-	    {
-	      FOR_OBJECT_QUEUE_REMOVE(q, n);
-	      return f;
-	    }
-	  else return NULL;
+	  FOR_OBJECT_QUEUE_REMOVE(q, n);
+	  return 1;
 	}
     }
-  return NULL;
+  return 0;
 }
 
 
+#if 0
 /* Handle channel open requests */
 
 /* Exception handler that promotes connect and dns errors to
@@ -235,259 +222,6 @@ make_channel_open_direct_tcpip(struct command *callback)
 
 /* Global requests for forwarding */
 
-/* GABA:
-   (class
-     (name tcpip_forward_request_continuation)
-     (super command_continuation)
-     (vars
-       (forward object local_port)
-       (table object channel_table)
-       (c object command_continuation)))
-*/
-
-static void
-do_tcpip_forward_request_continuation(struct command_continuation *c,
-				      struct lsh_object *x)
-{
-  CAST(tcpip_forward_request_continuation, self, c);
-  CAST(lsh_fd, fd, x);
-
-  trace("do_tcpip_forward_request_continuation\n");
-  assert(self->forward);
-  assert(fd);
-
-  self->forward->socket = fd;
-  remember_resource(self->table->resources, &fd->super);
-  
-  COMMAND_RETURN(self->c, &self->forward->super.super);
-}
-
-static struct command_continuation *
-make_tcpip_forward_request_continuation(struct local_port *forward,
-					struct channel_table *table,
-					struct command_continuation *c)
-{
-  NEW(tcpip_forward_request_continuation, self);
-
-  trace("make_tcpip_forward_request_continuation\n");
-  self->forward = forward;
-  self->table = table;
-  self->c = c;
-  
-  self->super.c = do_tcpip_forward_request_continuation;
-
-  return &self->super;
-}
-
-/* GABA:
-   (class
-     (name tcpip_forward_request_handler)
-     (super exception_handler)
-     (vars
-       (table object channel_table)
-       (forward object local_port)))
-*/
-
-static void
-do_tcpip_forward_request_exc(struct exception_handler *s,
-			     const struct exception *e)
-{
-  CAST(tcpip_forward_request_handler, self, s);
-  
-  switch(e->type)
-    {
-    case EXC_IO_LISTEN:
-    case EXC_RESOLVE:
-      {
-	struct local_port *port
-	  = remove_forward(&self->table->local_ports,
-			   1,
-			   STRING_LD(self->forward->super.listen->ip),
-			   self->forward->super.listen->port);
-	assert(port);
-	assert(port == self->forward);
-	EXCEPTION_RAISE(s->parent,
-			make_simple_exception(EXC_GLOBAL_REQUEST,
-					      e->msg));
-	break;
-      }
-    default:
-      if (e->type & EXC_IO)
-	{
-	  werror("I/O error on forwarded connection: %z\n",
-		 e->msg);
-	}
-      else
-	EXCEPTION_RAISE(self->super.parent, e);
-    }
-}
-
-static struct exception_handler *
-make_tcpip_forward_request_exc(struct channel_table *table,
-			       struct local_port *forward,
-			       struct exception_handler *parent,
-			       const char *context)
-{
-  NEW(tcpip_forward_request_handler, self);
-  self->super.raise = do_tcpip_forward_request_exc;
-  self->super.parent = parent;
-  self->super.context = context;
-
-  self->table = table;
-  self->forward = forward;
-
-  return &self->super;
-}
-
-/* GABA:
-   (class
-     (name tcpip_forward_request)
-     (super global_request)
-     (vars
-       ; The callback is invoked for each request, with the port as
-       ; argument. If successful, it should return the fd object
-       ; associated with the listening port. It need not remember the port;
-       ; the continuation installed by do_tcpip_forward_request
-       ; takes care of that.
-       (callback object command)))
-*/
-
-static void
-do_tcpip_forward_request(struct global_request *s, 
-			 struct channel_table *table,
-			 uint32_t type UNUSED,
-			 int want_reply UNUSED,
-			 struct simple_buffer *args,
-			 struct command_continuation *c,
-			 struct exception_handler *e)
-{
-  CAST(tcpip_forward_request, self, s);
-  struct lsh_string *bind_host;
-  uint32_t bind_port;
-  
-  if ((bind_host = parse_string_copy(args)) 
-      && parse_uint32(args, &bind_port) 
-      && parse_eod(args))
-    {
-      struct address_info *a = make_address_info(bind_host, bind_port);
-      struct local_port *forward;
-
-      if (bind_port < 1024)
-	{
-	  werror("Denying forwarding of privileged port %i.\n", bind_port);
-	  COMMAND_RETURN(c, NULL);
-	  return;
-	}
-
-      if (lookup_forward(&table->local_ports,
-			 STRING_LD(bind_host), bind_port))
-	{
-	  static const struct exception again = 
-	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "An already requested tcp-forward requested again");
-
-	  verbose("An already requested tcp-forward requested again\n");
-	  EXCEPTION_RAISE(e, &again);
-	  return;
-	}
-
-#if 0
-      werror("forward-tcpip request for port %i by user %S.\n",
-	     bind_port, connection->user->name);
-#endif
-
-      forward = make_local_port(a, NULL);
-      object_queue_add_head(&table->local_ports,
-			    &forward->super.super);
-
-      {
-	COMMAND_CALL(self->callback,
-		     a,
-		     make_tcpip_forward_request_continuation(forward,
-							     table,
-							     c),
-		     make_tcpip_forward_request_exc(table, forward,
-						    e, HANDLER_CONTEXT));
-	
-	return;
-      }
-    }
-  else
-    {
-      werror("Incorrectly formatted tcpip-forward request\n");
-      PROTOCOL_ERROR(e, "Invalid tcpip-forward message.");
-    }
-}
-
-struct global_request *
-make_tcpip_forward_request(struct command *callback)
-{
-  NEW(tcpip_forward_request, self);
-  
-  self->super.handler = do_tcpip_forward_request;
-  self->callback = callback;
-  
-  return &self->super;
-}
-
-static void
-do_tcpip_cancel_forward(struct global_request *s UNUSED, 
-			struct channel_table *table,
-			uint32_t type UNUSED,
-			int want_reply UNUSED,
-			struct simple_buffer *args,
-			struct command_continuation *c,
-			struct exception_handler *e)
-{
-  uint32_t bind_host_length;
-  const uint8_t *bind_host;
-  uint32_t bind_port;
-  
-  if (parse_string(args, &bind_host_length, &bind_host) &&
-      parse_uint32(args, &bind_port) &&
-      parse_eod(args))
-    {
-      /* FIXME: Using null_ok == 0 is not quite right. If the
-       * tcpip_forward_hook doesn't return immediately, and we receive
-       * a cancel request before the forwarding is setup (which should
-       * be ok, if the forwarding was requested with want_reply == 0),
-       * cancelling fails and the client has to try again later. */
-
-      struct local_port *port
-	= remove_forward(&table->local_ports, 0,
-			 bind_host_length,
-			 bind_host,
-			 bind_port);
-
-      if (port)
-        {
-	  assert(port->socket);
-	  verbose("Cancelling a requested tcpip-forward.\n");
-
-	  close_fd(port->socket);
-	  port->socket = NULL;
-
-	  COMMAND_RETURN(c, NULL);
-	  return;
-	}
-      else
-	{      
-	  static const struct exception notfound = 
-	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "Could not find tcpip-forward to cancel");
-	  verbose("Could not find tcpip-forward to cancel\n");
-
-	  EXCEPTION_RAISE(e, &notfound);
-	  return;
-	}
-    }
-  else
-    {
-      werror("Incorrectly formatted cancel-tcpip-forward request\n");
-      PROTOCOL_ERROR(table->e, "Invalid cancel-tcpip-forward message.");
-    }
-}
-
-struct global_request tcpip_cancel_forward =
-{ STATIC_HEADER, do_tcpip_cancel_forward }; 
 
 
 /* Remote forwarding */
@@ -547,3 +281,4 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 
 struct channel_open channel_open_forwarded_tcpip =
 { STATIC_HEADER, do_channel_open_forwarded_tcpip};
+#endif

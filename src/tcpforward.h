@@ -33,33 +33,25 @@
 #include "tcpforward.h.x"
 #undef GABA_DECLARE
 
-/* FIXME: Rename? */
 struct command *
-forward_local_port(struct address_info *local,
-		   struct address_info *target);
+tcpforward_direct_tcpip(struct address_info *local,
+			struct address_info *target);
 
 /* GABA:
    (class
      (name forwarded_port)
      (vars
-       ; this could store the type of this forward
-       ; tcp, udp etc. Or we could invent relevant methods
-       ; and subclasses.
-       ; (type . int)
-       
-       (listen object address_info)))
+       ; The key we use for looking up the port
+       (address object address_info)))
 */
-#if 0
 
-/* GABA:
-   (class
-     (name local_port)
-     (super forwarded_port)
-     (vars
-       ; socket == NULL means that we are setting up a forward for this port,
-       ; but are not done yet.
-       (socket object lsh_fd)))
-*/
+struct forwarded_port *
+tcpforward_lookup(struct object_queue *q,
+		  uint32_t length, const uint8_t *ip, uint32_t port);
+
+int
+tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port);
+
 
 /* Used by the client to keep track of remotely forwarded ports */
 /* GABA:
@@ -72,6 +64,7 @@ forward_local_port(struct address_info *local,
        (callback object command)))
 */
 
+#if 0
 struct remote_port *
 make_remote_port(struct address_info *listen,
 		 struct command *callback);
@@ -83,9 +76,15 @@ extern struct channel_open channel_open_forwarded_tcpip;
 
 struct global_request *
 make_tcpip_forward_request(struct command *callback);
+#endif
 
-extern struct global_request tcpip_cancel_forward;
+extern struct global_request
+tcpip_forward_handler;
 
+extern struct global_request
+tcpip_cancel_forward_handler;
+
+#if 0
 struct command *
 make_open_tcpip_command(int type,
 			struct address_info *port,
