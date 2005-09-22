@@ -42,6 +42,7 @@
 #include "server_session.h"
 #include "service.h"
 #include "ssh.h"
+#include "tcpforward.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -252,6 +253,12 @@ make_connection(void)
 			 ATOM_EXEC, &exec_request_handler,
 			 /* ATOM_PTY_REQ, &pty_request_handler, */
 			 /* ATOM_X11_REQ, &x11_request_handler, */ -1))->super);
+
+  /* FIXME: Make tcpip forwarding optional */
+  ALIST_SET(self->super.global_requests, ATOM_TCPIP_FORWARD,
+	    &tcpip_forward_handler.super);
+  ALIST_SET(self->super.global_requests, ATOM_CANCEL_TCPIP_FORWARD,
+	    &tcpip_cancel_forward_handler.super);
 
   return self;
 }
