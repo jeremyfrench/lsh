@@ -1188,7 +1188,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification `%s'.", arg);
 
-	client_add_action(options, forward_local_port
+	client_add_action(options, tcpforward_direct_tcpip
 			  (make_address_info((options->with_remote_peers
 					      ? NULL
 					      : ssh_format("%lz", "127.0.0.1")),
