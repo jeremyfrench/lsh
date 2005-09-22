@@ -92,9 +92,11 @@ enum {
        
        (max_channels . uint32_t) ; Max number of channels allowed 
 
-       ; Forwarded TCP ports. FIXME: Do we really need two of them?
-       (local_ports struct object_queue)
-       (remote_ports struct object_queue)
+       ; Forwarded TCP ports. On the server side, it's ports we listen
+       ; on. On the client side, it's remote ports for which we have
+       ; requested forwarding, and expect to get receive CHANNEL_OPEN
+       ; forwarded-tcpip requests on.       
+       (forwarded_ports struct object_queue)
 
        ; Used if we're currently forwarding X11. To support several
        ; screens at the same time, this should be replaced with a
