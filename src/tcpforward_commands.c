@@ -43,9 +43,6 @@
 
 #define TCPIP_WINDOW_SIZE 10000
 
-/* FIXME: Should be static */
-struct command_3 open_direct_tcpip_command;
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip_command.super.super)
 
 #if 0
 /* FIXME: Should be static */
@@ -77,57 +74,6 @@ struct command make_tcpip_forward_handler;
 
 #include "tcpforward_commands.c.x"
 
-/* (open_direct_tcpip target connection listen_value) */
-DEFINE_COMMAND3(open_direct_tcpip_command)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct lsh_object *a3,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST(address_info, target, a1);
-  CAST_SUBTYPE(ssh_connection, connection, a2);
-  CAST(listen_value, lv, a3);
-
-  struct channel_forward *channel;
-
-  channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
-  
-  if (!channel_open_new_type(connection, &channel->super, ATOM_DIRECT_TCPIP,
-			     "%S%i%S%i",
-			     target->ip, target->port,
-			     lv->peer->ip, lv->peer->port))
-			     
-    {
-      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
-					"Allocating a local channel number failed."));
-      KILL_RESOURCE(&channel->super.super);
-    }
-  else
-    {
-      assert(!channel->super.channel_open_context);
-      channel->super.channel_open_context = make_command_context(c, e);
-    }
-}
-
-/* GABA:
-   (expr
-     (name forward_local_port)
-     (params
-       (local object address_info)
-       (target object address_info))
-     (expr
-       (lambda (connection)
-         (connection_remember connection
-           (listen_tcp
-	     (lambda (peer)
-	       (open_direct_tcpip target connection peer))
-	       
-	     ; NOTE: The use of prog1 is needed to delay the
-	     ; listen_tcp call until the (otherwise ignored)
-	     ; connection argument is available.
-	     (prog1 local connection))))))
-*/
 
 /* Takes a socket as argument, and returns a tcpip channel. Used by
  * the party receiving a open-tcp request, when a channel to the
