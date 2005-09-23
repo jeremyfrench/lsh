@@ -385,15 +385,15 @@ AH_BOTTOM(
 char *alloca ();
 #   endif
 #  endif
+/* Needed for alloca on windows */
+#  if HAVE_MALLOC_H
+#   include <malloc.h>
+#  endif
 # endif
 #else /* defined __GNUC__ */
 # if HAVE_ALLOCA_H
 #  include <alloca.h>
 # endif
-#endif
-/* Needed for alloca on windows */
-#if HAVE_MALLOC_H
-# include <malloc.h>
 #endif
 ])])
 
