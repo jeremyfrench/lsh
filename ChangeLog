@@ -1,7 +1,8 @@
 2005-09-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_FUNC_ALLOCA): Moved inclucion of malloc.h and
-	check of HAVE_MALLOC_H inside #ifndef __GNUC__.
+	check of HAVE_MALLOC_H inside #ifndef __GNUC__. On FreeBSD 4.9,
+	malloc.h exists but generates obsoleteness warnings when used.
 
 2005-09-07  Niels Möller  <niels@s3.kth.se>
 
