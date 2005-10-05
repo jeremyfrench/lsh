@@ -5,6 +5,8 @@
 @settitle lsh
 @c %**end of header
 
+@documentencoding ISO-8859-1
+
 @dircategory GNU Packages
 @direntry
 * LSH: (lsh).           Secure Shell and related utilities.
