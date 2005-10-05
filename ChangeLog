@@ -1,3 +1,7 @@
+2005-10-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo: Use @documentencoding ISO-8859-1.
+
 2005-09-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_FUNC_ALLOCA): Moved inclucion of malloc.h and
