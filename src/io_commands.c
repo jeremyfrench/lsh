@@ -34,6 +34,7 @@
 #include "io_commands.h"
 
 #include "command.h"
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -126,9 +127,7 @@ DEFINE_COMMAND2(listen_tcp_command)
   int yes = 1;
   int fd;
 
-  /* FIXME: Use something simpler than address_info2sockaddr, when we
-     want to handle numerical addresses only. */
-  addr = address_info2sockaddr(&addr_length, a, NULL, 0);
+  addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
   if (!addr)
     {
       EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
@@ -136,7 +135,7 @@ DEFINE_COMMAND2(listen_tcp_command)
     }
 
   fd = socket(addr->sa_family, SOCK_STREAM, 0);
-  
+
   if (fd < 0)
     {
       EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "socket failed"));
