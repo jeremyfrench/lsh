@@ -65,9 +65,21 @@
 /* Information shared by several connections */
 /* GABA:
    (class
-     (name configuration)
+     (name lshd_configuration)
      (super transport_context)
      (vars
+       ; Command line options
+       (algorithms object algorithms_options)
+       (port . "char *")
+       (hostkey . "char *")
+
+       (daemonic . int)
+       (background . int)
+       (corefile . int)
+       (pid_file . "const char *")
+       ; -1 means use pid file iff we're in daemonic mode
+       (use_pid_file . int)
+
        (keys object alist)
        ; For now, a list { name, program, name, program, NULL }       
        (services . "const char **")))
@@ -170,7 +182,7 @@ lshd_service_request_handler(struct transport_forward *self,
       && parse_string(&buffer, &name_length, &name)
       && parse_eod(&buffer))
     {
-      CAST(configuration, config, self->super.ctx);
+      CAST(lshd_configuration, config, self->super.ctx);
       const char *program = lookup_service(config->services,
 					   name_length, name);
 
@@ -277,7 +289,7 @@ lshd_packet_handler(struct transport_connection *connection,
      (name lshd_port)
      (super resource)
      (vars
-       (config object configuration)
+       (config object lshd_configuration)
        (fd . int)))
 */
 
@@ -294,7 +306,7 @@ kill_port(struct resource *s)
 };
 
 static struct lshd_port *
-make_lshd_port(struct configuration *config, int fd)
+make_lshd_port(struct lshd_configuration *config, int fd)
 {
   NEW(lshd_port, self);
   init_resource(&self->super, kill_port);
@@ -341,7 +353,7 @@ lshd_port_accept(oop_source *source UNUSED,
    services. At the UI, given interfaces can include explicit port,
    and the -p options gives one or more default ports. */
 static int
-open_ports(struct configuration *config, struct resource_list *resources,
+open_ports(struct lshd_configuration *config, struct resource_list *resources,
 	   const char *portid)
 {
   struct sockaddr_in sin;
@@ -421,10 +433,10 @@ open_ports(struct configuration *config, struct resource_list *resources,
   return 1;
 }
 
-static struct configuration *
-make_configuration(const char *hostkey)
+static struct lshd_configuration *
+make_lshd_configuration(void)
 {
-  NEW(configuration, self);
+  NEW(lshd_configuration, self);
   static const char *services[3];
 
   services[0] = "ssh-userauth";
@@ -432,36 +444,27 @@ make_configuration(const char *hostkey)
   services[2] = NULL;
 
   self->super.is_server = 1;
-
   self->super.random = make_system_random();
-
-  if (!self->super.random)
-    {
-      werror("No randomness generator available.\n");
-      exit(EXIT_FAILURE);
-    }
-
   self->super.algorithms = all_symmetric_algorithms();
 
+  self->algorithms = make_algorithms_options(self->super.algorithms);
   self->keys = make_alist(0, -1);
-  if (!read_host_key(hostkey,
-		     all_signature_algorithms(self->super.random),
-		     self->keys))
-    werror("No host key.\n");
 
-  ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-	    &make_server_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
-				     self->keys)->super);
+  /* Default behaviour is to lookup the "ssh" service, and fall back
+   * to port 22 if that fails. */
+  self->port = NULL;
 
-  self->super.kexinit
-    = make_simple_kexinit(
-      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
-      filter_algorithms(self->keys, default_hostkey_algorithms()),
-      default_crypto_algorithms(self->super.algorithms),
-      default_mac_algorithms(self->super.algorithms),
-      default_compression_algorithms(self->super.algorithms),
-      make_int_list(0, -1));
+  /* FIXME: This should use sysconfdir */  
+  self->hostkey = "/etc/lsh_host_key";
 
+  self->daemonic = 0;
+  self->background = 0;
+
+  /* FIXME: Make the default a configure time option? */
+  self->pid_file = "/var/run/lshd.pid";
+  self->use_pid_file = -1;
+  self->corefile = 0;
+  
   self->services = services;
 
   return self;
@@ -525,44 +528,6 @@ make_sighup_close_callback(struct resource *resource)
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name lshd_options)
-     (vars
-       (port . "char *")
-       (hostkey . "char *")
-
-       (daemonic . int)
-       (background . int)
-       (corefile . int)
-       (pid_file . "const char *")
-       ; -1 means use pid file iff we're in daemonic mode
-       (use_pid_file . int)))
-*/
-
-static struct lshd_options *
-make_lshd_options(void)
-{
-  NEW(lshd_options, self);
-
-  /* Default behaviour is to lookup the "ssh" service, and fall back
-   * to port 22 if that fails. */
-  self->port = NULL;
-
-  /* FIXME: This should use sysconfdir */  
-  self->hostkey = "/etc/lsh_host_key";
-
-  self->daemonic = 0;
-  self->background = 0;
-
-  /* FIXME: Make the default a configure time option? */
-  self->pid_file = "/var/run/lshd.pid";
-  self->use_pid_file = -1;
-  self->corefile = 0;
-  
-  return self;
-}
-
 /* Option parsing */
 
 const char *argp_program_version
@@ -604,6 +569,7 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
+  { &algorithms_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -611,20 +577,50 @@ main_argp_children[] =
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
 {
-  CAST(lshd_options, self, state->input);
+  CAST(lshd_configuration, self, state->input);
 
   switch(key)
     {
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = self->algorithms;
+      state->child_inputs[1] = NULL;
       break;
 
     case ARGP_KEY_END:
       if (self->daemonic && self->background)
 	argp_error(state, "The options --background and --daemonic are "
 		   "mutually exclusive.");
+
+      if (!read_host_key(self->hostkey,
+			 all_signature_algorithms(self->super.random),
+			 self->keys))
+	argp_failure(state, EXIT_FAILURE, 0, "No host key.");
+
+      ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
+		&make_server_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
+					 self->keys)->super);
+
+      {
+	struct int_list *hostkey_algorithms
+	  = filter_algorithms(self->keys, self->algorithms->hostkey_algorithms);
+
+	if (!hostkey_algorithms)
+	  {
+	    werror("No hostkey algorithms advertised.\n");
+	    hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
+	  }
+	  
+	self->super.kexinit
+	  = make_simple_kexinit(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
+				hostkey_algorithms,
+				self->algorithms->crypto_algorithms,
+				self->algorithms->mac_algorithms,
+				self->algorithms->compression_algorithms,
+				make_int_list(0, -1));
+
+      }
       break;
 
     case OPT_INTERFACE:
@@ -677,19 +673,26 @@ main_argp =
 int
 main(int argc, char **argv)
 {
-  struct lshd_options *options = make_lshd_options();
-  struct configuration *configuration;
+  struct lshd_configuration *configuration = make_lshd_configuration();
   struct resource_list *resources = make_resource_list();;
 
-  argp_parse(&main_argp, argc, argv, 0, NULL, options);
+  argp_parse(&main_argp, argc, argv, 0, NULL, configuration);
+
+  /* Put this check after argument parsing, to make the --help option
+     work. */
+  if (!configuration->super.random)
+    {
+      werror("No randomness generator available.\n");
+      exit(EXIT_FAILURE);
+    }
   
-  if (!options->corefile && !daemon_disable_core())
+  if (!configuration->corefile && !daemon_disable_core())
     {
       werror("Disabling of core dumps failed.\n");
       return EXIT_FAILURE;
     }
 
-  if (options->daemonic)
+  if (configuration->daemonic)
     {
       werror("--daemonic not yet implemented.\n");
       return EXIT_FAILURE;
@@ -697,12 +700,10 @@ main(int argc, char **argv)
 
   io_init();
   
-  configuration = make_configuration(options->hostkey);
-  
-  if (!open_ports(configuration, resources, options->port))
+  if (!open_ports(configuration, resources, configuration->port))
     return EXIT_FAILURE;
 
-  if (options->background)
+  if (configuration->background)
     {
       /* Just put process into the background. */
       switch (fork())
@@ -725,20 +726,17 @@ main(int argc, char **argv)
 	}
     }
   
-  if (options->use_pid_file)
+  if (configuration->use_pid_file)
     {
-      if (daemon_pidfile(options->pid_file))
+      if (daemon_pidfile(configuration->pid_file))
 	remember_resource(resources, 
-			  make_pid_file_resource(options->pid_file));
+			  make_pid_file_resource(configuration->pid_file));
       else
 	{
 	  werror("lshd seems to be running already.\n");
 	  return EXIT_FAILURE;
 	}
     }
-
-  /* FIXME: We need a mechanism to exit when we have closed our ports
-     in response to SIGHUP, and all connections have died. */
 
   io_signal_handler(SIGHUP,
 		    make_sighup_close_callback(&resources->super));
