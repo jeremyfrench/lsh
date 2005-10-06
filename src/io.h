@@ -136,6 +136,9 @@ sockaddr2info(size_t addr_len,
 	      struct sockaddr *addr);
 
 struct sockaddr *
+io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port);
+
+struct sockaddr *
 address_info2sockaddr(socklen_t *length,
 		      struct address_info *a,
 		      const int *preference,

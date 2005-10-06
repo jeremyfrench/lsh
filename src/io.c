@@ -746,6 +746,72 @@ fd2info(struct lsh_fd *fd, int side)
 }
 #endif
 
+/* Creates a sockaddr. Only handles ip-addresses, no dns names. This
+   is a simplified version of address_info2sockaddr. */
+struct sockaddr *
+io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
+{
+  struct sockaddr *sa;
+  int res;
+
+  if (!ip)
+    {
+      werror("io_make_sockaddr: NULL ip address!\n");
+      return NULL;
+    }
+  if (port >= 0x1000)
+    {
+      werror("io_make_sockaddr: Invalid port %i.\n", port);
+      return NULL;
+    }
+
+#if WITH_IPV6
+  if (strchr(ip, ':'))
+    {
+      /* IPv6 */
+      struct sockaddr_in6 *sin6;
+      NEW_SPACE(sin6);
+      
+      sin6->sin6_family = AF_INET6;
+      sin6->sin6_port = htons(port);
+      res = inet_pton(AF_INET6, ip, &sin6->sin6_addr);
+
+      *lenp = sizeof(*sin6);
+      sa = (struct sockaddr *) &sin6;
+    }
+  else
+#endif
+    {
+      /* IPv4 */
+      struct sockaddr_in *sin;
+      NEW_SPACE(sin);
+      
+      sin->sin_family = AF_INET;
+      sin->sin_port = htons(port);
+      res = inet_pton(AF_INET, ip, &sin->sin_addr);
+
+      *lenp = sizeof(*sin);
+      sa = (struct sockaddr *) &sin;
+    }
+  if (res < 0)
+    {
+      werror("inet_pton failed for address type %i: %e.\n",
+	     sa->sa_family, errno);
+
+      lsh_space_free(sa);
+      return NULL;
+    }
+  else if (!res)
+    {
+      werror("Invalid address for address type %i.\n",
+	     sa->sa_family);
+      lsh_space_free(sa);
+      return NULL;
+    }
+
+  return sa;
+}
+
 #if HAVE_GETADDRINFO
 static struct addrinfo *
 choose_address(struct addrinfo *list,
