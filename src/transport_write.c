@@ -36,6 +36,7 @@
 #include "format.h"
 #include "lsh_string.h"
 #include "ssh.h"
+#include "werror.h"
 #include "xalloc.h"
 
 /* When we have to send a small (less than super.threshold) amount of
