@@ -86,6 +86,12 @@ need_tsocks () {
     fi
 }
 
+need_lshg () {
+    if [ -x ../lshg ] ; then : ; else
+	test_skip
+    fi
+}
+
 at_exit () {
   ATEXIT="$ATEXIT ; $1"
 }
