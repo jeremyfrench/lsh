@@ -54,18 +54,6 @@ tcpforward_lookup(struct object_queue *q,
 int
 tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port);
 
-
-/* Used by the client to keep track of remotely forwarded ports */
-/* GABA:
-   (class
-     (name remote_port)
-     (super forwarded_port)
-     (vars
-       ; Invoked when a forwarded_tcpip request is received.
-       ; Called with the struct address_info *peer as argument.
-       (callback object command)))
-*/
-
 struct resource *
 tcpforward_connect(struct address_info *a,
 		   struct command_continuation *c,
