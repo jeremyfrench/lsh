@@ -220,8 +220,9 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
   switch(event)
     {
     case CHANNEL_EVENT_CONFIRM:
-      /* Server never opens a session channel. */
-      fatal("Internal error.\n");
+      /* Do nothing; i/o isn't started until after a child process has
+	 been spawned. */
+      break;
 
     case CHANNEL_EVENT_EOF:
       if (session->pty)
