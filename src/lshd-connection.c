@@ -255,6 +255,8 @@ make_connection(void)
 			 /* ATOM_X11_REQ, &x11_request_handler, */ -1))->super);
 
   /* FIXME: Make tcpip forwarding optional */
+  ALIST_SET(self->super.channel_types, ATOM_DIRECT_TCPIP, &channel_open_direct_tcpip.super);
+  
   ALIST_SET(self->super.global_requests, ATOM_TCPIP_FORWARD,
 	    &tcpip_forward_handler.super);
   ALIST_SET(self->super.global_requests, ATOM_CANCEL_TCPIP_FORWARD,
