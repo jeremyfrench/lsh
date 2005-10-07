@@ -34,6 +34,7 @@
 #include "channel_forward.h"
 #include "io_commands.h"
 #include "ssh.h"
+#include "werror.h"
 
 /* Forward declarations */
 /* FIXME: Should be static */
@@ -41,8 +42,6 @@ struct command_3 open_direct_tcpip_command;
 #define OPEN_DIRECT_TCPIP (&open_direct_tcpip_command.super.super)
 
 #include "client_tcpforward.c.x"
-
-#define TCPIP_WINDOW_SIZE 10000
 
 
 /* Local forwarding using direct-tcpip */
@@ -61,6 +60,9 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
 
   struct channel_forward *channel;
 
+  trace("open_direct_tcpip_command\n");
+
+  io_register_fd(lv->fd, "forwarded socket");
   channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
   
   if (!channel_open_new_type(connection, &channel->super, ATOM_DIRECT_TCPIP,
@@ -82,7 +84,7 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
 
 /* GABA:
    (expr
-     (name tcpforward_direct_tcpip)
+     (name forward_local_port)
      (params
        (local object address_info)
        (target object address_info))
