@@ -1,5 +1,24 @@
 2005-10-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/tcpforward.h (remote_port): Removed class. Replaced by new
+	version in client_tcpforward.c.
+
+	* src/server_tcpforward.c (do_channel_open_direct_tcpip): Fixed
+	messages.
+
+	* src/server.h (make_offer_service): Deleted prototype.
+
+	* src/exception.h: Deleted old definition of exception type
+	constants.
+
+	* src/client_tcpforward.c (make_remote_port): New function.
+	(do_channel_open_forwarded_tcpip): New function.
+	(class remote_port): New class. Both replace older versions in
+	tcpforward.c
+
+	* src/channel_commands.h (class channel_open_command): Deleted class.
+	* src/channel_commands.c (do_channel_open_command): Deleted function.
+
 	* src/testsuite/functions.sh (need_lshg): New function.
 	* src/testsuite/lshg-1-test: Skip test if lshg isn't built.
 	* src/testsuite/lshg-cat-2-test: Likewise.
