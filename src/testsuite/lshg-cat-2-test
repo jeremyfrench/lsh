@@ -6,6 +6,8 @@ fi
 
 . $srcdir/functions.sh
 
+need_lshg
+
 echo lshg, cat 2 test
 
 rm -f test.out1
