@@ -1,3 +1,102 @@
+2005-10-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh (need_lshg): New function.
+	* src/testsuite/lshg-1-test: Skip test if lshg isn't built.
+	* src/testsuite/lshg-cat-2-test: Likewise.
+	* src/testsuite/lshg-cat-test: Likewise.
+	* src/testsuite/lshg-tcpip-local-test: Likewise.
+
+	* src/client.c (client_parse_forward_arg): Use io_lookup_address.
+	(client_argp_parser): Use forward_local_port (renamed).
+
+	* src/tcpforward.c (class tcpforward_connect_state): New class.
+	(tcpforward_connect_done, tcpforward_connect_error) 
+	(tcpforward_connect): New functions, using the new io_connect
+	interface.
+
+	* src/tcpforward.h (TCPIP_WINDOW_SIZE): Moved constant definition
+	here.
+
+	* src/client_tcpforward.c (open_direct_tcpip_command): Call
+	io_register_fd. Added trace message.
+	(expr forward_local_port): Reverted earlier renaming, was called
+	tcpforward_direct_tcpip.
+
+	* src/server_tcpforward.c (open_forwarded_tcpip_command): Call
+	io_register_fd.
+	(do_channel_open_direct_tcpip): New function, replacing the old
+	one in tcpforward.c. Uses tcpforward_connect.
+
+	* src/server_session.c (do_server_session_event): Ignore
+	CHANNEL_EVENT_CONFIRM.
+
+	* src/lshd-connection.c (make_connection): Enabled direct-tcpip.
+
+	* src/io.c (kill_io_connect_state, init_io_connect_state) 
+	(oop_io_connect): New functions.
+	(io_connect): New different interface, using class
+	io_connect_state.
+	(get_portno): Changed return type to unsigned.
+	(io_make_sockaddr): Bug fixes. Now it seems to actually work.
+	(io_lookup_address): New function.
+
+	* src/io.h (class io_connect_state): New class.
+
+	* src/channel_forward.c (init_channel_forward): Don't call
+	io_register_fd; it's now the responsibility of the caller.
+
+	* src/channel.c (do_channel_open_continue): Generate a
+	CHANNEL_EVENT_CONFIRM.
+
+2005-10-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c (listen_tcp_command): Use io_make_sockaddr.
+
+	* src/io.c (io_make_sockaddr): New function.
+
+	* src/transport_write.c: Include werror.h, needed for trace.
+
+	* src/lshd.c (class lshd_configuration): Renamed, was
+	configuration. Merged attributes from class lshd_options.
+	(class lshd_options): Deleted class.
+	(main_argp_children): Use algorithms_argp as a child parser.
+	(main_argp_parser): When handling ARGP_KEY_END, read host key, and
+	set up kexinit according to the algorithm options.
+
+2005-09-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added client_tcpforward.c
+	and server_tcpforward.c. Removed tcpforward_commands.c.
+
+	* src/tcpforward_commands.c: Code related to direct-tcpip moved to
+	client_tcpforward.c.
+
+	* src/tcpforward.c: Code related to tcpip-forward moved to
+	server_tcpforward.c.
+	(tcpforward_lookup): Renamed, was lookup_forward, and made
+	non-static.
+	(tcpforward_remove_port): New function.
+
+	* src/server_tcpforward.c: New file. Moved handling of remote port
+	forwarding here, including open_forwarded_tcpip_command and
+	tcpip_forward_handler. 
+
+	* src/lshd-connection.c (make_connection): Enable global request
+	handlers for tcpip-forward and cancel-tcpip-forward.
+
+	* src/connection.c (init_ssh_connection): Initialize
+	connection->forwarded_ports. 
+
+	* src/connection.h (class ssh_connection): Replaced remote_ports
+	and local_ports with a single queue forwarded_ports..
+
+	* src/client.c (client_argp_parser): Use tcpforward_direct_tcpip,
+	not forward_local_port.
+
+	* src/client_tcpforward.c: New file. Moved
+	open_direct_tcpip_command and tcpforward_direct_tcpip. The latter
+	used to be called forward_local_port.
+
 2005-09-21  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/command.h (class command_2): Changed invoke to be a plain
