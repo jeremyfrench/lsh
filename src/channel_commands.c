@@ -39,51 +39,6 @@
 
 #include "channel_commands.c.x"
 
-#if 0
-void
-do_channel_open_command(struct command *s,
-			struct lsh_object *x,
-			struct command_continuation *c,
-			struct exception_handler *e)
-{
-  CAST_SUBTYPE(channel_open_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, x);
-  struct lsh_string *request;
-  struct ssh_channel *channel;
-
-  int index = ssh_connection_alloc_channel(connection);
-
-  if (index < 0)
-    {
-      /* We have run out of channel numbers. */
-      werror("do_channel_open_command: alloc_channel failed\n");
-      EXCEPTION_RAISE(e,
-		      make_channel_open_exception(
-			SSH_OPEN_RESOURCE_SHORTAGE,
-			"Allocating a local channel number failed."));
-
-      return;
-    }
-
-  channel = NEW_CHANNEL(self, connection, index, &request);
-
-  if (!channel)
-    {
-      werror("do_channel_open_command: NEW_CHANNEL failed\n");
-      ssh_connection_dealloc_channel(connection, index);
-    }
-  else
-    {
-      /* FIXME: Set up channel->connection here? If we do that,
-       * perhaps we need not pass the connection to NEW_CHANNEL. */
-      channel->channel_open_context = make_command_context(c, e);
-      register_channel(connection, index, channel, 0);
-
-      SSH_CONNECTION_WRITE(connection, request);
-    }
-}
-#endif
-
 void
 do_channel_request_command(struct command *s,
 			   struct lsh_object *x,

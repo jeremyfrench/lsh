@@ -30,30 +30,6 @@
 #include "channel_commands.h.x"
 #undef GABA_DECLARE
 
-/* Command to open a new channel. Takes a connection as argument
- * returns a new channel. Raises an EXC_CHANNEL_OPEN exception on
- * error. */
-
-/* GABA:
-   (class
-     (name channel_open_command)
-     (super command)
-     (vars
-       ; This method should return a partially filled in channel,
-       ; and create a channel open request by calling
-       ; prepare_channel_open.
-       (new_channel method "struct ssh_channel *"
-                    "struct ssh_connection *table"
-                    "uint32_t local_channel_number"
-                    "struct lsh_string **request")))
-*/
-
-#define NEW_CHANNEL(s, c, n, r) ((s)->new_channel((s), (c), (n), (r)))
-
-void do_channel_open_command(struct command *s,
-			    struct lsh_object *x,
-			    struct command_continuation *c,
-			    struct exception_handler *e);
 
 /* Takes a channel as argument, and returns the same channel. Raises
  * an exception on error. FIXME: Which exception??? */
