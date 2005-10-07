@@ -197,7 +197,7 @@ io_register_fd(int fd, const char *label)
   global_nfiles++;
 }
 
-/* Closes an fd registered as above. Stdio fiel descriptors are
+/* Closes an fd registered as above. Stdio file descriptors are
    treated specially. */
 void
 io_close_fd(int fd)
@@ -386,6 +386,89 @@ make_listen_value(int fd,
   self->peer = peer;
 
   return self;
+}
+
+static void
+kill_io_connect_state(struct resource *s)
+{
+  CAST_SUBTYPE(io_connect_state, self, s);
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      if (self->fd >= 0)
+	{
+	  io_close_fd(self->fd);
+	  self->fd = 0;
+	}
+    }
+}
+
+void
+init_io_connect_state(struct io_connect_state *self,
+		      void (*done)(struct io_connect_state *self, int fd),
+		      void (*error)(struct io_connect_state *self, int err))
+{
+  init_resource(&self->super, kill_io_connect_state);
+  self->fd = -1;
+  self->done = done;
+  self->error = error;
+}
+
+static void *
+oop_io_connect(oop_source *source UNUSED,
+	       int fd, oop_event event, void *state)
+{
+  CAST_SUBTYPE(io_connect_state, self, (struct lsh_object *) state);
+  int socket_error = 0;
+  socklen_t len = sizeof(socket_error);
+
+  assert(self->fd == fd);
+  assert(event == OOP_WRITE);
+
+  global_oop_source->cancel_fd(global_oop_source, fd, OOP_WRITE);
+
+  /* Check if the connection was successful */
+  if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *) &socket_error, &len) < 0
+      || socket_error)
+    {
+      self->error(self, socket_error);
+    }
+  else
+    {
+      self->fd = -1;
+      self->done(self, fd);
+    }
+
+  KILL_RESOURCE(&self->super);
+  return OOP_CONTINUE;
+}
+
+int
+io_connect(struct io_connect_state *self,
+	   socklen_t addr_length,
+	   struct sockaddr *addr)
+{
+  assert(self->fd < 0);
+  self->fd = socket(addr->sa_family, SOCK_STREAM, 0);
+
+  if (self->fd < 0)
+    return 0;
+
+  io_register_fd(self->fd, "connect fd");
+  
+  if (connect(self->fd, addr, addr_length) < 0 && errno != EINPROGRESS)
+    {
+      int saved_errno = errno;
+
+      KILL_RESOURCE(&self->super);
+      errno = saved_errno;
+
+      return 0;
+    }
+
+  global_oop_source->on_fd(global_oop_source, self->fd, OOP_WRITE, oop_io_connect, self);
+  gc_global(&self->super);
+  return 1;
 }
 
 #if 0
@@ -632,7 +715,8 @@ io_read_file_raw(int fd, uint32_t guess)
  * Returns the port number in _host_ byte order, or 0 if lookup
  * fails. */
 
-int get_portno(const char *service, const char *protocol)
+unsigned
+get_portno(const char *service, const char *protocol)
 {
   if (service == NULL)
     return 0;
@@ -759,7 +843,7 @@ io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
       werror("io_make_sockaddr: NULL ip address!\n");
       return NULL;
     }
-  if (port >= 0x1000)
+  if (port >= 0x10000)
     {
       werror("io_make_sockaddr: Invalid port %i.\n", port);
       return NULL;
@@ -777,7 +861,7 @@ io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
       res = inet_pton(AF_INET6, ip, &sin6->sin6_addr);
 
       *lenp = sizeof(*sin6);
-      sa = (struct sockaddr *) &sin6;
+      sa = (struct sockaddr *) sin6;
     }
   else
 #endif
@@ -791,7 +875,7 @@ io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
       res = inet_pton(AF_INET, ip, &sin->sin_addr);
 
       *lenp = sizeof(*sin);
-      sa = (struct sockaddr *) &sin;
+      sa = (struct sockaddr *) sin;
     }
   if (res < 0)
     {
@@ -812,6 +896,107 @@ io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
   return sa;
 }
 
+/* Translating a dns name to an IP address. We don't currently support
+   DNS names in tcpip forwarding requests, so all names have to be
+   translated by the client. */
+
+struct address_info *
+io_lookup_address(const char *ip, const char *service)
+{
+  struct address_info *addr;
+  const char *last_dot;
+  
+  assert(ip);
+
+  if (strchr(ip, ':'))
+    {
+      /* Raw IPv6 address */
+      unsigned port;
+
+    raw_address:
+
+      port = get_portno(service, "tcp");
+      if (port > 0)
+	return make_address_info(make_string(ip), port);
+      else return 0;
+    }
+
+  /* Difference between a dns name and an ip address is that the ip
+     address is dotted, and the final component starts with a
+     digit. */
+  last_dot = strrchr(ip, '.');
+  if (last_dot && last_dot[1] >= '0' && last_dot[1] <= '9')
+    /* Raw IPv4 address */
+    goto raw_address;
+
+  /* So, it looks like a domain name. Look it up. */
+#if HAVE_GETADDRINFO
+  {
+    struct addrinfo hints;
+    struct addrinfo *list;
+    struct addrinfo *p;
+    int err;
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    err = getaddrinfo(ip, service, &hints, &list);
+    if (err)
+      {
+      	werror("io_address_lookup: getaddrinfo failed (err = %i): %z\n",
+	      err, gai_strerror(err));
+	return 0;
+      }
+
+    addr = NULL;
+    
+    /* We pick only one address, and prefer IPv4 */
+    for (p = list; p; p = p->ai_next)
+      {
+	if (p->ai_family == AF_INET)
+	  {
+	    struct sockaddr_in *sin = (struct sockaddr_in *) p->ai_addr;
+	    assert(p->ai_addrlen == sizeof(*sin));
+	    
+	    addr = make_address_info(lsh_string_ntop(AF_INET, INET_ADDRSTRLEN,
+						     &sin->sin_addr),
+				     ntohs(sin->sin_port));
+
+	    break;
+	  }
+      }
+#if WITH_IPV6
+    if (!addr)
+      for (p = list; p; p = p->ai_next)
+      {
+	if (p->ai_family == AF_INET6)
+	  {
+	    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) p->ai_addr;
+	    assert(p->ai_addrlen == sizeof(*sin6));
+	    
+	    addr = make_address_info(lsh_string_ntop(AF_INET6, INET6_ADDRSTRLEN,
+						     &sin6->sin6_addr),
+				     ntohs(sin6->sin6_port));
+
+	    break;
+	  }
+      }
+#endif
+    freeaddrinfo(list);
+    
+    if (!addr)
+      {
+	werror("No internet address found.\n");
+	return NULL;
+      }
+
+    return addr;
+  }
+#else
+#error At the moment, getaddrinfo is required
+#endif
+}
 #if HAVE_GETADDRINFO
 static struct addrinfo *
 choose_address(struct addrinfo *list,
