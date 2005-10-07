@@ -33,9 +33,11 @@
 #include "tcpforward.h.x"
 #undef GABA_DECLARE
 
+#define TCPIP_WINDOW_SIZE 10000
+
 struct command *
-tcpforward_direct_tcpip(struct address_info *local,
-			struct address_info *target);
+forward_local_port(struct address_info *local,
+		   struct address_info *target);
 
 /* GABA:
    (class
@@ -63,6 +65,13 @@ tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port);
        ; Called with the struct address_info *peer as argument.
        (callback object command)))
 */
+
+struct resource *
+tcpforward_connect(struct address_info *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e);
+
+extern struct channel_open channel_open_direct_tcpip;
 
 #if 0
 struct remote_port *
