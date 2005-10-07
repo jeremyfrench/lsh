@@ -121,12 +121,15 @@ io_signal_handler(int signum,
 struct resource *
 io_callout(struct lsh_callback *action, unsigned seconds);
 
-int
+unsigned
 get_portno(const char *service, const char *protocol);
 
 struct address_info *
 make_address_info(struct lsh_string *host, 
 		  uint32_t port);
+
+struct address_info *
+io_lookup_address(const char *ip, const char *service);
 
 struct address_info *
 fd2info(struct lsh_fd *fd, int side);
@@ -162,6 +165,29 @@ io_read_file_raw(int fd, uint32_t guess);
 void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);
+
+
+/* GABA:
+   (class
+     (name io_connect_state)
+     (super resource)
+     (vars
+       (fd . int)
+       (done method void "int fd")
+       ; The argument is a socket failure value.
+       (error method void "int err")))
+*/
+
+void
+init_io_connect_state(struct io_connect_state *self,
+		      void (*done)(struct io_connect_state *self, int fd),
+		      void (*error)(struct io_connect_state *self, int err));
+
+int
+io_connect(struct io_connect_state *self,
+	   socklen_t addr_length,
+	   struct sockaddr *addr);
+
 
 #if 0
 /* ;; GABA:
