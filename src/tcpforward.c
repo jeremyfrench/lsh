@@ -92,6 +92,69 @@ tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port)
   return 0;
 }
 
+/* GABA:
+   (class
+     (name tcpforward_connect_state)
+     (super io_connect_state)
+     (vars
+       (c object command_continuation)
+       (e object exception_handler)))
+*/
+
+static void
+tcpforward_connect_done(struct io_connect_state *s, int fd)
+{
+  CAST(tcpforward_connect_state, self, s);
+
+  COMMAND_RETURN(self->c, make_channel_forward(fd, TCPIP_WINDOW_SIZE));
+}
+
+static void
+tcpforward_connect_error(struct io_connect_state *s, int error)
+{
+  CAST(tcpforward_connect_state, self, s);
+  
+  werror("Connection failed, socket error %i\n", error);
+  EXCEPTION_RAISE(self->e,
+		  make_exception(EXC_CHANNEL_OPEN, error, "Connection failed"));
+}
+
+struct resource *
+tcpforward_connect(struct address_info *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  struct sockaddr *addr;
+  socklen_t addr_length;
+
+  addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
+  if (!addr)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
+      return NULL;
+    }
+
+  {
+    NEW(tcpforward_connect_state, self);
+    init_io_connect_state(&self->super,
+			  tcpforward_connect_done,
+			  tcpforward_connect_error);
+    int res;
+    
+    self->c = c;
+    self->e = e;
+
+    res = io_connect(&self->super, addr_length, addr);
+    lsh_space_free(addr);
+
+    if (!res)
+      {
+	EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "io_connect failed"));
+	return NULL;
+      }
+    return &self->super.super;
+  }
+}
 
 #if 0
 /* Handle channel open requests */
