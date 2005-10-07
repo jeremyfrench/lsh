@@ -734,6 +734,8 @@ do_channel_open_continue(struct command_continuation *c,
 
   SSH_CONNECTION_WRITE(self->connection,
 		       format_open_confirmation(channel, ""));
+
+  CHANNEL_EVENT(channel, CHANNEL_EVENT_CONFIRM);  
 }
 
 static struct command_continuation *
