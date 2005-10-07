@@ -83,45 +83,6 @@ struct exception_handler name =					\
 static void							\
 do_##name
 
-/* Exception types. */
-#if 0
-/* FIXME: This is an inappropriate name, as this exception type is
- * used for all events that should result in a disconnect message. */
-
-/* Protocol errors */
-#define EXC_PROTOCOL 0x1000
-
-/* IO related errors */
-#define EXC_IO 0x2000
-#define EXC_IO_CONNECT 0x2001
-#define EXC_IO_BLOCKING_WRITE 0x2003
-#define EXC_IO_BLOCKING_READ 0x2004
-#define EXC_IO_READ 0x2005
-#define EXC_IO_WRITE 0x2006
-#define EXC_IO_OPEN_WRITE 0x2007
-#define EXC_IO_OPEN_READ 0x2008
-#define EXC_IO_LISTEN 0x2009
-#define EXC_IO_CLOSE 0x200A
-
-/* Services */
-#define EXC_SERVICE 0x8000
-#define EXC_GLOBAL_REQUEST 0x8001
-#define EXC_CHANNEL_REQUEST 0x8002
-
-/* Use subtypes for the different error codes? */
-#define EXC_CHANNEL_OPEN 0x8003
-
-/* DNS errors */
-#define EXC_RESOLVE 0x20001
-
-/* Pausing, used to temporarily stop reading packets on a connection. */
-#define EXC_PAUSE 0x100000
-
-#define EXC_PAUSE_READ 0x100001
-#define EXC_PAUSE_START_READ 0x100002
-
-#define EXC_ALL (~0)
-#endif
 
 extern struct exception_handler ignore_exception_handler;
 
