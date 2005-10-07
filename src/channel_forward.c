@@ -190,6 +190,7 @@ do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
 
 #define FORWARD_READ_BUFFER_SIZE 0x4000
 
+/* NOTE: It's the caller's responsibility to call io_register_fd. */
 void
 init_channel_forward(struct channel_forward *self,
 		     int socket, uint32_t initial_window)
@@ -207,10 +208,9 @@ init_channel_forward(struct channel_forward *self,
 
   init_channel_read_state(&self->read, socket, FORWARD_READ_BUFFER_SIZE);
   init_channel_write_state(&self->write, socket, initial_window);
-
-  io_register_fd(socket, "forwarded socket");
 }
 
+/* NOTE: It's the caller's responsibility to call io_register_fd. */
 struct channel_forward *
 make_channel_forward(int socket, uint32_t initial_window)
 {
