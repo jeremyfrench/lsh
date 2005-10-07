@@ -381,7 +381,7 @@ do_channel_open_direct_tcpip(struct channel_open *s UNUSED,
     {
       struct resource *r;
       
-      verbose("direct-tcp to %pS:%i.\n", dest_host, dest_port);
+      verbose("direct-tcpip to %pS:%i.\n", dest_host, dest_port);
 
       r = tcpforward_connect(make_address_info(dest_host, dest_port),
 			     c, e);
@@ -393,7 +393,7 @@ do_channel_open_direct_tcpip(struct channel_open *s UNUSED,
       lsh_string_free(dest_host);
       
       werror("do_channel_open_direct_tcpip: Invalid message!\n");
-      SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_OPEN direct-tcp message.");
+      SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_OPEN direct-tcpip message.");
     }
 }
 
