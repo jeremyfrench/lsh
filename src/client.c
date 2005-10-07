@@ -1025,14 +1025,12 @@ client_parse_forward_arg(char *arg,
 
   *listen_port = port;
 
-  port = strtol(second + 1, &end, 0);
-  if ( (end == second + 1) || (*end != '\0')
-       || (port < 0) || (port > 0xffff) )
-    return 0;
-
-  *target = make_address_info(ssh_format("%ls", second - first - 1, first + 1), port);
+  /* Terminate host part. */
+  second[0] = 0;
   
-  return 1;
+  *target = io_lookup_address(first + 1, second + 1);
+  
+  return *target != NULL;
 }
 
 static int
@@ -1188,7 +1186,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification `%s'.", arg);
 
-	client_add_action(options, tcpforward_direct_tcpip
+	client_add_action(options, forward_local_port
 			  (make_address_info((options->with_remote_peers
 					      ? NULL
 					      : ssh_format("%lz", "127.0.0.1")),
