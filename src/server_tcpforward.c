@@ -46,7 +46,8 @@ struct command_3 open_forwarded_tcpip_command;
 
 #include "server_tcpforward.c.x"
 
-#define TCPIP_WINDOW_SIZE 10000
+
+/* Handling of tcpip-forward */
 
 /* GABA:
    (class
@@ -106,6 +107,7 @@ DEFINE_COMMAND3(open_forwarded_tcpip_command)
 
   struct channel_forward *channel;
 
+  io_register_fd(lv->fd, "forwarded socket");
   channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
 
   if (!channel_open_new_type(connection, &channel->super, ATOM_FORWARDED_TCPIP,
@@ -353,3 +355,48 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
 
 struct global_request tcpip_cancel_forward_handler =
 { STATIC_HEADER, do_tcpip_cancel_forward };
+
+
+/* Handling of direct-tcpip */
+     
+static void
+do_channel_open_direct_tcpip(struct channel_open *s UNUSED,
+			     struct ssh_connection *connection,
+			     struct channel_open_info *info UNUSED,
+			     struct simple_buffer *args,
+			     struct command_continuation *c,
+			     struct exception_handler *e)
+{
+  struct lsh_string *dest_host = NULL;
+  uint32_t dest_port;
+  const uint8_t *orig_host;
+  uint32_t orig_host_length;
+  uint32_t orig_port;
+  
+  if ( (dest_host = parse_string_copy(args))
+       && parse_uint32(args, &dest_port) 
+       && parse_string(args, &orig_host_length, &orig_host)
+       && parse_uint32(args, &orig_port) 
+       && parse_eod(args))
+    {
+      struct resource *r;
+      
+      verbose("direct-tcp to %pS:%i.\n", dest_host, dest_port);
+
+      r = tcpforward_connect(make_address_info(dest_host, dest_port),
+			     c, e);
+      if (r)
+	remember_resource(connection->resources, r);
+    }
+  else
+    {
+      lsh_string_free(dest_host);
+      
+      werror("do_channel_open_direct_tcpip: Invalid message!\n");
+      SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_OPEN direct-tcp message.");
+    }
+}
+
+struct channel_open
+channel_open_direct_tcpip =
+{ STATIC_HEADER, do_channel_open_direct_tcpip };
