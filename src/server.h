@@ -24,11 +24,8 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
+/* FIXME: Get rid of this file? */
 #include "alist.h"
-
-#if 0
-struct command *make_offer_service(struct alist *services);
-#endif
 
 int
 read_host_key(const char *file,
