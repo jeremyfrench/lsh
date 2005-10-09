@@ -43,7 +43,7 @@ bootstrap: $(generated_sources) $(dist_classes)
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c tcpforward_commands.c
 
-# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c 
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c 
 
 
 liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
@@ -77,7 +77,7 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	sexp.c \
 	spki.c srp_exchange.c \
 	ssh_read.c ssh_write.c \
-	string_buffer.c suspend.c \
+	suspend.c \
 	tcpforward.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c \
