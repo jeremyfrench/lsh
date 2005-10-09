@@ -163,7 +163,7 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
   trace("do_tcpip_forward_request_continuation\n");
   assert(self->forward);
   assert(port);
-  assert(self->forward->port);
+  assert(!self->forward->port);
 
   self->forward->port = port;
   remember_resource(self->connection->resources, port);
