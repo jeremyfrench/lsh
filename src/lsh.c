@@ -365,9 +365,9 @@ main_options[] =
   { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHM, "Algorithm", 0, "", 0 }, 
   
   /* Actions */
-#if 0
   { "forward-remote-port", 'R', "remote-port:target-host:target-port",
     0, "", CLIENT_ARGP_ACTION_GROUP },
+#if 0
   { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
 #endif
 
@@ -614,16 +614,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 #endif
 
-#if 0
     case 'R':
       {
-	uint32_t listen_port;
+	unsigned long listen_port;
 	struct address_info *target;
 
 	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
-	client_add_action(&self->super, make_forward_remote_port
+	client_add_action(&self->super, forward_remote_port
 			  (make_address_info((self->super.with_remote_peers
 					      ? ssh_format("%lz", "0.0.0.0")
 					      : ssh_format("%lz", "127.0.0.1")),
@@ -633,7 +632,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	self->super.remote_forward = 1;
 	break;
       }
-
+#if 0
     CASE_FLAG('G', with_gateway);
 #endif
 #if WITH_X11_FORWARD
@@ -835,7 +834,11 @@ main(int argc, char **argv, const char** envp)
   /* Contains session channels to be opened. */
   remember_resource(connection->super.resources,
 		    &options->super.resources->super);
-		    
+
+  if (options->super.remote_forward)
+    ALIST_SET(connection->super.channel_types, ATOM_FORWARDED_TCPIP,
+	      &channel_open_forwarded_tcpip.super);
+
   {
     FOR_OBJECT_QUEUE(&options->super.actions, n)
       {
