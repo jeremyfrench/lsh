@@ -49,7 +49,6 @@
 #include "command.h"
 #include "format.h"
 #include "lsh_string.h"
-#include "string_buffer.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -674,38 +673,41 @@ read_raw(int fd, uint32_t length, uint8_t *data)
 struct lsh_string *
 io_read_file_raw(int fd, uint32_t guess)
 {
-  struct string_buffer buffer;
-  string_buffer_init(&buffer, guess);
-
+  struct lsh_string *buffer = lsh_string_alloc(guess);
+  uint32_t pos = 0;
+  
   for (;;)
     {
+      uint32_t left = lsh_string_length(buffer) - pos;
       int res;
-      
-      if (!buffer.left)
-        /* Roughly double the size of the buffer */
-        string_buffer_grow(&buffer,
-                           lsh_string_length(buffer.partial) + buffer.total + 100);
 
-      res = lsh_string_read(buffer.partial, buffer.pos,
-			    fd, buffer.left);
+      if (!left)
+	{
+	  /* Roughly double the size of the buffer */
+	  
+	  buffer = lsh_string_realloc(buffer, 2*pos + 100);
+	  left = lsh_string_length(buffer) - pos;
+	}
+
+      res = lsh_string_read(buffer, pos, fd, left);
       
       if (res < 0)
         {
           if (errno == EINTR)
             continue;
-          
-          string_buffer_clear(&buffer);
+
+	  lsh_string_free(buffer);
           return NULL;
         }
       else if (!res)
         {
           /* EOF */
-          return string_buffer_final(&buffer, buffer.left);
+	  lsh_string_trunc(buffer, pos);
+	  return buffer;
         }
-      assert( (unsigned) res <= buffer.left);
+      assert( (unsigned) res <= left);
       
-      buffer.pos += res;
-      buffer.left -= res;
+      pos += res;
     }
 }
 
