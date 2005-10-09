@@ -29,7 +29,6 @@
 
 #include "tcpforward.h"
 
-#include "channel_commands.h"
 #include "channel_forward.h"
 #include "format.h"
 #include "io_commands.h"
