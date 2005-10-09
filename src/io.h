@@ -104,9 +104,7 @@ make_local_info(struct lsh_string *directory,
 */
 
 struct listen_value *
-make_listen_value(int fd,
-		  struct address_info *peer);
-
+make_listen_value(int fd, struct address_info *peer);
 
 void
 io_init(void);
@@ -131,8 +129,10 @@ make_address_info(struct lsh_string *host,
 struct address_info *
 io_lookup_address(const char *ip, const char *service);
 
+#if 0
 struct address_info *
 fd2info(struct lsh_fd *fd, int side);
+#endif
 
 struct address_info *
 sockaddr2info(size_t addr_len,
@@ -188,51 +188,7 @@ io_connect(struct io_connect_state *self,
 	   socklen_t addr_length,
 	   struct sockaddr *addr);
 
-
 #if 0
-/* ;; GABA:
-   (class
-     (name connect_list_state)
-     (super resource)
-     (vars
-       (q struct addr_queue)
-       ;; Number of currently active fd:s
-       (nfds . unsigned)
-       (fds array (object lsh_fd) CONNECT_ATTEMPTS_LIMIT)))
-*/
-
-struct connect_list_state *
-make_connect_list_state(void);
-
-struct resource *
-io_connect_list(struct connect_list_state *remote,
-		struct command_continuation *c,
-		struct exception_handler *e);
-
-/* FIXME: Reorder arguments to put length first, for consistency? */
-struct lsh_fd *
-io_connect(struct sockaddr *remote,
-	   socklen_t remote_length,
-	   struct io_callback *c,
-	   struct exception_handler *e);
-
-struct io_callback *
-make_connect_callback(struct command_continuation *c);
-
-struct lsh_fd *
-io_bind_sockaddr(struct sockaddr *local,
-		 socklen_t length,
-		 struct exception_handler *e);
-
-struct lsh_fd *
-io_listen(struct lsh_fd *fd,
-	  struct io_callback *callback);
-
-struct resource *
-io_listen_list(struct addr_queue *addresses,
-	       struct io_callback *callback,
-	       struct exception_handler *e);
-
 struct lsh_fd *
 io_bind_local(struct local_info *info,
 	      struct exception_handler *e);
@@ -241,11 +197,6 @@ struct lsh_fd *
 io_connect_local(struct local_info *info,
 		 struct command_continuation *c,
 		 struct exception_handler *e);
-
-struct io_callback *
-make_listen_callback(struct command *c,
-		     struct exception_handler *e);
-
 #endif
 
 int
