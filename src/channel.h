@@ -234,20 +234,20 @@ channel_open_new_type(struct ssh_connection *connection,
 		      int type,
 		      const char *format, ...);
 
+void
+channel_send_request(struct ssh_channel *channel, int type,
+		     struct command_context *ctx,
+		     const char *format, ...);
+
+void
+channel_send_global_request(struct ssh_connection *connection, int type,
+			    struct command_context *ctx,
+			    const char *format, ...);
+
 struct lsh_string *
 format_channel_request_i(struct channel_request_info *info,
 			 struct ssh_channel *channel,
 			 uint32_t args_length, const uint8_t *args_data);
-
-struct lsh_string *
-format_channel_request(int type,
-		       struct ssh_channel *channel,
-		       int want_reply,
-		       const char *format, ...);
-
-struct lsh_string *
-format_global_request(int type, int want_reply,
-		      const char *format, ...);
 
 struct lsh_string *format_channel_close(struct ssh_channel *channel);
 struct lsh_string *format_channel_eof(struct ssh_channel *channel);
