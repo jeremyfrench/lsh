@@ -33,7 +33,7 @@
 
 #include "client.h"
 
-#include "channel_commands.h"
+#include "channel.h"
 #include "channel_io.h"
 #include "client.h"
 #include "io.h"
