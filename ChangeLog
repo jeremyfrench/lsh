@@ -1,3 +1,60 @@
+2005-10-09  Niels Möller  <niels@s3.kth.se>
+
+	* src/gateway_commands.c: Don't include connection_commands.h.
+	* src/lsh.c: Likewise.
+	* src/socks.c: Likewise.
+
+	* src/connection_commands.c, src/connection_commands.h: Deleted
+	files.
+
+	* src/tcpforward_commands.c: Deleted file.
+
+	* src/tcpforward.h: Deleted old declarations.
+	(forward_remote_port): New declaration.
+
+	* src/tcpforward.c: Deleted old tcpforwarding code.
+
+	* src/server_tcpforward.c (do_tcpip_forward_request_continuation):
+	Fixed assert.
+
+	* src/server_session.c: Don't include channel_commands.h.
+	(format_exit_signal, format_exit): Deleted functions.
+	(do_exit_shell): Use channel_send_request.
+
+	* src/lsh.c: Enabled remote port forwarding.
+	(main): Add handler for CHANNEL_OPEN "forwarded-tcpip".
+
+	* src/client_pty.c: Don't include channel_commands.h.
+	* src/gateway_channel.c: Likewise.
+	* src/server_x11.c: Likewise.
+	* src/tcpforward.c: Likewise.
+
+	* src/client_tcpforward.c (forward_remote_port): Reimplemented.
+
+	* src/client_session.c: Include channel.h, not channel_commands.h.
+
+	* src/client.h: Don't include channel_commands.h.
+	(request_service): Deleted class.
+
+	* src/client.c (request_shell): Use channel_send_request.
+	(session_channel_request): New class, replacing exec_request and
+	subsystem_request. 
+	(do_session_channel_request, make_session_channel_request): New
+	functions, using channel_send_request. 
+	(make_exec_request, make_subsystem_request): Use
+	make_session_channel_request. 
+	(client_parse_forward_arg): Use client_arg_unsigned.
+
+	* src/channel_commands.c: Deleted file.
+	* src/channel_commands.h: Deleted file.
+
+	* src/channel.c (channel_send_request)
+	(channel_send_global_request): New functions. 
+	(format_channel_request, format_global_request): Deleted
+	functions.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed channel_commands.c.
+
 2005-10-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/tcpforward.h (remote_port): Removed class. Replaced by new
