@@ -109,6 +109,7 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
      (name remote_port)
      (super forwarded_port)
      (vars
+       (active . int)
        (target object address_info)))
 */
 
@@ -119,6 +120,7 @@ make_remote_port(struct address_info *listen,
   NEW(remote_port, self);
 
   self->super.address = listen;
+  self->active = 0;
   self->target = target;
 
   return self;
@@ -150,7 +152,7 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 	   tcpforward_lookup(&connection->forwarded_ports,
 			     listen_ip_length, listen_ip, listen_port));
 	   
-      if (port && port->target)
+      if (port && port->active)
 	{
 	  struct resource *r;
 
@@ -183,15 +185,13 @@ struct channel_open
 channel_open_forwarded_tcpip =
 { STATIC_HEADER, do_channel_open_forwarded_tcpip };
 
-#if 0
-/* ;;GABA:
+/* GABA:
    (class
      (name remote_port_continuation)
      (super command_continuation)
      (vars
        (up object command_continuation)
-       (port object remote_port)
-       (target object address_info)))
+       (port object remote_port)))
 */
 
 static void
@@ -199,35 +199,33 @@ do_remote_port_continuation(struct command_continuation *s,
 			    struct lsh_object *x)
 {
   CAST(remote_port_continuation, self, s);
-  CAST(ssh_connection, connection, x);
+  CAST_SUBTYPE(ssh_connection, connection, x);
 
   assert(connection);
 
-  debug("tcpforward_commands.c: do_remote_port_install_continuation.\n");
-  self->port->target = self->target;
+  debug("tcpforward_commands.c: do_remote_port_continuation.\n");
+  self->port->active = 1;
 
   COMMAND_RETURN(self->up, x);
 }
 
 static struct command_continuation *
 make_remote_port_continuation(struct remote_port *port,
-				      struct command *callback,
-				      struct command_continuation *c)
+			      struct command_continuation *c)
 {
-  NEW(remote_port_install_continuation, self);
+  NEW(remote_port_continuation, self);
 
-  debug("tcpforward_commands.c: make_remote_port_install_continuation\n");
+  debug("tcpforward_commands.c: make_remote_port_continuation\n");
 
-  self->super.super.c = do_remote_port_continuation;
+  self->super.c = do_remote_port_continuation;
   self->up = c;
 
   self->port = port;
-  self->target = target;
 
-  return &self->super.super;
+  return &self->super;
 }
 
-/* ;;GABA:
+/* GABA:
    (class
      (name remote_port_exception_handler)
      (super exception_handler)
@@ -239,12 +237,12 @@ make_remote_port_continuation(struct remote_port *port,
 
 static void
 do_remote_port_exception_handler(struct exception_handler *s,
-				 const struct exception *e)
+				 const struct exception *x)
 {
   CAST(remote_port_exception_handler, self, s);
   
   tcpforward_remove_port(&self->connection->forwarded_ports,
-			 self->port);
+			 &self->port->super);
 
   EXCEPTION_RAISE(self->e, x);
 }
@@ -259,12 +257,14 @@ make_remote_port_exception_handler(struct ssh_connection *connection,
   self->e = e;
   self->connection = connection;
   self->port = port;
+
+  return &self->super;
 }
     
-/* ;;GABA:
+/* GABA:
    (class
      (name request_tcpip_forward_command)
-     (super global_request_command)
+     (super command)
      (vars
        ; Remote port to listen on
        (port object address_info)
@@ -272,62 +272,38 @@ make_remote_port_exception_handler(struct ssh_connection *connection,
        (target object address_info)))
 */
 
-static struct lsh_string *
-do_format_request_tcpip_forward(struct global_request_command *s,
-				struct ssh_connection *connection,
-				struct command_continuation **c)
+static void
+do_request_tcpip_forward(struct command *s,
+			 struct lsh_object *x,
+			 struct command_continuation *c,
+			 struct exception_handler *e)
 {
   CAST(request_tcpip_forward_command, self, s);
+  CAST_SUBTYPE(ssh_connection, connection, x);
   struct remote_port *port;
-  int want_reply;
+  struct command_context *ctx;
 
-  debug("client_tcpforward.c: do_format_request_tcpip_forward\n");
+  debug("client_tcpforward.c: do_request_tcpip_forward\n");
 
-  /* FIXME: Use some exception handler to remove the port from the
-   * list if the request fails. */
-  port = make_remote_port(self->port, NULL);
-  *c = make_remote_port_install_continuation(port, self->target, *c);
+  port = make_remote_port(self->port, self->target);
+  ctx = make_command_context(
+    make_remote_port_continuation(port, c),
+    make_remote_port_exception_handler(connection, port, e));
 
-  object_queue_add_tail(&table->remote_ports, &port->super.super);
-  
-  return format_global_request(ATOM_TCPIP_FORWARD, 1, "%S%i",
-			       self->port->ip, self->port->port);
+  object_queue_add_tail(&connection->forwarded_ports, &port->super.super);
+
+  channel_send_global_request(connection, ATOM_TCPIP_FORWARD, ctx,
+			      "%S%i", self->port->ip, self->port->port);
 }
 
-/* GABA:
-   (class
-     (name remote_listen)
-     (super command)
-     (vars
-       (port object remote_port)))
-*/
-
-static void
-do_remote_listen(struct command *s, struct lsh_object *a,
-		 struct command_continuation *c,
-		 struct exception_handler *e)
+struct command *
+forward_remote_port(struct address_info *port,
+		    struct address_info *target)
 {
-  CAST(remote_listen, self, s);
-  
-}
-DEFINE_COMMAND3(remote_listen)
+  NEW(request_tcpip_forward_command, self);
+  self->super.call = do_request_tcpip_forward;
+  self->port = port;
+  self->target = target;
 
-/* ;; GABA:
-   (expr
-     (name forward_remote_port)
-     (params
-       (connect object command)
-       (remote object address_info))
-     (expr
-       (lambda (connection)
-         (remote_listen (lambda (peer)
-	                  (tcpip_connect_io 
-			     ; NOTE: The use of prog1 is needed to
-			     ; delay the connect call until the
-			     ; (otherwise ignored) peer argument is
-			     ; available.  
-			     (connect (prog1 connection peer))))
-	                remote
-			connection))))
-*/
-#endif
+  return &self->super;
+}
