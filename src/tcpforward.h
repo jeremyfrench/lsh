@@ -39,6 +39,10 @@ struct command *
 forward_local_port(struct address_info *local,
 		   struct address_info *target);
 
+struct command *
+forward_remote_port(struct address_info *port,
+		    struct address_info *target);
+
 /* GABA:
    (class
      (name forwarded_port)
@@ -60,20 +64,7 @@ tcpforward_connect(struct address_info *a,
 		   struct exception_handler *e);
 
 extern struct channel_open channel_open_direct_tcpip;
-
-#if 0
-struct remote_port *
-make_remote_port(struct address_info *listen,
-		 struct command *callback);
-
-struct channel_open *
-make_channel_open_direct_tcpip(struct command *callback);
-
 extern struct channel_open channel_open_forwarded_tcpip;
-
-struct global_request *
-make_tcpip_forward_request(struct command *callback);
-#endif
 
 extern struct global_request
 tcpip_forward_handler;
@@ -82,25 +73,6 @@ extern struct global_request
 tcpip_cancel_forward_handler;
 
 #if 0
-struct command *
-make_open_tcpip_command(int type,
-			struct address_info *port,
-			struct listen_value *peer);
-
-struct command *
-make_forward_local_port(struct address_info *local,
-			struct address_info *target);
-
-struct command *
-make_forward_remote_port(struct address_info *local,
-			 struct address_info *target);
-
-struct command *
-make_direct_tcpip_hook(void);
-
-struct command *
-make_tcpip_forward_hook(void);
-
 struct command *
 make_socks_server(struct address_info *local);
 
