@@ -39,7 +39,6 @@
 
 #include "server_x11.h"
 
-#include "channel_commands.h"
 #include "channel_forward.h"
 #include "environ.h"
 #include "format.h"
