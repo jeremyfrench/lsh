@@ -66,8 +66,9 @@
       exception.
 
    3. Install the channel object, and reply with
-      CHANNEL_OPEN_CONFIRMATION. On error, deallocate channel number,
-      and reply with CHANNEL_OPEN_FAILURE.
+      CHANNEL_OPEN_CONFIRMATION. Generate a CHANNEL_EVENT_CONFIRM on
+      the channel. On error, deallocate channel number, and reply with
+      CHANNEL_OPEN_FAILURE.
 */
 
 struct exception *
@@ -1530,6 +1531,7 @@ channel_open_new_type(struct ssh_connection *connection,
   return res;
 }
 
+#if 0
 struct lsh_string *
 format_channel_request_i(struct channel_request_info *info,
 			 struct ssh_channel *channel,
@@ -1541,20 +1543,24 @@ format_channel_request_i(struct channel_request_info *info,
 		    info->want_reply,
 		    args_length, args_data);
 }
+#endif
 
-struct lsh_string *
-format_channel_request(int type, struct ssh_channel *channel,
-		       int want_reply, const char *format, 
-		       ...)
+void
+channel_send_request(struct ssh_channel *channel, int type,
+		     struct command_context *ctx,
+		     const char *format, ...)
 {
   va_list args;
   uint32_t l1, l2;
   struct lsh_string *packet;
+  uint8_t want_reply;
 
 #define REQUEST_FORMAT "%c%i%a%c"
 #define REQUEST_ARGS SSH_MSG_CHANNEL_REQUEST, channel->remote_channel_number, \
   type, want_reply
-    
+
+  want_reply = (ctx != NULL);
+
   l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);
   
   va_start(args, format);
@@ -1569,22 +1575,32 @@ format_channel_request(int type, struct ssh_channel *channel,
   ssh_vformat_write(format, packet, l1, args);
   va_end(args);
 
-  return packet;
 #undef REQUEST_FORMAT
 #undef REQUEST_ARGS
+
+  SSH_CONNECTION_WRITE(channel->connection, packet);
+  if (want_reply)
+    {
+      assert(ctx);
+      object_queue_add_tail(&channel->pending_requests, &ctx->super);
+    }      
 }
 
-struct lsh_string *
-format_global_request(int type, int want_reply,
-		      const char *format, ...)
+void
+channel_send_global_request(struct ssh_connection *connection, int type,
+			    struct command_context *ctx,
+			    const char *format, ...)
 {
   va_list args;
   uint32_t l1, l2;
   struct lsh_string *packet;
+  uint8_t want_reply;
 
 #define REQUEST_FORMAT "%c%a%c"
 #define REQUEST_ARGS SSH_MSG_GLOBAL_REQUEST, type, want_reply
-    
+
+  want_reply = (ctx != NULL);
+
   l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);
   
   va_start(args, format);
@@ -1599,7 +1615,14 @@ format_global_request(int type, int want_reply,
   ssh_vformat_write(format, packet, l1, args);
   va_end(args);
 
-  return packet;
 #undef REQUEST_FORMAT
 #undef REQUEST_ARGS
+  
+  SSH_CONNECTION_WRITE(connection, packet);
+  if (want_reply)
+    {
+      assert(ctx);
+      object_queue_add_tail(&connection->pending_global_requests,
+			    &ctx->super);
+    }      
 }
