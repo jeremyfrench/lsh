@@ -27,7 +27,6 @@
 
 #include "gateway_channel.h"
 
-#include "channel_commands.h"
 #include "format.h"
 #include "ssh.h"
 #include "werror.h"

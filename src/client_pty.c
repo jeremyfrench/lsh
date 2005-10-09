@@ -29,7 +29,6 @@
 
 #include "client.h"
 
-#include "channel_commands.h"
 #include "environ.h"
 #include "format.h"
 #include "interact.h"
