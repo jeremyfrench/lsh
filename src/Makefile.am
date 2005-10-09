@@ -43,11 +43,11 @@ bootstrap: $(generated_sources) $(dist_classes)
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c tcpforward_commands.c
 
-# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c 
 
 
 liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
-	channel.c channel_commands.c channel_io.c channel_forward.c \
+	channel.c channel_io.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c \
 	client_session.c client_tcpforward.c \
