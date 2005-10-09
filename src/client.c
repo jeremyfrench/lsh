@@ -41,7 +41,6 @@
 #include "client.h"
 
 #include "channel.h"
-#include "channel_commands.h"
 #include "environ.h"
 #include "format.h"
 #include "interact.h"
@@ -315,83 +314,76 @@ DEFINE_COMMAND2(open_session_command)
     }
 }
 
-static struct lsh_string *
-do_format_shell_request(struct channel_request_command *s UNUSED,
-			struct ssh_channel *channel,
-			struct command_continuation **c)
+DEFINE_COMMAND(request_shell)
+     (struct command *s UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  return format_channel_request(ATOM_SHELL, channel, !!*c, "");
+  CAST_SUBTYPE(ssh_channel, channel, x);
+
+  struct command_context *ctx = NULL;
+  if (CONTINUATION_USED_P(c))
+    ctx = make_command_context(c, e);
+  else
+    ctx = NULL;
+
+  channel_send_request(channel, ATOM_SHELL,
+		       (CONTINUATION_USED_P(c)
+			? make_command_context(c, e)
+			: NULL), "");
 }
 
-struct channel_request_command request_shell =
-{ { STATIC_HEADER, do_channel_request_command }, do_format_shell_request };
-
-
+/* Used for both exec and subsystem request. */
 /* GABA:
    (class
-     (name exec_request)
-     (super channel_request_command)
+     (name session_channel_request)
+     (super command)
      (vars
-       (command string)))
+       (type . int)
+       (arg string)))
 */
 
-static struct lsh_string *
-do_format_exec_request(struct channel_request_command *s,
-		       struct ssh_channel *channel,
-		       struct command_continuation **c)
+static void
+do_session_channel_request(struct command *s,
+			   struct lsh_object *x,
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
-  CAST(exec_request, self, s);
+  CAST(session_channel_request, self, s);
+  CAST_SUBTYPE(ssh_channel, channel, x);
 
-  verbose("lsh: Requesting remote exec.\n");
+  verbose("lsh: Requesting remote %a.\n", self->type);
 
-  return format_channel_request(ATOM_EXEC, channel,
-				!!*c, "%S", self->command);
+  channel_send_request(channel, self->type,
+		       (CONTINUATION_USED_P(c)
+			? make_command_context(c, e)
+			: NULL),
+		       "%S", self->arg);
+}
+
+struct command *
+make_session_channel_request(int type, struct lsh_string *arg)
+{
+  NEW(session_channel_request, self);
+
+  self->super.call = do_session_channel_request;
+  self->type = type;
+  self->arg = arg;
+
+  return &self->super;
 }
 
 struct command *
 make_exec_request(struct lsh_string *command)
 {
-  NEW(exec_request, req);
-
-  req->super.format_request = do_format_exec_request;
-  req->super.super.call = do_channel_request_command;
-  req->command = command;
-
-  return &req->super.super;
-}
-
-
-/* GABA:
-   (class
-     (name subsystem_request)
-     (super channel_request_command)
-     (vars
-       (subsystem string)))
-*/
-
-static struct lsh_string *
-do_format_subsystem_request(struct channel_request_command *s,
-			    struct ssh_channel *channel,
-			    struct command_continuation **c)
-{
-  CAST(subsystem_request, self, s);
-
-  verbose("lsh: Requesting remote subsystem.\n");
-
-  return format_channel_request(ATOM_SUBSYSTEM, channel,
-				!!*c, "%S", self->subsystem);
+  return make_session_channel_request(ATOM_EXEC, command);
 }
 
 struct command *
 make_subsystem_request(struct lsh_string *subsystem)
 {
-  NEW(subsystem_request, req);
-
-  req->super.format_request = do_format_subsystem_request;
-  req->super.super.call = do_channel_request_command;
-  req->subsystem = subsystem;
-
-  return &req->super.super;
+  return make_session_channel_request(ATOM_SUBSYSTEM, subsystem);
 }
 
 
@@ -623,7 +615,7 @@ client_shell_session(struct client_options *options)
       client_maybe_pty(options, 1, &session_requests);
       client_maybe_x11(options, &session_requests);
   
-      object_queue_add_tail(&session_requests, &request_shell.super.super);
+      object_queue_add_tail(&session_requests, &request_shell.super);
   
       return make_start_session(session,
 				queue_to_list_and_kill(&session_requests));
@@ -996,43 +988,6 @@ envp_parse(const struct argp *argp,
    }
 }
 
-/* Parse the argument for -R and -L */
-int
-client_parse_forward_arg(char *arg,
-			 uint32_t *listen_port,
-			 struct address_info **target)
-{
-  char *first;
-  char *second;
-  char *end;
-  long port;
-  
-  first = strchr(arg, ':');
-  if (!first)
-    return 0;
-
-  second = strchr(first + 1, ':');
-  if (!second || (second == first + 1))
-    return 0;
-
-  if (strchr(second + 1, ':'))
-    return 0;
-
-  port = strtol(arg, &end, 0);
-  if ( (end == arg)  || (end != first)
-       || (port < 0) || (port > 0xffff) )
-    return 0;
-
-  *listen_port = port;
-
-  /* Terminate host part. */
-  second[0] = 0;
-  
-  *target = io_lookup_address(first + 1, second + 1);
-  
-  return *target != NULL;
-}
-
 static int
 client_arg_unsigned(const char *arg, unsigned long *n)
 {
@@ -1042,6 +997,39 @@ client_arg_unsigned(const char *arg, unsigned long *n)
 
   *n = strtoul(arg, &end, 0);
   return *end == 0;
+}
+
+/* Parse the argument for -R and -L */
+int
+client_parse_forward_arg(char *arg,
+			 unsigned long *listen_port,
+			 struct address_info **target)
+{
+  const char *host;
+  const char *target_port;
+  char *sep;
+  
+  sep = strchr(arg, ':');
+  if (!sep)
+    return 0;
+
+  sep[0] = '\0';
+
+  if (!client_arg_unsigned(arg, listen_port))
+    return 0;
+  
+  host = sep + 1;
+
+  sep = strchr(host, ':');
+  if (!sep)
+    return 0;
+
+  sep[0] = '\0';
+  target_port = sep + 1;
+
+  *target = io_lookup_address(host, target_port);
+  
+  return *target != NULL;
 }
 		    
 #define CASE_ARG(opt, attr, none)		\
@@ -1180,7 +1168,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'L':
       {
-	uint32_t listen_port;
+	unsigned long listen_port;
 	struct address_info *target;
 
 	if (!client_parse_forward_arg(arg, &listen_port, &target))
