@@ -93,6 +93,23 @@ lsh_string_random(struct randomness *r, uint32_t length)
   return s;
 }
 
+/* FIXME: Inefficient allocate-copy-free implementation */
+struct lsh_string *
+lsh_string_realloc(struct lsh_string *s, uint32_t size)
+{  
+  struct lsh_string *n;
+  uint32_t length = lsh_string_length(s);
+
+  /* NOTE: Currently, only growing strings is supported. */
+  assert(size > length);
+  
+  n = lsh_string_alloc(size);
+  lsh_string_write_string(n, 0, s);
+
+  lsh_string_free(s);
+  return n;
+}
+
 #if DEBUG_ALLOC
 struct lsh_string_header
 {

@@ -30,18 +30,12 @@
 #include "nettle/base64.h"
 #include "nettle/nettle-meta.h"
 
-/* The memory allocation model (for strings) is as follows:
- *
- * Packets are allocated when they are needed. A packet may be passed
- * through a chain of processing functions, until it is finally
- * discarded or transmitted, at which time it is deallocated.
- * Processing functions may deallocate their input packets and
- * allocate fresh packets to pass on; therefore, any data from a
- * packet that is needed later must be copied into some other storage.
- *
- * At any time, each packet is own by a a particular processing
- * function. Pointers into a packet are valid only while you own it.
- * */
+/* The memory allocation for strings does not use the garbage
+   collector. Each string must have an owner. Strings are often passed
+   over a producer/consumer interface, where a producer allocates a
+   string, passed the string and ownership over to a consumer, which
+   deallocates the string (or passes it on to another consumer) when
+   done with it. */
 
 #if WITH_ZLIB
 #if HAVE_ZLIB_H
@@ -66,6 +60,9 @@ lsh_get_number_of_strings(void);
 struct lsh_string *
 lsh_string_alloc(uint32_t size);
 #endif /* !DEBUG_ALLOC */
+
+struct lsh_string *
+lsh_string_realloc(struct lsh_string *s, uint32_t size);
 
 uint32_t
 lsh_string_length(const struct lsh_string *s);
