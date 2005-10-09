@@ -24,7 +24,6 @@
 #ifndef LSH_CLIENT_H_INCLUDED
 #define LSH_CLIENT_H_INCLUDED
 
-#include "channel_commands.h"
 #include "io.h"
 #include "keyexchange.h"
 
@@ -35,29 +34,6 @@
 /* The argp option group for actions. */
 #define CLIENT_ARGP_ACTION_GROUP 100
 #define CLIENT_ARGP_MODIFIER_GROUP 200
-
-struct packet_handler *
-make_accept_service_handler(uint32_t service,
-			    struct command_continuation *c);
-
-/* GABA:
-   (class
-     (name request_service)
-     (super command)
-     (vars
-       (service . int)))
-*/
-
-void
-do_request_service(struct command *s,
-		   struct lsh_object *x,
-		   struct command_continuation *c,
-		   struct exception_handler *e);
-
-#define STATIC_REQUEST_SERVICE(service) \
-{ STATIC_COMMAND(do_request_service), service } 
-
-struct command *make_request_service(int service);
 
 /* GABA:
    (class
@@ -92,8 +68,11 @@ struct channel_request *make_handle_exit_signal(int *exit_code);
 struct command *make_open_session_command(struct ssh_channel *session);
 
 
-extern struct channel_request_command request_shell;
-#define REQUEST_SHELL (&request_shell.super.super)
+extern struct command request_shell;
+#define REQUEST_SHELL (&request_shell.super)
+
+struct command *
+make_session_channel_request(int type, struct lsh_string *arg);
 
 extern struct command client_start_io;
 #define CLIENT_START_IO (&client_start_io.super)
@@ -196,7 +175,7 @@ client_prepend_action(struct client_options *options,
 
 int
 client_parse_forward_arg(char *arg,
-			 uint32_t *listen_port,
+			 unsigned long *listen_port,
 			 struct address_info **target);
 
 extern const struct argp client_argp;
