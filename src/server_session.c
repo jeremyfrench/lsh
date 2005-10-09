@@ -38,7 +38,6 @@
 
 #include "server_session.h"
 
-#include "channel_commands.h"
 #include "channel_io.h"
 #include "environ.h"
 #include "format.h"
@@ -333,32 +332,6 @@ make_open_session(struct alist *session_requests)
   return &closure->super;
 }
 
-
-struct lsh_string *
-format_exit_signal(struct ssh_channel *channel,
-		   int core, int signal)
-{
-  struct lsh_string *msg
-    = ssh_format("%lz.\n", STRSIGNAL(signal));
-  
-  return format_channel_request(ATOM_EXIT_SIGNAL,
-				channel,
-				0,
-				"%a%c%fS%z",
-				signal_local_to_network(signal),
-				core,
-				msg, "");
-}
-
-struct lsh_string *
-format_exit(struct ssh_channel *channel, int value)
-{
-  return format_channel_request(ATOM_EXIT_STATUS,
-				channel,
-				0,
-				"%i", value);
-}
-
 /* GABA:
    (class
      (name exit_shell)
@@ -384,11 +357,17 @@ do_exit_shell(struct exit_callback *c, int signaled,
       verbose("server_session.c: Sending %a message on channel %i\n",
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
 	      channel->remote_channel_number);
-      
-      SSH_CONNECTION_WRITE(channel->connection,
-	      (signaled
-	       ? format_exit_signal(channel, core, value)
-	       : format_exit(channel, value)) );
+
+      if (signaled)
+	channel_send_request(&session->super, ATOM_EXIT_SIGNAL,
+			     NULL,
+			     "%a%c%z%z",
+			     signal_local_to_network(value),
+			     core,
+			     STRSIGNAL(value), "");
+      else
+	channel_send_request(&session->super, ATOM_EXIT_STATUS,
+			     NULL, "%i", value);
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from
