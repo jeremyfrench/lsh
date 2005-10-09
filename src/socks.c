@@ -36,7 +36,6 @@
 #include "nettle/macros.h"
 #include "channel_forward.h"
 #include "command.h"
-#include "connection_commands.h"
 #include "format.h"
 #include "io_commands.h"
 #include "lsh_string.h"

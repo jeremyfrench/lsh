@@ -50,7 +50,6 @@
 #include "charset.h"
 #include "client.h"
 #include "compress.h"
-#include "connection_commands.h"
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"

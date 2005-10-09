@@ -33,7 +33,6 @@
 #include "gateway_commands.h"
 
 #include "channel.h"
-#include "connection_commands.h"
 #include "format.h"
 #include "gateway_channel.h"
 
