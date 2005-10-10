@@ -1,3 +1,46 @@
+2005-10-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (client_argp_parser): Enable socks forwarding.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added socks.c.
+
+	* src/socks.c: Adapted to new i/o and channel_forward interfaces.
+
+2005-10-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io.c: Deleted obsoleted functionality.
+	(class io_listen_callback): Deleted class.
+	(do_listen_callback, make_listen_callback): Deleted functions.
+	(class io_connect_callback): Deleted class.
+	(do_connect_callback, make_connect_callback): Deleted functions.
+	(do_kill_fd, do_exc_io_handler): Deleted functions.
+	(read_raw): Deleted function.
+	(io_connect): Deleted old connect interface.
+	(do_connect_list_kill, make_connect_list_state): Deleted functions.
+	(class connect_list_callback): Deleted class.
+	(connect_attempt, do_connect_list_callback) 
+	(make_connect_list_callback, io_connect_list): Deleted functions.
+	(io_bind_sockaddr, io_listen, io_listen_list): Deleted old listen interface.
+	(io_read_write, io_read, io_write): Deleted old constructors.
+	(class write_only_file)): Deleted class.
+	(io_write_file): Deleted function.
+	(close_fd, close_fd_nicely, close_fd_read, close_fd_write):
+	Deleted old close interface.
+	(class exc_finish_read_handler)): Deleted class.
+	(finish_read_exception, finish_io_exception): Deleted exceptions.
+	(make_io_exception): Deleted function.
+	* src/io.h (connect_list_state): Deleted class.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed string_buffer.c.
+
+	* src/io.c: Don't include string_buffer.h.
+	(io_read_file_raw): Use lsh_string_realloc, not the
+	string_buffer abstraction.
+
+	* src/lsh_string.c (lsh_string_realloc): New function.
+
+	* src/string_buffer.c, src/string_buffer.h: Deleted files.
+
 2005-10-09  Niels Möller  <niels@s3.kth.se>
 
 	* src/gateway_commands.c: Don't include connection_commands.h.
