@@ -1,3 +1,11 @@
+2005-10-10  Niels Möller  <niels@s3.kth.se>
+
+	* src/.dist_classes (dist_classes): Removed a bunch of obsolete
+	class files.
+
+	* src/client_userauth.c: Deleted file.
+	* src/client_userauth.h: Deleted file.
+
 2005-10-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c (client_argp_parser): Enable socks forwarding.
