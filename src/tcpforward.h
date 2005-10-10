@@ -72,9 +72,7 @@ tcpip_forward_handler;
 extern struct global_request
 tcpip_cancel_forward_handler;
 
-#if 0
 struct command *
 make_socks_server(struct address_info *local);
 
-#endif
 #endif /* LSH_TCPFORWARD_H_INCLUDED */
