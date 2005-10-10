@@ -475,8 +475,8 @@ client_options[] =
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
 
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
-#if 0
   { "forward-socks", 'D', "port", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
+#if 0
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
 #endif
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
@@ -1182,7 +1182,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 			   target));
 	break;
       }      
-#if 0
+
     case 'D':
       {
 	unsigned long socks_port = DEFAULT_SOCKS_PORT;
@@ -1196,7 +1196,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 					     socks_port)));
 	break;
       }
-#endif 
+
     case 'N':
       options->start_shell = 0;
       break;
