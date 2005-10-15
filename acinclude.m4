@@ -487,6 +487,35 @@ AC_SUBST([DEP_INCLUDE])
 AC_SUBST([DEP_FLAGS])
 AC_SUBST([DEP_PROCESS])])
 
+dnl  GMP_TRY_ASSEMBLE(asm-code,[action-success][,action-fail])
+dnl  ----------------------------------------------------------
+dnl  Attempt to assemble the given code.
+dnl  Do "action-success" if this succeeds, "action-fail" if not.
+dnl
+dnl  conftest.o and conftest.out are available for inspection in
+dnl  "action-success".  If either action does a "break" out of a loop then
+dnl  an explicit "rm -f conftest*" will be necessary.
+dnl
+dnl  This is not unlike AC_TRY_COMPILE, but there's no default includes or
+dnl  anything in "asm-code", everything wanted must be given explicitly.
+
+AC_DEFUN([GMP_TRY_ASSEMBLE],
+[cat >conftest.s <<EOF
+[$1]
+EOF
+gmp_assemble="$CC $CFLAGS $CPPFLAGS -c conftest.s >conftest.out 2>&1"
+if AC_TRY_EVAL(gmp_assemble); then
+  cat conftest.out >&AC_FD_CC
+  ifelse([$2],,:,[$2])
+else
+  cat conftest.out >&AC_FD_CC
+  echo "configure: failed program was:" >&AC_FD_CC
+  cat conftest.s >&AC_FD_CC
+  ifelse([$3],,:,[$3])
+fi
+rm -f conftest*
+])
+
 dnl @synopsis AX_CREATE_STDINT_H [( HEADER-TO-GENERATE [, HEADERS-TO-CHECK])]
 dnl
 dnl the "ISO C9X: 7.18 Integer types <stdint.h>" section requires the
