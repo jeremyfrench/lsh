@@ -1,3 +1,7 @@
+2005-10-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* acinclude.m4 (GMP_TRY_ASSEMBLE): New macro.
+
 2005-10-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo: Use @documentencoding ISO-8859-1.
