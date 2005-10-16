@@ -1,3 +1,9 @@
+2005-10-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* acinclude.m4 (LSH_GCC_ATTRIBUTES): Put the declaration and
+	definition of the test function in the declarations argument of
+	AC_TRY_COMPILE. It used to end up inside main.
+
 2005-10-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (GMP_TRY_ASSEMBLE): New macro.
