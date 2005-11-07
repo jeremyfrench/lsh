@@ -46,11 +46,8 @@ relative_symlink misc/getopt.h \
     
 (cd src/nettle && ln -s ../../acinclude.m4 aclocal.m4)
     
-# relative_symlink misc/memxor.c \
-#     src src/nettle
-# 
-# relative_symlink misc/memxor.h \
-#     src src/nettle
+relative_symlink config.guess src/nettle src/spki
+relative_symlink config.sub src/nettle src/spki
 
 if [ "$1" = "links" ] ; then
     # Skip the time consuming autoconf and automake stuff
