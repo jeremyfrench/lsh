@@ -23,45 +23,31 @@ fi
 dnl Choose cc flags for compiling position independent code
 dnl FIXME: Doesn't do the right thing when crosscompiling.
 AC_DEFUN([LSH_CCPIC],
-[AC_MSG_CHECKING(CCPIC)
+[AC_REQUIRE([AC_CANONICAL_HOST])dnl
+AC_MSG_CHECKING(CCPIC)
 AC_CACHE_VAL(lsh_cv_sys_ccpic,[
   if test -z "$CCPIC" ; then
     if test "$GCC" = yes ; then
-      case `uname -sr` in
-	BSD/OS*)
-         case `uname -r` in
-           4.*) CCPIC="-fPIC";;
-           *) CCPIC="";;
-         esac
-	;;
-	Darwin*)
-	  CCPIC="-fPIC"
-	;;
-	SunOS\ 5.*)
-	  # Could also use -fPIC, if there are a large number of symbol reference
-	  CCPIC="-fPIC"
-	;;
-	CYGWIN*)
-	  CCPIC=""
-	;;
-	*)
-	  CCPIC="-fpic"
-	;;
+      case "$host_os" in
+	bsdi4.*)	CCPIC="-fPIC" ;;
+	bsdi*)		CCPIC="" ;;
+	darwin*)	CCPIC="-fPIC" ;;
+	# Could also use -fpic, depending on the number of symbol references
+	solaris*)	CCPIC="-fPIC" ;;
+	cygwin*)	CCPIC="" ;;
+	mingw32*)	CCPIC="" ;;
+	*)		CCPIC="-fpic" ;;
       esac
     else
-      case `uname -sr` in
-	Darwin*)
-	  CCPIC="-fPIC"
-	;;
-        IRIX*)
-          CCPIC="-share"
-        ;;
-	hp*|HP*) CCPIC="+z"; ;;
-	FreeBSD*) CCPIC="-fpic";;
-	SCO_SV*) CCPIC="-KPIC -dy -Bdynamic";;
-        UnixWare*|OpenUNIX*) CCPIC="-KPIC -dy -Bdynamic";;
-	Solaris*) CCPIC="-KPIC -Bdynamic";;
-	Windows_NT*) CCPIC="-shared" ;;
+      case "$host_os" in
+	darwin*)	CCPIC="-fPIC" ;;
+        irix*)		CCPIC="-share" ;;
+	hpux*)		CCPIC="+z"; ;;
+	*freebsd*)	CCPIC="-fpic" ;;
+	sco*|sysv4.*)	CCPIC="-KPIC -dy -Bdynamic" ;;
+	solaris*)	CCPIC="-KPIC -Bdynamic" ;;
+	winnt*)		CCPIC="-shared" ;;
+	*)		CCPIC="" ;;
       esac
     fi
   fi
@@ -110,19 +96,13 @@ AC_DEFUN([LSH_RPATH_ADD], [LSH_PATH_ADD(RPATH_CANDIDATE, $1)])
 
 dnl LSH_RPATH_INIT(candidates)
 AC_DEFUN([LSH_RPATH_INIT],
-[AC_MSG_CHECKING([for -R flag])
+[AC_REQUIRE([AC_CANONICAL_HOST])dnl
+AC_MSG_CHECKING([for -R flag])
 RPATHFLAG=''
-case `uname -sr` in
-  OSF1\ V4.*)
-    RPATHFLAG="-rpath "
-    ;;
-  IRIX\ 6.*)
-    RPATHFLAG="-rpath "
-    ;;
-  IRIX\ 5.*)
-    RPATHFLAG="-rpath "
-    ;;
-  SunOS\ 5.*)
+case "$host_os" in
+  osf1*)		RPATHFLAG="-rpath " ;;
+  irix6.*|irix5.*)	RPATHFLAG="-rpath " ;;
+  solaris*)
     if test "$TCC" = "yes"; then
       # tcc doesn't know about -R
       RPATHFLAG="-Wl,-R,"
@@ -130,12 +110,8 @@ case `uname -sr` in
       RPATHFLAG=-R
     fi
     ;;
-  Linux\ 2.*)
-    RPATHFLAG="-Wl,-rpath,"
-    ;;
-  *)
-    :
-    ;;
+  linux*)		RPATHFLAG="-Wl,-rpath," ;;
+  *)			RPATHFLAG="" ;;
 esac
 
 if test x$RPATHFLAG = x ; then
