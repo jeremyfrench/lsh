@@ -1,3 +1,7 @@
+2005-11-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* config.guess, config.sub: Moved files from src/nettle.
+
 2005-10-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_GCC_ATTRIBUTES): Put the declaration and
