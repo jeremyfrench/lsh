@@ -1,5 +1,12 @@
 2005-11-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* .bootstrap: Link config.sub and config.guess to the nettle and
+	spki subdirectories.
+
+	* acinclude.m4 (LSH_CCPIC): AC_REQUIRE AC_CANONICAL_HOST, and use
+	$host_os instead of uname.
+	(LSH_RPATH_INIT): Likewise.
+
 	* config.guess, config.sub: Moved files from src/nettle.
 
 2005-10-16  Niels Möller  <nisse@lysator.liu.se>
