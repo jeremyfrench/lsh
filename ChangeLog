@@ -1,3 +1,11 @@
+2005-11-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/ssh-conv: In the awk script, check for ssh-dsa and ssh-rsa
+	only when state == 0.
+
+	* misc/run-tests: Added --debug option. If used, the teardown-env
+	script is not run.
+
 2005-11-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* .bootstrap: Link config.sub and config.guess to the nettle and
