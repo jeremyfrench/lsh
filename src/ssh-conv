@@ -37,6 +37,6 @@ awk 'BEGIN { state = 0; }
      state == 1 && $0 ~ /^---- END SSH2 PUBLIC KEY/ { state = 2 }
      state == 1 && $0 !~ /:/ { print }
      state == 2 { next } 
-     /^ssh-dss/ { print $2; }
-     /^ssh-rsa/ { print $2; }' \
+     state == 0 /^ssh-dss/ { print $2; }
+     state == 0 /^ssh-rsa/ { print $2; }' \
   | $SSH_CONV -b
