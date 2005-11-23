@@ -1,3 +1,7 @@
+2005-11-23  Niels Möller  <niels@s3.kth.se>
+
+	* src/xalloc.h (number_of_strings): Deleted declaration.
+
 2005-11-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/ssh-conv: In the awk script, check for ssh-dsa and ssh-rsa
