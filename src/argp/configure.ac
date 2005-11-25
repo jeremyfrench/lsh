@@ -40,7 +40,7 @@ AC_TYPE_SIZE_T
 LSH_GCC_ATTRIBUTES
 
 # Checks for library functions.
-AC_FUNC_ALLOCA
+LSH_FUNC_ALLOCA
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(strerror sleep getpid snprintf)
 
