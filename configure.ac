@@ -522,10 +522,6 @@ AC_HEADER_TIME
 # Needed by the supplied memcmp.c
 AC_C_BIGENDIAN
 
-AC_CHECK_SIZEOF(short, 2)
-AC_CHECK_SIZEOF(int, 4)
-AC_CHECK_SIZEOF(long, 4)
-
 # FIXME: We should check that a pid_t fits in an int
 	
 # Checks for library functions.
@@ -744,7 +740,6 @@ if test x$lsh_cv_sys_unix98_ptys = xyes; then
 fi
 
 LSH_GCC_ATTRIBUTES
-LSH_GCC_FUNCTION_NAME
 
 AC_MSG_CHECKING(for BSD pty names)
 
@@ -794,6 +789,10 @@ if test x$GCC = xyes ; then
     true
   else
     CFLAGS="$CFLAGS -ggdb3"
+  fi
+  # FIXME: It would be better to actually test if this option works and/or is needed.
+  if "$CC" --version | grep 'gcc.* 4\.' 1>/dev/null 2>&1; then
+    CFLAGS="$CFLAGS -Wno-pointer-sign"
   fi
   CFLAGS="$CFLAGS -Wall -W \
   -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes \
