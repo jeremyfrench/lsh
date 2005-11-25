@@ -44,10 +44,15 @@ relative_symlink misc/getopt1.c \
 relative_symlink misc/getopt.h \
     src/nettle/examples src/nettle/tools src/spki/tools
     
-(cd src/nettle && ln -s ../../acinclude.m4 aclocal.m4)
+(cd src/nettle && ln -s ../../acinclude.m4 aclocal.m4 || true)
     
 relative_symlink config.guess src/nettle src/spki
 relative_symlink config.sub src/nettle src/spki
+
+relative_symlink install-sh src/nettle
+relative_symlink texinfo.tex src/nettle
+relative_symlink INSTALL src/nettle
+relative_symlink COPYING src/nettle
 
 if [ "$1" = "links" ] ; then
     # Skip the time consuming autoconf and automake stuff
@@ -59,8 +64,3 @@ for subdir in src/argp src/nettle src/sftp src/spki ; do
 done
 
 aclocal && autoconf && autoheader && automake -a
-
-relative_symlink install-sh src/nettle
-relative_symlink texinfo.tex src/nettle
-relative_symlink INSTALL src/nettle
-relative_symlink COPYING src/nettle
