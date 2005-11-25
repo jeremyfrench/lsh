@@ -1,3 +1,9 @@
+2005-11-25  Niels Möller  <niels@s3.kth.se>
+
+	* misc/run-tests: New -v option, propagated to test programs.
+
+	* src/ssh-conv: Fixed syntax error in awk program.
+
 2005-11-23  Niels Möller  <niels@s3.kth.se>
 
 	* src/xalloc.h (number_of_strings): Deleted declaration.
