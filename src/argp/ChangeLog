@@ -1,3 +1,7 @@
+2005-11-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Use LSH_FUNC_ALLOCA.
+
 2004-11-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* argp-parse.c (__option_is_end): Delete __THROW on these
