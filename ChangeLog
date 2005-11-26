@@ -1,5 +1,8 @@
 2005-11-26  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/lsh-6-test (ALGORITHMS): Try both aes-cbc and
+	aes-ctr.
+
 	* src/dummy.c (ctr_crypt): New dummy implementation.
 
 	* src/lsh_string.c (lsh_string_ctr_crypt): New function.
