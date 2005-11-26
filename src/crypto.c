@@ -39,6 +39,7 @@
 #include "nettle/twofish.h"
 
 #include "nettle/cbc.h"
+#include "nettle/ctr.h"
 #include "nettle/hmac.h"
 
 #include "crypto.h"
@@ -93,43 +94,23 @@ struct crypto_algorithm crypto_arcfour_algorithm =
   8, 16, 0, make_arcfour_instance };
 
 /* Create a CBC super class? */
-/* ;;GABA:
-   (class
-     (name cbc_crypto_algorithm)
-     (super crypto_algorithm)
-     (vars
-       (context_size . uint32_t)
-       (block_size . uint32_t)
-       (encrypt . nettle_encrypt_func)
-       (encrypt . nettle_decrypt_func)))
-*/
-
-/* ;; GABA:
-   (class
-     (name cbc_instance)
-     (super crypto_instance)
-     (vars
-       (type object cbc_crypto_algorithm)
-       (ctx space void)
-       (iv string)))
-*/
 
 /* AES/Rijndael */
 /* GABA:
    (class
-     (name aes_instance)
+     (name aes_cbc_instance)
      (super crypto_instance)
      (vars
        (ctx . "struct CBC_CTX(struct aes_ctx, AES_BLOCK_SIZE)")))
 */
 
 static void
-do_aes_encrypt(struct crypto_instance *s,
-	       uint32_t length,
-	       struct lsh_string *dst, uint32_t di,
-	       const struct lsh_string *src, uint32_t si)
+do_aes_cbc_encrypt(struct crypto_instance *s,
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
-  CAST(aes_instance, self, s);
+  CAST(aes_cbc_instance, self, s);
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 AES_BLOCK_SIZE, self->ctx.iv,
@@ -138,12 +119,12 @@ do_aes_encrypt(struct crypto_instance *s,
 }
 
 static void
-do_aes_decrypt(struct crypto_instance *s,
-	       uint32_t length,
-	       struct lsh_string *dst, uint32_t di,
-	       const struct lsh_string *src, uint32_t si)
+do_aes_cbc_decrypt(struct crypto_instance *s,
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
-  CAST(aes_instance, self, s);
+  CAST(aes_cbc_instance, self, s);
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 AES_BLOCK_SIZE, self->ctx.iv,
@@ -155,18 +136,18 @@ static struct crypto_instance *
 make_aes_cbc_instance(struct crypto_algorithm *algorithm, int mode,
                       const uint8_t *key, const uint8_t *iv)
 {
-  NEW(aes_instance, self);
+  NEW(aes_cbc_instance, self);
 
   self->super.block_size = AES_BLOCK_SIZE;
 
   if (mode == CRYPTO_ENCRYPT)
     {
-      self->super.crypt = do_aes_encrypt;
+      self->super.crypt = do_aes_cbc_encrypt;
       aes_set_encrypt_key(&self->ctx.ctx, algorithm->key_size, key);
     }
   else
     {
-      self->super.crypt = do_aes_decrypt;
+      self->super.crypt = do_aes_cbc_decrypt;
       aes_set_decrypt_key(&self->ctx.ctx, algorithm->key_size, key);
     }
 
@@ -175,9 +156,57 @@ make_aes_cbc_instance(struct crypto_algorithm *algorithm, int mode,
   return(&self->super);
 }
 
+#if 0
+struct crypto_algorithm crypto_aes128_cbc_algorithm =
+{ STATIC_HEADER, AES_BLOCK_SIZE, 16, AES_BLOCK_SIZE, make_aes_cbc_instance};
+
+struct crypto_algorithm crypto_aes192_cbc_algorithm =
+{ STATIC_HEADER, AES_BLOCK_SIZE, 24, AES_BLOCK_SIZE, make_aes_cbc_instance};
+#endif
+
 struct crypto_algorithm crypto_aes256_cbc_algorithm =
 { STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_cbc_instance};
 
+/* GABA:
+   (class
+     (name aes_ctr_instance)
+     (super crypto_instance)
+     (vars
+       (ctx . "struct CTR_CTX(struct aes_ctx, AES_BLOCK_SIZE)")))
+*/
+
+static void
+do_aes_ctr_crypt(struct crypto_instance *s,
+		 uint32_t length,
+		 struct lsh_string *dst, uint32_t di,
+		 const struct lsh_string *src, uint32_t si)
+{
+  CAST(aes_ctr_instance, self, s);
+
+  lsh_string_ctr_crypt(dst, di, src, si, length,
+		       AES_BLOCK_SIZE, self->ctx.ctr,
+		       (nettle_crypt_func) aes_encrypt,
+		       &self->ctx.ctx);
+}
+
+static struct crypto_instance *
+make_aes_ctr_instance(struct crypto_algorithm *algorithm, int mode UNUSED,
+                      const uint8_t *key, const uint8_t *iv)
+{
+  NEW(aes_ctr_instance, self);
+
+  self->super.block_size = AES_BLOCK_SIZE;
+
+  self->super.crypt = do_aes_ctr_crypt;
+  aes_set_encrypt_key(&self->ctx.ctx, algorithm->key_size, key);
+
+  CTR_SET_COUNTER(&self->ctx, iv);
+  
+  return(&self->super);
+}
+
+struct crypto_algorithm crypto_aes256_ctr_algorithm =
+{ STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_ctr_instance};
 
 /* Triple DES */
 /* GABA:
