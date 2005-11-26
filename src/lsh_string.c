@@ -38,6 +38,7 @@
 
 #include "nettle/buffer.h"
 #include "nettle/cbc.h"
+#include "nettle/ctr.h"
 #include "nettle/hmac.h"
 #include "nettle/macros.h"
 #include "nettle/memxor.h"
@@ -273,6 +274,24 @@ lsh_string_cbc_decrypt(struct lsh_string *dst, uint32_t di,
   assert (src != dst || di == si);
   cbc_decrypt(ctx, f, block_size, iv,
 	      length, dst->data + di, src->data + si);
+
+  assert(!dst->data[dst->length]);
+}
+
+void
+lsh_string_ctr_crypt(struct lsh_string *dst, uint32_t di,
+		     const struct lsh_string *src, uint32_t si,
+		     uint32_t length,
+		     uint32_t block_size, uint8_t *iv,
+		     nettle_crypt_func f, void *ctx)
+{
+  ASSERT_ROOM(dst, di, length);
+  ASSERT_ROOM(src, si, length);
+
+  /* Equal source and destination is ok, but no overlaps. */
+  assert (src != dst || di == si);
+  ctr_crypt(ctx, f, block_size, iv,
+	    length, dst->data + di, src->data + si);
 
   assert(!dst->data[dst->length]);
 }
