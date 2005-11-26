@@ -34,6 +34,7 @@
 #include "nettle/bignum.h"
 #include "nettle/buffer.h"
 #include "nettle/cbc.h"
+#include "nettle/ctr.h"
 #include "nettle/hmac.h"
 #include "nettle/memxor.h"
 #include "nettle/nettle-meta.h"
@@ -60,6 +61,13 @@ cbc_decrypt(void *ctx UNUSED, nettle_crypt_func f UNUSED,
 	    unsigned block_size UNUSED, uint8_t *iv UNUSED,
 	    unsigned length UNUSED, uint8_t *dst UNUSED,
 	    const uint8_t *src UNUSED)
+{ abort(); }
+
+void
+ctr_crypt(void *ctx UNUSED, nettle_crypt_func f UNUSED,
+	  unsigned block_size UNUSED, uint8_t *iv UNUSED,
+	  unsigned length UNUSED, uint8_t *dst UNUSED,
+	  const uint8_t *src UNUSED)
 { abort(); }
 
 void
