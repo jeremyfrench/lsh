@@ -9,24 +9,35 @@ zlib
 # Bulk encryption
 
 3des-cbc         REQUIRED          three-key 3DES in CBC mode
-blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
+3des-ctr         RECOMMENDED       Three-key 3DES in SDCTR mode
+blowfish-cbc     RECOMMENDED       Blowfish in CBC mode, 128-bit key
+blowfish-ctr     OPTIONAL          Blowfish in SDCTR mode, 256-bit key
 twofish256-cbc   OPTIONAL          Twofish in CBC mode, with 256-bit key
 twofish-cbc      OPTIONAL          alias for "twofish256-cbc"
-twofish192-cbc   OPTIONAL          Twofish with 192-bit key
 twofish128-cbc   RECOMMENDED       Twofish with 128-bit key
+twofish192-cbc   OPTIONAL          Twofish with 192-bit key
+twofish128-ctr   OPTIONAL          Twofish in SDCTR mode, with 128-bit key
+twofish192-ctr   OPTIONAL          Twofish with 192-bit key
+twofish256-ctr   OPTIONAL          Twofish with 256-bit key
 aes256-cbc       OPTIONAL          AES (Rijndael) in CBC mode, with 256-bit key
 aes192-cbc       OPTIONAL          AES with 192-bit key
 aes128-cbc       RECOMMENDED       AES with 128-bit key
+aes128-ctr       RECOMMENDED       AES (Rijndael) in SDCTR mode, with 128-bit key
+aes192-ctr       RECOMMENDED       AES with 192-bit key
+aes256-ctr       RECOMMENDED       AES with 256-bit key
 serpent256-cbc   OPTIONAL          Serpent in CBC mode, with 256-bit key
 serpent192-cbc   OPTIONAL          Serpent with 192-bit key
 serpent128-cbc   OPTIONAL          Serpent with 128-bit key
+serpent128-ctr   OPTIONAL          Serpent in SDCTR mode, with 128-bit key
+serpent192-ctr   OPTIONAL          Serpent with 192-bit key
+serpent256-ctr   OPTIONAL          Serpent with 256-bit key
+arcfour          OPTIONAL          the ARCFOUR stream cipher
+cast128-cbc      OPTIONAL          CAST-128 in CBC mode
+cast128-ctr      OPTIONAL          CAST-128 in SDCTR mode,
+# none           OPTIONAL          no encryption; NOT RECOMMENDED
 
 # Old lsh aliases
 serpent-cbc@lysator.liu.se      EXPERIMENTAL      Serpent cipher in CBC mode
-
-arcfour          OPTIONAL          the ARCFOUR stream cipher
-cast128-cbc      OPTIONAL          CAST-128 in CBC mode
-# none           OPTIONAL          no encryption; NOT RECOMMENDED
 
 # MAC algorithms
 
