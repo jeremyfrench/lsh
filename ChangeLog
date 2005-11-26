@@ -1,3 +1,22 @@
+2005-11-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/dummy.c (ctr_crypt): New dummy implementation.
+
+	* src/lsh_string.c (lsh_string_ctr_crypt): New function.
+
+	* src/crypto.c (class aes_cbc_instance): Renamed class, was
+	aes_instance. Renamed the corresponding functions too. 
+	(aes_ctr_instance): New class.
+	(do_aes_ctr_crypt, make_aes_ctr_instance): New functions.
+	(crypto_aes256_ctr_algorithm): New algorithm.
+
+	* src/algorithms.c (all_symmetric_algorithms): Added
+	ATOM_AES256_CTR.
+	(all_crypto_algorithms): Likewise.
+	(lookup_crypto): Check for "aes256-ctr" and "aes-ctr".
+
+	* src/atoms.in: Added symbols for counter mode ciphers.
+
 2005-11-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/run-tests (find_program): If argument contains a slash
