@@ -8,6 +8,8 @@ fi
 
 . $srcdir/functions.sh
 
+[ -x /bin/bash ] || test_skip
+
 spawn_lshd || die "spawn_lshd failed"
 spawn_lsh -G || die "spawn_lsh failed"
 
