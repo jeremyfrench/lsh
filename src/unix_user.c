@@ -145,7 +145,8 @@ make_pwhelper_callback(struct unix_user *user,
   return &self->super;
 }
 
-/* NOTE: Consumes the pw string if successful. */
+/* NOTE: Consumes the pw string if successful.
+   FIXME: Should be renamed. */
 static int
 kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
 		  struct command_continuation *c,
