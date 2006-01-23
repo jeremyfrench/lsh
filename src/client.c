@@ -1018,6 +1018,7 @@ make_client_session(struct client_options *options)
   debug("lsh.c: Setting up stdout\n");
 
   if (options->stdout_file)
+    /* FIXME: Use O_TRUNC too? */
     out = open(options->stdout_file, O_WRONLY | O_CREAT, 0666);
   else
     {
@@ -1034,6 +1035,7 @@ make_client_session(struct client_options *options)
   debug("lsh.c: Setting up stderr\n");
   
   if (options->stderr_file)
+    /* FIXME: Use O_TRUNC too? */
     err = open(options->stderr_file, O_WRONLY | O_CREAT, 0666);
   else
     {
