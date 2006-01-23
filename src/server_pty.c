@@ -49,6 +49,7 @@
 #include "channel.h"
 #include "connection.h"
 #include "format.h"
+#include "io.h"
 #include "lsh_string.h"
 #include "parse.h"
 #include "ssh.h"
@@ -191,7 +192,9 @@ pty_open_master(struct pty_info *pty,
       werror("pty_open_master: Opening /dev/ptmx failed %e\n", errno);
       return 0;
     }
-  
+
+  io_set_close_on_exec(pty->master);
+
   if ((name = pty_grantpt_uid(pty->master, user))
       && (unlockpt(pty->master) == 0))
     {
@@ -227,6 +230,9 @@ pty_open_master(struct pty_info *pty,
 	  if (pty->master != -1) 
 	    {
 	      /* master succesfully opened */
+
+	      io_set_close_on_exec(pty->master);
+
 	      snprintf(slave, sizeof(slave),
 		       PTY_BSD_SCHEME_SLAVE, first[i], second[j]);
 	      slave[sizeof(slave) - 1] = 0;
@@ -281,6 +287,8 @@ pty_open_slave(struct pty_info *pty)
 	     pty->tty_name, errno);
       return -1;
     }
+
+  io_set_close_on_exec(fd);
 
   /* For Sys V and Solaris, push some streams modules.
    * This seems to also have the side effect of making the
