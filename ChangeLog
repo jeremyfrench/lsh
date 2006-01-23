@@ -1,3 +1,19 @@
+2006-01-23  Niels Möller  <niels@s3.kth.se>
+
+	* src/xauth.c (x11_forward): Commented out unused class. 
+
+	* src/lsh-make-seed.c (spawn_source_process): Explicitly close
+	dev_null fd in child process.
+
+	* src/unix_random.c (do_device_source, random_init): Use
+	io_set_close_on_exec, to avoid fd:s leaking to user shells.
+	* src/werror.c (werror_argp_parser): Likewise.
+	* src/server_pty.c (pty_open_master): Likewise.
+	* src/unix_interact.c (make_unix_interact): Likewise (even if this
+	is in the client).
+	* src/io.c (lsh_pushd_fd): Likewise.
+	(lsh_pushd): Likewise. Also fixed EINTR logic.
+
 2005-11-28  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lcp-test: Skip test if /bin/bash doesn't exist.
