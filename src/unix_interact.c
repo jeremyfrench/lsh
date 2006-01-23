@@ -522,8 +522,10 @@ make_unix_interact(void)
 #endif
 
   if (self->tty_fd >= 0)
-    /* Restore and reset tty if process is suspended. */      
-    suspend_handle_tty(self->tty_fd);
-
+    {
+      io_set_close_on_exec(self->tty_fd);
+      /* Restore and reset tty if process is suspended. */      
+      suspend_handle_tty(self->tty_fd);
+    }
   return &self->super;
 }

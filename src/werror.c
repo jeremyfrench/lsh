@@ -114,7 +114,10 @@ werror_argp_parser(int key, char *arg,
 	if (fd < 0)
 	  argp_error(state, "Failed to open log file `%s'.", arg);
 	else
-	  set_error_stream(fd);
+	  {
+	    io_set_close_on_exec(fd);
+	    set_error_stream(fd);
+	  }
       }
     }
   return 0;
