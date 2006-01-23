@@ -289,7 +289,7 @@ xauth_lock(const char *name)
   return NULL;
 }
 
-/* GABA:
+/* ;; GABA:
    (class
      (name x11_forward)
      (super channel_open)
