@@ -749,7 +749,8 @@ spawn_source_process(unsigned *index,
 	
       close (output[0]);
       close (output[1]);
-      
+      close (dev_null);
+
       /* Works also if state->source->arg == NULL */
       execl(state->source->path, state->source->path,
 	    state->source->arg, NULL);
@@ -1304,7 +1305,8 @@ main(int argc, char **argv)
 	     options->filename);
 
       overwrite = 1;
-      
+
+      /* FIXME: Use O_TRUNC? */
       fd = open(lsh_get_cstring(options->filename),
 		O_WRONLY,
 		0600);
@@ -1356,7 +1358,8 @@ main(int argc, char **argv)
 	      return EXIT_FAILURE;
 	    }
 	}
-      
+
+      /* FIXME: Use O_TRUNC instead? */
       if (ftruncate(fd, 0) < 0)
 	{
 	  werror("Failed to truncate file `%S' %e\n",
