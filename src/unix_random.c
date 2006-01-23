@@ -258,6 +258,7 @@ do_device_source(struct unix_random *self, int init)
       if (self->device_fd < 0)
 	return 0;
 
+      io_set_close_on_exec(self->device_fd);
       self->device_last_read = now;
     }
 
@@ -381,6 +382,7 @@ random_init(struct lsh_string *seed_file_name)
 	return NULL;
       }
 
+    io_set_close_on_exec(self->seed_file_fd);
     trace("random_init, reading seed file...\n");
     
     if (!read_initial_seed_file(&self->yarrow, self->seed_file_fd))
