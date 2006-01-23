@@ -1813,6 +1813,8 @@ lsh_pushd_fd(int dir)
       return -1;
     }
 
+  io_set_close_on_exec(old_cd);
+
   /* Test if we are allowed to cd to our current working directory. */
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
@@ -1909,13 +1911,16 @@ lsh_pushd(const char *directory,
       return -1;
     }
 
+  io_set_close_on_exec(old_cd);
+
   /* Test if we are allowed to cd to our current working directory. */
   while (fchdir(old_cd) < 0)
-    {
-      werror("io.c: fchdir(\".\") failed %e\n", errno);
-      close(fd);
-      close(old_cd);
-      return -1;
+    if (errno != EINTR)
+      {
+	werror("io.c: fchdir(\".\") failed %e\n", errno);
+	close(fd);
+	close(old_cd);
+	return -1;
       }
 
   /* As far as I have been able to determine, all checks for
