@@ -1,3 +1,15 @@
+News for the 2.0.2 release
+
+	Fixed a couple of problems in lshd, where the server process
+	leaks file descriptors to user shells that it starts. These
+	bugs implied a local denial of service hole, at best.
+
+	Support for aes256-ctr.
+
+	Newer nettle library. Bugfixes and performance improvements
+	for the assembler code, in particular support for sparc64, and
+	Makefile fixes.
+
 News for the 2.0.1 release
 
 	Fixed denial of service bug in lshd.
