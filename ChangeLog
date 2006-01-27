@@ -1,3 +1,9 @@
+2006-01-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* Released lsh-2.0.2.
+
+	* NEWS: Entry for 2.0.2.
+
 2006-01-23  Niels Möller  <niels@s3.kth.se>
 
 	* src/xauth.c (x11_forward): Commented out unused class. 
