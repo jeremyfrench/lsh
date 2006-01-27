@@ -1,5 +1,7 @@
 2006-01-27  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Bumped version to 2.0.3.
+
 	* Released lsh-2.0.2.
 
 	* NEWS: Entry for 2.0.2.
