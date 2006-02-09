@@ -1,3 +1,8 @@
+2006-02-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/index.html: Updated sshtools link, after prodding from
+	Jerrad Pierce.
+
 2006-01-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.3.
