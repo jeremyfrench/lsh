@@ -19,7 +19,7 @@ bin_PROGRAMS = lsh lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed
 	       
 
-sbin_PROGRAMS = lshd lshd-userauth lshd-connection lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
+sbin_PROGRAMS = lshd lshd-userauth lshd-connection @KRB_PROGRAM@ @PAM_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp
 noinst_LIBRARIES = liblsh.a
 
@@ -38,12 +38,12 @@ bootstrap: $(generated_sources) $(dist_classes)
 # Old files:
 #
 # client_keyexchange.c client_userauth.c connection_commands.c
-# debug.c gateway_commands.c handshake.c
+# debug.c gateway_commands.c
 # read_packet.c write_packet.c
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c tcpforward_commands.c
 
-# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c 
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c handshake.c
 
 
 liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
@@ -53,7 +53,6 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	client_session.c client_tcpforward.c \
 	combinators.c command.c compress.c \
 	connection.c \
-	parse_config.c \
 	crypto.c \
 	daemon.c \
 	dh_exchange.c \
@@ -66,6 +65,7 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	list.c \
 	lock_file.c \
 	lsh_string.c parse.c \
+	parse_config.c \
 	pkcs5.c \
 	queue.c \
 	randomness.c \
@@ -73,12 +73,14 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	rsa.c \
 	server.c \
 	server_pty.c server_session.c server_tcpforward.c \
+	server_config.c \
 	service_read.c \
 	sexp.c socks.c \
 	spki.c srp_exchange.c \
 	ssh_read.c ssh_write.c \
 	suspend.c \
 	tcpforward.c \
+	tokenize_config.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c \
 	werror.c \
