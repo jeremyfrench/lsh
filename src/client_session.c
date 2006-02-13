@@ -187,41 +187,6 @@ do_send_adjust(struct ssh_channel *s,
   channel_io_start_read(&session->super, &session->in, oop_read_stdin);
 }
 
-#if 0
-/* Called when a session channel which a remote shell */
-DEFINE_COMMAND(client_start_io)
-     (struct command *s UNUSED,
-      struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(client_session, session, x);
-
-  session->super.receive = do_receive;
-  session->super.send_adjust = do_send_adjust;
-  session->super.eof = do_client_session_eof;
-
-  session->super.sources ++;
-
-  /* One reference each for stdout and stderr, and one more for the
-     exit-status/exit-signal message */
-  session->super.sinks += 3;
-  
-  /* FIXME: Setup escape handler, and raw tty? */
-  if (session->super.send_window_size)
-    channel_io_start_read(&session->super, &session->in, oop_read_stdin);
-
-  ALIST_SET(session->super.request_types, ATOM_EXIT_STATUS,
-	    &make_handle_exit_status(session->exit_status)->super);
-  ALIST_SET(session->super.request_types, ATOM_EXIT_SIGNAL,
-	    &make_handle_exit_signal(session->exit_status)->super);
-
-  channel_start_receive(&session->super, lsh_string_length(session->out.state->buffer));
-
-  COMMAND_RETURN(c, session);
-}
-#endif
-
 static void
 do_client_session_event(struct ssh_channel *c, enum channel_event event)
 {
@@ -284,7 +249,8 @@ make_client_session_channel(int in, int out, int err,
   trace("make_client_session\n");
   init_channel(&self->super, do_kill_client_session, do_client_session_event);
   
-  /* Set to initial_window in client_start_io */
+  /* Set to initial_window when channel_start_receive is called, in
+     do_client_session_event. */
   self->super.rec_window_size = 0;
 
   /* FIXME: Make maximum packet size configurable */
