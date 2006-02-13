@@ -16,9 +16,14 @@
 #define FILE_SEXP_CONV		BINDIR "/sexp-conv"
 #define FILE_KERBEROS_HELPER	SBINDIR "/lsh-krb-checkpw"
 
+#define FILE_LSHD_CONFIG_DIR	SYSCONFDIR "/lshd"
 #define FILE_LSHD_CONNECTION	LIBEXECDIR "/lshd-connection"
 #define FILE_LSHD_USERAUTH	LIBEXECDIR "/lshd-userauth"
 #define FILE_LSH_TRANSPORT	LIBEXECDIR "/lsh-transport"
+
+#define FILE_LSHD_CONF		"lshd.conf"
+#define FILE_LSHD_USERAUTH_CONF	"lshd-userauth.conf"
+#define FILE_LSHD_CONNECTION_CONF "lshd-connection.conf"
 
 /* Some other files: /dev/null, /tmp/.X11-unix..., /var/run, /, /tmp,
  * /var/spool/lsh/yarrow-seed-file, /etc/lsh_host_key,
@@ -33,8 +38,12 @@
 #define ENV_HOME		"HOME"
 #define ENV_LOGNAME		"LOGNAME"
 #define ENV_LSH_TRANSPORT	"LSH_TRANSPORT"
+#define ENV_LSHD_CONFIG_DIR	"LSHD_CONFIG_DIR"
+#define ENV_LSHD_CONFIG_FILE	"LSHD_CONFIG_FILE"
 #define ENV_LSHD_CONNECTION	"LSHD_CONNECTION"
+#define ENV_LSHD_CONNECTION_CONFIG_FILE	"LSHD_CONNECTION_CONFIG_FILE"
 #define ENV_LSHD_USERAUTH	"LSHD_USERAUTH"
+#define ENV_LSHD_USERAUTH_CONFIG_FILE	"LSHD_USERAUTH_CONFIG_FILE"
 #define ENV_SEED_FILE 		"LSH_YARROW_SEED_FILE"
 #define ENV_PATH      		"PATH"
 #define ENV_SEXP_CONV 		"SEXP_CONV"
@@ -57,7 +66,7 @@
     (s) = getenv(ENV_USER);			\
 } while (0)
 
-#define GET_FILE_ENV(s, name) do {			\
+#define GET_FILE_ENV(s, name) do {		\
   (s) = getenv(ENV_##name);			\
   if (!(s))					\
     (s) = FILE_##name;				\
