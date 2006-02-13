@@ -79,22 +79,6 @@ init_ssh_connection(struct ssh_connection *connection,
   object_queue_init(&connection->pending_global_requests);
 }
 
-#if 0
-void
-kill_ssh_connection(struct ssh_connection *connection)
-{
-  KILL_RESOURCE_LIST(self->resources);
-  for (i = 0; i<connection->used_channels; i++)
-    {
-      /* Loop over all channels, no matter if the status is reserved or in use */
-      struct ssh_channel *channel = connection->channels[i];
-
-      if (channel)
-	KILL_RESOURCE(&channel->super);
-    }
-}
-#endif
-
 /* Returns -1 if allocation fails */
 /* NOTE: This function returns locally chosen channel numbers, which
  * are always small integers. So there's no problem fitting them in
