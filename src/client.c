@@ -51,7 +51,6 @@
 #include "suspend.h"
 #include "tcpforward.h"
 #include "translate_signal.h"
-#include "werror.h"
 #include "xalloc.h"
 #include "io.h"
 
@@ -228,7 +227,7 @@ do_exit_signal(struct channel_request *s,
 {
   CAST(exit_handler, self, s);
 
-  uint32_t signal;
+  int signal;
   int core;
 
   const uint8_t *msg;
@@ -422,6 +421,8 @@ init_client_options(struct client_options *self,
 		    struct exception_handler *handler,
 		    int *exit_code)			 
 {
+  init_werror_config(&self->super);
+
   self->random = random;
 
   self->tty = make_unix_interact();
@@ -730,25 +731,24 @@ DEFINE_ESCAPE(exit_callback, "Exit.")
   exit(EXIT_SUCCESS);
 }
 
-DEFINE_ESCAPE(verbose_callback, "Toggle verbose messages.")
-{
-  verbose_flag = !verbose_flag;
-  if (verbose_flag)
-    verbose("Enabling verbose messages\n");
-}
-
-DEFINE_ESCAPE(debug_callback, "Toggle debug messages.")
-{
-  debug_flag = !debug_flag;
-  if (debug_flag)
-    debug("Enabling debug messages\n");
-}
-
 DEFINE_ESCAPE(quiet_callback, "Toggle warning messages.")
 {
-  quiet_flag = !quiet_flag;
-  if (!quiet_flag)
-    werror("Enabling warning messages\n");
+  toggle_quiet();
+}
+
+DEFINE_ESCAPE(verbose_callback, "Toggle verbose messages.")
+{
+  toggle_verbose();
+}
+
+DEFINE_ESCAPE(trace_callback, "Toggle trace messages.")
+{
+  toggle_trace();
+}
+
+DEFINE_ESCAPE(debug_callback, "Toggle trace messages.")
+{
+  toggle_trace();
 }
 
 /* GABA:
@@ -872,9 +872,10 @@ make_client_session(struct client_options *options)
       escape->dispatch['.'] = &exit_callback;
 
       /* Toggle the verbosity flags */
-      escape->dispatch['d'] = &debug_callback;
-      escape->dispatch['v'] = &verbose_callback;
       escape->dispatch['q'] = &quiet_callback;      
+      escape->dispatch['v'] = &verbose_callback;
+      escape->dispatch['t'] = &trace_callback;
+      escape->dispatch['d'] = &debug_callback;
     }
   
   debug("lsh.c: Setting up stdout\n");
@@ -936,6 +937,8 @@ make_client_session(struct client_options *options)
 
 /* Treat environment variables as sources for options */
 
+/* FIXME: Can we obsolete this hack once we have reasonable
+   configuration files? */
 void
 envp_parse(const struct argp *argp,
 	   const char** envp,
@@ -1069,6 +1072,10 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
     {
     default:
       return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &options->super;
+      break;
+      
     case ARGP_KEY_NO_ARGS:
       argp_usage(state);
       break;
@@ -1091,6 +1098,9 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
+      if (!werror_init(&options->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
       if (options->inhibit_actions)
 	break;
 
@@ -1226,9 +1236,18 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
   return 0;
 }
 
+static const struct argp_child
+client_argp_children[] =
+{
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+  
 const struct argp client_argp =
 {
   client_options,
   client_argp_parser,
-  NULL, NULL, NULL, NULL, NULL
+  NULL, NULL,
+  client_argp_children,
+  NULL, NULL
 };
