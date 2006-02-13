@@ -185,6 +185,7 @@ static const struct argp_child
 main_argp_children[] =
 {
   { &client_argp, 0, "", 0 },
+  XXX Broken, needs a werror_config object
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
