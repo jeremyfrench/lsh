@@ -1,5 +1,12 @@
 2006-02-13  Niels Möller  <niels@s3.kth.se>
 
+	* src/testsuite/functions.sh (LSHD_CONFIG_DIR): Set and export.
+	(INTERFACE): Deleted variable.
+
+	* src/testsuite/config/lshd-connection.conf: New file.
+	* src/testsuite/config/lshd-userauth.conf: New file.
+	* src/testsuite/config/lshd.conf: New file.
+
 	* src/.dist_classes (dist_classes): Added lshd-userauth.c.x,
 	server.h.x and werror.h.x.
 
