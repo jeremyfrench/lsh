@@ -268,7 +268,8 @@ transport_process_packet(struct transport_connection *connection,
   data = lsh_string_data(packet);
   msg = data[0];
 
-  trace("Received %T (%i) message, length %i\n", msg, msg, length);
+  trace("transport_process_packet: %T (%i) message, length %i\n",
+	msg, msg, length);
   
   /* Messages of type IGNORE, DISCONNECT and DEBUG are always
      acceptable. */
