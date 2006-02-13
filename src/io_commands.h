@@ -31,31 +31,6 @@ extern struct command_2 listen_tcp_command;
 #define LISTEN_TCP (&listen_tcp_command.super.super)
 
 #if 0
-extern struct command_2 listen_command;
-#define LISTEN (&listen_command.super.super)
-
-extern struct command bind_address_command;
-#define BIND (&bind_address_command.super)
-
-extern struct command bind_local_command;
-#define BIND_LOCAL (&bind_local_command.super)
-
-
-struct command *
-make_connect_port(struct address_info *target);
-
-extern struct command_2 connect_connection_command;
-#define CONNECT_CONNECTION (&connect_connection_command.super.super)
-
-extern struct command connect_simple_command;
-#define CONNECT_SIMPLE (&connect_simple_command.super)
-
-extern struct command connect_list_command;
-#define CONNECT_LIST (&connect_list_command.super)
-
-extern struct command connect_local_command;
-#define CONNECT_LOCAL (&connect_local_command.super)
-
 extern struct command io_log_peer_command;
 #define LOG_PEER (&io_log_peer_command.super)
 
