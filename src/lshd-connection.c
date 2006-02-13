@@ -34,17 +34,18 @@
 #include "nettle/macros.h"
 
 #include "channel.h"
+#include "environ.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
 #include "resource.h"
 #include "reaper.h"
+#include "server.h"
 #include "server_session.h"
 #include "service.h"
 #include "ssh.h"
 #include "tcpforward.h"
 #include "version.h"
-#include "werror.h"
 #include "xalloc.h"
 
 #include "lshd-connection.c.x"
@@ -275,7 +276,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 static const struct argp_child
 main_argp_children[] =
 {
-  { &werror_argp, 0, "", 0 },
+  { &server_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
 
@@ -294,6 +295,10 @@ int
 main(int argc, char **argv)
 {
   struct connection *connection;
+  struct server_config *config
+    = make_server_config(&werror_config_parser,
+			 FILE_LSHD_CONNECTION_CONF,
+			 ENV_LSHD_CONNECTION_CONFIG_FILE);
 #if 0
   fprintf(stderr, "argc = %d\n", argc);
   {
@@ -302,7 +307,7 @@ main(int argc, char **argv)
       fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
   }
 #endif
-  argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
+  argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
   io_init();
   reaper_init();
