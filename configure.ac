@@ -797,6 +797,10 @@ if test x$GCC = xyes ; then
   else
     CFLAGS="$CFLAGS -ggdb3"
   fi
+  # FIXME: It would be better to actually test if this option works and/or is needed.
+  if "$CC" --version | grep 'gcc.* 4\.' 1>/dev/null 2>&1; then
+    CFLAGS="$CFLAGS -Wno-pointer-sign"
+  fi
   CFLAGS="$CFLAGS -Wall -W \
   -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes \
   -Wpointer-arith -Wbad-function-cast -Wnested-externs"
