@@ -38,18 +38,6 @@
 #include "exception.h.x"
 #undef GABA_DEFINE
 
-#if 0
-static void
-do_default_handler(struct exception_handler *ignored UNUSED,
-		   const struct exception *e)
-{
-  fatal("Unhandled exception of type 0x%xi: %z\n", e->type, e->msg);
-}
-
-struct exception_handler default_exception_handler =
-STATIC_EXCEPTION_HANDLER(do_default_handler, NULL);
-#endif
-
 DEFINE_EXCEPTION_HANDLER(ignore_exception_handler)
      (struct exception_handler *self UNUSED,
       const struct exception *e)
@@ -133,40 +121,6 @@ make_exception(int type, int subtype, const char *msg)
 
   return e;
 }
-
-#if 0
-/* Reason == 0 means disconnect without sending any disconnect
- * message. */
-
-struct exception *
-make_protocol_exception(uint32_t reason, const char *msg)
-{
-  NEW(protocol_exception, self);
-
-#define MAX_REASON 15
-  const char *messages[MAX_REASON+1] =
-  {
-    NULL, "Host not allowed to connect",
-    "Protocol error", "Key exchange failed",
-    "Host authentication failed", "MAC error",
-    "Compression error", "Service not available",
-    "Protocol version not supported", "Host key not verifiable",
-    "Connection lost", "By application",
-    "Too many connections", "Auth cancelled by user",
-    "No more auth methods available", "Illegal user name"
-  };
-    
-  assert(reason <= MAX_REASON);
-#undef MAX_REASON
-
-  self->super.type = EXC_PROTOCOL;
-  self->super.msg = msg ? msg : messages[reason];
-
-  self->reason = reason;
-
-  return &self->super;
-}
-#endif
 
 #if DEBUG_TRACE
 void
