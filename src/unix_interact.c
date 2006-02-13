@@ -215,7 +215,9 @@ read_password(struct unix_interact *self,
       char *password;
       const char *cprompt;
 
-      if (!IS_TTY(self) || quiet_flag)
+      /* FIXME: What's best, to use the flag in werror.c, or make
+	 quietness a property of this object? */
+      if (!IS_TTY(self) || werror_quiet_p())
 	return NULL;
 
       cprompt = lsh_get_cstring(prompt);
@@ -267,7 +269,7 @@ unix_yes_or_no(struct interact *s,
 #define TTY_BUFSIZE 10
 
   CAST(unix_interact, self, s);
-  if (!IS_TTY(self) || quiet_flag)
+  if (!IS_TTY(self))
     {
       if (free)
 	lsh_string_free(prompt);
@@ -496,7 +498,7 @@ struct interact *
 make_unix_interact(void)
 {
   NEW(unix_interact, self);
-  
+
   self->super.is_tty = unix_is_tty;
   self->super.read_password = unix_read_password;
   self->super.set_askpass = unix_set_askpass;
