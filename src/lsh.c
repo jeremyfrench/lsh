@@ -388,7 +388,6 @@ static const struct argp_child
 main_argp_children[] =
 {
   { &client_argp, 0, "", 0 },
-  { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
 
@@ -431,7 +430,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
-      state->child_inputs[1] = NULL;
       break;
       
     case ARGP_KEY_END:
@@ -443,83 +441,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "No home directory. Please set HOME in the environment.");
 	  break;
 	}
-
-#if 0
-      if (!self->super.random)
-	argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
-
-      if (self->with_dh_keyexchange < 0)
-	self->with_dh_keyexchange = !self->with_srp_keyexchange;
-      
-      if (self->with_dh_keyexchange || self->with_srp_keyexchange)
-	{
-	  int i = 0;
-	  self->kex_algorithms 
-	    = alloc_int_list(2 * self->with_dh_keyexchange + self->with_srp_keyexchange);
-	    
-#if WITH_SRP	    
-	  if (self->with_srp_keyexchange)
-	    {
-	      LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
-	      ALIST_SET(self->algorithms->algorithms,
-			ATOM_SRP_RING1_SHA1_LOCAL,
-			&make_srp_client(make_srp1(self->super.random),
-					 self->super.tty,
-					 ssh_format("%lz", self->super.user))
-			->super);
-	    }
-#endif /* WITH_SRP */
-	  if (self->with_dh_keyexchange)
-	    {
-	      struct keyexchange_algorithm *dh2
-		= make_dh_client(make_dh14(self->super.random));
-	      
-	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP14_SHA1;
-	      ALIST_SET(self->algorithms->algorithms,
-			ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-			&dh2->super);
-
-	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
-	      ALIST_SET(self->algorithms->algorithms,
-			ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			&make_dh_client(make_dh1(self->super.random))
-			->super);
-	    }
-	}
-      else
-	argp_error(state, "All keyexchange algorithms disabled.");
-	
-      {
-	struct lsh_string *tmp = NULL;
-	const char *s = NULL;
-	  
-	if (self->capture)
-	  s = self->capture;
-	else if (self->sloppy)
-	  {
-	    tmp = ssh_format("%lz/.lsh/captured_keys", self->home);
-	    s = lsh_get_cstring(tmp);
-	  }
-	if (s)
-	  {
-	    static const struct report_exception_info report =
-	      STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO,
-					   "Writing new ACL: ");
-
-	    self->capture_file
-	      = io_write_file(s,
-			      O_CREAT | O_APPEND | O_WRONLY,
-			      0600, 
-			      make_report_exception_handler
-			      (&report,
-			       &default_exception_handler,
-			       HANDLER_CONTEXT));
-	    if (!self->capture_file)
-	      werror("Failed to open '%z' %e.\n", s, errno);
-	  }
-	lsh_string_free(tmp);
-      }
-#endif
       
       /* We can't add the gateway action immediately when the -G
        * option is encountered, as we need the name and port of the
@@ -763,13 +684,13 @@ fork_lsh_transport(struct lsh_options *options)
       dup2(pipe[1], STDOUT_FILENO);
       close(pipe[1]);
 
-      if (verbose_flag)
+      if (options->super.super.verbose > 0)
 	arglist_push(&options->transport_args, "-v");
-      if (quiet_flag)
+      if (options->super.super.quiet > 0)
 	arglist_push(&options->transport_args, "-q");	
-      if (debug_flag)
+      if (options->super.super.debug > 0)
 	arglist_push(&options->transport_args, "--debug");
-      if (trace_flag)
+      if (options->super.super.trace > 0)
 	arglist_push(&options->transport_args, "--trace");
 
       if (options->super.port)
