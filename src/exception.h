@@ -86,76 +86,7 @@ do_##name
 
 extern struct exception_handler ignore_exception_handler;
 
-#if 0
-/* ;; GABA:
-   (class
-     (name report_exception_info)
-     (vars
-       (mask . uint32_t)
-       (value . uint32_t)
-       (prefix . "const char *")))
-*/
-
-struct report_exception_info *
-make_report_exception_info(uint32_t mask, uint32_t value,
-			   const char *prefix);
-
-#define STATIC_REPORT_EXCEPTION_INFO(m, v, p) \
-{ STATIC_HEADER, m, v, p }
-
-struct exception_handler *
-make_report_exception_handler(const struct report_exception_info *info,
-			      struct exception_handler *parent,
-			      const char *context);
-#endif
-
 struct exception *
 make_exception(int type, int subtype, const char *msg);
-
-#if 0
-/* Create a simple exception handler, with no internal state */
-struct exception_handler *
-make_exception_handler(void (*raise)(struct exception_handler *s,
-				     const struct exception *x),
-		       struct exception_handler *parent,
-		       const char *context);
-
-/* A protocol exception, that normally terminates the connection */
-/* ;;GABA:
-   (class
-     (name protocol_exception)
-     (super exception)
-     (vars
-       ; A reason code that can be passed in a SSH_MSG_DISCONNECT message.
-       ; Zero means terminate the connection without sending such a message.
-       (reason . uint32_t)))
-*/
-
-
-/* If msg is NULL, it is derived from the reason value */
-struct exception *
-make_protocol_exception(uint32_t reason, const char *msg);
-
-#define STATIC_PROTOCOL_EXCEPTION(reason, msg) \
-{ { STATIC_HEADER, EXC_PROTOCOL, (msg) }, (reason) }
-
-/* Always a static message */
-#define PROTOCOL_ERROR(e, msg)			\
-{						\
-  static const struct protocol_exception _exc	\
-    = { { STATIC_HEADER, EXC_PROTOCOL, (msg) },	\
-        SSH_DISCONNECT_PROTOCOL_ERROR };	\
-  EXCEPTION_RAISE((e), &_exc.super);		\
-}
-
-/* Always a static message */
-#define PROTOCOL_ERROR_DISCONNECT(e, reason, msg)			\
-{						\
-  static const struct protocol_exception _exc	\
-    = { { STATIC_HEADER, EXC_PROTOCOL, (msg) },	\
-        (reason) };	\
-  EXCEPTION_RAISE((e), &_exc.super);		\
-}
-#endif
 
 #endif /* LSH_EXCEPTION_H_INCLUDED */
