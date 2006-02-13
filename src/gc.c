@@ -71,7 +71,7 @@ static void sanity_check_object_list(void)
 
 /* FIXME: This function recurses heavily. One could use some trickery
  * to emulate tail recursion, which would help marking linked lists.
- * Or one could use some more efficient datastructures than the C
+ * Or one could use some more efficient data structures than the C
  * stack for keeping track of the marked but not yet traced objects.
  * Or use something more sophisticated, like pointer reversal. */
 static void gc_mark(struct lsh_object *o)

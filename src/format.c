@@ -268,7 +268,7 @@ end_options:
 		    l = nettle_mpz_sizeinbase_256_u(n);
 		  }
 		else
-		  /* FIXME: Do we really need tohandle negative
+		  /* FIXME: Do we really need to handle negative
 		   * numbers in lsh? */
 		  /* Unlike nettle's convention, zero is represented
 		   * as an empty string. */
