@@ -423,19 +423,6 @@ lsh_string_base64_decode(struct lsh_string *s)
   return 0;
 }
 
-#if 0
-unsigned
-lsh_string_put_base64_single(struct lsh_string *s, uint32_t start,
-			     struct base64_encode_ctx *ctx, uint8_t c)
-{
-  unsigned res;
-  ASSERT_ROOM(s, start, 2);
-  res = base64_encode_single(ctx, s->data + start, c);
-  assert(!s->data[s->length]);
-  return res;    
-}
-#endif
-
 unsigned
 lsh_string_base64_encode_update(struct lsh_string *s, uint32_t start,
 				struct base64_encode_ctx *ctx,
