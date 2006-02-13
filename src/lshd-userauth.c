@@ -50,12 +50,15 @@
 #include "format.h"
 #include "io.h"
 #include "parse.h"
+#include "server.h"
 #include "ssh.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
 #include "lsh_argp.h"
+
+#include "lshd-userauth.c.x"
 
 #define HEADER_SIZE 8
 
@@ -397,7 +400,7 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
       
       packet = read_packet(&seqno);
       
-      werror("handle_userauth: Received packet.\n");
+      trace("handle_userauth: Received packet.\n");
       simple_buffer_init(&buffer, STRING_LD(packet));
 
       if (!parse_uint8(&buffer, &msg_number))
@@ -460,24 +463,39 @@ format_env_pair(const char *name, const char *value)
 static void
 start_service(struct lshd_user *user, char **argv)
 {
-  /* We need place for SHELL, HOME, USER, LOGNAME, TZ, PATH and a
-     terminating NULL */
-  
-#define ENV_MAX 6
+  /* We need place for SHELL, HOME, USER, LOGNAME, TZ, PATH,
+     LSHD_CONFIG_DIR, and a terminating NULL */
+
+  /* FIXME: Is it really the right way to propagate lshd-specific
+     environment variables, such as LSHD_CONFIG_DIR, here? If we
+     support providing command line options with the service, that
+     might be a cleaner alternative. */
+
+#define ENV_MAX 7
 
   const char *env[ENV_MAX + 1];
   const char *tz = getenv(ENV_TZ);
-  const char *cname = lsh_get_cstring(user->name);
-  assert(cname);
+  const char *cname = lsh_get_cstring(user->name);  
+  const char *config_dir = getenv(ENV_LSHD_CONFIG_DIR);
+  unsigned i;
   
-  env[0] = format_env_pair(ENV_SHELL, user->shell);
-  env[1] = format_env_pair(ENV_HOME, user->home);
-  env[2] = format_env_pair(ENV_USER, cname);
-  env[3] = format_env_pair(ENV_LOGNAME, cname);
-  env[4] = ENV_PATH "=/bin:/usr/bin";
-  env[5] = tz ? format_env_pair(ENV_TZ, tz) : NULL;
-  env[6] = NULL;
+  assert(cname);
 
+  i = 0;
+  env[i++] = format_env_pair(ENV_SHELL, user->shell);
+  env[i++] = format_env_pair(ENV_HOME, user->home);
+  env[i++] = format_env_pair(ENV_USER, cname);
+  env[i++] = format_env_pair(ENV_LOGNAME, cname);
+  env[i++] = ENV_PATH "=/bin:/usr/bin";
+  if (tz)
+    env[i++] = format_env_pair(ENV_TZ, tz);
+
+  if (config_dir)
+    env[i++] = format_env_pair(ENV_LSHD_CONFIG_DIR, config_dir);
+  env[i++] = NULL;
+
+  assert(i <= ENV_MAX);
+  
   /* To allow for a relative path, even when we cd to $HOME. */
   argv[0] = canonicalize_file_name(argv[0]);
   if (!argv[0])
@@ -577,7 +595,10 @@ decode_hex(const char *hex)
 
 /* Option parsing */
 
-#define OPT_SESSION_ID 0x200
+enum {
+  OPT_SESSION_ID = 0x200,
+};  
+
 const char *argp_program_version
 = "lshd-userauth (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
 
@@ -586,7 +607,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 static const struct argp_child
 main_argp_children[] =
 {
-  { &werror_argp, 0, "", 0 },
+  { &server_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
 
@@ -596,38 +617,54 @@ main_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "session-id", OPT_SESSION_ID, "Session id", 0,
     "Session id from the transport layer.", 0 },
+  
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
-struct lshd_userauth_options
+/* GABA:
+   (class
+     (name lshd_userauth_config)
+     (super server_config)
+     (vars
+       (session_id string)))
+*/
+
+static struct lshd_userauth_config *
+make_lshd_userauth_config(void)
 {
-  struct lsh_string *session_id;
-};  
+  NEW(lshd_userauth_config, self);
+  init_server_config(&self->super,
+		     &werror_config_parser,
+		     FILE_LSHD_USERAUTH_CONF,
+		     ENV_LSHD_USERAUTH_CONFIG_FILE);
+
+  self->session_id = NULL;
+  return self;
+}
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
 {
-  struct lshd_userauth_options *options
-    = (struct lshd_userauth_options *) state->input;
+  CAST(lshd_userauth_config, self, state->input);
 
   switch(key)
     {
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      options->session_id = NULL;
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
       break;
 
     case ARGP_KEY_END:
-      if (!options->session_id)
+      if (!self->session_id)
 	argp_error(state, "Mandatory option --session-id is missing.");
       break;
 
     case OPT_SESSION_ID:
-      options->session_id = decode_hex(arg);
-      if (!options->session_id)
+      self->session_id = decode_hex(arg);
+      if (!self->session_id)
 	argp_error(state, "Invalid argument for --session-id.");
+      break;
     }
   return 0;
 }
@@ -636,8 +673,8 @@ static const struct argp
 main_argp =
 { main_options, main_argp_parser, 
   NULL,
-  "Handles the ssh-connection service.\v"
-  "Intended to be invoked by lshd and lshd-userauth.",
+  "Handles the ssh-userauth service.\v"
+  "Intended to be invoked by lshd.",
   main_argp_children,
   NULL, NULL
 };
@@ -646,15 +683,15 @@ int
 main(int argc, char **argv)
 {
   struct lshd_user user;
-  struct lshd_userauth_options options;
+  struct lshd_userauth_config *config = make_lshd_userauth_config();
 
-  argp_parse(&main_argp, argc, argv, 0, NULL, &options);
-  
+  argp_parse(&main_argp, argc, argv, 0, NULL, config);
+
   werror("Started userauth service.\n");
 
   lshd_user_init(&user);
 
-  if (!handle_userauth(&user, options.session_id))
+  if (!handle_userauth(&user, config->session_id))
     {
       write_packet(format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				     "Access denied", ""));
@@ -662,7 +699,7 @@ main(int argc, char **argv)
     }
 
   {
-    char *args[] = { NULL, "-v", "--trace", NULL };
+    char *args[] = { NULL, NULL };
     GET_FILE_ENV(args[0], LSHD_CONNECTION);
     start_service(&user, args);
     
