@@ -68,6 +68,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_decryptkey_options)
+     (super werror_config)
      (vars
        ; Base filename
        (tty object interact)
@@ -79,7 +80,9 @@ static struct lsh_decryptkey_options *
 make_lsh_decryptkey_options(void)
 {
   NEW(lsh_decryptkey_options, self);
-  
+
+  init_werror_config(&self->super);
+
   /* We don't need window change tracking. */
   self->tty = make_unix_interact();
 
@@ -124,7 +127,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
+      break;
+
+    case ARGP_KEY_END:      
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
       break;
 
     case OPT_ASKPASS:
@@ -153,9 +161,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       else
 	self->out_fd = i;
-      break;
-
-    case ARGP_KEY_END:      
       break;
     }
   return 0;
