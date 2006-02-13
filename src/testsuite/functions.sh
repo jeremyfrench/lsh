@@ -14,16 +14,17 @@ set -e
 : ${LSHD_CONNECTION:="`pwd`/../lshd-connection"}
 : ${LSHD_USERAUTH:="`pwd`/../lshd-userauth"}
 
-export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT LSHD_CONNECTION LSHD_USERAUTH
+: ${LSHD_CONFIG_DIR:="$srcdir/config"}
 
-: ${LSHD_FLAGS:='-q --enable-core'}
+export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT LSHD_CONNECTION LSHD_USERAUTH LSHD_CONFIG_DIR
+
+: ${LSHD_FLAGS:=''}
 : ${LSH_FLAGS:=-q}
 : ${LSHG_FLAGS:=-q}
 : ${HOSTKEY:="$srcdir/key-1.private"}
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
-: ${INTERFACE:=localhost}
 
 # Ignore any options the tester might have put in the environment.
 
