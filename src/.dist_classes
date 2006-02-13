@@ -40,6 +40,7 @@ dist_classes = \
     lsh.c.x \
     lsh_process.h.x \
     lshd-connection.c.x \
+    lshd-userauth.c.x \
     lshd.c.x \
     parse_config.c.x \
     queue.h.x \
@@ -48,6 +49,7 @@ dist_classes = \
     reaper.h.x \
     resource.h.x \
     rsa.c.x \
+    server.h.x \
     server_keyexchange.c.x \
     server_pty.h.x \
     server_session.c.x \
@@ -67,4 +69,5 @@ dist_classes = \
     unix_interact.c.x \
     unix_process.c.x \
     unix_random.c.x \
+    werror.h.x \
     zlib.c.x
