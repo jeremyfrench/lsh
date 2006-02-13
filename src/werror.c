@@ -52,86 +52,23 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "parse.h"
+#include "server_config.h"
 #include "xalloc.h"
 
-static void
-werror_format(const char *format, ...);
+#define GABA_DEFINE
+#include "werror.h.x"
+#undef GABA_DEFINE
 
 static const char *packet_types[0x100] =
 #include "packet_types.h"
 ;
 
-/* Global flags */
-int trace_flag = 0;
-int debug_flag = 0;
-int quiet_flag = 0;
-int verbose_flag = 0;
+static int trace_flag = 0;
+static int debug_flag = 0;
+static int quiet_flag = 0;
+static int verbose_flag = 0;
 
 static const char *program_name = NULL;
-
-#define WERROR_TRACE -1
-#define WERROR_DEBUG -2
-#define WERROR_LOG -3
-
-static const struct argp_option
-werror_options[] =
-{
-  { "quiet", 'q', NULL, 0, "Suppress all warnings and diagnostic messages", 0 },
-  { "verbose", 'v', NULL, 0, "Verbose diagnostic messages", 0},
-  { "trace", WERROR_TRACE, NULL, 0, "Detailed trace", 0 },
-  { "debug", WERROR_DEBUG, NULL, 0, "Print huge amounts of debug information", 0 },
-  { "log-file", WERROR_LOG, "File name", 0,
-    "Append messages to this file.", 0},
-  { NULL, 0, NULL, 0, NULL, 0 }
-};
-
-static error_t
-werror_argp_parser(int key, char *arg,
-		   struct argp_state *state)
-{
-  switch(key)
-    {
-    default:
-      return ARGP_ERR_UNKNOWN;
-    case ARGP_KEY_END:
-    case ARGP_KEY_INIT:
-      program_name = state->name;
-      break;
-    case 'q':
-      quiet_flag = 1;
-      break;
-    case 'v':
-      verbose_flag = 1;
-      break;
-    case WERROR_TRACE:
-      trace_flag = 1;
-      break;
-    case WERROR_DEBUG:
-      debug_flag = 1;
-      break;
-    case WERROR_LOG:
-      {
-	/* FIXME: For clients, this is right: We only get lsh-related
-	 * messages to the log file, and child processes are not
-	 * affected. But for the server, perhaps we should also dup
-	 * the logfile over stderr? */
-	
-	int fd = open(arg, O_WRONLY | O_CREAT | O_APPEND, 0666);
-	if (fd < 0)
-	  argp_error(state, "Failed to open log file `%s'.", arg);
-	else
-	  set_error_stream(fd);
-      }
-    }
-  return 0;
-}
-
-const struct argp werror_argp =
-{
-  werror_options,
-  werror_argp_parser,
-  NULL, NULL, NULL, NULL, NULL
-};
 
 static int error_fd = STDERR_FILENO;
 
@@ -164,11 +101,10 @@ write_syslog(int fd UNUSED, uint32_t length, const uint8_t *data)
   return 1;
 }
 
-/* FIXME: Delete argument and use program_name. */
 void
-set_error_syslog(const char *id)
+set_error_syslog(void)
 {
-  openlog(id, LOG_PID | LOG_CONS, LOG_DAEMON);
+  openlog(program_name, LOG_PID | LOG_CONS, LOG_DAEMON);
   error_write = write_syslog;
   error_fd = -1;
 }
@@ -633,7 +569,7 @@ werror_vformat(const char *f, va_list args)
 }
 
 /* Unconditionally display message. */
-static void
+void
 werror_format(const char *format, ...) 
 {
   va_list args;
@@ -783,3 +719,245 @@ format_size_in_hex(uint32_t n)
   return e+1;
 }
 
+void
+toggle_quiet(void)
+{
+  if (quiet_flag)
+    {
+      quiet_flag = 0;
+      werror("Enabling warning messages.\n");      
+    }
+  else
+    {
+      werror("Disabling warning messages.\n");
+      quiet_flag = 1;
+    }
+}
+
+void
+toggle_verbose(void)
+{
+  if (verbose_flag)
+    {
+      verbose("Disabling verbose messages.\n");
+      verbose_flag = 0;
+    }
+  else
+    {
+      verbose_flag = 1;
+      verbose("Enabling verbose messages.\n");
+    }
+}
+
+void
+toggle_trace(void)
+{
+  if (trace_flag)
+    {
+      trace("Disabling trace messages.\n");
+      trace_flag = 0;
+    }
+  else
+    {
+      trace_flag = 1;
+      trace("Enabling trace messages.\n");
+    }
+}
+
+void
+toggle_debug(void)
+{
+  if (debug_flag)
+    {
+      debug("Disabling debug messages.\n");
+      debug_flag = 0;
+    }
+  else
+    {
+      debug_flag = 1;
+      debug("Enabling debug messages.\n");
+    }
+}
+
+int
+werror_quiet_p(void)
+{
+  return quiet_flag;
+}
+
+void
+init_werror_config(struct werror_config *self)
+{
+  self->logfile = NULL;
+  self->syslog = -1;
+  self->quiet = -1;
+  self->verbose = -1;
+  self->trace = -1;
+  self->debug = -1;
+}
+
+struct werror_config *
+make_werror_config(void)
+{
+  NEW(werror_config, self);
+
+  init_werror_config(self);
+  return self;
+}
+
+#define WERROR_TRACE -1
+#define WERROR_DEBUG -2
+#define WERROR_LOGFILE -3
+#define WERROR_SYSLOG -4
+
+static const struct argp_option
+werror_options[] =
+{
+  { "quiet", 'q', NULL, 0, "Suppress all warnings and diagnostic messages", 0 },
+  { "verbose", 'v', NULL, 0, "Verbose diagnostic messages", 0},
+  { "trace", WERROR_TRACE, NULL, 0, "Detailed trace", 0 },
+  { "debug", WERROR_DEBUG, NULL, 0, "Print huge amounts of debug information", 0 },
+  { "log-file", WERROR_LOGFILE, "FILE", 0,
+    "Append messages to this file.", 0},
+  /* Note: No syslog option here, since it's not available for clients */
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static error_t
+werror_argp_parser(int key, char *arg,
+		   struct argp_state *state)
+{
+  CAST_SUBTYPE(werror_config, self, (struct lsh_object *) state->input);
+  
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_END:
+    case ARGP_KEY_INIT:
+      program_name = state->name;
+      break;
+    case 'q':
+      self->quiet = 1;
+      break;
+    case 'v':
+      self->verbose = 1;
+      break;
+    case WERROR_TRACE:
+      self->trace = 1;
+      break;
+    case WERROR_DEBUG:
+      self->debug = 1;
+      break;
+    case WERROR_LOGFILE:
+      if (!self->logfile)
+	{
+	  self->logfile = make_string(arg);
+	  self->syslog = 0;
+	}
+      break;
+    }
+  return 0;
+}
+
+const struct argp werror_argp =
+{
+  werror_options,
+  werror_argp_parser,
+  NULL, NULL, NULL, NULL, NULL
+};
+
+static const struct config_option
+werror_config_options[] = {
+  { WERROR_LOGFILE, "log-file", CONFIG_TYPE_STRING, "File to log messages to.", NULL },
+#if HAVE_SYSLOG
+  { WERROR_SYSLOG, "use-syslog", CONFIG_TYPE_BOOL, "Use the syslog facility.", "no" },
+#endif
+  { 'q', "quiet", CONFIG_TYPE_BOOL, "Supress warning messages.", "no" },
+  { 'v', "verbose", CONFIG_TYPE_BOOL, "Enable verbose logging", "yes" },
+  { WERROR_TRACE, "trace", CONFIG_TYPE_BOOL, "Enable trace messages to the log.", "no" },
+  { WERROR_DEBUG, "debug", CONFIG_TYPE_BOOL, "Enable debug messages to the log.", "no" },
+  { 0, NULL, 0, NULL, NULL }
+};
+
+static int
+werror_config_handler(int key, uint32_t value, const uint8_t *data,
+		      struct config_parser_state *state)
+{
+  CAST_SUBTYPE(werror_config, self, state->input);
+  switch (key)
+    {
+    case WERROR_LOGFILE:
+      if (!self->logfile)
+	self->logfile = ssh_format("%ls", value, data);
+      break;
+#if HAVE_SYSLOG
+    case WERROR_SYSLOG:
+      if (self->syslog < 0)
+	self->syslog = value;
+      break;
+#endif
+    case 'q':
+      if (self->quiet < 0)
+	self->quiet = value;
+      break;
+
+    case 'v':
+      if (self->verbose < 0)
+	self->verbose = value;
+      break;
+
+    case WERROR_TRACE:
+      if (self->trace < 0)
+	self->trace = value;
+      break;
+
+    case WERROR_DEBUG:
+      if (self->debug < 0)
+	self->debug = value;
+    }
+  return 0;
+}
+
+const struct config_parser
+werror_config_parser = {
+  werror_config_options,
+  werror_config_handler,
+  NULL
+};
+
+int
+werror_init(struct werror_config *config)
+{
+  if (config->quiet > 0)
+    quiet_flag = 1;
+  if (config->verbose > 0)
+    verbose_flag = 1;
+  if (config->trace > 0)
+    trace_flag = 1;
+  if (config->debug > 0)
+    debug_flag = 1;
+#ifdef HAVE_SYSLOG
+  if (config->syslog > 0)
+    set_error_syslog();
+  else
+#endif
+    if (config->logfile)
+      {
+	/* FIXME: For clients, this is right: We only get lsh-related
+	 * messages to the log file, and child processes are not
+	 * affected. But for the server, perhaps we should also dup
+	 * the logfile over stderr? */
+	
+	int fd = open(lsh_get_cstring(config->logfile),
+		      O_WRONLY | O_CREAT | O_APPEND, 0666);
+	if (fd < 0)
+	  {
+	    werror("Failed to open log file `%S'.", config->logfile);
+	    return 0;
+	  }
+	else
+	  set_error_stream(fd);	
+      }
+  return 1;
+}

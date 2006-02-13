@@ -28,13 +28,43 @@
 
 #include "lsh_argp.h"
 
-/* Global variables */
-extern int trace_flag;
-extern int debug_flag;
-extern int quiet_flag;
-extern int verbose_flag;
+#include "lsh.h"
+
+#define GABA_DECLARE
+#include "werror.h.x"
+#undef GABA_DECLARE
+
+
+/* GABA:
+   (class
+     (name werror_config)
+     (vars
+       (logfile string)
+       (syslog . int)
+
+       (quiet . int)
+       (verbose . int)
+       (trace . int)
+       (debug . int)))
+*/
+
+void
+init_werror_config(struct werror_config *self);
+
+struct werror_config *
+make_werror_config(void);
 
 extern const struct argp werror_argp;
+extern const struct config_parser werror_config_parser;
+
+void toggle_quiet(void);
+void toggle_verbose(void);
+void toggle_trace(void);
+void toggle_debug(void);
+
+int werror_quiet_p(void);
+
+int werror_init(struct werror_config *config);
 
 void set_error_stream(int fd);
 void set_error_ignore(void);
@@ -46,7 +76,7 @@ void set_error_raw(int raw);
 int dup_error_stream(void);
      
 #ifdef HAVE_SYSLOG
-void set_error_syslog(const char *id);
+void set_error_syslog(void);
 #endif
 
 /* Format specifiers:
@@ -71,6 +101,8 @@ void set_error_syslog(const char *id);
  * u  Input is in utf-8; convert to local charset
  */
 
+
+void werror_format(const char *format, ...);
 
 void werror(const char *format, ...);
 void trace(const char *format, ...);
