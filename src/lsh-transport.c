@@ -94,6 +94,8 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
      (super transport_context)
      (vars
        (algorithms object algorithms_options)
+       (werror_config object werror_config)
+
        (kex_algorithms object int_list)
 
        (tty object interact)
@@ -144,6 +146,8 @@ make_lsh_transport_config(void)
   
   self->super.algorithms = all_symmetric_algorithms();
   self->algorithms = make_algorithms_options(self->super.algorithms);
+
+  self->werror_config = make_werror_config();
 
   self->signature_algorithms = all_signature_algorithms(self->super.random);
 
@@ -269,7 +273,7 @@ lsh_transport_packet_handler(struct transport_connection *connection,
   
   uint8_t msg;
   
-  werror("Received packet: %xs\n", length, packet);
+  debug("Received packet: %xs\n", length, packet);
   assert(length > 0);
 
   msg = packet[0];
@@ -701,7 +705,7 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 	}
       
       /* Ok, let's see if we want to use this untrusted key. */
-      if (!quiet_flag)
+      if (!werror_quiet_p())
 	{
 	  /* Display fingerprint */
 	  /* FIXME: Rewrite to use libspki subject */
@@ -926,7 +930,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
       state->child_inputs[0] = self->algorithms;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[1] = self->werror_config;
       break;
 
     case ARGP_KEY_NO_ARGS:
@@ -943,6 +947,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
+      if (!werror_init(self->werror_config))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
       self->super.kexinit
 	= make_simple_kexinit(self->kex_algorithms,
 			      self->algorithms->hostkey_algorithms,
