@@ -248,7 +248,7 @@ register_channel(struct ssh_connection *connection,
   remember_resource(connection->resources, &channel->super);  
 }
 
-struct ssh_channel *
+static struct ssh_channel *
 lookup_channel(struct ssh_connection *connection, uint32_t i)
 {
   if ( (i < connection->used_channels) && (connection->in_use[i] == CHANNEL_IN_USE))
@@ -262,7 +262,7 @@ lookup_channel(struct ssh_connection *connection, uint32_t i)
   return NULL;
 }
 
-struct ssh_channel *
+static struct ssh_channel *
 lookup_channel_reserved(struct ssh_connection *connection, uint32_t i)
 {
   if ( (i < connection->used_channels) && (connection->in_use[i] == CHANNEL_RESERVED))

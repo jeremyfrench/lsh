@@ -86,7 +86,6 @@ enum channel_flag {
   CHANNEL_NO_WAIT_FOR_EOF = 0x10
 };
 
-/* FIXME: Inherit resource */
 /* GABA:
    (class
      (name ssh_channel)
@@ -208,12 +207,6 @@ register_channel(struct ssh_connection *table,
 		 uint32_t local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use);
-
-/* FIXME: Make static? */
-struct ssh_channel *
-lookup_channel(struct ssh_connection *table, uint32_t i);
-struct ssh_channel *
-lookup_channel_reserved(struct ssh_connection *table, uint32_t i);
 
 void
 channel_adjust_rec_window(struct ssh_channel *channel, uint32_t written);
