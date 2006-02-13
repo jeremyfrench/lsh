@@ -122,6 +122,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_make_seed_options)
+     (super werror_config)
      (vars
        ; Directory that should be created if needed
        (directory string)
@@ -134,6 +135,7 @@ static struct lsh_make_seed_options *
 make_options(void)
 {
   NEW(lsh_make_seed_options, self);
+  init_werror_config(&self->super);
 
   self->directory = NULL;
   self->filename = NULL;
@@ -173,10 +175,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
       break;
 
     case ARGP_KEY_END:
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
       if (!self->filename)
 	{
 	  char *home = getenv(ENV_HOME);
@@ -1271,7 +1276,7 @@ main(int argc, char **argv)
 
           return EXIT_FAILURE;
         }
-      if (!quiet_flag)
+      if (!werror_quiet_p())
 	get_interact(&yarrow, SOURCE_USER);
     }
 
