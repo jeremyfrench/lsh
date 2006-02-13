@@ -430,11 +430,11 @@ algorithms_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { NULL, 0, NULL, 0, "Algorithm selection:", 0},
-  { "crypto", 'c', "Algorithm", 0, "", 0 },
-  { "compression", 'z', "Algorithm",
+  { "crypto", 'c', "ALGORITHM", 0, "", 0 },
+  { "compression", 'z', "ALGORITHM",
     OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
-  { "mac", 'm', "Algorithm", 0, "", 0 },
-  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHMS, "Algorithm", 0, "", 0 }, 
+  { "mac", 'm', "ALGORITHM", 0, "", 0 },
+  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHMS, "ALGORITHM", 0, "", 0 }, 
   { "list-algorithms", OPT_LIST_ALGORITHMS, NULL, 0,
     "List supported algorithms.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }  
