@@ -145,25 +145,6 @@ channel_forward_start_io(struct channel_forward *self)
     channel_io_start_read(&self->super, &self->read, oop_read_socket);
 }
 
-#if 0
-/* Like above, but doesn't install a new write buffer. Used by the socks server. */
-void
-channel_forward_start_io_read(struct channel_forward *channel)
-{
-  channel->super.receive = do_channel_forward_receive;
-  channel->super.send_adjust = do_channel_forward_send_adjust;
-  channel->super.eof = do_channel_forward_eof;
-  
-  /* Install callbacks on the local socket. Leave write callbacks alone */
-  io_read(channel->socket,
-	  make_channel_read_data(&channel->super),
-	  make_channel_read_close_callback(&channel->super));
-  
-  /* Flow control */
-  channel->socket->write_buffer->report = &channel->super.super;
-}
-#endif
-
 static void
 do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
 {
