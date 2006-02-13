@@ -26,6 +26,7 @@
 
 #include "io.h"
 #include "keyexchange.h"
+#include "werror.h"
 
 #define GABA_DECLARE
 #include "client.h.x"
@@ -104,6 +105,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
 /* GABA:
    (class
      (name client_options)
+     (super werror_config)
      (vars
        ;; Used only by lsh, NULL for lshg.
        (random object randomness)
