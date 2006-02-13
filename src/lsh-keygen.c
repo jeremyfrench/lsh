@@ -72,6 +72,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_keygen_options)
+     (super werror_config)     
      (vars
        (server . int)
        ; 'd' means dsa, 'r' rsa
@@ -83,6 +84,8 @@ static struct lsh_keygen_options *
 make_lsh_keygen_options(void)
 {
   NEW(lsh_keygen_options, self);
+  init_werror_config(&self->super);
+  
   self->server = 0;
   self->level = -1;
   self->algorithm = 'r';
@@ -120,10 +123,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
       break;
 
     case ARGP_KEY_END:
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
       switch (self->algorithm)
 	{
 	case 'd':

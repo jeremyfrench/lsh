@@ -67,6 +67,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_writekey_options)
+     (super werror_config)
      (vars
        ; Base filename
        (public_file string)
@@ -93,6 +94,8 @@ static struct lsh_writekey_options *
 make_lsh_writekey_options(void)
 {
   NEW(lsh_writekey_options, self);
+  init_werror_config(&self->super);
+
   self->public_file = NULL;
   self->private_file = NULL;
   self->server = 0;
@@ -153,10 +156,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
       break;
 
     case ARGP_KEY_END:
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
       if (!self->private_file)
 	{
 	  if (self->server)
