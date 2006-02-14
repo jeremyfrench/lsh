@@ -122,6 +122,7 @@ handle_kexinit(struct kexinit_state *self,
    (class
      (name kexinit)
      (vars
+       ; NOTE: One of the very few remaining raw char buffers.
        (cookie array uint8_t 16);
        ; Lists of atoms
        (kex_algorithms object int_list)
