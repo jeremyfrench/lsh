@@ -52,13 +52,19 @@
 /* Time to wait for write buffer to drain after disconnect */
 #define TRANSPORT_TIMEOUT_CLOSE (5 * 60)
 
+static struct lsh_string *
+format_newkeys(void)
+{
+  return ssh_format("%c", SSH_MSG_NEWKEYS);
+}
+
 void
 init_transport_connection(struct transport_connection *self,
 			  void (*kill)(struct resource *s),
 			  struct transport_context *ctx,
 			  int ssh_input, int ssh_output,
-			  int (*event)(struct transport_connection *,
-				       enum transport_event event))
+			  void (*event)(struct transport_connection *,
+					enum transport_event event))
 {
   init_resource(&self->super, kill);
   
@@ -147,19 +153,17 @@ transport_connection_kill(struct transport_connection *connection)
 /* We close the connection when we either have sent a DISCONNECT
    message (possible as the result of a protocol error), or when we
    have received a DISCONNECT message. In the first case, we want to
-   let out write buffer for the ssh connection drain (so that our
-   DISCONNECT message is delivered properly). We may also want to
-   deliver any buffered data to the application, but that's not quite
-   necessary.
-
-   In the latter case, when we have received DISCONNECT, we can
-   discard all data buffered on the ssh connection, but we should try
-   to deliver data bufferd for the application, i.e., the messages the
-   remote peer sent us just before the DISCONNECT message.
+   let our write buffer for the ssh connection drain (so that our
+   DISCONNECT message is delivered properly).
 
    In both cases, the application can't generate any more data. We
    generate a TRANSPORT_EVENT_CLOSE event tell it, and the return
    value tells us if the application is finished.
+
+   When a DISCONNECT message is sent and received, we stop caring
+   about delivering application data. It's the job of the connection
+   layer's channel close logic, with CHANNEL_EOF and CHANNEL_CLOSE to
+   decide when the connection can be disconnected.
 */
 
 void
@@ -169,9 +173,7 @@ transport_close(struct transport_connection *connection, int flush)
 
   if (connection->super.alive && !connection->closing)
     {
-      /* FIXME: Is the return value from the event handler really useful? */
-      connection->closing
-	= connection->event_handler(connection, TRANSPORT_EVENT_CLOSE);
+      connection->event_handler(connection, TRANSPORT_EVENT_CLOSE);
 
       if (connection->expire)
 	{
@@ -185,23 +187,21 @@ transport_close(struct transport_connection *connection, int flush)
       connection->ssh_input = -1;
 
       if (flush && connection->write_active)
-	connection->closing++;
-      else
-	{	      
-	  io_close_fd(connection->ssh_output);
-	  connection->ssh_output = -1;
-	}
-
-      if (connection->closing)
 	{
 	  /* Stay open for a while, to allow buffers to drain. */
+	  connection->closing = 1;
+
 	  transport_timeout(connection,
 			    TRANSPORT_TIMEOUT_CLOSE,
 			    transport_timeout_close);
 	  trace("transport_close: Waiting for buffers to drain.\n");
 	}
       else
-	KILL_RESOURCE(&connection->super);	
+	{	      
+	  io_close_fd(connection->ssh_output);
+	  connection->ssh_output = -1;
+	  KILL_RESOURCE(&connection->super);
+	}
     }
 }
 
