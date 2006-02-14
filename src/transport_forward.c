@@ -64,8 +64,8 @@ init_transport_forward(struct transport_forward *self,
 		       void (*kill)(struct resource *s),
 		       struct transport_context *ctx,
 		       int ssh_input, int ssh_output,
-		       int (*event)(struct transport_connection *,
-				    enum transport_event event))
+		       void (*event)(struct transport_connection *,
+				     enum transport_event event))
 {
   init_transport_connection(&self->super, kill, ctx, ssh_input, ssh_output, event);
 
@@ -79,8 +79,8 @@ struct transport_forward *
 make_transport_forward(void (*kill)(struct resource *s),
 		       struct transport_context *ctx,
 		       int ssh_input, int ssh_output,
-		       int (*event)(struct transport_connection *,
-				    enum transport_event event))
+		       void (*event)(struct transport_connection *,
+				     enum transport_event event))
 {
   NEW(transport_forward, self);
   init_transport_forward(self, kill, ctx, ssh_input, ssh_output, event);
@@ -120,9 +120,6 @@ oop_read_service(oop_source *source UNUSED,
   assert(fd == self->service_in);
   assert(event == OOP_READ);
 
-  /* FIXME: Must check self->service_read_active, and stop the reading
-     loop in case the write buffer fills up and the transport
-     generates a TRANSPORT_EVENT_STOP_APPLICATION. */
   while (self->service_in >= 0 && self->service_read_active)
     {
       enum service_read_status status;
@@ -153,10 +150,10 @@ oop_read_service(oop_source *source UNUSED,
 			       SSH_DISCONNECT_BY_APPLICATION,
 			       "Service done.");
 	  break;
-	case TRANSPORT_READ_PUSH:
+	case SERVICE_READ_PUSH:
 	  transport_send_packet(&self->super, 0, NULL);
 	  /* Fall through */
-	case TRANSPORT_READ_PENDING:
+	case SERVICE_READ_PENDING:
 	  return OOP_CONTINUE;
 
 	case SERVICE_READ_COMPLETE:
@@ -252,7 +249,7 @@ forward_stop_write(struct transport_forward *self)
     }
 }
 
-static int
+static void
 forward_event_handler(struct transport_connection *connection,
 		      enum transport_event event)
 {
@@ -260,7 +257,9 @@ forward_event_handler(struct transport_connection *connection,
   switch (event)
     {
     case TRANSPORT_EVENT_START_APPLICATION:
-      /* FIXME: Must also arrange so that buffered data is read. */
+      /* FIXME: Must also arrange so that buffered data is read. Set
+	 up an OOP_TIME_NOW callback, and have it loop around
+	 service_read_packet in a similar way as oop_read_service. */
       forward_start_read(self);
       break;
 
@@ -274,10 +273,9 @@ forward_event_handler(struct transport_connection *connection,
     case TRANSPORT_EVENT_CLOSE:
       assert(self->service_in >= 0);
       
-      /* FIXME: Should maybe allow service buffer to drain. On the
-	 other hand, the connection layer exchange of EOF and CLOSE
-	 messages should be sufficient to ensure that all important
-	 data is delivered. */
+      /* NOTE: The connection layer exchange of EOF and CLOSE messages
+	 should be sufficient to ensure that all important data has
+	 been delivered already. */
       transport_forward_close(self);
       break;
 
@@ -304,7 +302,6 @@ forward_event_handler(struct transport_connection *connection,
 	    }
 	}
     }
-  return 0;
 }
 
 /* Handles decrypted packets above the ssh transport layer. */
@@ -324,7 +321,9 @@ forward_packet_handler(struct transport_connection *connection,
   WRITE_UINT32(header, seqno);
   WRITE_UINT32(header + 4, length);
 
-  /* FIXME: Avoid pushing out the header */
+  /* FIXME: Avoid pushing out the header. XXX Easy, by using a large
+     value for to_write. But we should probably avoid pushing the data
+     to, unless we get a push indication from the reader. */
   done = ssh_write_data(self->service_writer,
 			self->service_out, 0,
 			sizeof(header), header);
