@@ -44,6 +44,7 @@
 #include "lsh_process.h"
 #include "lsh_string.h"
 #include "reaper.h"
+#include "server.h"
 #include "server_pty.h"
 #include "server_x11.h"
 #include "ssh.h"
@@ -262,11 +263,7 @@ make_server_session(uint32_t initial_window,
 
   init_channel(&self->super,
 	       do_kill_server_session, do_server_session_event);
-  
-  /* FIXME: More proper initialization */
-  self->in.fd = self->out.fd = self->err.fd = -1;
 
-  self->initial_window = initial_window;
   /* We don't want to receive any data before we have forked some
    * process to receive it. */
   self->super.rec_window_size = 0;
@@ -275,15 +272,19 @@ make_server_session(uint32_t initial_window,
   self->super.rec_max_packet = SSH_MAX_PACKET;
   self->super.request_types = request_types;
 
-  /* Note: We don't need a close handler; the channel's resource list
-   * is taken care of automatically. */
-
+  self->initial_window = initial_window;
+  
   self->process = NULL;
 
   self->pty = NULL;
+  self->x11 = NULL;
   self->term = NULL;
   self->client = NULL;
 
+  init_channel_write_state(&self->in, -1, 0);
+  init_channel_read_state(&self->out, -1, 0);
+  init_channel_read_state(&self->err, -1, 0);
+  
   return &self->super;
 }
 
@@ -586,14 +587,14 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   if (session->term)
     {
       env[i].name = ENV_TERM;
-      env[i].value = session->term;
+      env[i].value = lsh_get_cstring(session->term);
       i++;
     }
 
   if (info->pty && info->pty->tty_name)
     {
       env[i].name = ENV_SSH_TTY;
-      env[i].value = info->pty->tty_name;
+      env[i].value = lsh_get_cstring(info->pty->tty_name);
       i++;
     }
 
@@ -601,11 +602,11 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   if (session->x11)
     {
       env[i].name = ENV_DISPLAY;
-      env[i].value = session->x11->display;
+      env[i].value = lsh_get_cstring(session->x11->display);
       i++;
 
       env[i].name = ENV_XAUTHORITY;
-      env[i].value = session->x11->xauthority;
+      env[i].value = lsh_get_cstring(session->x11->xauthority);
       i++;
     }
 #endif /* WITH_X11_FORWARD */
@@ -644,7 +645,6 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   init_spawn_info(&spawn, session, NULL, 5, env);
   spawn.login = 1;
 
-  /* FIXME: lshd-connection shouldn't need any user information */
   if (spawn_process(session, &spawn))
     COMMAND_RETURN(c, channel);
   else
@@ -718,31 +718,6 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
        (subsystems . "const char **")))
 */
 
-/* ;; GABA:
-   (class
-     (name sybsystem_info)
-     (vars
-       (name "const char *")))
-*/
-
-static const char *
-lookup_subsystem(struct subsystem_request *self,
-		 uint32_t length, const uint8_t *name)
-{
-  unsigned i;
-  if (memchr(name, 0, length))
-    return NULL;
-
-  for (i = 0; self->subsystems[i]; i+=2)
-    {
-      assert(self->subsystems[i+1]);
-      if ((length == strlen(self->subsystems[i]))
-	  && !memcmp(name, self->subsystems[i], length))
-	return self->subsystems[i + 1];
-    }
-  return NULL;
-}
-
 static void
 do_spawn_subsystem(struct channel_request *s,
 		   struct ssh_channel *channel,
@@ -769,7 +744,7 @@ do_spawn_subsystem(struct channel_request *s,
       return;
     }
   
-  program = lookup_subsystem(self, name_length, name);
+  program = server_lookup_module(self->subsystems, name_length, name);
   
   if (!session->process && program)
     {
