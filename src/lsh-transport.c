@@ -37,9 +37,6 @@
 #include <fcntl.h>
 #include <netdb.h>
 
-/* For struct spki_iterator */
-#include "spki/parse.h"
-
 #include "algorithms.h"
 #include "crypto.h"
 #include "environ.h"
@@ -195,7 +192,7 @@ kill_lsh_transport_connection(struct resource *s UNUSED)
   exit(EXIT_SUCCESS);
 }
 
-static int
+static void
 lsh_transport_event_handler(struct transport_connection *connection,
 			    enum transport_event event)
 {
@@ -223,8 +220,7 @@ lsh_transport_event_handler(struct transport_connection *connection,
       connection->packet_handler = lsh_transport_packet_handler;
       break;
     }
-  return 0;
-}
+ }
 
 static struct lsh_transport_connection *
 make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
@@ -695,7 +691,6 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
   else
     {
       struct lsh_string *acl;
-      struct spki_iterator i;
       
       verbose("SPKI authorization failed.\n");
       if (!self->config->sloppy)
@@ -747,11 +742,9 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 				   STRING_LD(self->access));
       
       /* FIXME: Seems awkward to pick the acl apart again. */
-      if (!spki_iterator_first(&i, STRING_LD(acl)))
-	fatal("Internal error.\n");
       
       /* Remember this key. We don't want to ask again for key re-exchange */
-      spki_add_acl(self->db, &i);
+      spki_add_acls(self->db, STRING_LD(acl));
 
       /* Write an ACL to disk. */
       if (self->config->capture_fd >= 0)
@@ -792,7 +785,6 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
 {
   struct lsh_string *contents;
   int fd;
-  struct spki_iterator i;
   const char *sexp_conv;
   const char *args[] = { "sexp-conv", "-s", "canonical", NULL };
 
@@ -851,18 +843,9 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
 
   close(fd);
 
-  if (!spki_iterator_first(&i, STRING_LD(contents)))
-    werror("read_known_hosts: S-expression syntax error.\n");
-    
-  else
-    while (i.type != SPKI_TYPE_END_OF_EXPR)
-      {
-	if (!spki_add_acl(self->db, &i))
-	  {
-	    werror("read_known_hosts: Invalid ACL.\n");
-	    break;
-	  }
-      }
+  /* Ignores any error */
+  spki_add_acls(self->db, STRING_LD(contents));
+
   lsh_string_free(contents);
 }
 
