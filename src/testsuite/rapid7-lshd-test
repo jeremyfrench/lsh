@@ -16,7 +16,7 @@ spawn_lshd
 
 for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
     werror "Testing $f"
-    tcpconnect $INTERFACE $PORT < "$f" > /dev/null \
+    tcpconnect localhost $PORT < "$f" > /dev/null \
 	|| die "Connect failed"
 
     kill -0 `cat $PIDFILE` || die "Server died"
