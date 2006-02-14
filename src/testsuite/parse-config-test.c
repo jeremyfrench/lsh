@@ -97,7 +97,7 @@ int
 test_main(void)
 {
   struct config_group *config
-    = config_parse_string(strlen(config_file), config_file);
+    = config_parse_string("test data", strlen(config_file), config_file);
 
   if (!config)
     FAIL();
