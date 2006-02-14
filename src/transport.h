@@ -65,8 +65,7 @@ enum transport_event {
   /* Initial keyexchange complete, time to transmit or accept a
      service request */
   TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE,
-  /* Connection is being closed. Event handler returns the number of
-     non-empty buffers the application wants to wait for. */
+  /* Connection is being closed. */
   TRANSPORT_EVENT_CLOSE,
   /* Push through any buffered data; no more is arriving on the ssh
      connection. */
@@ -134,7 +133,7 @@ transport_read_new_keys(struct transport_read_state *self,
      (super ssh_write_state)
      (vars     
        ; The preferred packet size, and amount of data we try to
-       ; collect actually writing anything.
+       ; collect before actually writing anything.
        (threshold . uint32_t)
        ; Amount of unimportant data at end of buffer
        (ignore . uint32_t)
@@ -258,9 +257,7 @@ transport_write_flush(struct transport_write_state *self,
        ; If non-zero, it's the number of buffers that we are waiting on.
        (closing . unsigned)
 
-       ; Return value is used only for TRANSPORT_EVENT_CLOSE
-       ; FIXME: Should it be an unsigned?
-       (event_handler method int "enum transport_event event")
+       (event_handler method void "enum transport_event event")
 
        ; Handles all non-transport messages. Returns 1 on success, or
        ; 0 if the application's buffers are full. FIXME: Call should
@@ -276,8 +273,8 @@ init_transport_connection(struct transport_connection *self,
 			  void (*kill)(struct resource *s),
 			  struct transport_context *ctx,
 			  int ssh_input, int ssh_output,
-			  int (*event)(struct transport_connection *,
-				       enum transport_event event));
+			  void (*event)(struct transport_connection *,
+					enum transport_event event));
 
 void
 transport_connection_kill(struct transport_connection *connection);
