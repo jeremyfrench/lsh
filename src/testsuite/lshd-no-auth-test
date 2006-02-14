@@ -13,7 +13,7 @@ set +e
 LSHD_FLAGS="$LSHD_FLAGS --no-password --no-publickey --no-srp"
 
 HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
-    -p $PORT --interface=$INTERFACE $LSHD_FLAGS \
+    -p $PORT $LSHD_FLAGS \
     --pid-file $PIDFILE --daemon --no-syslog "$@"
 excode=$?
 
