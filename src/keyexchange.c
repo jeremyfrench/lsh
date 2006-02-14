@@ -30,14 +30,13 @@
 
 #include "keyexchange.h"
 
-/* For filter_algorithms */
-#include "algorithms.h"
 #include "alist.h"
 #include "command.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
 #include "parse.h"
+#include "randomness.h"
 #include "ssh.h"
 #include "transport.h"
 #include "werror.h"
@@ -107,7 +106,7 @@ parse_kexinit(uint32_t length, const uint8_t *packet)
       return NULL;
     }
 
-  if (!parse_octets(&buffer, 16, res->cookie))
+  if (!parse_octets(&buffer, sizeof(res->cookie), res->cookie))
     {
       KILL(res);
       return NULL;
@@ -147,7 +146,7 @@ format_kexinit(struct kexinit *kex)
 {
   return ssh_format("%c%ls%A%A%A%A%A%A%A%A%A%A%c%i",
 		    SSH_MSG_KEXINIT,
-		    16, kex->cookie,
+		    sizeof(kex->cookie), kex->cookie,
 		    kex->kex_algorithms,
 		    kex->server_hostkey_algorithms,
 		    kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER],
@@ -301,7 +300,7 @@ do_make_simple_kexinit(struct make_kexinit *c, struct randomness *random)
   NEW(kexinit, kex);
 
   assert(random->quality == RANDOM_GOOD);
-  RANDOM(random, 16, kex->cookie);
+  RANDOM(random, sizeof(kex->cookie), kex->cookie);
 
   kex->kex_algorithms = closure->kex_algorithms;
   kex->server_hostkey_algorithms = closure->hostkey_algorithms;
