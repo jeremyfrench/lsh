@@ -309,7 +309,7 @@ get_verifier(struct lshd_user *user, int algorithm,
   s = lsh_get_cstring(file);
   assert(s);
 
-  /* FIXME: Use seteuid around the stat call. */
+  /* FIXME: Use seteuid around the stat call? */
   if (stat(s, &sbuf) < 0)
     v = NULL;
   
