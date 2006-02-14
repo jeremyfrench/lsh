@@ -23,6 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_STRING_H_INCLUDED
+#define LSH_STRING_H_INCLUDED
+
 #include "lsh.h"
 
 /* Can we avoid this dependency? */
@@ -194,3 +197,10 @@ int
 lsh_string_transport_iterator_first(struct lsh_string *s,
 				    struct sexp_iterator *iterator);
 
+struct lsh_string *
+lsh_string_colonize(const struct lsh_string *s, int every, int freeflag);
+
+struct lsh_string *
+lsh_string_bubblebabble(const struct lsh_string *s, int freeflag);
+
+#endif /* LSH_STRING_H_INCLUDED */
