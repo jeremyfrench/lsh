@@ -229,14 +229,7 @@ safe_close(int fd)
 }
 
 static const char *
-format_env_pair(const char *name, struct lsh_string *value)
-{
-  assert(lsh_get_cstring(value));
-  return lsh_get_cstring(ssh_format("%lz=%lS", name, value));
-}
-
-static const char *
-format_env_pair_c(const char *name, const char *value)
+format_env_pair(const char *name, const char *value)
 {
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
 }
@@ -268,14 +261,14 @@ exec_shell(struct spawn_info *info)
       return 0;
     }
 
-  envp[i++] = format_env_pair_c(ENV_SHELL, shell);
+  envp[i++] = format_env_pair(ENV_SHELL, shell);
   
   for (j = 1; j < INHERIT_ENV; j++)
     {
       const char *name = inherited[j];
       const char *value = getenv(name);
       if (value)
-	envp[i++] = format_env_pair_c(name, value);
+	envp[i++] = format_env_pair(name, value);
     }
   for (j = 0; j < info->env_length; j++)
     envp[i++] = format_env_pair(info->env[j].name, info->env[j].value);
