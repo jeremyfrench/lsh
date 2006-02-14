@@ -85,7 +85,8 @@
        (writer object ssh_write_state)))
 */
 
-/* FIXME: Duplicates code in lshd-connection */
+/* FIXME: Duplicates code in lshd-connection, in particular
+   oop_read_service. */
 
 static void
 kill_connection(struct resource *s)
