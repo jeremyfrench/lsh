@@ -78,7 +78,8 @@ parse_string(struct simple_buffer *buffer,
   return 1;
 }
 
-/* FIXME: Get rid of this memcpy? */
+/* NOTE: This is used in one single place: For copying the cookie in
+   received KEYEXCHANGE_INIT messages. */
 int
 parse_octets(struct simple_buffer *buffer,
 	     uint32_t length, uint8_t *start)
