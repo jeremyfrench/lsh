@@ -102,7 +102,7 @@ lshd_packet_handler(struct transport_connection *connection,
 		    uint32_t seqno, uint32_t length, const uint8_t *packet);
 
 /* Used only until the service is started. */
-static int
+static void
 lshd_event_handler(struct transport_connection *connection,
 		   enum transport_event event)
 {
@@ -119,7 +119,6 @@ lshd_event_handler(struct transport_connection *connection,
       /* Do nothing */
       break;
     }
-  return 0;
 }
 
 static void
@@ -138,25 +137,6 @@ lshd_line_handler(struct transport_connection *connection,
 
   connection->kex.version[0] = ssh_format("%ls", length, line);
   connection->line_handler = NULL;
-}
-
-/* FIXME: Duplicates server_session.c: lookup_subsystem. */
-static const char *
-lookup_service(const char **services,
-	       uint32_t length, const uint8_t *name)
-{
-  unsigned i;
-  if (memchr(name, 0, length))
-    return NULL;
-
-  for (i = 0; services[i]; i+=2)
-    {
-      assert(services[i+1]);
-      if ((length == strlen(services[i]))
-	  && !memcmp(name, services[i], length))
-	return services[i+1];
-    }
-  return NULL;
 }
 
 static struct lsh_string *
@@ -183,8 +163,8 @@ lshd_service_request_handler(struct transport_forward *self,
       && parse_eod(&buffer))
     {
       CAST(lshd_context, ctx, self->super.ctx);
-      const char *program = lookup_service(ctx->services,
-					   name_length, name);
+      const char *program = server_lookup_module(ctx->services,
+						 name_length, name);
 
       if (program)
 	{
