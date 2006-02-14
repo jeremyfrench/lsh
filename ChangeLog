@@ -1,3 +1,99 @@
+2006-02-14  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/parse-config-test.c (test_main): Pass dummy file
+	name to config_parse_string.
+
+	* src/testsuite/lshd-random-input-test: Use "localhost" instead of
+	$INTERFACE. 
+	* src/testsuite/rapid7-lshd-test: Likewise.
+
+
+	* src/testsuite/lshd-no-auth-test: Deleted --interface option.
+
+	* src/lshd_keyexchange.c: Deleted obsolete file.
+
+	* src/Makefile.am (lsh_execuv_LDADD): Deleted.
+
+	* src/unix_process.c (format_env_pair): Use const char * for the
+	value.
+	(format_env_pair_c): Deleted.
+	(exec_shell): Updated for above changes.
+
+	* src/transport_forward.c: Adapted event handler functions to
+	return void.
+	(oop_read_service): Fix cut and paste error, should use
+	SERVICE_READ_PUSH and SERVICE_READ_PENDING, not TRANSPORT_READ_*.
+
+	* src/transport.c (format_newkeys): Moved function here, and made
+	static. Used to be in format.c.
+	(transport_close): Clarified comment on disconnect handling.
+	The event handler no longer returns and value for
+	TRANSPORT_EVENT_CLOSE. Simplified logic deciding if the connection
+	should be closed immediately, or if we should allow some time for
+	the buffer to drain.
+
+	* src/server_session.c (make_server_session): Cleanup of
+	initialization. 
+	(init_spawn_info): Now plain const char * is used for environment
+	values.
+	(shell_request_handler): Deleted FIXME comment.
+	(lookup_subsystem): Deleted function, replaced by
+	server_lookup_module.
+	(do_spawn_subsystem): Use server_lookup_module.
+
+	* src/lshd.c (lshd_event_handler): Return void.
+	(lookup_service): Deleted function, replaced by
+	server_lookup_module.
+	(lshd_service_request_handler): Use server_lookup_module.
+
+	* src/server.c (server_lookup_module): New function, replacing
+	lookup_service and lookup_subsystem.
+
+	* src/lsh_string.h: Added include guards. Declare
+	lsh_string_colonize, lsh_string_bubblebabble_c and
+	lsh_string_bubblebabble. 
+
+	* src/lsh_string.c (lsh_string_colonize) 
+	(lsh_string_bubblebabble_c, lsh_string_bubblebabble): Functions
+	moved here, used to be in format.c.
+
+	* src/lsh_process.h (struct env_value): Use a const char * for the
+	value.
+
+	* src/lsh-transport.c (lsh_transport_event_handler): Changed
+	return type to void.
+	(lsh_transport_lookup_verifier): Use spki_add_acls.
+	(read_host_acls): Use spki_add_acls.
+
+	* src/spki.c (spki_add_acls): New function, replacing
+	spki_add_acl. The new function takes a string as argument,
+	containing zero or more acls.
+
+	* src/transport.h (class transport_connection): Changed the
+	event_handler method to return void.
+
+	* src/keyexchange.c (parse_kexinit, format_kexinit) 
+	(do_make_simple_kexinit): Use sizeof to get the size of
+	kex->cookie, instead of hardcoding the value 16.
+
+	* src/format.c (ssh_vformat_length): Removed support for negative
+	numbers.
+	(ssh_vformat_write): Likewise.
+	(format_newkeys): Function moved to transport.c.
+	(lsh_string_colonize): Function moved to lsh_string.c.
+	(lsh_string_bubblebabble_c): Likewise.
+	(lsh_string_bubblebabble): Likewise.
+
+	* src/dsa.c (DSA_BLOB_LENGTH): New constant.
+	(dsa_blob_length): Deleted function.
+	(dsa_blob_write): Deleted length argument.
+	(do_dsa_sign): Use a constant size DSA_BLOB_LENGTH for writing r
+	and s.
+
+	* src/channel_io.c (init_channel_read_state) 
+	(init_channel_write_state): Let fd < 0 mean that no buffer should
+	be allocated yet.
+
 2006-02-13  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh (LSHD_CONFIG_DIR): Set and export.
