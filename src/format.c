@@ -259,25 +259,25 @@ end_options:
 	    case 'n':
 	      {
 		MP_INT *n = va_arg(args, MP_INT*);
-
-		/* Calculate length of written number */
 		unsigned l;
-		if (unsigned_form)
-		  {
-		    assert(mpz_sgn(n) >= 0);
-		    l = nettle_mpz_sizeinbase_256_u(n);
-		  }
-		else
-		  /* FIXME: Do we really need to handle negative
-		   * numbers in lsh? */
-		  /* Unlike nettle's convention, zero is represented
-		   * as an empty string. */
-		  l = mpz_sgn(n) ? nettle_mpz_sizeinbase_256_s(n) : 0;
-
-		length += l;
+		
+		/* lsh uses  non-negative numbers only. */
+		assert(mpz_sgn(n) >= 0);
 
 		/* Decimal not supported. */
 		assert(!decimal);
+
+		/* Calculate length of written number. Unlike nettle's
+		 * convention, zero is represented as an empty
+		 * string. */
+		if (mpz_sgn(n) == 0)
+		  l = 0;
+		else if (unsigned_form)
+		  l = nettle_mpz_sizeinbase_256_u(n);
+		else
+		  l = nettle_mpz_sizeinbase_256_s(n);
+
+		length += l;
 
 		if (!literal)
 		  length += 4;
@@ -517,17 +517,18 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 		MP_INT *n = va_arg(args, MP_INT *);
 		uint32_t length;
 
+		/* lsh uses  non-negative numbers only. */
+		assert(mpz_sgn(n) >= 0);
+
 		/* Decimal not supported */
 		assert(!decimal);
-		
-		if (unsigned_form)
-		  {
-		    assert(mpz_sgn(n) >= 0);
 
-		    length = nettle_mpz_sizeinbase_256_u(n);
-		  }
+		if (mpz_sgn(n) == 0)
+		  length = 0;
+		else if (unsigned_form)
+		  length = nettle_mpz_sizeinbase_256_u(n);
 		else
-		  length = mpz_sgn(n) ? nettle_mpz_sizeinbase_256_s(n) : 0;
+		  length = nettle_mpz_sizeinbase_256_s(n);
 
 		if (!literal)
 		  {
@@ -628,148 +629,4 @@ struct lsh_string *
 format_unimplemented(uint32_t seqno)
 {
   return ssh_format("%c%i", SSH_MSG_UNIMPLEMENTED, seqno);
-}
-
-struct lsh_string *
-format_newkeys(void)
-{
-  return ssh_format("%c", SSH_MSG_NEWKEYS);
-}
-
-
-struct lsh_string *
-lsh_string_colonize(const struct lsh_string *s, int every, int freeflag)
-{
-  uint32_t i = 0;
-  uint32_t j = 0;
-
-  struct lsh_string *packet;
-  const uint8_t *data;
-  uint32_t length;
-  uint32_t size;
-  int colons;
-
-  /* No of colonds depens on length, 0..every => 0, 
-   * every..2*every => 1 */
-  length = lsh_string_length(s);
-  data = lsh_string_data(s);
-  
-  colons = length ? (length - 1) / every : 0;
-  size = length + colons;
-
-  packet = lsh_string_alloc(size);
-
-  for (; i<length; i++)
-    {
-      if (i && !(i%every))  /* Every nth position except at the beginning */
-	lsh_string_putc(packet, j++, ':');
-
-      lsh_string_putc(packet, j++, data[i]);
-    }
-
-  assert(j == size);
-
-  if (freeflag) /* Throw away the source string? */
-    lsh_string_free( s );
-
-  return packet;
-}
-
-static uint8_t 
-lsh_string_bubblebabble_c(const struct lsh_string *s, uint32_t i)
-{ 
-  /* Recursive, should only be used for small strings */
-
-  uint8_t c;
-  uint32_t j;
-  uint32_t k;
-  uint32_t length = lsh_string_length(s);
-  const uint8_t *data = lsh_string_data(s);
-  assert( 0 != i);
-
-  if (1==i)
-    return 1;
-
-  j = i*2-3-1;
-  k = i*2-2-1;
-
-  assert( j < length && k < length );
-
-  c = lsh_string_bubblebabble_c( s, i-1 );
- 
-  return (5*c + (data[j]*7+data[k])) % 36;
-}
-
-struct lsh_string *
-lsh_string_bubblebabble(const struct lsh_string *s, int freeflag)
-{
-  /* Implements the Bubble Babble Binary Data Encoding by Huima as
-   * posted to the secsh list in August 2001 by Lehtinen.*/
-
-  uint32_t length = lsh_string_length(s);
-  uint32_t i = 0;
-  uint32_t babblelen = 2 + 6*(length/2) + 3;
-  struct lsh_string *p = lsh_string_alloc( babblelen );
-  
-  uint32_t r = 0;
-  const uint8_t *q = lsh_string_data(s);
-
-  uint8_t a;
-  uint8_t b;
-  uint8_t c;
-  uint8_t d;
-  uint8_t e;
-
-  char vowels[6] = { 'a', 'e', 'i', 'o', 'u', 'y' };
-
-  char cons[17] = { 'b', 'c', 'd', 'f', 'g', 'h', 'k',  'l', 'm',
-		    'n', 'p', 'r', 's', 't', 'v', 'z', 'x' }; 
-
-  lsh_string_putc(p, r++, 'x');
-  
-  while( i < length/2 )
-    {
-      assert( i*2+1 < length );
-
-      a = (((q[i*2] >> 6) & 3) + lsh_string_bubblebabble_c( s, i+1 )) % 6;
-      b = (q[i*2] >> 2) & 15;
-      c = ((q[i*2] & 3) + lsh_string_bubblebabble_c( s, i+1 )/6 ) % 6;
-      d = (q[i*2+1] >> 4) & 15; 
-      e = (q[i*2+1]) & 15;
-
-      lsh_string_putc(p, r++, vowels[a]);
-      lsh_string_putc(p, r++, cons[b]);
-      lsh_string_putc(p, r++, vowels[c]);
-      lsh_string_putc(p, r++, cons[d]);
-      lsh_string_putc(p, r++, '-');
-      lsh_string_putc(p, r++, cons[e]);
-
-      i++;
-    }
-
-  if( length % 2 ) /* Odd length? */
-    {
-      a = (((q[length-1] >> 6) & 3) + lsh_string_bubblebabble_c( s, i+1 )) % 6;
-      b = (q[length-1] >> 2) & 15;
-      c = ((q[length-1] & 3) + lsh_string_bubblebabble_c( s, i+1 )/6 ) % 6;
-    }
-  else
-    {
-      a = lsh_string_bubblebabble_c( s, i+1 ) % 6;
-      b = 16;
-      c = lsh_string_bubblebabble_c( s, i+1 ) / 6;
-    }
-
-  lsh_string_putc(p, r++, vowels[a]);
-  lsh_string_putc(p, r++, cons[b]);
-  lsh_string_putc(p, r++, vowels[c]);
-  
-  lsh_string_putc(p, r++, 'x');
-  
-  assert(r == lsh_string_length(p));
-  
-  if( freeflag )
-    lsh_string_free( s );
-
-  return p;
 }
