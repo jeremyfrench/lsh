@@ -24,7 +24,9 @@
 #ifndef LSH_GATEWAY_H_INCLUDED
 #define LSH_GATEWAY_H_INCLUDED
 
-/* FIXME: Do we really need this file? */
+/* FIXME: Do we really need this file? make_gateway_address should be
+   merged in lsh.c, but if we merge gateway.c and gateway_commands.c,
+   this file will be the right one for the declarations. */
 
 #include "lsh.h"
 
