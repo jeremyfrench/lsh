@@ -44,8 +44,8 @@
 #include "channel.c.x"
 
 /* Opening a new channel: There are two cases, depending on which side
-   sends the CHANNEL_OPEN_REQUEST. FIXME: This description is not yet
-   accurate. When we send it, the following steps are taken:
+   sends the CHANNEL_OPEN_REQUEST. When we send it, the following
+   steps are taken:
 
    1. Create a new channel object of the appropriate type.
    
@@ -69,6 +69,24 @@
       CHANNEL_OPEN_CONFIRMATION. Generate a CHANNEL_EVENT_CONFIRM on
       the channel. On error, deallocate channel number, and reply with
       CHANNEL_OPEN_FAILURE.
+
+   FIXME: This description is not yet accurate, this is how it works:
+   To open a channel, channel_open_new_type is called, and a
+   continuation and an exception handler is installed in the channel's
+   channel_open_context. These are invoked on success and failure. To
+   move to the new way of doing things, we must check if there's any
+   code that depends on getting an exception on CHANNEL_OPEN_FAILURE.
+   In the gateway case, a CHANNEL_OPEN_FAILURE should be forwarded to
+   the gateway. It seems best to wait with this cleanup until
+   gatewaying has been reimplemented.
+
+   FIXME: It seems dangerous to use the "reserved" state for both the
+   case when we're waiting for receiving a CHANNEL_OPEN_CONFIRMATION,
+   and when we're waiting for something else to happen before we send
+   CHANNEL_OPEN_CONFIRMATION. What if we receive a CHANNEL_OPEN
+   request immediately followed by a CHANNEL_OPEN_CONFIRMATION which
+   happen to contain the right local number? We must detect that as a
+   protocol error.
 */
 
 struct exception *
