@@ -112,7 +112,7 @@ struct object_list *queue_to_list(struct object_queue *q);
 struct object_list *queue_to_list_and_kill(struct object_queue *q);
 
 /* NOTE: Exits the loop prematurely if any of the objects is NULL. */
-/* We have to be careful, to not make cast and reference
+/* We have to be careful, to not make execute the cast and reference
 
      ((struct object_queue_node *) n##_this)->o
 
@@ -127,7 +127,6 @@ struct object_list *queue_to_list_and_kill(struct object_queue *q);
 
 /* NOTE: You should probably use break or perhaps continue after
  * removing the current node. */
-/* FIXME: This name is rather ugly. */
 
 #define FOR_OBJECT_QUEUE_REMOVE(self, n) \
 do { (self)->q.length--; lsh_queue_remove(n##_this); } while(0)
