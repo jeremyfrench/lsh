@@ -32,8 +32,7 @@
 #include "format.h"
 #include "lsh_string.h"
 #include "ssh.h"
-/* FIXME: Could write new packet into the output buffer, without
-   freeing and allocating new strings. */
+
 struct lsh_string *
 encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
 	       struct crypto_instance *crypt, struct mac_instance *mac,
