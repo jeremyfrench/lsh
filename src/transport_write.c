@@ -200,6 +200,10 @@ make_ignore_packet(struct transport_write_state *self,
   return packet;
 }
 
+/* FIXME: It should be possible to avoid allocating and deallocating
+   new strings here, and instead encrypt the packet directly into the
+   write buffer. */
+
 enum transport_write_status
 transport_write_packet(struct transport_write_state *self,
 		       int fd, enum transport_write_flag flags,
