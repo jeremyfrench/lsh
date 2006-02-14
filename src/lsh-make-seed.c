@@ -27,6 +27,8 @@
 #include "config.h"
 #endif
 
+/* FIXME: Rewrite using select. Then we won't need jpoll.c anymore */
+   
 /* The zlib using code isn't used now */
 #undef WITH_ZLIB
 #define WITH_ZLIB 0
