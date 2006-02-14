@@ -43,7 +43,7 @@ bootstrap: $(generated_sources) $(dist_classes)
 # gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c tcpforward_commands.c
 
-# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c handshake.c
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c handshake.c lshd_keyexchange.c
 
 
 liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
@@ -125,8 +125,6 @@ packet_types.h: ssh.h invert-defs
 	test -s $@T && mv -f $@T $@
 
 lsh_krb_checkpw_LDADD=@KRB_LIBS@
-
-lsh_execuv_LDADD=
 
 LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
