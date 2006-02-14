@@ -24,7 +24,6 @@
 #ifndef LSH_ATOMS_H_INCLUDED
 #define LSH_ATOMS_H_INCLUDED
 
-/* FIXME: Need this be a separate file? */
 #include "lsh.h"
 
 #include "atoms_defines.h"
