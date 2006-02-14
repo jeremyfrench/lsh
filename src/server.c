@@ -27,7 +27,7 @@
 
 #include <assert.h>
 #include <errno.h>
-
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -117,6 +117,25 @@ read_host_key(const char *file,
   return 1;
 }
 
+/* Handles lists of services or subsystems. MODULES is a list { name,
+   program, name, program, ..., NULL }. */ 
+const char *
+server_lookup_module(const char **modules,
+		     uint32_t length, const uint8_t *name)
+{
+  unsigned i;
+  if (memchr(name, 0, length))
+    return NULL;
+
+  for (i = 0; modules[i]; i+=2)
+    {
+      assert(modules[i+1]);
+      if ((length == strlen(modules[i]))
+	  && !memcmp(name, modules[i], length))
+	return modules[i+1];
+    }
+  return NULL;
+}
 
 /* The config file is located, in order of decreasing precendence:
  *

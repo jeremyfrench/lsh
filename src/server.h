@@ -37,6 +37,10 @@ read_host_key(const char *file,
               struct alist *signature_algorithms,
               struct alist *keys);
 
+const char *
+server_lookup_module(const char **modules,
+		     uint32_t length, const uint8_t *name);
+
 /* GABA:
    (class
      (name server_config)
