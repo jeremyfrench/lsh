@@ -46,11 +46,10 @@
 struct lsh_process *
 make_unix_process(pid_t pid, int signal);
 
-/* FIXME: Perhaps it's better to use a const char * for the value? */
 struct env_value
 {
   const char *name;
-  struct lsh_string *value;
+  const char *value;
 };
 
 #define SPAWN_INFO_FIRST_ARG 1
