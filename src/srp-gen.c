@@ -252,7 +252,6 @@ int main(int argc, char **argv)
 
   generator = srp_gen(options);
   
-  /* FIXME: Use write_raw instead. */
   if (!write_raw(options->dest, STRING_LD(generator)))
     {
       werror("Write failed: %e\n", errno);

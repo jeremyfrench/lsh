@@ -30,7 +30,6 @@
 # include "ssh_write.h.x"
 #undef GABA_DECLARE
 
-/* FIXME: Make this into a struct rather than a class? */
 /* GABA:
    (class
      (name ssh_write_state)
