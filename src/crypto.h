@@ -313,6 +313,9 @@ init_dh_state(struct dh_state *self,
 	      const struct dh_params *params,
 	      struct kexinit_state *kex);
 
+/* NOTE: For all calls to this function, free = 1, which means that we
+   do some unnecessary allocation and freeing. But since key exchange
+   is pretty expensive anyway, it shouldn't matter much. */
 void
 dh_hash_update(struct dh_state *self,
 	       struct lsh_string *s, int free);
