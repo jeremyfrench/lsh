@@ -46,7 +46,7 @@ init_channel_read_state(struct channel_read_state *self, int fd,
 {
   self->fd = fd;
   self->active = 0;
-  self->buffer = lsh_string_alloc(buffer_size);
+  self->buffer = (fd < 0) ? NULL : lsh_string_alloc(buffer_size);
 }
 
 void
@@ -151,7 +151,7 @@ init_channel_write_state(struct channel_write_state *self, int fd,
 {
   self->fd = fd;
   self->active = 0;
-  self->state = make_ssh_write_state(buffer_size);
+  self->state = (fd < 0) ? NULL : make_ssh_write_state(buffer_size);
 }
 
 void
