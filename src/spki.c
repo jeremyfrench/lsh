@@ -229,14 +229,27 @@ do_spki_acl_db_free(struct spki_acl_db *db)
   spki_acl_clear(db);
 }
 
-/* FIXME: This functions seems a little redundant. Perhaps change it
- * to take a string argument, and let it loop over an acl list? Then
- * lsh.c need no longer include spki/parse.h. */
+/* The input is a string containing zero or more acls to be processed. */
 int
-spki_add_acl(struct spki_context *ctx,
-             struct spki_iterator *i)
+spki_add_acls(struct spki_context *ctx,
+	      uint32_t length, const uint8_t *data)
 {
-  return spki_acl_process(&ctx->db, i);
+  struct spki_iterator i;
+
+  if (!spki_iterator_first(&i, length, data))
+    {
+      werror("spki_add_acls: S-expression syntax error.\n");
+      return 0;
+    }
+  while (i.type != SPKI_TYPE_END_OF_EXPR)
+    {
+      if (!spki_acl_process(&ctx->db, &i))
+	{
+	  werror("spki_add_acls: Invalid ACL.\n");
+	  return 0;
+	}
+    }
+  return 1;
 }
 
 struct spki_principal *

@@ -107,8 +107,8 @@ struct spki_context *
 make_spki_context(struct alist *algorithms);
 
 int
-spki_add_acl(struct spki_context *ctx,
-	     struct spki_iterator *i);
+spki_add_acls(struct spki_context *ctx,
+	      uint32_t length, const uint8_t *data);
 
 
 struct lsh_string *
