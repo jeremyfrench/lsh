@@ -80,7 +80,7 @@ int
 parse_bignum(struct simple_buffer *buffer, mpz_t result, uint32_t limit);
 
 int
-parse_atom(struct simple_buffer *buffer, int *result);
+parse_atom(struct simple_buffer *buffer, enum lsh_atom *result);
 
 /* Reads a list of zero or more atoms. The buffer should hold the list
  * body; the length field should already be stripped off (usually by
