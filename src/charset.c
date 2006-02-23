@@ -31,7 +31,6 @@
 
 #include "charset.h"
 
-#include "format.h"  /* For lsh_string_dup() FIXME: Should move to lsh_string.h */
 #include "lsh_string.h"
 #include "parse.h"
 #include "werror.h"
