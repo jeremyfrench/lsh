@@ -97,7 +97,7 @@ do_rsa_verify(struct verifier *v,
 	struct simple_buffer buffer;
 	uint32_t length;
 	const uint8_t *digits;
-	int atom;
+	enum lsh_atom atom;
 	
 	simple_buffer_init(&buffer, signature_length, signature_data);
 
@@ -315,7 +315,7 @@ struct verifier *
 make_ssh_rsa_verifier(uint32_t length, const uint8_t *key)
 {
   struct simple_buffer buffer;
-  int atom;
+  enum lsh_atom atom;
   
   simple_buffer_init(&buffer, length, key);
 

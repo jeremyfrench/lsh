@@ -114,7 +114,7 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	
 	uint32_t buf_length;
 	const uint8_t *buf;
-	int atom;
+	enum lsh_atom atom;
       
 	simple_buffer_init(&buffer, signature_length, signature_data);
 	if (!(parse_atom(&buffer, &atom)
@@ -369,7 +369,7 @@ struct verifier *
 make_ssh_dss_verifier(uint32_t length, const uint8_t *key)
 {
   struct simple_buffer buffer;
-  int atom;
+  enum lsh_atom atom;
   
   simple_buffer_init(&buffer, length, key);
 

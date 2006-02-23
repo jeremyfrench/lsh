@@ -277,7 +277,7 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
 #define AUTHORIZATION_DIR "authorized_keys_sha1"
 
 static struct verifier *
-get_verifier(struct lshd_user *user, int algorithm,
+get_verifier(struct lshd_user *user, enum lsh_atom algorithm,
 	     uint32_t key_length, const uint8_t *key)
 {
   struct verifier *v;
@@ -325,7 +325,7 @@ handle_publickey(struct simple_buffer *buffer,
 		 const struct lsh_string *session_id)
 {
   int check_key;
-  int algorithm;
+  enum lsh_atom algorithm;
   uint32_t key_length;
   const uint8_t *key;
   uint32_t signature_start;
@@ -395,8 +395,8 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
       const uint8_t *user_utf8;
       uint32_t seqno;
 
-      int service;
-      int method;
+      enum lsh_atom service;
+      enum lsh_atom method;
       
       packet = read_packet(&seqno);
       

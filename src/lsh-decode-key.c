@@ -118,7 +118,7 @@ static struct lsh_string *
 lsh_decode_key(struct lsh_string *contents)
 {
   struct simple_buffer buffer;
-  int type;
+  enum lsh_atom type;
 
   simple_buffer_init(&buffer, STRING_LD(contents));
 
