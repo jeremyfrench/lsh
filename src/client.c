@@ -187,7 +187,7 @@ make_detach_callback(int *exit_status)
 static void
 do_exit_status(struct channel_request *s,
 	       struct ssh_channel *channel,
-	       struct channel_request_info *info,
+	       const struct channel_request_info *info,
 	       struct simple_buffer *args,
 	       struct command_continuation *c,
 	       struct exception_handler *e UNUSED)
@@ -220,14 +220,14 @@ do_exit_status(struct channel_request *s,
 static void
 do_exit_signal(struct channel_request *s,
 	       struct ssh_channel *channel,
-	       struct channel_request_info *info,
+	       const struct channel_request_info *info,
 	       struct simple_buffer *args,
 	       struct command_continuation *c,
 	       struct exception_handler *e UNUSED)
 {
   CAST(exit_handler, self, s);
 
-  int signal;
+  enum lsh_atom signal;
   int core;
 
   const uint8_t *msg;
@@ -290,27 +290,43 @@ make_handle_exit_signal(int *exit_status)
   return &self->super;
 }
 
-/* (open_session session connection) */
-DEFINE_COMMAND2(open_session_command)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST_SUBTYPE(ssh_channel, channel, a1);
-  CAST_SUBTYPE(ssh_connection, connection, a2);
 
-  if (!channel_open_new_type(connection, channel, ATOM_SESSION, ""))
+/* GABA:
+   (class
+     (name session_open_command)
+     (super command)
+     (vars
+       ; This command can only be executed once,
+       ; so we can allocate the session object in advance.
+       (channel object ssh_channel)))
+*/
+
+static void
+do_open_session_command(struct command *s,
+			struct lsh_object *a,
+			struct command_continuation *c UNUSED,
+			struct exception_handler *e)
+{
+  CAST(session_open_command, self, s);
+  CAST_SUBTYPE(ssh_connection, connection, a);
+  
+  if (!channel_open_new_type(connection, self->channel,
+			     ATOM_LD(ATOM_SESSION), ""))
     {
       EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
 					"Allocating a local channel number failed."));
-      KILL_RESOURCE(&channel->super);
+      KILL_RESOURCE(&self->channel->super);
     }
-  else
-    {
-      assert(!channel->channel_open_context);
-      channel->channel_open_context = make_command_context(c, e);
-    }
+}
+
+struct command *
+make_open_session_command(struct ssh_channel *channel)
+{
+  NEW(session_open_command, self);
+  self->super.call = do_open_session_command;
+  self->channel = channel;
+
+  return &self->super;
 }
 
 DEFINE_COMMAND(request_shell)
@@ -321,16 +337,7 @@ DEFINE_COMMAND(request_shell)
 {
   CAST_SUBTYPE(ssh_channel, channel, x);
 
-  struct command_context *ctx = NULL;
-  if (CONTINUATION_USED_P(c))
-    ctx = make_command_context(c, e);
-  else
-    ctx = NULL;
-
-  channel_send_request(channel, ATOM_SHELL,
-		       (CONTINUATION_USED_P(c)
-			? make_command_context(c, e)
-			: NULL), "");
+  channel_send_request(channel, ATOM_SHELL, 1, "");
 }
 
 /* Used for both exec and subsystem request. */
@@ -346,18 +353,15 @@ DEFINE_COMMAND(request_shell)
 static void
 do_session_channel_request(struct command *s,
 			   struct lsh_object *x,
-			   struct command_continuation *c,
-			   struct exception_handler *e)
+			   struct command_continuation *c UNUSED,
+			   struct exception_handler *e UNUSED)
 {
   CAST(session_channel_request, self, s);
   CAST_SUBTYPE(ssh_channel, channel, x);
 
   verbose("lsh: Requesting remote %a.\n", self->type);
 
-  channel_send_request(channel, self->type,
-		       (CONTINUATION_USED_P(c)
-			? make_command_context(c, e)
-			: NULL),
+  channel_send_request(channel, self->type, 1,
 		       "%S", self->arg);
 }
 
@@ -391,7 +395,7 @@ make_subsystem_request(struct lsh_string *subsystem)
 
 /* Forward declaration */
 
-static struct ssh_channel *
+static struct client_session *
 make_client_session(struct client_options *options);
 
 /* Block size for stdout and stderr buffers */
@@ -468,31 +472,32 @@ static const struct argp_option
 client_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-  { "port", 'p', "Port", 0, "Connect to this port.", 0 },
-  { "user", 'l', "User name", 0, "Login as this user.", 0 },
+  { "port", 'p', "PORT", 0, "Connect to this port.", 0 },
+  { "user", 'l', "NAME", 0, "Login as this user.", 0 },
   { "askpass", OPT_ASKPASS, "Program", 0,
     "Program to use for reading passwords. "
     "Should be an absolute filename.", 0 },
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
 
-  { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
-  { "forward-socks", 'D', "port", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
+  { "forward-local-port", 'L', "LOCAL-PORT:TARGET-HOST:TARGET-PORT", 0,
+    "Forward TCP/IP connections at a local port", 0 },
+  { "forward-socks", 'D', "PORT", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
 #if 0
-  { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
+  { "forward-remote-port", 'R', "REMOTE-PORT:TARGET-HOST:TARGET-PORT", 0, "", 0 },
 #endif
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
     "which is to spawn a remote shell)", 0 },
   { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
-  { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
-  { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
-  { "subsystem", OPT_SUBSYSTEM, "subsystem-name", 0,
+  { "execute", 'E', "COMMAND", 0, "Execute a command on the remote machine", 0 },
+  { "shell", 'S', NULL, 0, "Spawn a remote shell", 0 },
+  { "subsystem", OPT_SUBSYSTEM, "SUBSYSTEM-NAME", 0,
 #if WITH_PTY_SUPPORT 
     "Connect to given subsystem. Implies --no-pty.",
 #else
     "Connect to given subsystem.",
 #endif
     0 },
-  /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
+
   { NULL, 0, NULL, 0, "Universal not:", 0 },
   { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
 
@@ -525,20 +530,6 @@ client_options[] =
     "process to stdout.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
-
-
-/* GABA:
-   (expr
-     (name make_start_session)
-     (storage static)
-     (params
-       (session object ssh_channel)
-       (requests object object_list))
-     (expr (lambda (connection)
-       ((progn requests)
-         ; Create a "session" channel
-         (open_session session connection)))))
-*/
 
 static void
 client_maybe_pty(struct client_options *options,
@@ -605,21 +596,16 @@ client_maybe_x11(struct client_options *options,
 static struct command *
 client_shell_session(struct client_options *options)
 {
-  struct ssh_channel *session = make_client_session(options);
-  
+  struct client_session *session = make_client_session(options);
+
   if (session)
     {
-      struct object_queue session_requests;
-
-      object_queue_init(&session_requests);
-
-      client_maybe_pty(options, 1, &session_requests);
-      client_maybe_x11(options, &session_requests);
+      client_maybe_pty(options, 1, &session->requests);
+      client_maybe_x11(options, &session->requests);
   
-      object_queue_add_tail(&session_requests, &request_shell.super);
-  
-      return make_start_session(session,
-				queue_to_list_and_kill(&session_requests));
+      object_queue_add_tail(&session->requests, &request_shell.super);
+
+      return make_open_session_command(&session->super);
     }
   else
     return NULL;
@@ -630,16 +616,16 @@ static struct command *
 client_subsystem_session(struct client_options *options,
 			 struct lsh_string *subsystem)
 {
-  struct ssh_channel *session = make_client_session(options);
-  
-  if (session)
-    return make_start_session(
-      session,
-      make_object_list(1,
-		       &make_subsystem_request(subsystem)->super,
-		       -1));
+  struct client_session *session = make_client_session(options);
 
-  return NULL;
+  if (session)
+    {
+      object_queue_add_tail(&session->requests,
+			    &make_subsystem_request(subsystem)->super);
+      return make_open_session_command(&session->super);
+    }
+  else
+    return NULL;
 }
 
 /* Create a session executing a command line */
@@ -647,28 +633,22 @@ static struct command *
 client_command_session(struct client_options *options,
 		       struct lsh_string *command)
 {
-  struct ssh_channel *session = make_client_session(options);
-  
+  struct client_session *session = make_client_session(options);
+
   if (session)
     {
-      struct object_queue session_requests;
-    
-      object_queue_init(&session_requests);
-  
       /* NOTE: Doesn't ask for a pty by default. That's traditional
        * behaviour, although perhaps not the Right Thing. */
-      
-      client_maybe_pty(options, 0, &session_requests);
-      client_maybe_x11(options, &session_requests);
 
-      object_queue_add_tail(&session_requests,
+      client_maybe_pty(options, 0, &session->requests);
+      client_maybe_x11(options, &session->requests);
+
+      object_queue_add_tail(&session->requests,
 			    &make_exec_request(command)->super);
-
-      return make_start_session(session,
-				queue_to_list_and_kill(&session_requests));
+      return make_open_session_command(&session->super);
     }
-  
-  return NULL;
+  else
+    return NULL;
 }
 
 struct command *
@@ -812,7 +792,7 @@ make_background_process(int write_pid)
  * with independent lsh_fd objects). stdin can be used by only one
  * session (until something "session-control"/"job-control" is added).
  * */
-static struct ssh_channel *
+static struct client_session *
 make_client_session(struct client_options *options)
 {
   int in;
@@ -820,7 +800,7 @@ make_client_session(struct client_options *options)
   int err;
   
   int is_tty = 0;
-  struct ssh_channel *session;
+  struct client_session *session;
   
   struct escape_info *escape = NULL;
 #if 0
@@ -914,6 +894,7 @@ make_client_session(struct client_options *options)
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
 
   session = make_client_session_channel(in, out, err,
+					options->handler,
 					escape,
 					WINDOW_SIZE,
 					options->exit_code);
@@ -929,7 +910,7 @@ make_client_session(struct client_options *options)
   /* The channel won't get registered in anywhere else until later, so
    * we must register it here to be able to clean up properly if the
    * connection fails early. */
-  remember_resource(options->resources, &session->super);
+  remember_resource(options->resources, &session->super.super);
   
   return session;
 }
