@@ -1,3 +1,262 @@
+2006-02-23  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/lshg-1-test: Use --start-gateway. Don't use
+	need_lshg.
+	* src/testsuite/lshg-cat-2-test: Likewise.
+	* src/testsuite/lshg-cat-test: Likewise.
+	* src/testsuite/lshg-tcpip-local-test: Likewise.
+
+	* src/testsuite/rapid7-lshd-test: Less verbosity.
+	* src/testsuite/rapid7-lsh-test: Likewise.
+
+	* src/testsuite/functions.sh: Use new gateway flags. Deleted
+	function need_lshg. 
+
+	* src/lsh.c (class lsh_connection): Renamed, was connection. New
+	attribute gateway_connections.
+	(oop_read_service): Fixed cut and paste errors in error messages.
+	(make_lsh_connection): Initialize gateway_connections.
+	(gateway_accept): New command.
+	(expr make_gateway_setup): Moved from gateway_commands.c.
+	(class lsh_options): New attributes, use_gateway, start_gateway,
+	stop_gateway, and gateway.
+	(make_options): Initialize gateway related attributes.
+	(main_options): Use an enum to define option values. New options
+	--use-gateway, --no-use-gateway, -G, --start-gateway,
+	--stop-gateway.
+	(main_argp_parser): Handle gateway related options.
+	(fork_lsh_transport): Return a plain fd, not an object.
+	(main): Start and stop gateway, as appropriate. Use a loop with
+	object_queue_is_empty and object_queue_remove_head, instead of the
+	FOR_OBJECT_QUEUE macro.
+
+	* src/gateway_channel.c: Much of the old implementation deleted.
+	(class gateway_channel): New class.
+	(do_kill_gateway_channel): New function.
+	(do_receive): Use channel_transmit_data and
+	channel_transmit_extended, on the chained channel.
+	(do_send_adjust): Use channel_adjust_rec_window.
+	(do_gateway_channel_event): New function.
+	(do_gateway_channel_request): New function.
+	(do_gateway_channel_success): New function.
+	(do_gateway_channel_failure): New function.
+	(gateway_request_methods): New method struct.
+	(make_gateway_pair): New function.
+	(gateway_handle_channel_open): New function.
+	(gateway_packet_handler): New function.
+
+	* src/gateway.h (class gateway_connection): New class.
+
+	* src/gateway.c (kill_gateway_connection): New function.
+	(gateway_write_packet): New function.
+	(gateway_disconnect): New function.
+	(oop_read_gateway): New function.
+	(gateway_start_read): New function.
+	(do_write_packet): New function.
+	(do_disconnect): New function.
+	(make_gateway_connection): New function.
+
+	* src/client_tcpforward.c (open_direct_tcpip_command): Don't setup
+	any channel_open_context.
+
+	* src/client.c (do_exit_status): Updated for const
+	channel_request_info.
+	(do_exit_signal): Updated for const channel_request_info. Use enum
+	lsh_atom.
+	(class session_open_command): New class, replacing command of the
+	same name.
+	(do_open_session_command): Don't setup any channel_open_context.
+	(make_open_session_command): New function.
+	(request_shell): Pass non-zero close_on_error to
+	channel_send_request.
+	(do_session_channel_request): Likewise.
+	(client_options): Cosmetic changes.
+	(expr make_start_session): Deleted.
+	(client_shell_session, client_subsystem_session) 
+	(client_command_session): Use request queue in client_session
+	object.
+	(make_client_session): Changed return type to struct
+	client_session *.
+
+	* src/client_session.c (do_client_session_event): On
+	CHANNEL_EVENT_CONFIRM, send all queued channel requests. On
+	CHANNEL_EVENT_DENY, raise an exception. On CHANNEL_EVENT_CLOSE, do
+	nothing.
+
+	* src/client.h (class client_session): Moved definition here, from
+	client_session.c. New queue of requests to send. New attribute
+	with an exception handler to use for failed CHANNEL_OPEN and
+	CHANNEL_REQUEST.
+
+	* src/server_session.c (do_server_session_event): Handle and
+	ignore CHANNEL_EVENT_CLOSE and CHANNEL_EVENT_DENY.
+	(do_exit_shell): Updated call to channel_send_request.
+	(shell_request_handler, exec_request_handler): Updated for const
+	channel_request_info.
+	(pty_request_handler): Likewise.
+
+	* src/server_tcpforward.c (open_forwarded_tcpip_command): Don't
+	setup any channel_open_context.
+
+	* src/socks.c (class socks_channel): Replaces class
+	socks_connection, and inherits channel_forward.
+	(class socks_continuation): Deleted.
+	(do_socks_continuation, make_socks_continuation): Deleted.
+	(class socks_exception_handler): Deleted.
+	(do_exc_socks_handler, make_socks_exception_handler): Deleted.
+	(do_socks_channel_event): New function, in particular handling
+	CHANNEL_EVENT_CONFIRM and CHANNEL_EVENT_DENY.
+
+	* src/channel_forward.c (channel_forward_shutdown): Made
+	non-static.
+	(channel_forward_start_read): New function.
+	(channel_forward_start_io): Use channel_forward_start_read.
+	(do_channel_forward_event): Use channel_forward_start_read.
+	Recognize CHANNEL_EVENT_DENY and CHANNEL_EVENT_CLOSE, and do
+	nothing.	
+	(init_channel_forward): Take event handler as argument.
+	(make_channel_forward): Pass do_channel_forward_event to
+	init_channel_forward.
+	(forward_open_report, catch_channel_open): Deleted.
+
+	* src/channel.h (format_channel_close, format_channel_eof):
+	Deleted prototypes.
+
+	* src/channel.c: Generally, use ssh_connection_lookup_channel with
+	type CHANNEL_ALLOC_ACTIVE.
+	(format_open_confirmation, format_open_failure)
+	(format_channel_success, format_channel_failure)
+	(format_channel_window_adjust): New function.
+	(lookup_channel, lookup_channel_reserved): Deleted, replaced by
+	ssh_connection_lookup_channel.
+	(ssh_connection_register_channel): Renamed, was register_channel.
+	(send_window_adjust): New function, replacing
+	prepare_window_adjust.
+	(channel_adjust_rec_window, channel_start_receive): Use
+	send_window_adjust.
+	(handle_global_request): Use enum lsh_atom.
+	(handle_channel_request): Use request_methods, if non-NULL. Treat
+	a request on non-existing channel as a protocol error.
+	(do_channel_open_continue): Use ssh_connection_register_channel
+	and ssh_connection_activate_channel.
+	(do_exc_channel_open_handler): Updated for in_use / alloc_state
+	renaming.
+	(handle_channel_open): Don't use open_fallback handler. Use type
+	CHANNEL_ALLOC_RECEIVED_OPEN when allocating the channel number.
+	(handle_channel_close): Generate CHANNEL_EVENT_CLOSE.
+	(handle_open_confirm): Use ssh_connection_activate_channel. Don't
+	use channel_open_context.
+	(handle_open_failure): Use ssh_connection_lookup_channel with type
+	CHANNEL_ALLOC_SENT_OPEN. Generate CHANNEL_EVENT_DENY. Don't use
+	channel_open_context.
+	(handle_channel_success, handle_channel_failure): Use
+	request_methods if non-NULL. For now, don't invoke any
+	continuation or exception.
+	(init_channel): Updated initialization for added and removed
+	attributes.
+	(channel_transmit_data): Use format_channel_data.
+	(channel_transmit_extended): Use format_channel_extended_data.
+	(channel_open_new_v): Alloc channel with type
+	CHANNEL_ALLOC_SENT_OPEN. Call ssh_connection_register_channel.
+	(channel_open_new_type): Replaced type argument, an atom, with
+	length and const uint8_t *
+	(channel_send_request): Replaced the context argument with a flag
+	saying if the channel should be closed on failure.
+
+	* src/channel.h (enum channel_event): New event types
+	CHANNEL_EVENT_DENY and CHANNEL_EVENT_CLOSE.
+	(struct channel_request_info): Use enum lsh_atom for the type.
+	(struct channel_request_methods): New struct, used by gateway
+	channels to replace the handling of channel requests.
+	(class ssh_channel): New attribute request_methods. Deleted
+	request_fallback and channel_open_context.
+	(class channel_request): Made the struct channel_request_info *
+	argument const.
+
+	* src/connection.c (init_ssh_connection): Initialize alloc_state.
+	(ssh_connection_alloc_channel): Added type argument. Proper
+	reallocation of alloc_state.
+	(ssh_connection_dealloc_channel): Updated for in_use / alloc_state
+	renaming.
+	(ssh_connection_activate_channel): Renamed function, was
+	ssh_connection_use_channel.
+	(ssh_connection_lookup_channel): New function, replacing
+	lookup_channel and lookup_channel_reserved in channel.c.
+
+	* src/connection.h (enum channel_alloc_state): New name for enum.
+	Replaced CHANNEL_RESERVED and CHANNEL_IN_USE with three values,
+	CHANNEL_ALLOC_SENT_OPEN, CHANNEL_ALLOC_RECEIVED_OPEN, and
+	CHANNEL_ALLOC_ACTIVE. 
+	(class ssh_connection): Deleted open_fallback. Renamed array
+	in_use to alloc_state.
+
+	* src/gateway_channel.h: Deleted obsolete file.
+	* src/gateway_commands.h: Likewise.
+	* src/gateway_commands.c: Likewise.
+	* src/debug.c: Likewise.
+	
+	* src/resource.c (resource_iterate): New function.
+	(do_mark_resources): Use resource_iterate.
+	(resource_list_foreach): New function.
+	(kill_resource): New function.
+	(do_kill_resource_list): Renamed, was do_kill_all. Use
+	resource_list_foreach.
+
+	* src/ssh.h (SSH_LSH_GATEWAY_STOP): New, local, message number.
+
+	* src/charset.c: No longer includes format.h.
+
+	* src/io_commands.c (listen_tcp_command): Use io_bind_sockaddr.
+	(listen_local_command): New command.
+
+	* src/io.c (io_bind_local, io_connect_local): Changed to return a
+	plain fd, no lsh_fd object.
+	(io_bind_sockaddr): New function, used for both AF_LOCAL and
+	AF_INET sockets.
+
+	* src/lsh_string.c (lsh_string_dup): New function, replacing...
+	* src/format.h (lsh_string_dup): ... deleted macro.
+
+	* src/dsa.c (do_dsa_verify, make_ssh_dss_verifier): Use enum
+	lsh_atom.
+	* src/rsa.c (do_rsa_verify, make_ssh_rsa_verifier): Likewise.
+	* src/lsh-decode-key.c (lsh_decode_key): Likewise.
+	* src/lshd-userauth.c (get_verifier, handle_publickey)
+	(handle_userauth): Likewise.
+	* src/spki.c (spki_algorithm_lookup): Likewise.
+
+	* src/sexp.c (lsh_sexp_to_atom, lsh_sexp_get_type): Return enum
+	lsh_atom, not int.
+
+	* src/process_atoms: For the header file, generate an enum, not a
+	list of #define:s.
+
+	* src/parse.c (parse_atom, parse_next_atom): Use enum lsh_atom for
+	result.
+	(parse_atoms): Convert from enum lsh_atom to int, when
+	constructing the list.
+
+	* src/atoms.in: Deleted unused spki-related atoms, p, q, g, y, x,
+	r, s, n, e, d, a, b, c.
+
+	* src/atoms.h (ATOM_LD): New macro.
+
+	* src/atoms.c (lookup_atom): Return enum lsh_atom, not int.
+
+	* src/Makefile.am (sbin_PROGRAMS): Added lshd-pty-helper.
+	(liblsh_a_SOURCES): Added gateway.c and gateway_channel.c.
+
+	* src/lshd-pty-helper.c: New program.
+
+	* src/server_config.h: Fixed include guard.
+	* src/tokenize_config.h: Likewise.
+
+	* src/arglist.h: Added missing include guard.
+	* src/channel_io.h: Likewise.
+	* src/lock_file.h: Likewise.
+	* src/environ.h.in: Likewise.
+	* src/transport_forward.h: Likewise.
+
 2006-02-14  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/parse-config-test.c (test_main): Pass dummy file
