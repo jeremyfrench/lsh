@@ -256,9 +256,6 @@ format_channel_request_i(struct channel_request_info *info,
 			 struct ssh_channel *channel,
 			 uint32_t args_length, const uint8_t *args_data);
 
-struct lsh_string *format_channel_close(struct ssh_channel *channel);
-struct lsh_string *format_channel_eof(uint32_t number);
-
 struct lsh_string *
 format_open_confirmation(struct ssh_channel *channel,
 			 const char *format, ...);
