@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SERVER_CONFIG_H_INCLUDED
-#define SERVER_CONFIG_H_INCLUDED
+#ifndef LSH_SERVER_CONFIG_H_INCLUDED
+#define LSH_SERVER_CONFIG_H_INCLUDED
 
 #include <stdio.h>
 
@@ -95,4 +95,4 @@ void
 server_config_print_example(const struct config_parser *parser,
 			    FILE *f);
 
-#endif /* LSH_PARSE_CONFIG_H_INCLUDED */
+#endif /* LSH_SERVER_CONFIG_H_INCLUDED */

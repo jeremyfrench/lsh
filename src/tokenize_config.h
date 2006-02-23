@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef TOKENIZE_CONFIG_H_INCLUDED
-#define TOKENIZE_CONFIG_H_INCLUDED
+#ifndef LSH_TOKENIZE_CONFIG_H_INCLUDED
+#define LSH_TOKENIZE_CONFIG_H_INCLUDED
 
 #include "parse.h"
 
@@ -68,4 +68,4 @@ config_tokenizer_get_string(struct config_tokenizer *self);
 int
 config_tokenizer_skip_token(struct config_tokenizer *self, enum config_token_type type);
 
-#endif /* TOKENIZE_CONFIG_H_INCLUDED */
+#endif /* LSH_TOKENIZE_CONFIG_H_INCLUDED */
