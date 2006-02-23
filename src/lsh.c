@@ -54,8 +54,8 @@
 #include "environ.h"
 #include "format.h"
 #include "interact.h"
+#include "io_commands.h"
 #include "gateway.h"
-#include "gateway_commands.h"
 #include "lsh_string.h"
 #include "randomness.h"
 #include "reaper.h"
@@ -70,43 +70,48 @@
 
 #include "lsh_argp.h"
 
+struct command_2 gateway_accept;
+#define GATEWAY_ACCEPT (&gateway_accept.super.super)
+
 #include "lsh.c.x"
 
-#define CONNECTION_WRITE_THRESHOLD 1000
 #define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
 
 /* GABA:
    (class
-     (name connection)
+     (name lsh_connection)
      (super ssh_connection)
      (vars
        (transport . int)
        (reader object service_read_state)
-       (writer object ssh_write_state)))
+       (writer object ssh_write_state)
+
+       ; Keeps track of all gatewayed connections
+       (gateway_connections object resource_list)))
 */
 
-/* FIXME: Duplicates code in lshd-connection, in particular
-   oop_read_service. */
+/* FIXME: Duplicates code in lshd-connection and gateway.c, in
+   particular oop_read_service. */
 
 static void
-kill_connection(struct resource *s)
+kill_lsh_connection(struct resource *s)
 {
-  CAST(connection, self, s);
+  CAST(lsh_connection, self, s);
   if (self->super.super.alive)
     {
-      werror("kill_connection\n");
+      werror("kill_lsh_connection\n");
 
       self->super.super.alive = 0;      
 
       KILL_RESOURCE_LIST(self->super.resources);
-
+      
       io_close_fd(self->transport);
       self->transport = -1;
     }
 }
 
 static void
-write_packet(struct connection *connection,
+write_packet(struct lsh_connection *connection,
 	     struct lsh_string *packet)
 {
   uint32_t done;
@@ -131,7 +136,9 @@ write_packet(struct connection *connection,
     {
       if (connection->writer->length)
 	{
-	  /* FIXME: Install a write callback */
+	  /* FIXME: Install a write callback. If our write buffer is
+	     getting full, generate CHANNEL_EVENT_STOP events on all
+	     channels, and stop reading on all gateways. */
 	  werror("write_packet: ssh_write_data couldn't write all data.\n");
 	}
     }
@@ -143,7 +150,8 @@ write_packet(struct connection *connection,
 }
 
 static void
-disconnect(struct connection *connection, uint32_t reason, const char *msg)
+disconnect(struct lsh_connection *connection,
+	   uint32_t reason, const char *msg)
 {
   werror("disconnecting: %z.\n", msg);
 
@@ -156,12 +164,12 @@ disconnect(struct connection *connection, uint32_t reason, const char *msg)
 }
 
 static void
-service_start_read(struct connection *self);
+service_start_read(struct lsh_connection *self);
 
 static void *
 oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
 {
-  CAST(connection, self, (struct lsh_object *) state);
+  CAST(lsh_connection, self, (struct lsh_object *) state);
 
   assert(event == OOP_READ);
 
@@ -201,14 +209,14 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	case SERVICE_READ_COMPLETE:
 	  if (!length)
 	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
-		       "lshd-connection received an empty packet");
+		       "lsh received an empty packet from the transport layer");
 
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
 	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
 	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
-		       "lshd-connection received a transport or userauth layer packet");
+		       "lsh received a transport or userauth layer packet");
 
 	  else if (!channel_packet_handler(&self->super, length, packet))
 	    write_packet(self, format_unimplemented(seqno));	    
@@ -217,7 +225,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 }
 
 static void
-service_start_read(struct connection *self)
+service_start_read(struct lsh_connection *self)
 {
   global_oop_source->on_fd(global_oop_source,
 			   self->transport, OOP_READ,
@@ -227,7 +235,7 @@ service_start_read(struct connection *self)
 static void
 do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
 {
-  CAST(connection, self, s);
+  CAST(lsh_connection, self, s);
 
   write_packet(self, packet);
 }
@@ -235,15 +243,16 @@ do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
 static void
 do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
 {
-  CAST(connection, self, s);
+  CAST(lsh_connection, self, s);
   disconnect(self, reason, msg);  
 }
 
-static struct connection *
-make_connection(int fd)
+static struct lsh_connection *
+make_lsh_connection(int fd)
 {
-  NEW(connection, self);
-  init_ssh_connection(&self->super, kill_connection, do_write_packet, do_disconnect);
+  NEW(lsh_connection, self);
+  init_ssh_connection(&self->super, kill_lsh_connection,
+		      do_write_packet, do_disconnect);
 
   io_register_fd(fd, "lsh transport connection");
 
@@ -252,9 +261,48 @@ make_connection(int fd)
   service_start_read(self);
 
   self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE);
+  self->gateway_connections = make_resource_list();
+  remember_resource(self->super.resources,
+		    &self->gateway_connections->super);
 
   return self;
 }
+
+
+/* (gateway_accept main-connection gateway-connection) */
+DEFINE_COMMAND2(gateway_accept)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST(lsh_connection, connection, a1);
+  CAST(listen_value, lv, a2);
+
+  struct gateway_connection *gateway
+    = make_gateway_connection(&connection->super, lv->fd);
+  
+  /* Kill gateway connection if the main connection goes down. */
+  remember_resource(connection->gateway_connections, &gateway->super.super);
+
+  COMMAND_RETURN(c, gateway);
+}
+
+/* GABA:
+   (expr
+     (name make_gateway_setup)
+     (storage static)
+     (params
+       (local object local_info))
+     (expr
+       (lambda (connection)
+         (connection_remember connection
+	   (listen_local
+	     (lambda (peer)
+	       (gateway_accept connection peer))
+	       ;; prog1, to delay binding until we are connected.
+	     (prog1 local connection) )))))
+*/
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -270,10 +318,16 @@ make_connection(int fd)
      (super client_options)
      (vars
        (home . "const char *")
-       
-       ;; (with_gateway . int)
-       (transport_args . "struct arglist")
-       ))
+
+       ; 0 means no, 1 means yes, -1 means use if available.
+       (use_gateway . int)
+       ; 0 means no, 1 means yes, -1 means start if not already available.
+       (start_gateway . int)
+       (stop_gateway . int)
+
+       (gateway object local_info)
+
+       (transport_args . "struct arglist")))
 */
 
 
@@ -289,9 +343,11 @@ make_options(struct exception_handler *handler,
   init_client_options(&self->super, r, handler, exit_code);
 
   self->home = home;
-#if 0
-  self->with_gateway = 0;
-#endif
+
+  self->use_gateway = -1;
+  self->start_gateway = 0;
+  self->stop_gateway = 0;
+  self->gateway = NULL;
 
   arglist_init(&self->transport_args);
 
@@ -309,28 +365,32 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
-#define ARG_NOT 0x400
+enum {
+  ARG_NOT = 0x400,
 
-#define OPT_PUBLICKEY 0x201
+  OPT_PUBLICKEY = 0x201,
+  OPT_SLOPPY,
+  OPT_STRICT,
+  OPT_CAPTURE,
 
-#define OPT_SLOPPY 0x202
-#define OPT_STRICT 0x203
-#define OPT_CAPTURE 0x204
+  OPT_HOST_DB,
 
-#define OPT_HOST_DB 0x205
+  OPT_DH,
+  OPT_SRP,
 
-#define OPT_DH 0x206
-#define OPT_SRP 0x207
-
-#define OPT_HOSTKEY_ALGORITHM 0x210
+  OPT_HOSTKEY_ALGORITHM,
+  
+  OPT_USE_GATEWAY,
+  OPT_START_GATEWAY,
+  OPT_STOP_GATEWAY
+};
 
 static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
 
-  /* Options passed on to lsh-transport. */
-  
+  /* Options passed on to lsh-transport. */  
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
 #if 0
   { "publickey", OPT_PUBLICKEY, NULL, 0,
@@ -358,19 +418,16 @@ main_options[] =
   { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
 #endif
 
-  { "crypto", 'c', "Algorithm", 0, "", 0 },
-  { "compression", 'z', "Algorithm",
-    OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
-  { "mac", 'm', "Algorithm", 0, "", 0 },
-  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHM, "Algorithm", 0, "", 0 }, 
+  { "crypto", 'c', "ALGORITHM", 0, "", 0 },
+  { "compression", 'z', "ALGORITHM", OPTION_ARG_OPTIONAL,
+    "Enable compression. Default algorithm is zlib.", 0 },
+  { "mac", 'm', "ALGORITHM", 0, "Select MAC algorithm", 0 },
+  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHM, "ALGORITHM", 0,
+    "Select host authentication algorithm.", 0 }, 
   
   /* Actions */
-  { "forward-remote-port", 'R', "remote-port:target-host:target-port",
-    0, "", CLIENT_ARGP_ACTION_GROUP },
-#if 0
-  { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
-#endif
-
+  { "forward-remote-port", 'R', "REMOTE-PORT:TARGET-HOST:TARGET-PORT", 0,
+    "Forward TCP/IP connections at a remote port", CLIENT_ARGP_ACTION_GROUP },
 #if WITH_X11_FORWARD
   /* FIXME: Perhaps this should be moved from lsh.c to client.c? It
    * doesn't work with lshg. Or perhaps that can be fixed?
@@ -380,7 +437,19 @@ main_options[] =
   { "no-x11-forward", 'x' | ARG_NOT, NULL, 0,
     "Disable X11 forwarding (default).", 0 },
 #endif
-  
+
+  /* Gateway options */
+  { "use-gateway", OPT_USE_GATEWAY, NULL, 0,
+    "Always use a local gateway", 0 },
+  { "no-use-gateway", OPT_USE_GATEWAY | ARG_NOT, NULL, 0,
+    "Never use a local gateway", 0 },
+  { "gateway", 'G', NULL, 0,
+    "Use any existing gateway; if none exists, start a new one.", 0 },
+  { "start-gateway", OPT_START_GATEWAY, NULL, 0,
+    "Stop any existing gateway, and start a new one.", 0 },
+  { "stop-gateway", OPT_START_GATEWAY, NULL, 0,
+    "Stop any existing gateway. Disables all other actions.", 0 },
+
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -442,43 +511,39 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "No home directory. Please set HOME in the environment.");
 	  break;
 	}
-      
+
+      if (self->start_gateway > 0 && self->use_gateway > 0)
+	{
+	  argp_error(state, "--start-gateway and --use-gateway are "
+		     "mutually exclusive.");
+	  break;
+	}
       /* We can't add the gateway action immediately when the -G
        * option is encountered, as we need the name and port of the
        * remote machine (self->super.remote) first.
-       *
-       * This breaks the rule that actions should be performed in the
-       * order they are given on the command line. Since we usually
-       * want the gateway action first (e.g. when the testsuite runs
-       * lsh -G -B, and expects the gateway to be up by the time lsh
-       * goes into the background), we prepend it on the list of
-       * actions. */
-#if 0
-      if (self->start_gateway)
+       */
+
+      if (self->start_gateway || self->stop_gateway || self->use_gateway)
 	{
-	  struct local_info *gateway;
 	  if (!self->super.local_user)
 	    {
 	      argp_error(state, "You have to set LOGNAME in the environment, "
 			 " if you want to use the gateway feature.");
 	      break;
 	    }
-	  gateway = make_gateway_address(self->super.local_user,
-					 self->super.user,
-					 self->super.target);
+	  self->gateway = make_gateway_address(self->super.local_user,
+					       self->super.user,
+					       self->super.target);
 
-	  if (!gateway)
+	  if (!self->gateway)
 	    {
 	      argp_error(state, "Local or remote user name, or the target host name, are too "
 			 "strange for the gateway socket name construction.");
 	      break;
 	    }
-	      
-	  client_prepend_action(&self->super,
-				make_gateway_setup(gateway));
 	}
-#endif
-      if (object_queue_is_empty(&self->super.actions))
+
+      if (object_queue_is_empty(&self->super.actions) && !self->stop_gateway)
 	{
 	  argp_error(state, "No actions given.");
 	  break;
@@ -553,9 +618,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	self->super.remote_forward = 1;
 	break;
       }
-#if 0
-    CASE_FLAG('G', with_gateway);
-#endif
+
+    CASE_FLAG(OPT_USE_GATEWAY, use_gateway);
+
+    case 'G':
+      self->start_gateway = -1;
+      break;
+
+    case OPT_START_GATEWAY:
+      self->start_gateway = 1;
+      self->stop_gateway = 1;
+      break;
+
+    case OPT_STOP_GATEWAY:
+      self->stop_gateway = 1;
+      break;
+
 #if WITH_X11_FORWARD
     CASE_FLAG('x', super.with_x11);
 #endif
@@ -644,7 +722,7 @@ make_transport_exit_callback(void)
   return self;
 }
 
-static struct connection *
+static int
 fork_lsh_transport(struct lsh_options *options)
 {
   int pipe[2];
@@ -653,7 +731,7 @@ fork_lsh_transport(struct lsh_options *options)
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
     {
       werror("fork_lsh_transport: socketpair failed: %e\n", errno);
-      return NULL;
+      return -1;
     }
   child = fork();
   if (child < 0)
@@ -661,19 +739,15 @@ fork_lsh_transport(struct lsh_options *options)
       werror("fork_lsh_transport: fork failed: %e\n", errno);
       close(pipe[0]);
       close(pipe[1]);
-      return NULL;
+      return -1;
     }
   else if (child)
     {
       /* Parent process */
-      struct connection *connection;
       close(pipe[1]);
       
       reaper_handle(child, make_transport_exit_callback());
-      connection = make_connection(pipe[0]);
-
-      gc_global(&connection->super.super);
-      return connection;
+      return pipe[0];
     }
   else
     {
@@ -721,8 +795,9 @@ fork_lsh_transport(struct lsh_options *options)
 int
 main(int argc, char **argv, const char** envp)
 {
+  struct lsh_connection *connection;
   struct lsh_options *options;
-  struct connection *connection;
+  int fd;
   
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
@@ -748,25 +823,81 @@ main(int argc, char **argv, const char** envp)
   envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
-  connection = fork_lsh_transport(options);
-  if (!connection)
-    exit(EXIT_FAILURE);
+  if (options->stop_gateway)
+    {
+      /* Stop any existing gateway. */
+      static const uint8_t stop_message[] =
+	{
+	  0, 0, 0, 0,  /* seqno */
+	  0, 0, 0, 1,  /* length */
+	  SSH_LSH_GATEWAY_STOP,
+	};
+
+      fd = io_connect_local(options->gateway);
+      if (fd < 0)
+	{
+	  werror("Could not open gateway: %e\n", errno);
+	  if (!options->start_gateway)
+	    return EXIT_FAILURE;
+	}
+      else
+	{
+	  if (!write_raw(fd, sizeof(stop_message), stop_message))
+	    {
+	      werror("Failed to send stop message to gateway.\n");
+	      if (!options->start_gateway)
+		return EXIT_FAILURE;
+	    }
+	  close(fd);
+	}
+      if (!options->start_gateway)
+	return EXIT_SUCCESS;
+    }
+
+  fd = -1;
+
+  if (options->use_gateway)
+    {
+      fd = io_connect_local(options->gateway);
+      if (fd < 0)
+	{
+	  werror("Could not open gateway: %e\n", errno);
+	  if (options->start_gateway < 0)
+	    options->start_gateway = 1;
+	}
+    }
+
+  if (fd < 0 && options->use_gateway != 1)
+    {
+      fd = fork_lsh_transport(options);
+      if (fd < 0)
+	return EXIT_FAILURE;
+    }
+  connection = make_lsh_connection(fd);
+  gc_global(&connection->super.super);
+
+  if (options->start_gateway == 1)
+    client_prepend_action(&options->super,
+			  make_gateway_setup(options->gateway));
 
   /* Contains session channels to be opened. */
   remember_resource(connection->super.resources,
 		    &options->super.resources->super);
 
+  /* FIXME: When remote forwarding via the gateway is supported, we
+     should enable ATOM_FORWARDED_TCPIP even if no remote forwardings
+     were given on the command line. */
   if (options->super.remote_forward)
     ALIST_SET(connection->super.channel_types, ATOM_FORWARDED_TCPIP,
 	      &channel_open_forwarded_tcpip.super);
 
-  {
-    FOR_OBJECT_QUEUE(&options->super.actions, n)
-      {
-	CAST_SUBTYPE(command, action, n);
+
+  while (!object_queue_is_empty(&options->super.actions))
+    {
+      CAST_SUBTYPE(command, action,
+		   object_queue_remove_head(&options->super.actions));
 	COMMAND_CALL(action, connection, &discard_continuation, handler);
-      }
-  }
+    }
   
   io_run();
   
