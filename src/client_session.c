@@ -43,25 +43,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "client_session.c.x"
-
-
-/* Initiate and manage a session */
-/* GABA:
-   (class
-     (name client_session)
-     (super ssh_channel)
-     (vars
-       ; Session stdio. The fd:s should be distinct, for simplicity in the close logic.
-       (in struct channel_read_state)
-       (out struct channel_write_state)
-       (err struct channel_write_state)
-
-       ; Escape char handling
-       (escape object escape_info)
-       ; Where to save the exit code.
-       (exit_status . "int *")))
-*/
 
 static void
 do_kill_client_session(struct resource *s)
@@ -213,12 +194,24 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       ALIST_SET(session->super.request_types, ATOM_EXIT_SIGNAL,
 		&make_handle_exit_signal(session->exit_status)->super);
 
-      /* NOTE: We accept data even before we have sent any shell or
-	 exec request. FIXME: Delay this until later? */
+      while (!object_queue_is_empty(&session->requests))
+	{
+	  CAST_SUBTYPE(command, request,
+		       object_queue_remove_head(&session->requests));
+	  COMMAND_CALL(request, &session->super.super.super,
+		       &discard_continuation, session->e);
+	}
+
       channel_start_receive(&session->super,
 			    lsh_string_length(session->out.state->buffer));
+
       break;
 
+    case CHANNEL_EVENT_DENY:
+      EXCEPTION_RAISE(session->e,
+		      make_exception(EXC_CHANNEL_OPEN, 0,
+				     "Failed to open session channel."));
+      break;
     case CHANNEL_EVENT_EOF:
       if (!session->out.state->length)
 	channel_write_state_close(&session->super, &session->out);
@@ -226,6 +219,11 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       if (!session->err.state->length)
 	channel_write_state_close(&session->super, &session->err);
       break;
+
+    case CHANNEL_EVENT_CLOSE:
+      /* Do nothing */
+      break;
+
     case CHANNEL_EVENT_STOP:
       channel_io_stop_read(&session->in);
       break;
@@ -238,8 +236,9 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
 
 #define CLIENT_READ_BUFFER_SIZE 0x4000
 
-struct ssh_channel *
+struct client_session *
 make_client_session_channel(int in, int out, int err,
+			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status)
@@ -265,7 +264,10 @@ make_client_session_channel(int in, int out, int err,
   io_register_fd(in, "session stdin");
   io_register_fd(out, "session stdout");
   io_register_fd(err, "session stderr");
-  
+
+  object_queue_init(&self->requests);
+  self->e = e;
+
   self->escape = escape;
 
 #if 0
@@ -276,5 +278,5 @@ make_client_session_channel(int in, int out, int err,
 
   self->exit_status = exit_status;
   
-  return &self->super;
+  return self;
 }
