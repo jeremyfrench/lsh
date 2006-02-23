@@ -111,7 +111,7 @@ spki_algorithm_lookup(struct alist *algorithms,
 		      int *type)
 {
   struct lsh_object *res;
-  int algorithm_name = lsh_sexp_get_type(i);
+  enum lsh_atom algorithm_name = lsh_sexp_get_type(i);
   
   /* FIXME: Display a pretty message if lookup fails. */
   res = ALIST_GET(algorithms, algorithm_name);
