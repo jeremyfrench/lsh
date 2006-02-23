@@ -67,6 +67,9 @@ lsh_string_alloc(uint32_t size);
 struct lsh_string *
 lsh_string_realloc(struct lsh_string *s, uint32_t size);
 
+struct lsh_string *
+lsh_string_dup(const struct lsh_string *s);
+
 uint32_t
 lsh_string_length(const struct lsh_string *s);
 

@@ -110,6 +110,16 @@ lsh_string_realloc(struct lsh_string *s, uint32_t size)
   return n;
 }
 
+struct lsh_string *
+lsh_string_dup(const struct lsh_string *s)
+{
+  uint32_t length = lsh_string_length(s);
+  struct lsh_string *n = lsh_string_alloc(length);
+  lsh_string_write(n, 0, length, lsh_string_data(s));
+
+  return n;
+}
+
 /* FIXME: Could move some of the more obscure utility functions to a
    separate file. */
 

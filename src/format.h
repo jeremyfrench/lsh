@@ -105,8 +105,6 @@ format_hex_string(struct lsh_string *buffer, uint32_t pos,
 
      
 /* Short cuts */
-#define lsh_string_dup(s) (ssh_format("%lS", (s)))
-
 #define make_string(s) (ssh_format("%lz", (s)))
 
 unsigned format_size_in_decimal(uint32_t n);
