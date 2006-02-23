@@ -4,6 +4,9 @@
  * programs. Substitutions are performed at make time, not configure
  * time. */
 
+#ifndef LSH_ENVIRON_H_INCLUDED
+#define LSH_ENVIRON_H_INCLUDED
+
 #define PREFIX "@prefix@"
 #define BINDIR "@bindir@"
 #define SBINDIR "@sbindir@"
@@ -71,3 +74,5 @@
   if (!(s))					\
     (s) = FILE_##name;				\
 } while(0)
+
+#endif /* LSH_ENVIRON_H_INCLUDED */
