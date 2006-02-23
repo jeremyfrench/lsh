@@ -57,7 +57,7 @@ do_kill_channel_forward(struct resource *s)
     }
 }
 
-static void
+void
 channel_forward_shutdown(struct channel_forward *self)
 {
   if (shutdown (self->write.fd, SHUT_WR) < 0)
@@ -127,6 +127,13 @@ do_channel_forward_send_adjust(struct ssh_channel *s,
   channel_io_start_read(&self->super, &self->read, oop_read_socket);
 }
 
+void
+channel_forward_start_read(struct channel_forward *self)
+{
+  if (self->super.send_window_size)
+    channel_io_start_read(&self->super, &self->read, oop_read_socket);
+}
+
 /* NOTE: Because this function is called by
  * do_open_forwarded_tcpip_continuation, the same restrictions apply.
  * I.e we can not assume that the channel is completely initialized
@@ -140,9 +147,8 @@ channel_forward_start_io(struct channel_forward *self)
 
   self->super.sources++;
   self->super.sinks ++;
-  
-  if (self->super.send_window_size)
-    channel_io_start_read(&self->super, &self->read, oop_read_socket);
+
+  channel_forward_start_read(self);
 }
 
 static void
@@ -155,6 +161,10 @@ do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
     case CHANNEL_EVENT_CONFIRM:
       channel_forward_start_io(self);
       break;
+    case CHANNEL_EVENT_DENY:
+    case CHANNEL_EVENT_CLOSE:
+      /* Do nothing */
+      break;      
     case CHANNEL_EVENT_EOF:
       if (!self->write.state->length)
 	channel_forward_shutdown(self);
@@ -163,8 +173,7 @@ do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
       channel_io_stop_read(&self->read);
       break;
     case CHANNEL_EVENT_START:
-      if (self->super.send_window_size)
-	channel_io_start_read(&self->super, &self->read, oop_read_socket);
+      channel_forward_start_read(self);
       break;
     }
 }
@@ -174,10 +183,11 @@ do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
 /* NOTE: It's the caller's responsibility to call io_register_fd. */
 void
 init_channel_forward(struct channel_forward *self,
-		     int socket, uint32_t initial_window)
+		     int socket, uint32_t initial_window,
+		     void (*event)(struct ssh_channel *, enum channel_event))
 {
   init_channel(&self->super,
-	       do_kill_channel_forward, do_channel_forward_event);
+	       do_kill_channel_forward, event);
 
   /* The rest of the callbacks are not set up until
    * channel_forward_start_io. */
@@ -196,7 +206,8 @@ struct channel_forward *
 make_channel_forward(int socket, uint32_t initial_window)
 {
   NEW(channel_forward, self);
-  init_channel_forward(self, socket, initial_window);
+  init_channel_forward(self, socket, initial_window,
+		       do_channel_forward_event);
   
   return self;
 }
@@ -220,14 +231,3 @@ DEFINE_COMMAND(forward_start_io_command)
 
   COMMAND_RETURN(c, channel);  
 }
-
-#if 0
-/* FIXME: Arrange so that the forwarded socket is closed if
-   EXC_CHANNEL_OPEN is caught. And write some docs. */
-static const struct report_exception_info forward_open_report =
-STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN,
-			     "Forwarding failed, could not open channel");
-
-struct catch_report_collect catch_channel_open
-= STATIC_CATCH_REPORT(&forward_open_report);
-#endif
