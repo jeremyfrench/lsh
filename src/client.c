@@ -332,8 +332,8 @@ make_open_session_command(struct ssh_channel *channel)
 DEFINE_COMMAND(request_shell)
      (struct command *s UNUSED,
       struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e)
+      struct command_continuation *c UNUSED,
+      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(ssh_channel, channel, x);
 
