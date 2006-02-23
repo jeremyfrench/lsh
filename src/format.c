@@ -410,7 +410,8 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 		size = lsh_string_length(s);
 		data = lsh_string_data(s);
 
-		/* FIXME: Some duplication */
+		/* FIXME: Some duplication. Break out the do_string
+		   case to a function? */
 		length = hex ? (2*size) : size;
 
 		if (decimal)
@@ -604,6 +605,7 @@ format_decimal(struct lsh_string *buffer, uint32_t start,
     }
 }
 
+/* FIXME: This is not needed anymore. */
 static int
 write_decimal_length(struct lsh_string *buffer, uint32_t start, uint32_t n)
 {
