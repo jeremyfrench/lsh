@@ -45,7 +45,8 @@
 
 void
 init_channel_forward(struct channel_forward *self,
-		     int fd, uint32_t initial_window);
+		     int fd, uint32_t initial_window,
+		     void (*event)(struct ssh_channel *, enum channel_event));
 
 struct channel_forward *
 make_channel_forward(int fd, uint32_t initial_window);
@@ -54,13 +55,10 @@ void
 channel_forward_start_io(struct channel_forward *channel_forward);
 
 void
-channel_forward_start_io_read(struct channel_forward *channel);
+channel_forward_start_read(struct channel_forward *channel);
 
-extern struct command forward_start_io_command;
-#define FORWARD_START_IO (&forward_start_io_command.super)
-
-extern struct catch_report_collect catch_channel_open;
-#define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super)
+void
+channel_forward_shutdown(struct channel_forward *self);
 
 #endif /* LSH_CHANNEL_FORWARD_H_INCLUDED */
 
