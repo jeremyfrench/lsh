@@ -32,11 +32,13 @@
 struct channel_open;
 struct channel_open_info;
 
-enum {
-  /* Values used in the in_use array. */
+enum channel_alloc_state {
+  /* Values used in the alloc_flags array. */
+  /* FIXME: Move the SENT_CLOSED and RECEIVED_CLOSED flags here? */
   CHANNEL_FREE = 0,
-  CHANNEL_RESERVED = 1,
-  CHANNEL_IN_USE = 2,
+  CHANNEL_ALLOC_SENT_OPEN,
+  CHANNEL_ALLOC_RECEIVED_OPEN,
+  CHANNEL_ALLOC_ACTIVE,
 };
 
 #define GABA_DECLARE
@@ -63,19 +65,16 @@ enum {
        ; Channel types that we can open
        (channel_types object alist)
 
-       ; Used for unknown requests unknown channel types.
-       (open_fallback object channel_open)
-       
        ; Allocation of local channel numbers is managed using the same
        ; method as is traditionally used for allocation of unix file 
        ; descriptors.
 
        ; A channel number can be reserved before there is any actual
        ; channel object created for it. In particular, this is the
-       ; case for channel numbers allocated bythe CHANNEL_OPEN
+       ; case for channel numbers allocated by the CHANNEL_OPEN
        ; handler. So the channels table is not enough for keeping
        ; track of which numbers are in use.       
-       (in_use space uint8_t)
+       (alloc_state space "enum channel_alloc_state")
 
        ; Allocated size of the arrays.
        (allocated_channels . uint32_t)
@@ -131,14 +130,24 @@ void
 ssh_connection_pending_close(struct ssh_connection *table);
 
 int
-ssh_connection_alloc_channel(struct ssh_connection *connection);
+ssh_connection_alloc_channel(struct ssh_connection *connection,
+			     enum channel_alloc_state type);
 
 void
-ssh_connection_dealloc_channel(struct ssh_connection *connection, uint32_t i);
-
+ssh_connection_dealloc_channel(struct ssh_connection *connection,
+			       uint32_t local_channel_number);
 void
-ssh_connection_use_channel(struct ssh_connection *connection,
-			   uint32_t local_channel_number);
+ssh_connection_register_channel(struct ssh_connection *connection,
+				uint32_t local_channel_number,
+				struct ssh_channel *channel);
+void
+ssh_connection_activate_channel(struct ssh_connection *connection,
+				uint32_t local_channel_number);
+
+struct ssh_channel *
+ssh_connection_lookup_channel(struct ssh_connection *connection,
+			      uint32_t local_channel_number,
+			      enum channel_alloc_state flag);
 
 /* SSH_MSG_GLOBAL_REQUEST */
 
