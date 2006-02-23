@@ -23,6 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_CHANNEL_IO_H_INCLUDED
+#define LSH_CHANNEL_IO_H_INCLUDED
+
 #include "io.h"
 #include "ssh_write.h"
 
@@ -102,3 +105,4 @@ enum channel_io_status
 channel_io_stop_write(struct ssh_channel *channel,
 		      struct channel_write_state *file);
 
+#endif /* LSH_CHANNEL_IO_H_INCLUDED */

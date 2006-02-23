@@ -21,6 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_ARGLIST_H_INCLUDED
+#define LSH_ARGLIST_H_INCLUDED
+
 struct arglist
 {
   unsigned size;
@@ -41,3 +44,5 @@ void
 arglist_push_optarg(struct arglist *args,
 		    const char *opt, const char *arg);
 
+
+#endif /* LSH_ARGLIST_H_INCLUDED */
