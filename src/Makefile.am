@@ -19,7 +19,9 @@ bin_PROGRAMS = lsh lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed
 	       
 
-sbin_PROGRAMS = lshd lshd-userauth lshd-connection @KRB_PROGRAM@ @PAM_PROGRAM@
+sbin_PROGRAMS = lshd lshd-userauth lshd-connection lshd-pty-helper \
+	@KRB_PROGRAM@ @PAM_PROGRAM@
+
 bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp
 noinst_LIBRARIES = liblsh.a
 
@@ -40,7 +42,6 @@ bootstrap: $(generated_sources) $(dist_classes)
 # client_keyexchange.c client_userauth.c connection_commands.c
 # debug.c gateway_commands.c
 # read_packet.c write_packet.c
-# gateway.c gateway_channel.c
 # client_x11.c server_x11.c client_pty.c tcpforward_commands.c
 
 # Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c handshake.c lshd_keyexchange.c
@@ -60,7 +61,8 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	encrypt.c \
 	exception.c \
 	format.c gc.c \
-	interact.c io.c  io_commands.c \
+	interact.c io.c io_commands.c \
+	gateway.c gateway_channel.c \
 	keyexchange.c \
 	list.c \
 	lock_file.c \
@@ -136,6 +138,8 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
 # lshg_SOURCES = lshg.c dummy.c
 # lshg_LDADD = liblsh.a @LIBARGP@
+
+lshd_pty_helper_LDADD =
 
 lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
 	transport_forward.c server_keyexchange.c
