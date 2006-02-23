@@ -23,6 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_TRANSPORT_FORWARD_H_INCLUDED
+#define LSH_TRANSPORT_FORWARD_H_INCLUDED
+
 #include "service.h"
 #include "transport.h"
 
@@ -68,3 +71,5 @@ transport_forward_kill(struct transport_forward *self);
 void
 transport_forward_setup(struct transport_forward *self,
 			int service_in, int service_out);
+
+#endif /* LSH_TRANSPORT_FORWARD_H_INCLUDED */
