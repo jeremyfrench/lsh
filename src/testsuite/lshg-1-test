@@ -8,9 +8,8 @@ fi
 
 . $srcdir/functions.sh
 
-need_lshg
-
-spawn_lshd && spawn_lsh -G && \
-  echo foo | exec_lshg cat | grep foo > /dev/null && test_success
+spawn_lshd && spawn_lsh --start-gateway \
+    && echo foo | exec_lshg cat | grep foo > /dev/null \
+    && test_success
 
 test_done

@@ -6,13 +6,12 @@ fi
 
 . $srcdir/functions.sh
 
-need_lshg
-
 echo lshg, cat 2 test
 
 rm -f test.out1
 
-spawn_lshd && spawn_lsh -G && cat ../lshd | exec_lshg cat ">" "`pwd`/test.out1"
+spawn_lshd && spawn_lsh --start-gateway \
+    && cat ../lshd | exec_lshg cat ">" "`pwd`/test.out1"
 cat ../lshd > test.out2
 
 compare_output "lshg-cat-2-test"

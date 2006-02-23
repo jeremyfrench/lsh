@@ -7,14 +7,13 @@ fi
 . $srcdir/functions.sh
 
 need_tcputils
-need_lshg
 
 SERVERPORT=`expr $PORT + 1`
 PROXYPORT=`expr $PORT + 2`
 
 at_connect $SERVERPORT 1 'echo foo' \
     && spawn_lshd \
-    && spawn_lsh -G \
+    && spawn_lsh --start-gateway \
     && spawn_lshg -L $PROXYPORT:localhost:$SERVERPORT \
     && tcpconnect -r </dev/null localhost $PROXYPORT | grep foo \
     && test_success
