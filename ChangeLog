@@ -68,7 +68,8 @@
 	(do_open_session_command): Don't setup any channel_open_context.
 	(make_open_session_command): New function.
 	(request_shell): Pass non-zero close_on_error to
-	channel_send_request.
+	channel_send_request. Mark continuation and exception arguments as
+	UNUSED.
 	(do_session_channel_request): Likewise.
 	(client_options): Cosmetic changes.
 	(expr make_start_session): Deleted.
