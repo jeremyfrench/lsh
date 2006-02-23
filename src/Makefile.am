@@ -40,11 +40,13 @@ bootstrap: $(generated_sources) $(dist_classes)
 # Old files:
 #
 # client_keyexchange.c client_userauth.c connection_commands.c
-# debug.c gateway_commands.c
+# 
 # read_packet.c write_packet.c
 # client_x11.c server_x11.c client_pty.c tcpforward_commands.c
 
-# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c write_buffer.c channel_commands.c string_buffer.c handshake.c lshd_keyexchange.c
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c
+# write_buffer.c channel_commands.c string_buffer.c handshake.c
+# lshd_keyexchange.c debug.c gateway_commands.c
 
 
 liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \

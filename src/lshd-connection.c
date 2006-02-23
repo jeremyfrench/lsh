@@ -104,7 +104,11 @@ blocking_writev(int fd, struct iovec *iv, size_t n)
   return 1;
 }
 
-/* NOTE: Uses blocking mode. Doesn't set any sequence number. */
+/* NOTE: Uses blocking mode. Doesn't set any sequence number. The
+   reason we may get away with blocking mode, is that it's primarily
+   the client's responsibility to consume data and avoid dead locks.
+   But that may not be enough if we're forwarding channels with
+   reversed client/server responsibilities. */
 static void
 write_packet(struct connection *self, struct lsh_string *packet)
 {
