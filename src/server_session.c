@@ -219,7 +219,9 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
 
   switch(event)
     {
+    case CHANNEL_EVENT_CLOSE:
     case CHANNEL_EVENT_CONFIRM:
+    case CHANNEL_EVENT_DENY:
       /* Do nothing; i/o isn't started until after a child process has
 	 been spawned. */
       break;
@@ -361,14 +363,14 @@ do_exit_shell(struct exit_callback *c, int signaled,
 
       if (signaled)
 	channel_send_request(&session->super, ATOM_EXIT_SIGNAL,
-			     NULL,
+			     0,
 			     "%a%c%z%z",
 			     signal_local_to_network(value),
 			     core,
 			     STRSIGNAL(value), "");
       else
 	channel_send_request(&session->super, ATOM_EXIT_STATUS,
-			     NULL, "%i", value);
+			     0, "%i", value);
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from
@@ -458,9 +460,9 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
 
       pty->super.alive = 0;
       
-      /* FIXME: It seems unnecessary to dup all the fd:s here. We
-       * could use a single lsh_fd object for the master side of the
-       * pty. */
+      /* FIXME: It seems unnecessary to dup the master fd here; in
+       * principle, we could use the same fd for both stdin and
+       * stdout. */
 
       /* -1 means opening deferred to the child */
       in[0] = -1;
@@ -618,7 +620,7 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 DEFINE_CHANNEL_REQUEST(shell_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      struct channel_request_info *info UNUSED,
+      const struct channel_request_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -657,7 +659,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
 DEFINE_CHANNEL_REQUEST(exec_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      struct channel_request_info *info UNUSED,
+      const struct channel_request_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -721,7 +723,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 static void
 do_spawn_subsystem(struct channel_request *s,
 		   struct ssh_channel *channel,
-		   struct channel_request_info *info UNUSED,
+		   const struct channel_request_info *info UNUSED,
 		   struct simple_buffer *args,
 		   struct command_continuation *c,
 		   struct exception_handler *e)
@@ -791,7 +793,7 @@ make_subsystem_handler(const char **subsystems)
 DEFINE_CHANNEL_REQUEST(pty_request_handler)
      (struct channel_request *c UNUSED,
       struct ssh_channel *channel,
-      struct channel_request_info *info UNUSED,
+      const struct channel_request_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *s,
       struct exception_handler *e)
@@ -849,10 +851,11 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
   KILL(pty);
 }
 
+/* FIXME: Use DEFINE_CHANNEL_REQUEST */
 static void
 do_window_change_request(struct channel_request *c UNUSED,
 			 struct ssh_channel *channel,
-			 struct channel_request_info *info UNUSED,
+			 const struct channel_request_info *info UNUSED,
 			 struct simple_buffer *args,
 			 struct command_continuation *s,
 			 struct exception_handler *e)
