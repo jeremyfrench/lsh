@@ -100,6 +100,8 @@
 /* 192-255 Local extensions */
 #define SSH_FIRST_LOCAL 192
 
+#define SSH_LSH_GATEWAY_STOP 192
+
 /* Disconnecting */
 
 #define SSH_DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT      1
