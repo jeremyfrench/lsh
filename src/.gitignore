@@ -37,6 +37,7 @@
 /lsh_proxy
 /lshd
 /lshd-connection
+/lshd-pty-helper
 /lshd-userauth
 /lshg
 /packet_types.h
