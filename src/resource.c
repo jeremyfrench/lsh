@@ -85,26 +85,34 @@ struct resource_node
   struct resource *resource;
 };
 
-/* Loop over the resources, mark the living and unlink the dead. */
-void
-do_mark_resources(struct resource_node **q,
-		  void (*mark)(struct lsh_object *o))
+/* Loop over the resources, process the living and unlink the dead. */
+static void
+resource_iterate(struct resource_node **q,
+		 void (*f)(struct resource *r))
 {
   struct resource_node *n;
-  
+
   while ( (n = *q) )
     {
       if (n->resource->alive)
-	{
-	  mark(&n->resource->super);
-	  q = &n->next;
-	}
+	f(n->resource);
+
+      if (n->resource->alive)
+	q = &n->next;
       else
 	{
 	  *q = n->next;
 	  lsh_space_free(n);
 	}
     }
+}
+
+/* Mark the live resources. */
+void
+do_mark_resources(struct resource_node **q,
+		  void (*mark)(struct lsh_object *o))
+{
+  resource_iterate(q, (void (*)(struct resource *r)) mark);
 }
 
 /* Free the list. */
@@ -121,6 +129,12 @@ do_free_resources(struct resource_node **q)
     }
 }
 
+void
+resource_list_foreach(struct resource_list *self,
+		      void (*f)(struct resource *r))
+{
+  resource_iterate(&self->q, f);
+}
 
 void
 remember_resource(struct resource_list *self,
@@ -145,29 +159,23 @@ remember_resource(struct resource_list *self,
 }
 
 static void
-do_kill_all(struct resource *s)
+kill_resource(struct resource *resource)
+{
+  KILL_RESOURCE(resource);
+}
+
+static void
+do_kill_resource_list(struct resource *s)
 {
   CAST(resource_list, self, s);
 
-  trace("do_kill_all: resource_list %xi\n", self);
+  trace("do_kill_resource_list: resource_list %xi\n", self);
 
   if (self->super.alive)
     {
-      struct resource_node *n;
-      
       self->super.alive = 0;
 
-      for (n = self->q; n; )
-	{
-	  CAST_SUBTYPE(resource, r, n->resource);
-	  struct resource_node *old = n;
-	  
-	  KILL_RESOURCE(r);
-	  n = n->next;
-	  
-	  lsh_space_free(old);
-	}
-      self->q = NULL;
+      resource_list_foreach(self, kill_resource);
     }
 }
 
@@ -175,7 +183,7 @@ struct resource_list *
 make_resource_list(void)
 {
   NEW(resource_list, self);
-  init_resource(&self->super, do_kill_all);
+  init_resource(&self->super, do_kill_resource_list);
 
   trace("make_resource_list: created %xi\n", self);
   
