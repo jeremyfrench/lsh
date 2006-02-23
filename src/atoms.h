@@ -33,6 +33,10 @@
 
 uint32_t get_atom_length(int atom);
 const uint8_t *get_atom_name(int atom);
-int lookup_atom(uint32_t length, const uint8_t *name);
+enum lsh_atom lookup_atom(uint32_t length, const uint8_t *name);
+
+/* FIXME: Often used with constants, then we could replace the
+   function calls with constants. */   
+#define ATOM_LD(x) get_atom_length((x)), get_atom_name((x))
 
 #endif /* LSH_ATOMS_H_INCLUDED */
