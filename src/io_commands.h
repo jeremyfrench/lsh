@@ -30,6 +30,9 @@
 extern struct command_2 listen_tcp_command;
 #define LISTEN_TCP (&listen_tcp_command.super.super)
 
+extern struct command_2 listen_local_command;
+#define LISTEN_LOCAL (&listen_local_command.super.super)
+
 #if 0
 extern struct command io_log_peer_command;
 #define LOG_PEER (&io_log_peer_command.super)

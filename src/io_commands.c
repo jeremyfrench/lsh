@@ -124,7 +124,6 @@ DEFINE_COMMAND2(listen_tcp_command)
   struct sockaddr *addr;
   socklen_t addr_length;
   struct io_port *port;
-  int yes = 1;
   int fd;
 
   addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
@@ -134,7 +133,7 @@ DEFINE_COMMAND2(listen_tcp_command)
       return;
     }
 
-  fd = socket(addr->sa_family, SOCK_STREAM, 0);
+  fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
 
   if (fd < 0)
     {
@@ -142,19 +141,6 @@ DEFINE_COMMAND2(listen_tcp_command)
       lsh_space_free(addr);
       return;
     }
-
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes)) < 0)
-    werror("setsockopt failed: %e\n", errno);
-
-  if (bind(fd, addr, addr_length) < 0)
-    {
-      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "bind failed"));
-      lsh_space_free(addr);
-      close(fd);
-      return;
-    }
-
-  lsh_space_free(addr);
 
   if (listen(fd, 256) < 0)
     {
@@ -170,6 +156,41 @@ DEFINE_COMMAND2(listen_tcp_command)
   COMMAND_RETURN(c, port);
 }
 
+/* (listen_local callback port) */
+DEFINE_COMMAND2(listen_local_command)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, callback, a1);
+  CAST(local_info, a, a2);
+
+  struct io_port *port;
+  int fd;
+
+  fd = io_bind_local(a);
+  if (fd < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno,
+					"binding local socket failed"));
+      return;
+    }
+
+  if (listen(fd, 256) < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno,
+					"listen on local socket failed"));
+      close(fd);
+      return;
+    }    
+
+  port = make_io_port(fd, callback);
+  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
+			   oop_io_port_accept, port);
+
+  COMMAND_RETURN(c, port);
+}
 
 #if 0
 #if WITH_TCPWRAPPERS
