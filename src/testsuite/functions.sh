@@ -87,12 +87,6 @@ need_tsocks () {
     fi
 }
 
-need_lshg () {
-    if [ -x ../lshg ] ; then : ; else
-	test_skip
-    fi
-}
-
 at_exit () {
   ATEXIT="$ATEXIT ; $1"
 }
@@ -134,13 +128,14 @@ run_lsh () {
     cmd="$1"
     shift
     echo "$cmd" | HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt \
-	--sloppy-host-authentication \
+	--no-use-gateway --sloppy-host-authentication \
 	--capture-to /dev/null -p $PORT "$@" localhost
 
 }
 
 exec_lsh () {
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+	--no-use-gateway \
 	--capture-to /dev/null -z -p $PORT localhost "$@"
 }
 
@@ -148,18 +143,19 @@ exec_lsh () {
 spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+	--no-use-gateway \
 	--capture-to /dev/null -z -p $PORT "$@" --write-pid -B localhost > "$LSH_PIDFILE"
 
     at_exit 'kill `cat $LSH_PIDFILE`'
 }
 
 exec_lshg () {
-    ../lshg $LSHG_FLAGS -nt -p $PORT localhost "$@"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -nt -p $PORT localhost "$@"
 }
 
 spawn_lshg () {
     # echo spawn_lshg "$@"
-    ../lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
     at_exit 'kill `cat $LSHG_PIDFILE`'
 }
 
