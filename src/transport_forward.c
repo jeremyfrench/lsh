@@ -323,7 +323,7 @@ forward_packet_handler(struct transport_connection *connection,
 
   /* FIXME: Avoid pushing out the header. XXX Easy, by using a large
      value for to_write. But we should probably avoid pushing the data
-     to, unless we get a push indication from the reader. */
+     too, unless we get a push indication from the reader. */
   done = ssh_write_data(self->service_writer,
 			self->service_out, 0,
 			sizeof(header), header);
