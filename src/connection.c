@@ -55,9 +55,10 @@ init_ssh_connection(struct ssh_connection *connection,
   
   connection->resources = make_resource_list();
 
-  connection->channels = lsh_space_alloc(sizeof(struct ssh_channel *)
-				      * INITIAL_CHANNELS);
-  connection->in_use = lsh_space_alloc(INITIAL_CHANNELS);
+  connection->channels
+    = lsh_space_alloc(sizeof(*connection->channels) * INITIAL_CHANNELS);
+  connection->alloc_state
+    = lsh_space_alloc(sizeof(*connection->alloc_state) * INITIAL_CHANNELS);
   
   connection->allocated_channels = INITIAL_CHANNELS;
   connection->used_channels = 0;
@@ -70,8 +71,7 @@ init_ssh_connection(struct ssh_connection *connection,
 
   connection->global_requests = make_alist(0, -1);
   connection->channel_types = make_alist(0, -1);
-  connection->open_fallback = NULL;
-  
+
   object_queue_init(&connection->forwarded_ports);
   connection->x11_display = NULL;
   
@@ -84,16 +84,19 @@ init_ssh_connection(struct ssh_connection *connection,
  * are always small integers. So there's no problem fitting them in
  * a signed int. */
 int
-ssh_connection_alloc_channel(struct ssh_connection *connection)
+ssh_connection_alloc_channel(struct ssh_connection *connection,
+			     enum channel_alloc_state type)
 {
   uint32_t i;
-  
+
+  assert(type == CHANNEL_ALLOC_SENT_OPEN
+	 || type == CHANNEL_ALLOC_RECEIVED_OPEN);
+
   for (i = connection->next_channel; i < connection->used_channels; i++)
     {
-      if (connection->in_use[i] == CHANNEL_FREE)
+      if (connection->alloc_state[i] == CHANNEL_FREE)
 	{
 	  assert(!connection->channels[i]);
-	  connection->in_use[i] = CHANNEL_RESERVED;
 	  connection->next_channel = i+1;
 
 	  goto success;
@@ -108,18 +111,20 @@ ssh_connection_alloc_channel(struct ssh_connection *connection)
 
       connection->channels
 	= lsh_space_realloc(connection->channels,
-			    sizeof(struct ssh_channel *) * new_size);
+			    sizeof(*connection->channels) * new_size);
 
-      connection->in_use = lsh_space_realloc(connection->in_use, new_size);
+      connection->alloc_state
+	= lsh_space_realloc(connection->alloc_state,
+			    sizeof(*connection->alloc_state) * new_size);
       connection->allocated_channels = new_size;
     }
 
   connection->next_channel = connection->used_channels = i+1;
 
-  connection->in_use[i] = CHANNEL_RESERVED;
   connection->channels[i] = NULL;
   
  success:
+  connection->alloc_state[i] = type;
   connection->channel_count++;
   verbose("Allocated local channel number %i\n", i);
 
@@ -131,29 +136,49 @@ ssh_connection_dealloc_channel(struct ssh_connection *connection, uint32_t i)
 {
   assert(i < connection->used_channels);
   assert(connection->channel_count);
-  
+  assert(connection->alloc_state[i] != CHANNEL_FREE);
+
   verbose("Deallocating local channel %i\n", i);
   connection->channels[i] = NULL;
-  connection->in_use[i] = CHANNEL_FREE;
+  connection->alloc_state[i] = CHANNEL_FREE;
 
   connection->channel_count--;
   
-  if ( (unsigned) i < connection->next_channel)
+  if (i < connection->next_channel)
     connection->next_channel = i;
 }
 
 void
-ssh_connection_use_channel(struct ssh_connection *connection,
-			   uint32_t local_channel_number)
+ssh_connection_activate_channel(struct ssh_connection *connection,
+				uint32_t local_channel_number)
 {
+  assert(local_channel_number < connection->used_channels);
+  assert(connection->alloc_state[local_channel_number] != CHANNEL_FREE);
   assert(connection->channels[local_channel_number]);
-  assert(connection->in_use[local_channel_number] == CHANNEL_RESERVED);
-  
-  connection->in_use[local_channel_number] = CHANNEL_IN_USE;
-  trace("ssh_connection_use_channel: local_channel_number: %i.\n",
+
+  trace("ssh_connection_activate_channel: local_channel_number: %i.\n",
 	local_channel_number);
+
+  connection->alloc_state[local_channel_number] = CHANNEL_ALLOC_ACTIVE;  
 }
 
+struct ssh_channel *
+ssh_connection_lookup_channel(struct ssh_connection *connection,
+			      uint32_t local_channel_number,
+			      enum channel_alloc_state flag)
+{
+  assert(flag != 0);
+  if (local_channel_number < connection->used_channels
+      && (connection->alloc_state[local_channel_number] == flag))
+    {
+      struct ssh_channel *channel
+	= connection->channels[local_channel_number];
+      assert(channel);
+
+      return channel;
+    }
+  return NULL;
+}
 
 void
 ssh_connection_pending_close(struct ssh_connection *connection)
