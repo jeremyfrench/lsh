@@ -26,6 +26,8 @@
 
 #include "io.h"
 #include "keyexchange.h"
+#include "channel.h"
+#include "channel_io.h"
 #include "werror.h"
 
 #define GABA_DECLARE
@@ -78,8 +80,35 @@ make_session_channel_request(int type, struct lsh_string *arg);
 extern struct command client_start_io;
 #define CLIENT_START_IO (&client_start_io.super)
 
-struct ssh_channel *
+/* Initiate and manage a session */
+/* GABA:
+   (class
+     (name client_session)
+     (super ssh_channel)
+     (vars
+       ; Session stdio. The fd:s should be distinct, for simplicity in
+       ; the close logic.       
+       (in struct channel_read_state)
+       (out struct channel_write_state)
+       (err struct channel_write_state)
+
+       ; Commands to be invoked after the session is opened.
+       (requests struct object_queue)
+
+       ; For errors when opening the channel, or when sending the
+       ; channel requests. It's not clear what's the proper place for
+       ; the error handling.
+       (e object exception_handler)
+
+       ; Escape char handling
+       (escape object escape_info)
+       ; Where to save the exit code.
+       (exit_status . "int *")))
+*/
+
+struct client_session *
 make_client_session_channel(int in, int out, int err,
+			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status);
@@ -115,7 +144,6 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        ; -1 means default.
        (escape . int)
        
-       ; For i/o exceptions 
        (handler object exception_handler)
 
        (exit_code . "int *")
