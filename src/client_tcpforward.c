@@ -51,7 +51,7 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
      (struct lsh_object *a1,
       struct lsh_object *a2,
       struct lsh_object *a3,
-      struct command_continuation *c,
+      struct command_continuation *c UNUSED,
       struct exception_handler *e)
 {
   CAST(address_info, target, a1);
@@ -65,7 +65,8 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
   io_register_fd(lv->fd, "forwarded socket");
   channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
   
-  if (!channel_open_new_type(connection, &channel->super, ATOM_DIRECT_TCPIP,
+  if (!channel_open_new_type(connection, &channel->super,
+			     ATOM_LD(ATOM_DIRECT_TCPIP),
 			     "%S%i%S%i",
 			     target->ip, target->port,
 			     lv->peer->ip, lv->peer->port))
@@ -74,11 +75,6 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
       EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
 					"Allocating a local channel number failed."));
       KILL_RESOURCE(&channel->super.super);
-    }
-  else
-    {
-      assert(!channel->super.channel_open_context);
-      channel->super.channel_open_context = make_command_context(c, e);
     }
 }
 
