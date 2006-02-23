@@ -122,17 +122,6 @@ signal-unknown@lysator.liu.se
 private-key
 public-key
 dsa
-p
-q
-g
-y
-x
-
-# spki dsa signatures
-r
-s
-
-# spki rsa keys p, q already defined above
 
 # For use in spki keys
 rsa-pkcs1
@@ -140,13 +129,6 @@ rsa-pkcs1
 # These two should be obsoleted
 rsa-pkcs1-sha1
 rsa-pkcs1-md5
-
-n
-e
-d
-a
-b
-c
 
 # spki password encrypted data
 Xpkcs5v2
