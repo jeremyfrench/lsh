@@ -75,11 +75,10 @@ io_close_fd(int fd);
        (port . uint32_t)))
 */
 
-#if 0
 /* Used for listening and connecting to local sockets.
  * Both strings have to be NUL-terminated. */
 
-/* ;; GABA:
+/* GABA:
    (class
      (name local_info)
      (vars
@@ -90,7 +89,7 @@ io_close_fd(int fd);
 struct local_info *
 make_local_info(struct lsh_string *directory,
 		struct lsh_string *name);
-#endif
+
 
 /* Passed to the listen callback. Note that the fd here isn't
    registered anywhere, so it must be taken care of immedietely, or
@@ -188,16 +187,15 @@ io_connect(struct io_connect_state *self,
 	   socklen_t addr_length,
 	   struct sockaddr *addr);
 
-#if 0
-struct lsh_fd *
-io_bind_local(struct local_info *info,
-	      struct exception_handler *e);
 
-struct lsh_fd *
-io_connect_local(struct local_info *info,
-		 struct command_continuation *c,
-		 struct exception_handler *e);
-#endif
+int
+io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length);
+
+int
+io_bind_local(struct local_info *info);
+
+int
+io_connect_local(struct local_info *info);
 
 int
 lsh_make_pipe(int *fds);

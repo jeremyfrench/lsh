@@ -470,7 +470,6 @@ io_connect(struct io_connect_state *self,
   return 1;
 }
 
-
 /* These functions are used by werror and friends */
 
 /* For fd:s in blocking mode. On error, see errno. */
@@ -1156,9 +1155,6 @@ io_set_close_on_exec(int fd)
 
 /* AF_LOCAL sockets */
 
-/* Requires DIRECTORY and NAME to be NUL-terminated */
-
-#if 0
 struct local_info *
 make_local_info(struct lsh_string *directory,
 		struct lsh_string *name)
@@ -1177,7 +1173,6 @@ make_local_info(struct lsh_string *directory,
     return self;
   }
 }
-#endif
 
 void
 lsh_popd(int old_cd, const char *directory)
@@ -1329,11 +1324,30 @@ lsh_pushd(const char *directory,
   return old_cd;
 }
 
-#if 0
+int
+io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length)
+{
+  int yes = 1;
+  int fd;
 
-struct lsh_fd *
-io_bind_local(struct local_info *info,
-	      struct exception_handler *e)
+  fd = socket(addr->sa_family, SOCK_STREAM, 0);
+  if (fd < 0)
+    return -1;
+
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes)) < 0)
+    werror("setsockopt failed: %e\n", errno);
+
+  if (bind(fd, addr, addr_length) < 0)
+    {
+      close(fd);
+      return -1;
+    }
+
+  return fd;
+}
+
+int
+io_bind_local(struct local_info *info)
 {
   int old_cd;
 
@@ -1341,7 +1355,7 @@ io_bind_local(struct local_info *info,
   struct sockaddr_un *local;
   socklen_t local_length;
 
-  struct lsh_fd *fd;
+  int fd;
 
   const char *cdir = lsh_get_cstring(info->directory);
   const char *cname = lsh_get_cstring(info->name);
@@ -1365,7 +1379,7 @@ io_bind_local(struct local_info *info,
 
   old_cd = lsh_pushd(cdir, NULL, 1, 1);
   if (old_cd < 0)
-    return NULL;
+    return -1;
 
   /* Ok, now the current directory should be a decent place for
    * creating a socket. */
@@ -1377,7 +1391,7 @@ io_bind_local(struct local_info *info,
       werror("io.c: unlink '%S'/'%S' failed %e\n",
 	     info->directory, info->name, errno);
       lsh_popd(old_cd, cdir);
-      return NULL;
+      return -1;
     }
 
   /* We have to change the umask, as that's the only way to control
@@ -1386,8 +1400,7 @@ io_bind_local(struct local_info *info,
   old_umask = umask(0077);
 
   /* Bind and listen */
-  fd = io_bind_sockaddr((struct sockaddr *) local,
-			local_length, e);
+  fd = io_bind_sockaddr((struct sockaddr *) local, local_length);
   
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
@@ -1397,19 +1410,17 @@ io_bind_local(struct local_info *info,
   return fd;
 }
 
-/* Requires DIRECTORY and NAME to be NUL-terminated */
-struct lsh_fd *
-io_connect_local(struct local_info *info,
-		 struct command_continuation *c,
-		 struct exception_handler *e)
+/* Uses a blocking connect */
+int
+io_connect_local(struct local_info *info)
 {
   int old_cd;
+  int fd;
+  int res;
 
   struct sockaddr_un *addr;
   socklen_t addr_length;
 
-  struct lsh_fd *fd;
-  
   const char *cdir = lsh_get_cstring(info->directory);
   const char *cname = lsh_get_cstring(info->name);
   uint32_t length = lsh_string_length(info->name);
@@ -1417,8 +1428,8 @@ io_connect_local(struct local_info *info,
   assert(cname);
   assert(cdir);
 
-  /* NAME should not be a plain filename, with no directory separators.
-   * In particular, it should not be an absolute filename. */
+  /* NAME should be a plain filename, with no directory separators. In
+   * particular, it should not be an absolute filename. */
   assert(!memchr(cname, '/', length));
 
   addr_length = offsetof(struct sockaddr_un, sun_path) + length;
@@ -1431,17 +1442,26 @@ io_connect_local(struct local_info *info,
 
   old_cd = lsh_pushd(cdir, NULL, 0, 1);
   if (old_cd < 0)
-    return NULL;
-  
-  fd = io_connect( (struct sockaddr *) addr, addr_length,
-		   make_connect_callback(c), e);
+    return -1;
+
+  fd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (fd < 0)
+    return -1;
+
+  do
+    res = connect(fd, (struct sockaddr *) addr, addr_length);
+  while (res < 0 && errno == EINTR);
 
   lsh_popd(old_cd, cdir);
 
+  if (res < 0)
+    {
+      close(fd);
+      return -1;
+    }
   return fd;
 }
 
-#endif
 
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
