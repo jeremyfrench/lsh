@@ -243,7 +243,7 @@ channel_open_new_type(struct ssh_connection *connection,
 
 void
 channel_send_request(struct ssh_channel *channel, int type,
-		     int close_on_error,
+		     int want_reply, struct command_context *ctx,
 		     const char *format, ...);
 
 void
