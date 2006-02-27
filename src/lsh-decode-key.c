@@ -134,7 +134,7 @@ lsh_decode_key(struct lsh_string *contents)
       {
         struct verifier *v;
         
-        werror("lsh-decode-key: Reading key of type ssh-dss...\n");
+        werror("Reading key of type ssh-dss...\n");
 
         v = parse_ssh_dss_public(&buffer);
         
@@ -151,7 +151,7 @@ lsh_decode_key(struct lsh_string *contents)
       {
           struct verifier *v;
           
-          werror("lsh-decode-key: Reading key of type ssh-rsa...\n");
+          werror("Reading key of type ssh-rsa...\n");
 
           v = parse_ssh_rsa_public(&buffer);
 
