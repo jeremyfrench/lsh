@@ -41,7 +41,7 @@
 /* GABA:
    (class
      (name pty_request)
-     (super channel_request_command)
+     (super command)
      (vars
        (tty object interact)
        (term string)
@@ -89,17 +89,6 @@ make_client_tty_resource(struct interact *tty,
        (channel object ssh_channel)))
 */
 
-static struct lsh_string *
-format_window_change(struct ssh_channel *channel,
-		     struct terminal_dimensions *dims)
-{
-  return format_channel_request
-    (ATOM_WINDOW_CHANGE, channel,
-     0, "%i%i%i%i",
-     dims->char_width, dims->char_height,
-     dims->pixel_width, dims->pixel_height); 
-}
-
 static void
 do_client_winch_handler(struct window_change_callback *s,
 			struct interact *tty)
@@ -110,8 +99,11 @@ do_client_winch_handler(struct window_change_callback *s,
   if (!INTERACT_WINDOW_SIZE(tty, &dims))
     return;
 
-  CHANNEL_TABLE_WRITE(self->channel->table,
-		      format_window_change(self->channel, &dims));
+  channel_send_request(self->channel, ATOM_WINDOW_CHANGE,
+		       0, NULL,
+		       "%i%i%i%i",
+		       dims.char_width, dims.char_height,
+		       dims.pixel_width, dims.pixel_height);
 }
 
 static struct window_change_callback *
@@ -139,7 +131,7 @@ do_pty_continuation(struct command_continuation *s,
 		    struct lsh_object *x)
 {
   CAST(pty_request_continuation, self, s);
-  CAST_SUBTYPE(ssh_channel, channel, x);
+  CAST(client_session, session, x);
   struct terminal_attributes *raw;
   
   assert(x);
@@ -155,14 +147,14 @@ do_pty_continuation(struct command_continuation *s,
   /* Tell the werror functions that terminal mode is restored. */
   set_error_raw(1);
   
-  remember_resource(channel->resources,
+  remember_resource(session->resources,
 		    make_client_tty_resource(self->req->tty,
 					     self->req->attr));
   
-  remember_resource(channel->resources,
+  remember_resource(session->resources,
 		    INTERACT_WINDOW_SUBSCRIBE
 		    (self->req->tty,
-		     make_client_winch_handler(channel)));
+		     make_client_winch_handler(&session->super)));
   
   COMMAND_RETURN(self->super.up, x);
 }
@@ -179,24 +171,27 @@ make_pty_continuation(struct pty_request *req,
   return &self->super.super;
 }
 
-static struct lsh_string *
-do_format_pty_request(struct channel_request_command *s,
-		      struct ssh_channel *channel,
-		      struct command_continuation **c)
+static void
+do_pty_request(struct command *s,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
   CAST(pty_request, self, s);
+  CAST_SUBTYPE(ssh_channel, channel, x);
 
-  verbose("Requesting a remote pty.\n");
+  struct command_context *ctx
+    = make_command_context(make_pty_continuation(self, c), e);
 
-  *c = make_pty_continuation(self, *c);
+  trace("do_pty_request: Sending pty request.\n");
 
-  return format_channel_request
-    (ATOM_PTY_REQ, channel, 1,
-     "%S%i%i%i%i%fS",
-     self->term,
-     self->dims.char_width, self->dims.char_height,
-     self->dims.pixel_width, self->dims.pixel_height,
-     TERM_ENCODE(self->attr));
+  channel_send_request(channel, ATOM_PTY_REQ,
+		       1, ctx,
+		       "%S%i%i%i%i%fS",
+		       self->term,
+		       self->dims.char_width, self->dims.char_height,
+		       self->dims.pixel_width, self->dims.pixel_height,
+		       TERM_ENCODE(self->attr));
 }
 
 struct command *
@@ -205,6 +200,8 @@ make_pty_request(struct interact *tty)
   NEW(pty_request, req);
   char *term = getenv(ENV_TERM);
 
+  req->super.call = do_pty_request;
+  
   req->attr = INTERACT_GET_ATTRIBUTES(tty);
 
   if (!req->attr)
@@ -216,12 +213,9 @@ make_pty_request(struct interact *tty)
   if (!INTERACT_WINDOW_SIZE(tty, &req->dims))
     req->dims.char_width = req->dims.char_height
       = req->dims.pixel_width = req->dims.pixel_height = 0;
-
-  req->super.super.call = do_channel_request_command;
-  req->super.format_request = do_format_pty_request;
   
   req->tty = tty;
   req->term = term ? make_string(term) : ssh_format("");
 
-  return &req->super.super;
+  return &req->super;
 }
