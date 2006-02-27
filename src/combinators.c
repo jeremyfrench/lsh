@@ -244,11 +244,6 @@ DEFINE_COMMAND4(command_Cp)
 
   trace("command_Cp\n");
 
-#if 0
-  werror("command_Cp: k: %t, f: %t, y: %t, x: %t\n",
-	 k, f, y, x);
-#endif
-  
   COMMAND_CALL(cf, x,
 	       make_apply(ck,
 			  make_command_C_continuation(y, c, e), e),
