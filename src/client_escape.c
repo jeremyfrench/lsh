@@ -162,11 +162,6 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   uint32_t done;
   uint32_t length;
   const uint8_t *data;
-
-#if 0
-  trace("do_escape_handler: state = %i, packet length = %i\n",
-        self->state, packet->length);
-#endif
   
   if (!packet)
     {
