@@ -207,19 +207,7 @@ static void						\
 do_##cname
 
 
-void do_call_simple_command(struct command *s,
-			    struct lsh_object *arg,
-			    struct command_continuation *c,
-			    struct exception_handler *e);
-
-struct command *make_parallell_progn(struct object_list *body);
-extern struct command progn_command;
-
-extern struct command_2 protect_command;
-
 extern struct command_continuation discard_continuation;
-
-#define CONTINUATION_USED_P(c) ((c) != &discard_continuation)
 
 /* GABA:
    (class
@@ -232,7 +220,7 @@ extern struct command_continuation discard_continuation;
 
 /* Used when the execution context must be saved for later use.
  *
- * Primarily used in channel_commands.c.
+ * Primarily used in channel.c.
  */
 /* GABA:
    (class
@@ -246,37 +234,6 @@ struct command_context *
 make_command_context(struct command_continuation *c,
 		     struct exception_handler *e);
 
-struct catch_handler_info *
-make_catch_handler_info(uint32_t mask, uint32_t value,
-			int ignore_value,
-			struct command *handler);
-
-struct command *
-make_catch_apply(struct catch_handler_info *info,
-		 struct command *body);
-
-
-/* GABA:
-   (class
-     (name catch_report_collect)
-     (super command)
-     (vars
-       (info const object report_exception_info)))
-*/
-
-struct command *
-make_catch_report_apply(const struct report_exception_info *info,
-			struct command *body);
-
-void
-do_catch_report_collect(struct command *s,
-			struct lsh_object *a,
-			struct command_continuation *c,
-			struct exception_handler *e);
-
-#define STATIC_CATCH_REPORT(i) \
-{ STATIC_COMMAND(do_catch_report_collect), i }
-
 
 #if DEBUG_TRACE
 struct command *make_trace(const char *name, struct command *real);
@@ -289,8 +246,6 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 
 /* Useful global commands */
 #define PROG1 (&command_K.super.super)
-#define PROGN (&progn_command.super)
-#define PROTECT (&protect_command.super.super)
 
 /* The GABA_* macros are used by automatically generated evaluation code */
 
