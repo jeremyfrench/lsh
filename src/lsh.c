@@ -622,6 +622,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_FLAG(OPT_USE_GATEWAY, use_gateway);
 
     case 'G':
+      /* FIXME: It would be desirable to have this option also imply
+	 that lsh is backgrounded when the primary actions are
+	 completed. */
       self->start_gateway = -1;
       break;
 
@@ -676,7 +679,11 @@ do_lsh_default_handler(struct exception_handler *s,
   else
     werror("%z\n", e->msg);
 
-  *self->status = EXIT_FAILURE;
+  /* For essential requests, like "shell" and "exec", the channel is
+     just closed on errors. The channel request that we get exceptions
+     for are the ones that are not essential. */
+  if (e->type != EXC_CHANNEL_REQUEST)
+    *self->status = EXIT_FAILURE;
 }
 
 static struct exception_handler *
@@ -697,14 +704,14 @@ transport_exit_callback(struct exit_callback *s UNUSED,
 {
   if (signalled)
     {
-      werror("Transport process killed by %s (signal %d)%s.\n",
+      werror("Transport process killed by %s (signal %i)%s.\n",
 	     STRSIGNAL(value), value, core ? " (core dumped)" : "");
       /* FIXME: Design and document error code values. */
       exit(17);
     }
   else if (value)
     {
-      werror("Transport process exited with error code %d.\n", value);
+      werror("Transport process exited with error code %i.\n", value);
       exit(value);
     }
   else
@@ -776,15 +783,7 @@ fork_lsh_transport(struct lsh_options *options)
       arglist_push(&options->transport_args, options->super.target);
       
       argv = (char **) options->transport_args.argv;
-#if 0
-      {
-	fprintf(stderr, "argc = %d\n", options->transport_args.argc);
-	
-	int i;
-	for (i = 0; argv[i]; i++)
-	  fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
-      }
-#endif
+
       verbose("Starting %z.\n", argv[0]);
       execv(argv[0], argv);
       werror("fork_lsh_transport: exec failed: %e\n", errno);
