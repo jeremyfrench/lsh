@@ -58,7 +58,7 @@ ssh_format(const char *format, ...)
 #if __GNUC__
   packet = lsh_string_alloc_clue(length, clue);
 #else /* DEBUG_ALLOC && !__GNUC__ */
-  packet = lsh_string_alloc_clue(format, clue);
+  packet = lsh_string_alloc_clue(length, format);
 #endif  
 #else /* !DEBUG_ALLOC */
   packet = lsh_string_alloc(length);
@@ -71,7 +71,8 @@ ssh_format(const char *format, ...)
   return packet;
 }
 
-uint32_t ssh_format_length(const char *format, ...)
+uint32_t
+ssh_format_length(const char *format, ...)
 {
   va_list args;
   uint32_t length;
@@ -93,10 +94,9 @@ ssh_format_write(const char *format, struct lsh_string *buffer, uint32_t start, 
   va_end(args);
 }
      
-static int
-write_decimal_length(struct lsh_string *buffer, uint32_t start, uint32_t n);
 
-uint32_t ssh_vformat_length(const char *f, va_list args)
+uint32_t
+ssh_vformat_length(const char *f, va_list args)
 {
   uint32_t length = 0;
 
@@ -298,6 +298,48 @@ end_options:
   return length;
 }
 
+
+static void
+format_decimal(struct lsh_string *buffer, uint32_t start,
+	       uint32_t length, uint32_t n)
+{
+  unsigned i;
+  
+  for (i = 0; i<length; i++)
+    {
+      lsh_string_putc(buffer, start + length - i - 1, '0' + n % 10);
+      n /= 10;
+    }
+}
+
+static uint32_t
+format_string(struct lsh_string *buffer, uint32_t pos,
+	      uint32_t size, const uint8_t *data,
+	      int literal, int hex)
+{  
+  static const uint8_t hexchars[16] = "0123456789abcdef";
+  uint32_t length = hex ? (2*size) : size;
+
+  if (!literal)
+    {
+      lsh_string_write_uint32(buffer, pos, length);
+      pos += 4;
+    }
+
+  if (!hex)
+    lsh_string_write(buffer, pos, size, data);
+  else
+    {
+      uint32_t i;
+      for (i = 0; i < size; i++)
+	{
+	  lsh_string_putc(buffer, pos++, hexchars[ (data[i] & 0xf0) >> 4 ]);
+	  lsh_string_putc(buffer, pos++, hexchars[ data[i] & 0x0f]);
+	}
+    }
+  return pos + length;
+}
+
 void
 ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_list args)
 {
@@ -370,68 +412,41 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 	      }
 
 	    case 'z':
+	      assert(!do_free);
+	      assert(!decimal);
+
 	      data = va_arg(args, const char *);
 	      size = strlen(data);
-
-	      goto do_string;
+	      
+	      pos = format_string(buffer, pos,
+				  size, data,
+				  literal, hex);
+	      break;
 	      
 	    case 's':
+	      assert(!do_free);
+	      assert(!decimal);
+
 	      size = va_arg(args, uint32_t);
 	      data = va_arg(args, const uint8_t *);
 	      
-	    do_string:
-	      {
-		uint32_t length = hex ? (2*size) : size;
+	      pos = format_string(buffer, pos,
+				  size, data,
+				  literal, hex);
+	      break;
 
-		assert(!do_free);
-
-		if (decimal)
-		  pos += write_decimal_length(buffer, pos, length);
-		else if (!literal)
-		  {
-		    lsh_string_write_uint32(buffer, pos, length);
-		    pos += 4;
-		  }
-
-		if (hex)
-		  format_hex_string(buffer, pos, size, data);
-		else
-		  lsh_string_write(buffer, pos, size, data);
-
-		pos += length;
-		break;
-	      }
-	      
 	    case 'S':
 	      {
 		struct lsh_string *s = va_arg(args, struct lsh_string *);
-		uint32_t length;
-		
-		size = lsh_string_length(s);
-		data = lsh_string_data(s);
 
-		/* FIXME: Some duplication. Break out the do_string
-		   case to a function? */
-		length = hex ? (2*size) : size;
+		assert(!decimal);
 
-		if (decimal)
-		  pos += write_decimal_length(buffer, pos, length);
-		else if (!literal)
-		  {
-		    lsh_string_write_uint32(buffer, pos, length);
-		    pos += 4;
-		  }
-
-		if (hex)
-		  format_hex_string(buffer, pos, size, data);
-		else
-		  lsh_string_write(buffer, pos, size, data);
-		
-		pos += length;
-
+		pos = format_string(buffer, pos,
+				    STRING_LD(s),
+				    literal, hex);
 		if (do_free)
 		  lsh_string_free(s);
-		
+
 		break;
 	      }
 
@@ -440,9 +455,9 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 		uint32_t length = va_arg(args, uint32_t);
 		uint32_t *p = va_arg(args, uint32_t *);
 
-		if (decimal)
-		  pos += write_decimal_length(buffer, pos, length);
-		else if (!literal)
+		assert(!decimal);
+
+		if (!literal)
 		  {
 		    lsh_string_write_uint32(buffer, pos, length);
 		    pos += 4;
@@ -464,9 +479,9 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 
 		length = get_atom_length(atom);
 
-		if (decimal)
-		  pos += write_decimal_length(buffer, pos, length);
-		else if (!literal)
+		assert(!decimal);
+
+		if (!literal)
 		  {
 		    lsh_string_write_uint32(buffer, pos, length);
 		    pos += 4;
@@ -575,46 +590,6 @@ format_size_in_decimal(uint32_t n)
 #undef SIZE
   
   return e+1;
-}
-
-
-void
-format_hex_string(struct lsh_string *buffer, uint32_t pos,
-		  uint32_t length, const uint8_t *data)
-{
-  static const uint8_t hexchars[16] = "0123456789abcdef";
-  uint32_t i;
-
-  for (i = 0; i < length; i++)
-    {
-      lsh_string_putc(buffer, pos++, hexchars[ (data[i] & 0xf0) >> 4 ]);
-      lsh_string_putc(buffer, pos++, hexchars[ data[i] & 0x0f]);
-    }
-}
-
-void
-format_decimal(struct lsh_string *buffer, uint32_t start,
-	       uint32_t length, uint32_t n)
-{
-  unsigned i;
-  
-  for (i = 0; i<length; i++)
-    {
-      lsh_string_putc(buffer, start + length - i - 1, '0' + n % 10);
-      n /= 10;
-    }
-}
-
-/* FIXME: This is not needed anymore. */
-static int
-write_decimal_length(struct lsh_string *buffer, uint32_t start, uint32_t n)
-{
-  int length = format_size_in_decimal(n);
-
-  format_decimal(buffer, start, length, n);
-  lsh_string_putc(buffer, start + length, ':');
-
-  return length + 1;
 }
 
 struct lsh_string *
