@@ -65,6 +65,9 @@
      (vars
        (initial_window . uint32_t)
 
+       ; Communication with the helper process
+       (helper_fd . int)
+       
        ; Resource to kill when the channel is closed. 
        (process object lsh_process)
 
@@ -215,7 +218,7 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
 {
   CAST(server_session, session, channel);
 
-  trace("server_session.c: do_event %i\n", event);
+  trace("server_session.c: do_server_session_event %i\n", event);
 
   switch(event)
     {
@@ -257,9 +260,10 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
     }
 }
 
-struct ssh_channel *
+static struct ssh_channel *
 make_server_session(uint32_t initial_window,
-		    struct alist *request_types)
+		    struct alist *request_types,
+		    int helper_fd)
 {
   NEW(server_session, self);
 
@@ -275,7 +279,9 @@ make_server_session(uint32_t initial_window,
   self->super.request_types = request_types;
 
   self->initial_window = initial_window;
-  
+
+  self->helper_fd = helper_fd;
+
   self->process = NULL;
 
   self->pty = NULL;
@@ -296,6 +302,7 @@ make_server_session(uint32_t initial_window,
      (name open_session)
      (super channel_open)
      (vars
+       (helper_fd . int)
        (session_requests object alist)))
 */
 
@@ -316,7 +323,9 @@ do_open_session(struct channel_open *s,
   if (parse_eod(args))
     {
       COMMAND_RETURN(c,
-		     make_server_session(WINDOW_SIZE, self->session_requests));
+		     make_server_session(WINDOW_SIZE,
+					 self->session_requests,
+					 self->helper_fd));
     }
   else
     {
@@ -325,14 +334,15 @@ do_open_session(struct channel_open *s,
 }
 
 struct channel_open *
-make_open_session(struct alist *session_requests)
+make_open_session(struct alist *session_requests, int helper_fd)
 {
-  NEW(open_session, closure);
+  NEW(open_session, self);
 
-  closure->super.handler = do_open_session;
-  closure->session_requests = session_requests;
+  self->super.handler = do_open_session;
+  self->helper_fd = helper_fd;
+  self->session_requests = session_requests;
   
-  return &closure->super;
+  return &self->super;
 }
 
 /* GABA:
@@ -357,20 +367,20 @@ do_exit_shell(struct exit_callback *c, int signaled,
 
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
-      verbose("server_session.c: Sending %a message on channel %i\n",
+      verbose("Sending %a message on channel %i.\n",
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
 	      channel->remote_channel_number);
 
       if (signaled)
 	channel_send_request(&session->super, ATOM_EXIT_SIGNAL,
-			     0,
+			     0, NULL,
 			     "%a%c%z%z",
 			     signal_local_to_network(value),
 			     core,
 			     STRSIGNAL(value), "");
       else
 	channel_send_request(&session->super, ATOM_EXIT_STATUS,
-			     0, "%i", value);
+			     0, NULL, "%i", value);
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from
@@ -460,25 +470,26 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
 
       pty->super.alive = 0;
       
-      /* FIXME: It seems unnecessary to dup the master fd here; in
-       * principle, we could use the same fd for both stdin and
-       * stdout. */
+      /* FIXME: It seems unnecessary to dup the master fd here. But
+	 for simplicity of ownership, keep one copy in the pty_info
+	 object, one for stdin, and one for stdout. */
 
       /* -1 means opening deferred to the child */
       in[0] = -1;
-      in[1] = pty->master;
-      
+      if ((in[1] = dup(pty->master)) < 0)
+        {
+          werror("make_pty: duping master pty for stdin failed %e.\n", errno);
+
+          return 0;
+        }      
       if ((out[0] = dup(pty->master)) < 0)
         {
-          werror("make_pty: duping master pty to stdout failed %e\n", errno);
+          werror("make_pty: duping master pty for stdout failed %e.\n", errno);
 
           return 0;
         }
 
       out[1] = -1;
-
-      /* pty_info no longer owns the pty fd */
-      pty->master = -1;
 
 #if BASH_WORKAROUND
       /* Don't use a separate stderr channel; just dup the
@@ -516,7 +527,7 @@ spawn_process(struct server_session *session,
 	      struct spawn_info *info)
 {
   assert(!session->process);
-
+  
   if (session->pty && !make_pty(session->pty,
 				info->in, info->out, info->err))
     {
@@ -528,8 +539,10 @@ spawn_process(struct server_session *session,
   if (!session->pty && !make_pipes(info->in, info->out, info->err))
     return 0;
 
-  /* FIXME: Doesn't do any utmp/wtmp logging */
-  session->process = spawn_shell(info, make_exit_shell(session));
+  /* NOTE: Uses the info->pty->master. After this, it's ok to close
+     that fd, but we currently don't do that until session death. */
+  session->process = spawn_shell(info, session->helper_fd,
+				 make_exit_shell(session));
 
   if (!session->process)
     return 0;
@@ -540,6 +553,14 @@ spawn_process(struct server_session *session,
   io_register_fd(info->in[1], "process stdin");
   io_register_fd(info->out[0], "process stdout");
 
+  if (session->pty)
+    /* When the child process has exited, and hence the slave side of
+       the pty is closed, then read, at least on linux, returns EIO.
+       This should be treated as an EOF event, not an error. */
+    session->out.ignored_error = EIO;
+
+  session->super.sources++;
+
   if (info->err[0] < 0)
     {
       session->err.fd = -1;
@@ -549,6 +570,8 @@ spawn_process(struct server_session *session,
     {
       init_channel_read_state(&session->err, info->err[0], SERVER_READ_BUFFER_SIZE);
       io_register_fd(info->err[0], "process stderr");
+
+      session->super.sources++;
     }
 
   if (session->super.send_window_size)
@@ -560,8 +583,6 @@ spawn_process(struct server_session *session,
   session->super.receive = do_receive;
   session->super.send_adjust = do_send_adjust;
   
-  session->super.sources += 2;
-
   /* One reference for stdin, and one for the exit-status/exit-signal
      message */
   session->super.sinks += 2;

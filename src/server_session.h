@@ -30,12 +30,8 @@
 #include <assert.h>
 #include <string.h>
 
-struct ssh_channel *
-make_server_session(uint32_t initial_window,
-		    struct alist *request_types);
-
 struct channel_open *
-make_open_session(struct alist *session_requests);
+make_open_session(struct alist *session_requests, int helper_fd);
 
 extern struct channel_request
 shell_request_handler;
