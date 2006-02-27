@@ -141,7 +141,7 @@ server_lookup_module(const char **modules,
  *
  *   1. The --config-file command line option.
  *
- *   2. The <PROGRAM>_CONFIG_FILE environment variable.
+ *   2. The <PROGRAM>_CONF environment variable.
  *
  *   3. The LSHD_CONFIG_DIR environment variable, combined with the
  *      default file name.
