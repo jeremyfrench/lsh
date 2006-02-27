@@ -48,6 +48,13 @@ enum channel_io_status
      (name channel_read_state)
      (vars
        (fd . int)
+
+       ; If read fails with this errno value, treat it as EOF. Needed
+       ; since, at least on linux, reading the master side of a tty
+       ; returns EIO if the slave side is closed
+
+       (ignored_error . int)
+
        (active . int)
        (buffer string)))
 */

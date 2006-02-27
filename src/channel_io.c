@@ -45,6 +45,7 @@ init_channel_read_state(struct channel_read_state *self, int fd,
 			uint32_t buffer_size)
 {
   self->fd = fd;
+  self->ignored_error = 0;
   self->active = 0;
   self->buffer = (fd < 0) ? NULL : lsh_string_alloc(buffer_size);
 }
@@ -102,13 +103,20 @@ channel_io_read(struct ssh_channel *channel,
 
   if (res < 0)
     {
-      werror("reading on channel fd %d failed: %e.\n", file->fd, errno);
+      if (errno == file->ignored_error)
+	{
+	  trace("channel_io_read: reading on fd %i failed: %e ==> EOF.\n",
+		file->fd, errno);
+	  goto eof;
+	}
+      werror("reading on channel fd %i failed: %e.\n", file->fd, errno);
 
       channel_close(channel);
       return CHANNEL_IO_ERROR;
     }
   else if (res == 0)
     {
+    eof:
       assert(channel->sources);
       if (!--channel->sources)
 	channel_eof(channel);
@@ -192,7 +200,7 @@ channel_io_write(struct ssh_channel *channel,
     }
   else
     {
-      werror("write failed on channel write fd %d: %e.\n", file->fd, errno);
+      werror("write failed on channel write fd %i: %e.\n", file->fd, errno);
 
       channel_close(channel);
       return CHANNEL_IO_ERROR;
@@ -212,7 +220,7 @@ channel_io_flush(struct ssh_channel *channel,
     }
   else if (errno != EWOULDBLOCK)
     {
-      werror("Write failed on channel write fd %d: %e.\n", file->fd, errno);
+      werror("Write failed on channel write fd %i: %e.\n", file->fd, errno);
 
       channel_close(channel);
       return CHANNEL_IO_ERROR;
