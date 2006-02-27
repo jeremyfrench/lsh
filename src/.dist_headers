@@ -16,7 +16,6 @@ dist_headers = \
     exception.h \
     format.h \
     gateway.h \
-    gateway_commands.h \
     gc.h \
     interact.h \
     io.h \
@@ -31,11 +30,13 @@ dist_headers = \
     parse.h \
     parse_config.h \
     parse_macros.h \
+    pty-helper.h \
     queue.h \
     randomness.h \
     reaper.h \
     resource.h \
     server.h \
+    server_config.h \
     server_pty.h \
     server_session.h \
     server_x11.h \
@@ -47,6 +48,7 @@ dist_headers = \
     ssh_write.h \
     suspend.h \
     tcpforward.h \
+    tokenize_config.h \
     translate_signal.h \
     transport.h \
     transport_forward.h \
