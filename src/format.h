@@ -92,25 +92,23 @@ ssh_format(const char *format, ...);
 #endif /* !DEBUG_ALLOC */
 
 uint32_t ssh_format_length(const char *format, ...);
-void ssh_format_write(const char *format,
+void
+ssh_format_write(const char *format,
 		      struct lsh_string *buffer, uint32_t pos, ...);
 
-uint32_t ssh_vformat_length(const char *format, va_list args);
-void ssh_vformat_write(const char *format,
+uint32_t
+ssh_vformat_length(const char *format, va_list args);
+
+void
+ssh_vformat_write(const char *format,
 		       struct lsh_string *buffer, uint32_t pos, va_list args);
 
-void
-format_hex_string(struct lsh_string *buffer, uint32_t pos,
-		  uint32_t length, const uint8_t *data);
-
      
-/* Short cuts */
+/* Short cut */
 #define make_string(s) (ssh_format("%lz", (s)))
 
-unsigned format_size_in_decimal(uint32_t n);
-void
-format_decimal(struct lsh_string *buffer, uint32_t pos,
-	       uint32_t length, uint32_t n);
+unsigned
+format_size_in_decimal(uint32_t n);
 
 
 /* Helper functions for formatting particular ssh messages */
