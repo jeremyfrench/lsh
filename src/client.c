@@ -337,7 +337,7 @@ DEFINE_COMMAND(request_shell)
 {
   CAST_SUBTYPE(ssh_channel, channel, x);
 
-  channel_send_request(channel, ATOM_SHELL, 1, "");
+  channel_send_request(channel, ATOM_SHELL, 1, NULL, "");
 }
 
 /* Used for both exec and subsystem request. */
@@ -359,9 +359,9 @@ do_session_channel_request(struct command *s,
   CAST(session_channel_request, self, s);
   CAST_SUBTYPE(ssh_channel, channel, x);
 
-  verbose("lsh: Requesting remote %a.\n", self->type);
+  verbose("Requesting remote %a.\n", self->type);
 
-  channel_send_request(channel, self->type, 1,
+  channel_send_request(channel, self->type, 1, NULL,
 		       "%S", self->arg);
 }
 
@@ -536,12 +536,11 @@ client_maybe_pty(struct client_options *options,
 		 int default_pty,
 		 struct object_queue *q)
 {
-#if 0
 #if WITH_PTY_SUPPORT
   int with_pty = options->with_pty;
   if (with_pty < 0)
     with_pty = default_pty;
-  
+
   if (with_pty && !options->used_pty)
     {
       options->used_pty = 1;
@@ -551,19 +550,13 @@ client_maybe_pty(struct client_options *options,
 	  struct command *get_pty = make_pty_request(options->tty);
 
 	  if (get_pty)
-	    object_queue_add_tail(q,
-				  /* Ignore EXC_CHANNEL_REQUEST for the pty allocation call. */
-				  &make_catch_apply
-				  (make_catch_handler_info(EXC_ALL, EXC_CHANNEL_REQUEST,
-							   0, NULL),
-				   get_pty)->super);
+	    object_queue_add_tail(q, &get_pty->super);
 	  else
-	    werror("lsh: Can't use tty (probably getattr or atexit failed).\n");
+	    werror("Can't use tty (probably getattr or atexit failed).\n");
 	}
       else
-	werror("lsh: No tty available.\n");
+	werror("No tty available.\n");
     }
-#endif
 #endif
 }
 
@@ -826,7 +819,7 @@ make_client_session(struct client_options *options)
 
   if (in < 0)
     {
-      werror("lsh: Can't open stdin %e\n", errno);
+      werror("Can't open stdin %e\n", errno);
       return NULL;
     }
 
@@ -867,7 +860,7 @@ make_client_session(struct client_options *options)
 
   if (out < 0)
     {
-      werror("lsh: Can't open stdout %e\n", errno);
+      werror("Can't open stdout %e\n", errno);
       close(in);
       return NULL;
     }
@@ -881,7 +874,7 @@ make_client_session(struct client_options *options)
 
   if (err < 0) 
     {
-      werror("lsh: Can't open stderr!\n");
+      werror("Can't open stderr!\n");
       return NULL;
     }
 
