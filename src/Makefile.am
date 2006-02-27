@@ -14,7 +14,7 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
-# lshg and @SRP_PROGRAM@ are broken at the moment
+# @SRP_PROGRAM@ are broken at the moment
 bin_PROGRAMS = lsh lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed
 	       
@@ -42,18 +42,18 @@ bootstrap: $(generated_sources) $(dist_classes)
 # client_keyexchange.c client_userauth.c connection_commands.c
 # 
 # read_packet.c write_packet.c
-# client_x11.c server_x11.c client_pty.c tcpforward_commands.c
+# client_x11.c server_x11.c tcpforward_commands.c
 
 # Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c
 # write_buffer.c channel_commands.c string_buffer.c handshake.c
-# lshd_keyexchange.c debug.c gateway_commands.c
+# lshd_keyexchange.c debug.c gateway_commands.c lshg.c
 
 
 liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	channel.c channel_io.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c \
-	client_session.c client_tcpforward.c \
+	client_pty.c client_session.c client_tcpforward.c \
 	combinators.c command.c compress.c \
 	connection.c \
 	crypto.c \
@@ -71,6 +71,7 @@ liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
 	lsh_string.c parse.c \
 	parse_config.c \
 	pkcs5.c \
+	pty-helper.c \
 	queue.c \
 	randomness.c \
 	reaper.c resource.c \
@@ -132,15 +133,11 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 
 LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
-# To avoid having to link lshg with nettle, link with dummy.o.
-
 # FIXME: We still link with gmp and zlib, to avoid that we'd need to
-# remove them from LIBS. The only libraries really needed for lshg is
-# liboop and perhaps libXau.
+# remove them from LIBS. The only libraries really needed by
+# non-transport programs are liboop and perhaps libXau.
 
-# lshg_SOURCES = lshg.c dummy.c
-# lshg_LDADD = liblsh.a @LIBARGP@
-
+lshd_pty_helper_SOURCES = lshd-pty-helper.c pty-helper.c 
 lshd_pty_helper_LDADD =
 
 lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
