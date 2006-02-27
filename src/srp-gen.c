@@ -231,7 +231,7 @@ static void
 do_srp_gen_handler(struct exception_handler *s UNUSED,
 			const struct exception *e)
 {
-  werror("lsh_writekey: %z\n", e->msg);
+  werror("%z\n", e->msg);
 
   exit(EXIT_FAILURE);
 }
