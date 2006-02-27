@@ -92,6 +92,9 @@ extern struct command client_start_io;
        (out struct channel_write_state)
        (err struct channel_write_state)
 
+       ; The pty-allocation code adds resources here.
+       (resources object resource_list)
+
        ; Commands to be invoked after the session is opened.
        (requests struct object_queue)
 
