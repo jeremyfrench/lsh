@@ -64,6 +64,7 @@ do_kill_client_session(struct resource *s)
       io_close_fd(self->err.fd);
       self->err.fd = -1;
 
+      KILL_RESOURCE_LIST(self->resources);
       ssh_connection_pending_close(self->super.connection);
     }
 }
@@ -264,6 +265,8 @@ make_client_session_channel(int in, int out, int err,
   io_register_fd(in, "session stdin");
   io_register_fd(out, "session stdout");
   io_register_fd(err, "session stderr");
+
+  self->resources = make_resource_list();
 
   object_queue_init(&self->requests);
   self->e = e;
