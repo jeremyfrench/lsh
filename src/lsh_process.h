@@ -43,9 +43,6 @@
 
 #define SIGNAL_PROCESS(p, s) ((p)->signal((p), (s)))
 
-struct lsh_process *
-make_unix_process(pid_t pid, int signal);
-
 struct env_value
 {
   const char *name;
@@ -79,12 +76,9 @@ struct spawn_info
   const struct env_value *env;
 };
 
-int 
-exec_shell(struct spawn_info *info);
-
 /* On success, closes the childs stdio fd:s. On error, closes all the
    stdio fd:s. */
 struct lsh_process *
-spawn_shell(struct spawn_info *info, struct exit_callback *c);
+spawn_shell(struct spawn_info *info, int helper_fd, struct exit_callback *c);
 
 #endif /* LSH_PROCESS_H_INCLUDED */
