@@ -1,3 +1,186 @@
+2006-02-28  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/setup-env: Create empty utmp and wtmp files.
+
+	* src/testsuite/lcp-test: Updated to use new gateway interface.
+
+	* src/testsuite/functions.sh (LSHD_PTY_HELPER, LSHD_UTMP)
+	(LSHD_WTMP): Define and export.
+	(run_lsh): Moved -nt flag before $LSH_FLAGS, so it can be
+	overridden.
+	(exec_lsh, exec_lshg): Removed -nt flag, as no tty is the default
+	behaviour.
+
+	* src/testsuite/Makefile.am (TS_SH): Added lsh-10-test.
+
+	* src/lshd-userauth.c (lookup_group): New function.
+	(spawn_helper): New function.
+	(main): Start a helper program, and pass an fd connected to the
+	helper to the started service, using the --helper-fd option.
+
+	* src/lshd-connection.c (lshd_connection_config): New class.
+	(class connection): New attribute config.
+	(make_connection): New argument config. Enable pty support.
+	(make_lshd_connection_config): New function.
+	(OPT_HELPER_FD): New constant.
+	(main_options): New options struct, and new option --helper-fd.
+	(main_argp_parser): New function.
+	(main_argp): Include new options.
+	(main): Use make_lshd_connection_config, and pass configuration to
+	make_connection.
+
+	* src/io.h (SHUT_RD_UNIX, SHUT_WR_UNIX, SHUT_RD_WR_UNIX): Deleted.
+
+	* src/io.c (fd2info): Deleted.
+	(lsh_make_pipe): Don't use SHUT_RD_UNIX and SHUT_WR_UNIX.
+	(choose_address, io_resolv_address, address_info2sockaddr): #if:ed
+	out.
+
+2006-02-27  Niels Möller  <niels@s3.kth.se>
+
+	* src/format.c (ssh_format): Fixed bug for the case DEBUG_ALLOC &&
+	!__GNUC__.
+	(write_decimal_length): Deleted function.
+	(format_decimal): Made static.
+	(format_string): New function, for the common parts of
+	ssh_vformat_write. Includes the code from...
+	(format_hex_string): Deleted function.
+	(ssh_vformat_write): Deleted the feature of including a sexp-style
+	decimal length, "3:foo". Unified handling of %s, %S and %z, using
+	the new function format_string.
+
+	* src/exception.c (make_exception_handler) 
+	(make_report_exception_info): Deleted.
+	(class report_exception_handler): Deleted.
+	(do_report_exception_handler, make_report_exception_handler):
+	Deleted. 
+
+	* src/command.h (CONTINUATION_USED_P): Deleted.
+	(class catch_report_collect): Deleted.
+	(STATIC_CATCH_REPORT): Deleted.
+	(PROGN, PROTECT): Deleted.
+
+	* src/command.c (class parallell_progn): Deleted.
+	(do_parallell_progn, make_parallell_progn)
+	(progn_command): Deleted.
+	(class catch_handler_info): Deleted.
+	(make_catch_handler_info): Deleted.
+	(class catch_handler): Deleted.
+	(do_catch_handler, make_catch_handler): Deleted.
+	(class catch_apply): Deleted.
+	(do_catch_apply, make_catch_apply): Deleted.
+	(class catch_report_apply): Deleted.
+	(do_catch_report_apply, make_catch_report_apply)
+	(do_catch_report_collect): Deleted.
+	(class protect_handler): Deleted.
+	(do_exc_protect_handler, make_protect_exception_handler)
+	(protect_command): Deleted.
+
+	* src/unix_process.c: Deleted old code to handle utmp and wtmp.
+	That work is now delegated to a helper process, which can run with
+	sufficient privileges.
+	(make_unix_process): Made static.
+	(send_helper_request): New function.
+	(class logout_notice): New attributes helper_fd and helper_ref.
+	(do_logout_notice): Send a PTY_REQUEST_LOGOUT to the helper
+	process.
+	(exec_shell): Made static.
+	(spawn_error): New arguments helper_fd and helper_ref. Send a
+	PTY_REQUEST_DESTROY to the helper process.
+	(make_logout_notice): New arguments helper_fd and helper_ref.
+	(spawn_parent): Pass helper_fd and helper_ref to
+	make_logout_notice.
+	(spawn_child): New arguments helper_fd and helper_ref. Send a
+	PTY_REQUEST_LOGIN to the helper process.
+	(spawn_shell): New arguments helper_fd. Send a PTY_REQUEST_CREATE
+	to the helper process. Pass on helper_Fd and helper_ref to help
+	functions.
+
+	* src/server_session.c (class server_session): New attribute
+	helper_fd.
+	(make_server_session): Made static. New argument helper_fd.
+	(class open_session): New attribute helper_fd.
+	(do_open_session): Pass helper_fd to make_server_session.
+	(make_open_session): New argument helper_fd.
+	(do_exit_shell): Updated calls of channel_send_request. Cosmetic
+	change to verbose message.
+	(make_pty): Dup the master fd for both stdin and stdout, and leave
+	the fd in the pty_info object intact.
+	(spawn_process): Pass helper_fd to spawn_shell. If we're using a
+	pty, set ignored_error = EIO on the read state correspondign to
+	stdout. If we don't have a separate stderr channel, set
+	channel->sources to 1, not 2.
+
+	* src/lshg.c: Deleted file.
+
+	* src/testsuite/lsh-10-test: New testcase, using a pty request.
+
+	* src/lsh_process.h: Deleted prototypes for make_unix_process and
+	exec_shell, and updated prototype for spawn_shell to include
+	helper_fd.
+
+	* src/lsh.h (struct catch_report_collect): Deleted forward
+	declaration.
+
+	* src/lsh.c (do_lsh_default_handler): Don't treat
+	EXC_CHANNEL_REQUEST as an error.
+	(transport_exit_callback): Fixed format strings.
+	(fork_lsh_transport): Deleted if:ed out code.
+
+	* src/lsh-decode-key.c (lsh_decode_key): Cosmetic changes to
+	werror messages.
+
+	* src/environ.h.in: Changed "_CONFIG_FILE" to "_CONF" in the names
+	of environment variables.
+	(FILE_LSHD_PTY_HELPER, ENV_LSHD_PTY_HELPER): New constants.
+	(ENV_LSHD_UTMP, ENV_LSHD_WTMP): Likewise.
+
+	* src/client_pty.c (class pty_request): Inherit command.
+	(do_client_winch_handler): Use channel_send_request.
+	(format_window_change): Deleted function.
+	(do_pty_continuation): Use the session's resource list; a general
+	channel no longer includes a resource list.
+	(do_pty_request): New function, replacing do_format_pty_request.
+	(do_format_pty_request): Deleted function.
+	(make_pty_request): Update for changed inheritance.
+
+	* src/client.h (class client_session): New attribute with the
+	channel's resources. Needed for the pty support.
+	* src/client_session.c (do_kill_client_session): Kill associated
+	resources.
+	(make_client_session_channel): Initialize resource list.
+
+	* src/client.c: Cosmetic changes to werror messages.
+	(request_shell, do_session_channel_request): Pass a NULL ctx to
+	channel_send_request.
+	(client_maybe_pty): Enabled pty allocation.
+
+	* src/channel_io.h (class channel_read_state): New attribute
+	ignored_error.
+
+	* src/channel_io.c (init_channel_read_state): Initialize
+	ignored_error.
+	(channel_io_read): If ignored_error is non-zero, tread read errors
+	with matching errno as EOF.
+	(channel_io_write, channel_io_flush): Fixed werror format string.
+
+	* src/channel.c (handle_channel_success, handle_channel_failure):
+	Use the command_context associated with the request, if it's
+	non-NULL.
+	(format_channel_request_i): Deleted function.
+	(channel_send_request): Changed arguments to include a want_reply
+	flag and a struct command_context *.
+
+	* src/Makefile.am: Deleted lshg rules.
+	(liblsh_a_SOURCES): Added client_pty.c.
+	
+
+	* src/lshd-pty-helper.c: Rewritten. Uses the functions in
+	pty-helper.c. Handle utmp and wtmp.
+
+	* src/pty-helper.h: New file.
+	* src/pty-helper.c: New file.
+
 2006-02-23  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/lshg-1-test: Use --start-gateway. Don't use
