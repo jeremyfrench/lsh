@@ -83,9 +83,6 @@ sanity_check_queue(struct lsh_queue *q)
 
   while (n->next)
     {
-#if 0
-      debug("  n = %xi\n", (uint32_t) n);
-#endif 
       if (n->prev->next != n)
 	fatal("n->prev->next != n !\n");
 
