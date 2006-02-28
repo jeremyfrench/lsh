@@ -12,11 +12,17 @@ set -e
 : ${SEXP_CONV:="`pwd`/../nettle/tools/sexp-conv"}
 : ${LSH_TRANSPORT:="`pwd`/../lsh-transport"}
 : ${LSHD_CONNECTION:="`pwd`/../lshd-connection"}
+: ${LSHD_PTY_HELPER:="`pwd`/../lshd-pty-helper"}
 : ${LSHD_USERAUTH:="`pwd`/../lshd-userauth"}
+
+: ${LSHD_UTMP:="`pwd`/home/utmpx"}
+: ${LSHD_WTMP:="`pwd`/home/wtmpx"}
 
 : ${LSHD_CONFIG_DIR:="$srcdir/config"}
 
-export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT LSHD_CONNECTION LSHD_USERAUTH LSHD_CONFIG_DIR
+export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT
+export LSHD_CONNECTION LSHD_PTY_HELPER LSHD_USERAUTH
+export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 
 : ${LSHD_FLAGS:=''}
 : ${LSH_FLAGS:=-q}
@@ -127,14 +133,14 @@ spawn_lshd () {
 run_lsh () {
     cmd="$1"
     shift
-    echo "$cmd" | HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt \
+    echo "$cmd" | HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
 	--no-use-gateway --sloppy-host-authentication \
 	--capture-to /dev/null -p $PORT "$@" localhost
 
 }
 
 exec_lsh () {
-    HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+    HOME="$TEST_HOME" ../lsh $LSH_FLAGS --sloppy-host-authentication \
 	--no-use-gateway \
 	--capture-to /dev/null -z -p $PORT localhost "$@"
 }
@@ -150,7 +156,7 @@ spawn_lsh () {
 }
 
 exec_lshg () {
-    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -nt -p $PORT localhost "$@"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT localhost "$@"
 }
 
 spawn_lshg () {
