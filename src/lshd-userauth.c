@@ -114,7 +114,7 @@ read_packet(uint32_t *seqno)
   length = READ_UINT32(header + 4);
 
   if (length > SSH_MAX_PACKET)
-    die("lshd-userauth: Too large packet.\n");
+    die("Too large packet.\n");
 
   packet = lsh_string_alloc(length);
 
@@ -272,6 +272,13 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
     user->home = "/";
 
   return 1;
+}
+
+static gid_t
+lookup_group(const char *name, gid_t default_gid)
+{
+  struct group *group = getgrnam(name);
+  return group ? group->gr_gid : default_gid;
 }
 
 #define AUTHORIZATION_DIR "authorized_keys_sha1"
@@ -452,6 +459,77 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
   return 0;  
 }
 
+static int
+spawn_helper(const char *program, uid_t uid, gid_t gid)
+{
+  pid_t child;
+  /* pipe[0] for the child, pipe[1] for the parent */ 
+  int pipe[2];
+  
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
+    {
+      werror("socketpair failed: %e.\n", errno);
+      return -1;
+    }
+
+  child = fork();
+
+  if (child < 0)
+    {
+      werror("fork failed: %e.\n", errno);
+      close(pipe[0]);
+      close(pipe[1]);
+      return -1;
+    }
+  else if (child != 0)
+    {
+      /* Parent */
+      close(pipe[0]);
+      return pipe[1];
+    }
+  else
+    {
+      if (getuid() != uid)
+	{
+	  if (setgroups(0, NULL) < 0)
+	    {
+	      werror("setgroups failed: %e.\n", errno);
+	      _exit(EXIT_FAILURE);
+	    }
+	  if (setgid(gid) < 0)
+	    {
+	      werror("setgid failed: %e.\n", errno);
+	      _exit(EXIT_FAILURE);
+	    }
+	  if (setuid(uid) < 0)
+	    {
+	      werror("setgid failed: %e.\n", errno);
+	      _exit(EXIT_FAILURE);
+	    }
+	}
+
+      assert(getuid() == uid);
+      
+      if (dup2(pipe[0], STDIN_FILENO) < 0)
+	{
+	  werror("dup2 to stdin failed: %e.\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+      if (dup2(pipe[0], STDOUT_FILENO) < 0)
+	{
+	  werror("dup2 to stdin failed: %e.\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+      
+      close(pipe[0]);
+      close(pipe[1]);
+
+      execl(program, program, NULL);
+      werror("execl failed: %e.\n", errno);
+      _exit(EXIT_FAILURE);
+    }
+}
+
 static const char *
 format_env_pair(const char *name, const char *value)
 {
@@ -513,7 +591,7 @@ start_service(struct lshd_user *user, char **argv)
 	}
       if (setgid(user->gid) < 0)
 	{
-	  werror("start_service: setgid failed: %e\n", errno);
+	  werror("start_service: setgid failed: %e.\n", errno);
 	  service_error("Failed to start service process");
 	}
 
@@ -539,7 +617,7 @@ start_service(struct lshd_user *user, char **argv)
     cd_root:
       if (chdir("/") < 0)
 	{
-	  werror("chdir to `/' failed %e\n", errno);
+	  werror("chdir to `/' failed %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
     }
@@ -556,7 +634,7 @@ start_service(struct lshd_user *user, char **argv)
   */
   execve(argv[0], (char **) argv, (char **) env);
 
-  werror("start_service: exec failed: %e", errno);
+  werror("start_service: exec failed: %e.", errno);
 }
 
 static struct lsh_string *
@@ -636,7 +714,7 @@ make_lshd_userauth_config(void)
   init_server_config(&self->super,
 		     &werror_config_parser,
 		     FILE_LSHD_USERAUTH_CONF,
-		     ENV_LSHD_USERAUTH_CONFIG_FILE);
+		     ENV_LSHD_USERAUTH_CONF);
 
   self->session_id = NULL;
   return self;
@@ -684,6 +762,8 @@ main(int argc, char **argv)
 {
   struct lshd_user user;
   struct lshd_userauth_config *config = make_lshd_userauth_config();
+  const char *helper_program;
+  int helper_fd;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
@@ -698,9 +778,28 @@ main(int argc, char **argv)
       exit(EXIT_FAILURE);      
     }
 
+  GET_FILE_ENV(helper_program, LSHD_PTY_HELPER);
+
+  /* With UNIX98-style ptys, utmp is sufficient privileges for the
+     helper program. FIXME: Make sure that the user can't attach a
+     debugger to this process. How? */
+  helper_fd = spawn_helper(helper_program, user.uid,
+			   lookup_group("utmp", user.gid));
+
   {
-    char *args[] = { NULL, NULL };
+    char *args[4] = { NULL, NULL, NULL, NULL };
+    char buf[10];
+    
     GET_FILE_ENV(args[0], LSHD_CONNECTION);
+    if (helper_fd != -1)
+      {
+	snprintf(buf, sizeof(buf)-1, "%d", helper_fd);
+	buf[sizeof(buf)-1] = 0;
+	
+	args[1] = "--helper-fd";
+	args[2] = buf;
+      }
+	
     start_service(&user, args);
     
     service_error("Failed to start service process");
