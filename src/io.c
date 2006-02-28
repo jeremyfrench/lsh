@@ -181,7 +181,7 @@ lsh_oop_cancel_stop(void)
 
 /* Increments the count of active files, and sets the non-blocking and
    close-on-exec if appropriate. With the exception of stdio
-   filedescriptors, all file descripters handled by the backend should
+   file descriptors, all file descripters handled by the backend should
    have the close-on-exec flag set and use non-blocking mode. */
 void
 io_register_fd(int fd, const char *label)
@@ -624,36 +624,6 @@ sockaddr2info(size_t addr_len,
     }
 }
 
-#if 0
-struct address_info *
-fd2info(struct lsh_fd *fd, int side)
-{
-#if WITH_IPV6
-  struct sockaddr_storage sock;
-#else
-  struct sockaddr_in sock;
-#endif
-  
-  socklen_t s_len = sizeof(sock);
-
-  int get;
-
-  if( !side ) /* Local */
-    get = getsockname( fd->fd, (struct sockaddr *)  &sock, &s_len );
-  else
-    get = getpeername( fd->fd, (struct sockaddr *)  &sock, &s_len );
-  
-  if (get < 0)  
-    {               
-      werror("io.c: getXXXXname failed %e", errno);
-      return NULL;
-    }
-
-  return sockaddr2info(s_len,
-		       (struct sockaddr *) &sock);
-}
-#endif
-
 /* Creates a sockaddr. Only handles ip-addresses, no dns names. This
    is a simplified version of address_info2sockaddr. */
 struct sockaddr *
@@ -821,6 +791,8 @@ io_lookup_address(const char *ip, const char *service)
 #error At the moment, getaddrinfo is required
 #endif
 }
+
+#if 0
 #if HAVE_GETADDRINFO
 static struct addrinfo *
 choose_address(struct addrinfo *list,
@@ -965,7 +937,6 @@ io_resolv_address(const char *host, const char *service,
   return naddresses;
 }
 
-
 /* FIXME: Perhaps this function should be changed to return a list of
  * sockaddr:s? */
 struct sockaddr *
@@ -1106,6 +1077,7 @@ address_info2sockaddr(socklen_t *length,
     }
 #endif /* !HAVE_GETADDRINFO */  
 }
+#endif
 
 static void
 handle_nonblock_error(const char *msg)
@@ -1471,19 +1443,19 @@ lsh_make_pipe(int *fds)
 {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
-      werror("socketpair failed %e\n", errno);
+      werror("socketpair failed: %e.\n", errno);
       return 0;
     }
   trace("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
 
-  if (SHUTDOWN_UNIX(fds[0], SHUT_WR_UNIX) < 0)
+  if (SHUTDOWN_UNIX(fds[0], SHUT_WR) < 0)
     {
       werror("shutdown(%i, SHUT_WR) failed %e\n", fds[0], errno);
       goto fail;
     }
-  if (SHUTDOWN_UNIX(fds[1], SHUT_RD_UNIX) < 0)
+  if (SHUTDOWN_UNIX(fds[1], SHUT_RD) < 0)
     {
-      werror("shutdown(%i, SHUT_RD_UNIX) failed %e\n", fds[0], errno);
+      werror("shutdown(%i, SHUT_RD) failed %e\n", fds[0], errno);
     fail:
       {
 	int saved_errno = errno;
