@@ -538,7 +538,7 @@ make_lshd_config(struct lshd_context *ctx)
 {
   NEW(lshd_config, self);
   init_server_config(&self->super, &lshd_config_parser,
-		     FILE_LSHD_CONF, ENV_LSHD_CONFIG_FILE);
+		     FILE_LSHD_CONF, ENV_LSHD_CONF);
   self->algorithms
     = make_algorithms_options(all_symmetric_algorithms());
 
