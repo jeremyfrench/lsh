@@ -22,4 +22,8 @@ echo "Creating identity.pub for tests"
 echo "Authorizing key for login"
 "$srcdir/../lsh-authorize" "$HOME/.lsh/identity.pub"
 
+echo "Creating utmp/wtmp logs"
+cat /dev/null > $LSHD_UTMP
+cat /dev/null > $LSHD_WTMP
+
 test_success
