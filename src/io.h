@@ -26,8 +26,7 @@
 
 #include <time.h>
 #include <netdb.h>
-/* For sig_atomic_t */
-#include <signal.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -128,10 +127,6 @@ make_address_info(struct lsh_string *host,
 struct address_info *
 io_lookup_address(const char *ip, const char *service);
 
-#if 0
-struct address_info *
-fd2info(struct lsh_fd *fd, int side);
-#endif
 
 struct address_info *
 sockaddr2info(size_t addr_len,
@@ -154,9 +149,6 @@ io_resolv_address(const char *host, const char *service,
 /* Returns an 1 on success, 0 on error (and then see errno) */
 int
 write_raw(int fd, uint32_t length, const uint8_t *data);
-
-const struct exception *
-read_raw(int fd, uint32_t length, uint8_t *data);
 
 struct lsh_string *
 io_read_file_raw(int fd, uint32_t guess);
@@ -243,18 +235,6 @@ lsh_popd(int old_cd, const char *directory);
 
 #ifndef SHUT_RD_WR
 #define SHUT_RD_WR 2
-#endif
-
-#ifndef SHUT_RD_UNIX
-#define SHUT_RD_UNIX SHUT_RD
-#endif
-
-#ifndef SHUT_WR_UNIX
-#define SHUT_WR_UNIX SHUT_WR
-#endif
-
-#ifndef SHUT_RD_WR_UNIX
-#define SHUT_RD_WR_UNIX SHUT_RD_WR
 #endif
 
 #endif /* LSH_IO_H_INCLUDED */
