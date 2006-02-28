@@ -52,9 +52,17 @@
 
 /* GABA:
    (class
+     (name lshd_connection_config)
+     (super server_config)
+     (vars
+       (helper_fd . int)))
+*/
+/* GABA:
+   (class
      (name connection)
      (super ssh_connection)
      (vars
+       (config object lshd_connection_config)
        (reader object service_read_state)))
 */
 
@@ -240,24 +248,26 @@ do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
 }
 
 static struct connection *
-make_connection(void)
+make_connection(struct lshd_connection_config *config)
 {
   NEW(connection, self);
   init_ssh_connection(&self->super, kill_connection, do_write_packet, do_disconnect);
-
+  
   io_register_fd(STDIN_FILENO, "transport read fd");
 
+  self->config = config;
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  /* FIXME: Never enables X11 or pty */
+  /* FIXME: Never enables X11 */
   ALIST_SET(self->super.channel_types, ATOM_SESSION,
 	    &make_open_session(
-	      make_alist(2,
+	      make_alist(3,
 			 ATOM_SHELL, &shell_request_handler,
 			 ATOM_EXEC, &exec_request_handler,
-			 /* ATOM_PTY_REQ, &pty_request_handler, */
-			 /* ATOM_X11_REQ, &x11_request_handler, */ -1))->super);
+			 ATOM_PTY_REQ, &pty_request_handler,
+			 /* ATOM_X11_REQ, &x11_request_handler, */ -1),
+	      self->config->helper_fd)->super);
 
   /* FIXME: Make tcpip forwarding optional */
   ALIST_SET(self->super.channel_types, ATOM_DIRECT_TCPIP, &channel_open_direct_tcpip.super);
@@ -275,6 +285,32 @@ make_connection(void)
 const char *argp_program_version
 = "lshd-connection (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
 
+static struct lshd_connection_config *
+make_lshd_connection_config(void)
+{
+  NEW(lshd_connection_config, self);
+  init_server_config(&self->super, &werror_config_parser,
+		     FILE_LSHD_CONNECTION_CONF,
+		     ENV_LSHD_CONNECTION_CONF);
+
+  self->helper_fd = -1;
+  return self;
+}
+
+enum {
+  OPT_HELPER_FD = 0x201,
+};
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "helper-fd", OPT_HELPER_FD, "FD", 0,
+    "Use this file descriptor to talk to the helper process "
+    "managing ptys and utmp records.", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
 const char *argp_program_bug_address = BUG_ADDRESS;
 
 static const struct argp_child
@@ -284,9 +320,48 @@ main_argp_children[] =
   { NULL, 0, NULL, 0}
 };
 
+static error_t
+main_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST(lshd_connection_config, self, state->input);
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &self->super;
+      break;
+    case OPT_HELPER_FD:
+      {
+	long x;
+	char *end;
+	int socket_error;
+	socklen_t len = sizeof(socket_error);
+	
+	if (self->helper_fd != -1)
+	  argp_error(state, "There can be at most one --helper-fd option.");
+
+	x = strtol(arg, &end, 10);
+	if (x < 0 || x > INT_MAX)
+	  argp_error(state, "Invalid argument to --helper-fd.");
+
+	if (getsockopt(x, SOL_SOCKET, SO_ERROR,
+		       (char *) &socket_error, &len) < 0)
+	  argp_failure(state, EXIT_FAILURE, errno,
+		       "The fd %s passed to --helper-fd is invalid", arg);
+
+	self->helper_fd = x;
+	io_set_close_on_exec(self->helper_fd);
+      }
+      break;
+    }
+  return 0;
+}
+	
 static const struct argp
 main_argp =
-{ NULL, NULL,
+  { main_options, main_argp_parser,
   NULL,
   "Handles the ssh-connection service.\v"
   "Intended to be invoked by lshd and lshd-userauth.",
@@ -299,26 +374,19 @@ int
 main(int argc, char **argv)
 {
   struct connection *connection;
-  struct server_config *config
-    = make_server_config(&werror_config_parser,
-			 FILE_LSHD_CONNECTION_CONF,
-			 ENV_LSHD_CONNECTION_CONFIG_FILE);
-#if 0
-  fprintf(stderr, "argc = %d\n", argc);
-  {
-    int i;
-    for (i = 0; i < argc; i++)
-      fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
-  }
-#endif
+  struct lshd_connection_config *config
+    = make_lshd_connection_config();
+
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
   io_init();
   reaper_init();
 
   werror("Started connection service\n");
-  
-  connection = make_connection();
+  if (config->helper_fd != -1)
+    verbose("helper fd: %i.\n", config->helper_fd);
+
+  connection = make_connection(config);
   gc_global(&connection->super.super);
 
   io_run();
