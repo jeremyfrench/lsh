@@ -1,3 +1,7 @@
+2006-04-27  Niels Möller  <niels@s3.kth.se>
+
+	* rl.c: Disable readline support if the needed functions aren't available.
+
 2004-11-19  Pontus Freyhult  <pont@soua.net>
 
 	* Makefile.am: Added new manpages to man_MANS and EXTRA_DIST.
