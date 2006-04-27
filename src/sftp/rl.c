@@ -37,42 +37,55 @@ int sloppy_complete = 2;
 #include "rl.h"
 
 #ifdef WITH_READLINE
-#include "str_utils.h"
-
-static int lsftp_rl_line_inited=0;
-
 #ifdef HAVE_RL_FILENAME_COMPLETION_FUNCTION
 # define RL_FILENAME_COMPLETION_FUNCTION rl_filename_completion_function
 #else /* HAVE_RL_FILENAME_COMPLETION_FUNCTION */
 # ifdef HAVE_FILENAME_COMPLETION_FUNCTION
 #  define RL_FILENAME_COMPLETION_FUNCTION filename_completion_function
 # else
-#  error "lsftp doesn't work with your readline library, please disable readline and contact the author."
+#  if __GNUC__
+#   warning "lsftp doesn't work with your readline library, please disable readline and contact the author."
+#  endif
+#  undef WITH_READLINE
 # endif /* HAVE_FILENAME_COMPLETION_FUNCTION */
 #endif /* HAVE_RL_FILENAME_COMPLETION_FUNCTION */
+#endif
 
+#ifdef WITH_READLINE
 #ifdef HAVE_RL_COMPLETION_MATCHES
 # define RL_COMPLETION_MATCHES rl_completion_matches
 #else /* HAVE_RL_COMPLETION_MATCHES */
 # ifdef HAVE_COMPLETION_MATCHES
 #  define RL_COMPLETION_MATCHES completion_matches
 # else
-#  error "lsftp doesn't work with your readline library, please disable readline and contact the author."
+#  if __GNUC__
+#   warning "lsftp doesn't work with your readline library, please disable readline and contact the author."
+#  endif
+#  undef WITH_READLINE
 # endif /* HAVE_COMPLETION_MATCHES */
 #endif /* HAVE_RL_COMPLETION_MATCHES */
+#endif
 
-
+#ifdef WITH_READLINE
 #ifdef HAVE_RL_CHAR_IS_QUOTED_P
 # define RL_CHAR_IS_QUOTED rl_char_is_quoted_p
 #else /* HAVE_RL_CHAR_IS_QUOTED */
 # ifdef HAVE_CHAR_IS_QUOTED
 #  define RL_CHAR_IS_QUOTED char_is_quoted
 # else
-#  error "lsftp doesn't work with your readline library, please disable readline and contact the author."
+#  if __GNUC__
+#   warning "lsftp doesn't work with your readline library, please disable readline and contact the author."
+#  endif
+#  undef WITH_READLINE
 # endif /* HAVE_CHAR_IS_QUOTED */
 #endif /* HAVE_RL_CHAR_IS_QUOTED */
+#endif
 
+#ifdef WITH_READLINE
 
+#include "str_utils.h"
+
+static int lsftp_rl_line_inited=0;
 
 /* FIXME: review readline support, proper way to do it? */
 
