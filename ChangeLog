@@ -1,3 +1,8 @@
+2006-04-28  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/daemon-1-test: New test. Test that lshd doesn't
+	leak any fd:s to child processes.
+
 2006-02-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/index.html: Updated sshtools link, after prodding from
