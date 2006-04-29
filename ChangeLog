@@ -1,3 +1,30 @@
+2006-04-29  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Check for function getdtablesize.
+
+	* src/testsuite/Makefile.am (TS_SH): Added daemon-fd-test.
+
+	* src/testsuite/daemon-1-test: Renamed file to...
+	* src/testsuite/daemon-fd-test: ... new file. Improved test, using
+	/proc/self/fd.
+
+	* src/lshd.c (main): Improved daemonic behaviour. Call
+	daemon_close_fds. When --daemonic --no-syslog is given, still perform all
+	daemonic processing except for the redirect of stderr to /dev/null.
+
+	* src/daemon.h: Updated prototypes. Deleted C++ guard.
+
+	* src/daemon.c (daemon_pidfile): Deleted #if:ed out file locking
+	code.
+	(daemon_started_by_init, daemon_started_by_inetd): Made static.
+	(daemon_detect): New function, split out from daemon_init.
+	(daemon_dup_null): Likewise.
+	(getdtablesize): New function, for systems that don't have it in
+	libc.
+	(daemon_close_fds): New function.
+	(daemon_init): New argument with the daemon mode. Split handling
+	of fd:s to the new functions daemon_dup_null and daemon_close_fds.
+
 2006-04-28  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/daemon-1-test: New test. Test that lshd doesn't
