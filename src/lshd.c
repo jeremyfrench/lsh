@@ -1139,6 +1139,7 @@ int
 main(int argc, char **argv)
 {
   struct lshd_options *options;
+  enum daemon_mode mode = DAEMON_NORMAL;
 
   /* Resources that should be killed when SIGHUP is received,
    * or when the program exits. */
@@ -1148,6 +1149,9 @@ main(int argc, char **argv)
   struct alist *keys = make_alist(0, -1);
 
   struct resource *fds;
+
+  /* Do this first and unconditionally, before we start to initialize i/o */
+  daemon_close_fds();
   
 #if HAVE_SETRLIMIT && HAVE_SYS_RESOURCE_H
   /* Try to increase max number of open files, ignore any error */
@@ -1163,7 +1167,7 @@ main(int argc, char **argv)
   /* Not strictly needed for gc, but makes sure the
    * resource list is killed properly by gc_final. */
   gc_global(&resources->super);
-  
+
   io_init();
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -1181,15 +1185,35 @@ main(int argc, char **argv)
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
   trace("Parsing options... done\n");  
 
-  if (options->daemonic && !options->no_syslog)
+  if (options->daemonic)
     {
+      mode = daemon_detect();
+
+      if (mode == DAEMON_INETD)
+	{
+	  werror("Spawning from inetd not yet supported.\n");
+	  return EXIT_FAILURE;
+	}
+
+      if (!options->no_syslog)
+	{
 #if HAVE_SYSLOG
-      set_error_syslog("lshd");
+	  set_error_syslog("lshd");
 #else /* !HAVE_SYSLOG */
-      werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
+	  werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
 #endif /* !HAVE_SYSLOG */
+	}
+      else if (!daemon_dup_null(STDERR_FILENO))
+	return EXIT_FAILURE;
+
+      if (mode != DAEMON_INETD)
+	{
+	  if (!daemon_dup_null(STDIN_FILENO)
+	      || !daemon_dup_null(STDOUT_FILENO))
+	    return EXIT_FAILURE;
+	}
     }
-  
+
   if (!options->corefile && !daemon_disable_core())
     {
       werror("Disabling of core dumps failed.\n");
@@ -1228,46 +1252,11 @@ main(int argc, char **argv)
   
   if (options->daemonic)
     {
-      if (options->no_syslog)
-        {
-          /* Just put process into the background. --no-syslog is an
-           * inappropriate name */
-          switch (fork())
-            {
-            case 0:
-              /* Child */
-              /* FIXME: Should we create a new process group, close our tty
-               * and stdio, etc? */
-              trace("forked into background. New pid: %i.\n", getpid());
-              break;
-              
-            case -1:
-              /* Error */
-              werror("background_process: fork failed %e\n", errno);
-              break;
-              
-            default:
-              /* Parent */
-              _exit(EXIT_SUCCESS);
-            }
-        }
-      else
-        {
-          switch (daemon_init())
-            {
-            case 0:
-              werror("lshd: Spawning into background failed.\n");
-              return EXIT_FAILURE;
-            case DAEMON_INETD:
-              werror("lshd: spawning from inetd not yet supported.\n");
-              return EXIT_FAILURE;
-            case DAEMON_INIT:
-            case DAEMON_NORMAL:
-              break;
-            default:
-              fatal("Internal error\n");
-            }
-        }
+      if (!daemon_init(mode))
+	{
+	  werror("Setting up daemonic environment failed.\n");
+	  return EXIT_FAILURE;
+	}
     }
   
   if (options->use_pid_file)
