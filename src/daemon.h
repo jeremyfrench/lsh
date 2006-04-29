@@ -29,23 +29,29 @@
 
 #include "lsh.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+enum daemon_mode
+{
+  DAEMON_NORMAL = 1,
+  DAEMON_INIT,
+  DAEMON_INETD
+};
 
-#define DAEMON_NORMAL 1
-#define DAEMON_INIT 2
-#define DAEMON_INETD 3
-  
-int daemon_started_by_init(void);
-int daemon_started_by_inetd(void);
-int daemon_disable_core(void);
-int daemon_pidfile(const char *name);
-int daemon_init(void);
+enum daemon_mode
+daemon_detect(void);
+
+int
+daemon_dup_null(int fd);
+
+void
+daemon_close_fds(void);
+
+int
+daemon_disable_core(void);
+
+int
+daemon_pidfile(const char *name);
+int
+daemon_init(enum daemon_mode);
 int daemon_close(const char *name);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* LSH_DAEMON_H_INCLUDED */
