@@ -539,7 +539,7 @@ AC_CHECK_FUNCS(openpty)
 AC_CHECK_FUNCS(cfmakeraw)
 AC_CHECK_FUNCS(logwtmp login logout pututline pututxline updwtmp updwtmpx)
 AC_CHECK_FUNCS(getaddrinfo getnameinfo gai_strerror)
-AC_CHECK_FUNCS(setrlimit)
+AC_CHECK_FUNCS(setrlimit getdtablesize)
 AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
 
