@@ -67,22 +67,10 @@
 #define PID_SUFFIX ".pid"
 #endif
 
-/*
-** struct lsh_string *daemon_pidfile(const char *name)
-**
-** Creates a pid file for a daemon and locks it.
-** The file has one line containing the process id of the daemon.
-** The well-known location for the file is defined in PID_DIR
-** ("/var/run" by default). The name of the file is the name of
-** the daemon (given by the name argument) followed by ".pid".
-**
-** Returns 1 on success or 0 on failure (with errno set
-** appropriately). Reasons for failure are: ENAMETOOLONG If the pid
-** file's path is longer than the system path limit. open(2).
-** fcntl(2). write(2). */
-
-
-int daemon_pidfile(const char *name)
+/* Creates a pid file for a daemon. For now, only O_EXCL style
+   locking. Returns 1 on success or 0 on failure. */
+int
+daemon_pidfile(const char *name)
 {
   int fd;
   
@@ -100,90 +88,9 @@ int daemon_pidfile(const char *name)
 	  return 0;
 	}
 
+      /* FIXME: We could try to detect and ignore stale pid files. */
       werror("Pid file '%z' already exists.\n", name);
       return 0;
-      
-      /* FIXME: Various trickery to detect and ignore stale pid files.
-       * Disabled for now. */
-#if 0
-      /* Attempt to lock and read the file */
-      {
-	struct flock lock;
-	lock.l_type = F_WRLCK;
-	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;
-
-	int fd = open(name, O_RDWR);
-	
-	if (fcntl(fd, F_SETLK, &lock) < 0)
-	  {
-	    werror("pid file '%z' exists and is locked.\n");
-	    return 0;
-	  }
-      }
-      fd = open(name, O_RDONLY);
-      if (fd < 0)
-	{
-	  werror("Pid file '%z' already exists, and is unreadable %e\n",
-		 name, errno);
-	  return 0;
-	}
-      {
-	/* Read some characters */
-#define BUF_SIZE 20
-	char buffer[BUF_SIZE];
-	
-	int length = read(fd, buffer, BUF_SIZE);
-	close(fd);
-	
-	if (length < 0)
-	  {
-	    werror("Pid file '%z' already exists, but read failed %e\n",
-		   name, errno);
-	    return 0;
-	  }
-	if ( !length|| !buffer[0] || (length == BUF_SIZE) )
-	  {
-	    werror("Pid file '%z' already exists, but contents is garbled.\n",
-		   name);
-	    return 0;
-	  }
-
-	buffer[length] = '\0';
-	
-	{
-	  long other;
-	  char *end;
-
-	  /* FIXME: strtol is somewhat inconvenient, too forgiving,
-	   * and possibly locale dependent. */
-	  other = strtol(buffer, &end, 10);
-	  errno = 0;
-	  
-	  if ( (errno == ERANGE) || (end != buffer + length)
-	       || (other <= 0) || (other != (pid_t) other))
-	    {
-	      werror("Pid file '%z' already exists, but contents is garbled.\n",
-		     name);
-	      return 0;
-	    }
-
-	  if ( (kill((pid_t) other, 0) < 0)
-	       && (errno == SRCH))
-	    {
-	      werror("pid lock '%z' owned by process %i, which appear to be dead.\n",
-		     name, other);
-	      /* We could try to be clever and delete the file in this
-	       * case, but then we get into race conditions if two
-	       * processes tries to do that simultaneously. */
-	    }
-	  else
-	    werror("pid lock '%z' owned by process %i, which appears to be alive.\n");
-	  return 0;
-	}
-      }
-#endif 
     }
   else
     {
@@ -211,32 +118,23 @@ int daemon_pidfile(const char *name)
     }
 }
 
-/*
-** int daemon_started_by_init(void)
-**
-** Determines whether or not this process was started by init(8).
-** If it was, we might be getting respawned so fork(2) and exit(2)
-** would be a big mistake.
-*/
-
-int daemon_started_by_init(void)
+/* Determines whether or not this process was started by init(8). If
+   it was, we might be getting respawned so fork(2) and exit(2) would
+   be a big mistake. */
+static int
+daemon_started_by_init(void)
 {
   return (getppid() == 1);
 }
 
-/*
-** int daemon_started_by_inetd(void)
-**
-** Determines whether or not this process was started by inetd(8).
-** If it was, stdin, stdout and stderr would be opened to a socket.
-** Closing them would be a big mistake. We also wouldn't need to
-** fork(2) and exec(2) because there isn't a controlling terminal
-** in sight.
-*/
+/* Determines whether or not this process was started by inetd(8). If
+   it was, stdin, stdout and stderr would be opened to a socket.
+   Closing stdin and stdout. We also wouldn't need to fork(2) and
+   exec(2) because there isn't a controlling terminal in sight. */
 
 /* FIXME: Do we need to detect if the socket is listening or connected
  * to a peer? */
-int
+static int
 daemon_started_by_inetd(void)
 {
   int optval;
@@ -245,6 +143,17 @@ daemon_started_by_inetd(void)
   debug("daemon_started_by_inetd: res = %i, val = %i\n", res, optval);
   
   return res == 0;
+}
+
+enum daemon_mode
+daemon_detect(void)
+{
+  if (daemon_started_by_init())
+    return DAEMON_INIT;
+  else if (daemon_started_by_inetd())
+    return DAEMON_INETD;
+  else
+    return DAEMON_NORMAL;  
 }
 
 /* Disable core files */
@@ -268,51 +177,89 @@ daemon_disable_core(void)
   return 1;
 }
 
-/*
-** int daemon_init(void)
-**
-** Initialises a daemon:
-** Disables core files to prevent security holes.
-** If the process wasn't started by init(8) or inetd(8):
-**   Backgrounds the process to lose process group leadership.
-**   Becomes a process session leader.
-**   When SVR4 is defined:
-**     Backgrounds the process again to lose process group leadership.
-**     This prevents the process from gaining a controlling terminal.
-**     Under BSD, you must still include O_NOCTTY when opening terminals
-**     to prevent the process from gaining a controlling terminal.
-** Changes directory to the root directory so as not to hamper umounts.
-** Clears the umask to enable explicit file modes.
-** If the process wasn't started by inetd(8):
-**   Closes all files (as determined by sysconf(2)).
-**   Opens stdin, stdout and stderr to /dev/null in case something needs them.
-** If the hup parameter is non-null,
-**   Registers a SIGHUP handler.
-** If the term parameter is non-null,
-**   Registers a SIGTERM handler.
-** If the name parameter is non-null,
-**   Places the process id in the file system and locks it.
-**
-** Returns DAEMON_NORMAL, DAEMON_INIT or DAEMON_INETD on success, 0 on
-** error (with errno set appropriately).
-** 
-** Reasons for failure are: getrlimit(2), setrlimit(2), fork(2), chdir(2),
-** sysconf(2), open(2), dup2(2), daemon_pidfile(), sigemptyset(2),
-** sigaddset(2), sigaction(2). */
-
-int daemon_init(void)
+int
+daemon_dup_null(int fd)
 {
-  int mode = DAEMON_NORMAL;
+  int null = open("/dev/null", O_RDWR);
+  if (null < 0)
+    {
+      werror("Opening /dev/null failed: %e\n", errno);
+      return 0;
+    }
+  if (dup2(null, fd) < 0)
+    {
+      werror("Failed to redirect fd %i to /dev/null: %e\n", errno);
+      close(null);
+      return 0;
+    }
 
-  if (daemon_started_by_init())
-    mode = DAEMON_INIT;
-  else if (daemon_started_by_inetd())
-    mode = DAEMON_INETD;
-  
-  /*
-  ** Don't setup a daemon-friendly process context
-  ** if started by init(8) or inetd(8).
-  */
+  close(null);
+  return 1;
+}
+
+#if !HAVE_GETDTABLESIZE
+#define MAX_CLOSE_FD 1024;
+int
+getdtablesize(void)
+{
+  long open_max = sysconf(_SC_OPEN_MAX);
+  if (open_max < 0 || open_max > MAX_INT)
+    {
+      werror("No limit on number of openfiles. Some high fd:s might be left open.\n");
+      return MAX_CLOSE_FD;
+    }
+  else
+    return open_max;
+}
+#endif /* !HAVE_GETDTABLESIZE */
+
+/* Try to close all fd:s above stderr. There shouldn't be any open
+   file descriptors left over by startup scripts and the like, but if
+   there are anyway, they should be closed so that they aren't
+   inherited by user processes started by lshd. */
+void
+daemon_close_fds(void)
+{
+  int fd = getdtablesize();
+
+  while (--fd > 2)
+    {
+      int res;
+
+      do
+	res = close(fd);
+      while (res < 0 && errno == EINTR);
+
+      if (res == 0)
+	werror("Closed spurious fd %i\n", fd);
+      else if (errno != EBADF)
+	werror("Closing spurious fd %i failed: %e\n", fd, errno);
+    }
+}
+
+/* Initialises a daemon:
+
+   If the process wasn't started by init(8) or inetd(8):
+
+     Backgrounds the process to lose process group leadership.
+
+     Becomes a process session leader.
+
+     Backgrounds the process again to lose process group leadership.
+     This prevents the process from gaining a controlling terminal.
+     Under BSD, you must still include O_NOCTTY when opening terminals
+     to prevent the process from gaining a controlling terminal.
+
+   Changes directory to the root directory so as not to hamper umounts.
+
+   Clears the umask to enable explicit file modes.
+*/
+
+int
+daemon_init(enum daemon_mode mode)
+{
+  /* Don't setup a daemon-friendly process context if started by
+     init(8) or inetd(8). */
 
   if (mode == DAEMON_NORMAL)
     {
@@ -334,17 +281,16 @@ int daemon_init(void)
 	  /* Parent */
 	  exit(0);
 	}
-      /*
-      ** Become a process session leader.
-      */
+      /* Become a process session leader. */
 
       if (setsid() < 0)
-	fatal("daemon_init: setsid failed.\n");
+	{
+	  werror("daemon_init: setsid failed.\n");
+	  return 0;
+	}
 
-      /*
-      ** Lose process session leadership
-      ** to prevent gaining a controlling
-      ** terminal in SVR4.
+      /* Lose process session leadership to prevent gaining a
+	 controlling terminal in SVR4.
       */
       switch (child = fork())
 	{
@@ -378,123 +324,20 @@ int daemon_init(void)
 	}
     }
 
-  /*
-  ** Enter the root directory to prevent hampering umounts.
-  */
+  /* Enter the root directory to prevent hampering umounts. */
 
   if (chdir(ROOT_DIR) == -1)
     return 0;
 
-  /*
-  ** Clear umask to enable explicit file modes.
-  */
-
+  /* Clear umask to enable explicit file modes. */
   umask(0);
-
-  {
-    int fd;
-
-    fd = open("/dev/null", O_RDWR);
-
-    if (fd < 0)
-      return 0;
-
-    /* Don't close stdin if we are started from inetd. */
-
-    if ( (mode != DAEMON_INETD)
-	 && (dup2(fd, STDIN_FILENO) < 0))
-      {
-	werror("daemon_init: Failed to redirect stdin to /dev/null.\n");
-	close(fd);
-	return 0;
-      }
-
-    if ( (dup2(fd, STDOUT_FILENO) < 0)
-	 || (dup2(fd, STDERR_FILENO) < 0) )
-      {
-	werror("daemon_init: Failed to redirect stdout and stderr to /dev/null.\n");
-	close(fd);
-	return 0;
-      }
-
-    close(fd);
-
-    /* It seems unfriendly to try toclose all fds (and on some
-     * systems, e.g. the HURD, there are no limits to the number of
-     * open files. It should be good enough to take care of stdio. */
-    
-#if 0
-    /*
-    ** Close all open files.
-    ** Don't forget to open any future
-    ** tty devices with O_NOCTTY so as
-    ** to prevent gaining a controlling
-    ** terminal (not necessary with SVR4).
-    */
-    
-    if ((nopen = limit_open()) == -1)
-      return -1;
-    
-    for (fd = 0; fd < nopen; ++fd)
-      close(fd);
-    
-    /*
-    ** Open stdin, stdout and stderr to /dev/null
-    ** just in case someone expects them to be open.
-    */
-
-    if ((fd = open("/dev/null", O_RDWR)) == -1)
-      return -1;
-
-    /*
-    ** This is only needed for very strange
-    ** (hypothetical) posix implementations
-    ** where STDIN_FILENO != 0 or STDOUT_FILE != 1
-    ** or STERR_FILENO != 2 (yeah, right).
-    */
-
-    if (fd != STDIN_FILENO)
-      {
-	if (dup2(fd, STDIN_FILENO) == -1)
-	  return -1;
-
-	close(fd);
-      }
-
-    if (dup2(STDIN_FILENO, STDOUT_FILENO) == -1)
-      return -1;
-
-    if (dup2(STDIN_FILENO, STDERR_FILENO) == -1)
-      return -1;
-#endif
-  }
-  
-#if 0
-  /*
-  ** Register a SIGHUP handler, if required.
-  */
-
-  if (hup && signal_set_handler(SIGHUP, 0, hup) == -1)
-    return -1;
-
-  /*
-  ** Register a SIGTERM handler, if required.
-  */
-
-  if (term && signal_set_handler(SIGTERM, 0, term) == -1)
-    return -1;
-#endif
 
   return 1;
 }
 
-/*
-** int daemon_close()
-**
-** Unlinks the daemon's (locked) process id file.
-*/
-
-int daemon_close(const char *name)
+/* Unlinks the daemon's (locked) process id file. */
+int
+daemon_close(const char *name)
 {
   if (unlink(name) < 0)
     {
