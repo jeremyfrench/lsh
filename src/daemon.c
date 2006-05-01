@@ -279,7 +279,7 @@ daemon_init(enum daemon_mode mode)
 	  break;
 	default:
 	  /* Parent */
-	  exit(0);
+	  _exit(0);
 	}
       /* Become a process session leader. */
 
@@ -299,28 +299,7 @@ daemon_init(enum daemon_mode mode)
 	case 0:
 	  break;
 	default:
-	  {
-	    int status;
-	    int res;
-
-	    do {
-	      res = waitpid(child, &status, 0);
-	    } while (res < 0 && errno == EINTR);
-
-	    if (!res < 0)
-	      werror("deamon.c: waitpid failed %e\n", errno);
-	    else if (WIFEXITED(status))
-	      werror("deamon.c: process exited with status %i\n",
-		     WEXITSTATUS(status));
-	    else if (WIFSIGNALED(status))
-	      werror("deamon.c: process died from signal %i\n",
-		     WTERMSIG(status));
-	    else
-	      werror("deamon.c: process died, wait status: %i\n",
-		     status);
-
-	    _exit(0);
-	  }
+	  _exit(0);
 	}
     }
 
