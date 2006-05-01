@@ -1202,9 +1202,9 @@ main(int argc, char **argv)
 #else /* !HAVE_SYSLOG */
 	  werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
 #endif /* !HAVE_SYSLOG */
+	  if (!daemon_dup_null(STDERR_FILENO))
+	    return EXIT_FAILURE;
 	}
-      else if (!daemon_dup_null(STDERR_FILENO))
-	return EXIT_FAILURE;
 
       if (mode != DAEMON_INETD)
 	{
