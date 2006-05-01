@@ -11,4 +11,4 @@ fi
 spawn_lshd && spawn_lsh -G && exec_lshg "cat `pwd`/../lshd" > test.out1
 cat ../lshd > test.out2
 
-compare_output "lsh-cat-test"
+compare_output "lshg-cat-test"
