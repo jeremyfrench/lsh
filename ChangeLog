@@ -1,3 +1,7 @@
+2006-05-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (main): Fixed handling of stderr, with --no-syslog.
+
 2006-04-29  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Check for function getdtablesize.
