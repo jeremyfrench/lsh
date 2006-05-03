@@ -1,3 +1,10 @@
+2006-05-03  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/daemon-fd-test: Avoid using exec with no arg, for
+	better portability.
+
+	* src/daemon.c (daemon_started_by_inetd): Deleted debug message.
+
 2006-05-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (main): Fixed handling of stderr, with --no-syslog.
