@@ -12,6 +12,15 @@
 
 2006-05-01  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/lshg-cat-test: Fixed message for compare_output.
+
+	* src/daemon.c (daemon_init): When backgrounding, let the parent
+	process use _exit rather than exit. We used to let the
+	intermediate process wait on the child, in order to print out a
+	message for any unexpected status code. But then we get a race in
+	the testsuite, because that process may keep the listen sockets
+	open even after the main process has deleted its pid file.
+
 	* src/lshd.c (main): Fixed handling of stderr, with --no-syslog.
 
 2006-04-29  Niels Möller  <nisse@lysator.liu.se>
