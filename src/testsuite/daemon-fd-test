@@ -8,14 +8,15 @@ fi
 
 [ -d /proc/self/fd ] || test_skip
 
-# Opens a spurios fd 17.
+# Opens a spurios fd 9.
+exec 9>&2
 
 # Ignore fd 3, since it's used by the ls program to get to read the
 # directory. On linux, fd 3 should be a link to the appropriate
 # "/proc/<pid>/fd" directory, while on Solaris, it for some reason is
 # a link to "/".
 
-spawn_lshd 17>&2 && exec_lsh ls /proc/self/fd | grep -v '^3$'> test.out1
+spawn_lshd && exec_lsh ls /proc/self/fd | grep -v '^3$'> test.out1
 cat >test.out2 <<EOF
 0
 1
