@@ -1,3 +1,12 @@
+News for the 2.0.3 release
+
+	At startup, lshd now tries to close any spurious open file
+	descriptors. New test case for lshd fd leakage.
+
+	lshd --daemonic --no-syslog now sets up a proper daemonic
+	environment, except that log messages are still sent to
+	stderr. Improved testing of this feature.
+
 News for the 2.0.2 release
 
 	Fixed a couple of problems in lshd, where the server process
@@ -17,7 +26,7 @@ News for the 2.0.1 release
 	Fixed a bug in lsh-make-seed, which could make the program go
 	into an infinite loop on read errors.
 
-	lsh now asks for passwords also in quite (-q) mode, as
+	lsh now asks for passwords also in quiet (-q) mode, as
 	described in the manual.
 
 	Control character filtering used to sometimes consider newline
