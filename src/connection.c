@@ -336,6 +336,7 @@ do_connection_flow_controlled(struct flow_controlled *s,
   if (connection->hard_limit
       && length + WRITE_BUFFER_MARGIN < connection->soft_limit)
     {
+      trace("do_connection_flow_controlled: Resetting hard_limit\n");
       connection->hard_limit = 0;
       if (connection->wakeup)
 	COMMAND_RETURN(connection->wakeup, connection);
@@ -532,7 +533,10 @@ connection_send_kex(struct ssh_connection *self,
 	}
     }
   else if (length > self->soft_limit)
-    self->hard_limit = length + WRITE_BUFFER_MARGIN;
+    {
+      self->hard_limit = length + WRITE_BUFFER_MARGIN;
+      trace("connection_send_kex: Setting hard limit to %i\n", self->hard_limit);
+    }
 }
 
 /* Sends one ordinary (non keyexchange) packet */
