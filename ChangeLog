@@ -1,5 +1,8 @@
 2006-05-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/connection.c (do_connection_flow_controlled) 
+	(connection_send_kex): Trace output for hard_limit changes.
+
 	* Man pages: Applied patch from Stefan Pfetzing, addressing long
 	lines and non-ascii caharacters.
 
