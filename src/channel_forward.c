@@ -47,7 +47,7 @@
 static void
 do_kill_channel_forward(struct resource *s)
 {  
-  CAST(channel_forward, self, s);
+  CAST_SUBTYPE(channel_forward, self, s);
   if (self->super.super.alive)
     {
       trace("do_kill_channel_forward\n");
@@ -72,7 +72,7 @@ static void *
 oop_write_socket(oop_source *source UNUSED,
 		 int fd, oop_event event, void *state)
 {
-  CAST(channel_forward, self, (struct lsh_object *) state);
+  CAST_SUBTYPE(channel_forward, self, (struct lsh_object *) state);
   
   assert(event == OOP_WRITE);
   assert(fd == self->write.fd);
@@ -103,7 +103,7 @@ static void *
 oop_read_socket(oop_source *source UNUSED,
 		int fd, oop_event event, void *state)
 {
-  CAST(channel_forward, self, (struct lsh_object *) state);
+  CAST_SUBTYPE(channel_forward, self, (struct lsh_object *) state);
   uint32_t done;
   
   assert(fd == self->read.fd);
@@ -122,7 +122,7 @@ static void
 do_channel_forward_send_adjust(struct ssh_channel *s,
 			       uint32_t i UNUSED)
 {
-  CAST(channel_forward, self, s);
+  CAST_SUBTYPE(channel_forward, self, s);
 
   channel_io_start_read(&self->super, &self->read, oop_read_socket);
 }
