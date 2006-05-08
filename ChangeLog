@@ -1,3 +1,10 @@
+2006-05-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Set version to lsh-2x1.
+
+	* src/channel_forward.c: Use CAST_SUBTYPE, not CAST, to allow for
+	subclassing.
+
 2006-02-28  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/setup-env: Create empty utmp and wtmp files.
