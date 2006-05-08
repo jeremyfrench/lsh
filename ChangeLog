@@ -1,5 +1,8 @@
 2006-05-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* doc/ssh-conv.1: Changed to ordinary line breaks in example
+	ssh-conv output.
+
 	* src/connection.c (do_connection_flow_controlled) 
 	(connection_send_kex): Trace output for hard_limit changes.
 
