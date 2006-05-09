@@ -1,3 +1,9 @@
+2006-05-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Bumped version number to 2.0.4.
+
+	* Released lsh-2.0.2.
+	
 2006-05-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/ssh-conv.1: Changed to ordinary line breaks in example
