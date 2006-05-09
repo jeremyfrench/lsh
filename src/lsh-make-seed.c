@@ -289,7 +289,7 @@ get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
   unsigned i;
   int res;
   
-  char buffer[DEVRANDOM_SIZE];
+  uint8_t buffer[DEVRANDOM_SIZE];
 
   for (i = 0; names[i]; i++)
     {
