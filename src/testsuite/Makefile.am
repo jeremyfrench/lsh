@@ -8,7 +8,8 @@ AM_CPPFLAGS = -I$(srcdir)/.. -I.. -I../nettle
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 	   des-test \
 	   serpent-test twofish-test \
-           md5-test sha1-test rsa-test dsa-test spki-tag-test \
+           md5-test sha1-test rsa-test dsa-test \
+	   server-config-test spki-tag-test \
            string-test parse-config-test sockaddr2info-test \
 	   utf8-test
 
