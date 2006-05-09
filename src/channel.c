@@ -1190,6 +1190,11 @@ handle_open_confirm(struct ssh_connection *connection,
 	{
 	  channel->remote_channel_number = remote_channel_number;
 	  channel->send_window_size = window_size;
+
+	  /* Impose a limit, since our send buffers aren't dimensioned
+	     for arbitrarily large packets. */
+	  if (max_packet > SSH_MAX_DATA_SIZE)
+	    max_packet = SSH_MAX_DATA_SIZE;	  
 	  channel->send_max_packet = max_packet;
 
 	  ssh_connection_activate_channel(connection, local_channel_number);
