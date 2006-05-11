@@ -1,3 +1,8 @@
+2006-05-11  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/lsh-encrypted-key-test: Disabled test for now.
+	* src/testsuite/login-auth-test: Likewise.
+
 2006-05-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (TS_PROGS): Added server-config-test.
