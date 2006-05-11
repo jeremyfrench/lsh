@@ -8,6 +8,9 @@ fi
 
 echo lsh, test login, login-auth-mode
 
+# FIXME: Not currently supported
+test_skip
+
 rm -f test.out1
 
 LSHD_FLAGS="$LSHD_FLAGS --login-auth-mode --login-shell=/bin/cat --no-password --no-publickey"
