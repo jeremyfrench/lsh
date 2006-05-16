@@ -41,19 +41,11 @@
 
 #define EXIT_CALLBACK(e, s, c, v) ((e)->exit((e), (s), (c), (v)))
 
-/* GABA:
-   (class
-     (name reaper)
-     (vars
-       ; Use callback == NULL to cancel a previous callback.
-       (reap method void "pid_t pid" "struct exit_callback *callback")
-       ; Mapping of from pids to exit-callbacks. 
-       ; NOTE: This assumes that a pid_t fits in an int. 
-       (children object alist)))
-*/
+/* Uses global state */
+void
+reaper_init(void);
 
-#define REAP(r, p, c) ((r)->reap((r), (p), (c)))
-
-struct reaper *make_reaper(void);
+void
+reaper_handle(pid_t pid, struct exit_callback *callback);
 
 #endif /* LSH_REAPER_H_INCLUDED */

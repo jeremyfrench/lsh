@@ -33,7 +33,7 @@
 #include "nettle/sexp.h"
 #include "nettle/sha.h"
 
-#include "publickey_crypto.h"
+#include "crypto.h"
 
 #include "atoms.h"
 #include "format.h"
@@ -97,7 +97,7 @@ do_rsa_verify(struct verifier *v,
 	struct simple_buffer buffer;
 	uint32_t length;
 	const uint8_t *digits;
-	int atom;
+	enum lsh_atom atom;
 	
 	simple_buffer_init(&buffer, signature_length, signature_data);
 
@@ -312,12 +312,12 @@ struct signature_algorithm rsa_sha1_algorithm =
   { STATIC_HEADER, make_rsa_signer, make_rsa_verifier };
 
 struct verifier *
-make_ssh_rsa_verifier(const struct lsh_string *public)
+make_ssh_rsa_verifier(uint32_t length, const uint8_t *key)
 {
   struct simple_buffer buffer;
-  int atom;
+  enum lsh_atom atom;
   
-  simple_buffer_init(&buffer, STRING_LD(public));
+  simple_buffer_init(&buffer, length, key);
 
   return ( (parse_atom(&buffer, &atom)
 	    && (atom == ATOM_SSH_RSA))

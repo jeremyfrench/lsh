@@ -33,71 +33,44 @@
 #include "tcpforward.h.x"
 #undef GABA_DECLARE
 
+#define TCPIP_WINDOW_SIZE 10000
+
+struct command *
+forward_local_port(struct address_info *local,
+		   struct address_info *target);
+
+struct command *
+forward_remote_port(struct address_info *port,
+		    struct address_info *target);
+
 /* GABA:
    (class
      (name forwarded_port)
      (vars
-       ; this could store the type of this forward
-       ; tcp, udp etc. Or we could invent relevant methods
-       ; and subclasses.
-       ; (type . int)
-       
-       (listen object address_info)))
+       ; The key we use for looking up the port
+       (address object address_info)))
 */
 
-/* GABA:
-   (class
-     (name local_port)
-     (super forwarded_port)
-     (vars
-       ; socket == NULL means that we are setting up a forward for this port,
-       ; but are not done yet.
-       (socket object lsh_fd)))
-*/
+struct forwarded_port *
+tcpforward_lookup(struct object_queue *q,
+		  uint32_t length, const uint8_t *ip, uint32_t port);
 
-/* Used by the client to keep track of remotely forwarded ports */
-/* GABA:
-   (class
-     (name remote_port)
-     (super forwarded_port)
-     (vars
-       ; Invoked when a forwarded_tcpip request is received.
-       ; Called with the struct address_info *peer as argument.
-       (callback object command)))
-*/
+int
+tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port);
 
-struct remote_port *
-make_remote_port(struct address_info *listen,
-		 struct command *callback);
+struct resource *
+tcpforward_connect(struct address_info *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e);
 
-struct channel_open *
-make_channel_open_direct_tcpip(struct command *callback);
-
+extern struct channel_open channel_open_direct_tcpip;
 extern struct channel_open channel_open_forwarded_tcpip;
 
-struct global_request *
-make_tcpip_forward_request(struct command *callback);
+extern struct global_request
+tcpip_forward_handler;
 
-extern struct global_request tcpip_cancel_forward;
-
-struct command *
-make_open_tcpip_command(int type,
-			struct address_info *port,
-			struct listen_value *peer);
-
-struct command *
-make_forward_local_port(struct address_info *local,
-			struct address_info *target);
-
-struct command *
-make_forward_remote_port(struct address_info *local,
-			 struct address_info *target);
-
-struct command *
-make_direct_tcpip_hook(void);
-
-struct command *
-make_tcpip_forward_hook(void);
+extern struct global_request
+tcpip_cancel_forward_handler;
 
 struct command *
 make_socks_server(struct address_info *local);

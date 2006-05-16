@@ -46,28 +46,22 @@
 
 #include "reaper.c.x"
 
-static void
-do_reap(struct reaper *c,
-	pid_t pid, struct exit_callback *callback)
-{
-  CAST(reaper, closure, c);
-
-  ALIST_SET(closure->children, pid, &callback->super);
-}
-
 /* GABA:
    (class
      (name reaper_callback)
      (super lsh_callback)
      (vars
-       (reaper object reaper)))
+       (children object alist)))
 */
+
+/* We use a global variable for this. The SIGCHLD handler is global anyway. */
+static struct reaper_callback *
+reaper_global = NULL;
 
 static void
 do_reaper_callback(struct lsh_callback *s)
 {
   CAST(reaper_callback, self, s);
-  struct reaper *r = self->reaper;
   
   pid_t pid;
   int status;
@@ -105,13 +99,13 @@ do_reaper_callback(struct lsh_callback *s)
 	    fatal("Child died, but neither WIFEXITED or WIFSIGNALED is true.\n");
 
 	  {
-	    CAST_SUBTYPE(exit_callback, c, ALIST_GET(r->children, pid));
+	    CAST_SUBTYPE(exit_callback, c, ALIST_GET(self->children, pid));
 	    callback = c;
 	  }
 	  
 	  if (callback)
 	    {
-	      ALIST_SET(r->children, pid, NULL);
+	      ALIST_SET(self->children, pid, NULL);
 	      EXIT_CALLBACK(callback, signaled, core, value);
 	    }
 	  else
@@ -127,7 +121,7 @@ do_reaper_callback(struct lsh_callback *s)
       else switch(errno)
 	{
 	case EINTR:
-	  werror("reaper.c: waitpid returned EINTR.\n");
+	  debug("reaper.c: waitpid returned EINTR.\n");
 	  break;
 	case ECHILD:
 	  /* No more child processes */
@@ -138,25 +132,30 @@ do_reaper_callback(struct lsh_callback *s)
     }
 }
 
-static struct lsh_callback *
-make_reaper_callback(struct reaper *reaper)
+static struct reaper_callback *
+make_reaper_callback(void)
 {
   NEW(reaper_callback, self);
   self->super.f = do_reaper_callback;
-  self->reaper = reaper;
-
-  return &self->super;
-}
-
-struct reaper *
-make_reaper(void)
-{
-  NEW(reaper, self);
-
-  self->reap = do_reap;
   self->children = make_linked_alist(0, -1);
-
-  io_signal_handler(SIGCHLD, make_reaper_callback(self));
 
   return self;
 }
+
+void
+reaper_init(void)
+{
+  assert(reaper_global == NULL);
+  reaper_global = make_reaper_callback();
+  io_signal_handler(SIGCHLD, &reaper_global->super);
+}
+
+void
+reaper_handle(pid_t pid, struct exit_callback *callback)
+{
+  assert (reaper_global);
+  trace("reaper_handle: pid = %i.\n", (uint32_t) pid);
+
+  ALIST_SET(reaper_global->children, pid, &callback->super);
+}
+

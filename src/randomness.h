@@ -24,9 +24,7 @@
 #ifndef LSH_RANDOMNESS_H_INCLUDED
 #define LSH_RANDOMNESS_H_INCLUDED
 
-#include "abstract_crypto.h"
-
-#include "exception.h"
+#include "lsh.h"
 
 enum random_source_type
   {

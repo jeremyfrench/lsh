@@ -51,7 +51,7 @@ uint32_t get_atom_length(int atom)
 const uint8_t *get_atom_name(int atom)
 { return atom_table[atom].name; }
   
-int
+enum lsh_atom
 lookup_atom(uint32_t length, const uint8_t *name)
 {
   /* NOTE: The automatically generated code uses const char *, and

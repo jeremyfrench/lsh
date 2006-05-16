@@ -197,13 +197,14 @@ sexp_to_ssh2_key(struct lsh_string *expr,
 
     case OUTPUT_FINGERPRINT:
       {
+	struct lsh_string *hash
+	  = ssh_format("%lfxS", 
+		       hash_string(&crypto_md5_algorithm, key, 0));
+
 	struct lsh_string *output
 	  = ssh_format("MD5 fingerprint: %lfS\n"
 		       "Bubble Babble: %lfS\n",
-		       lsh_string_colonize( 
-			 ssh_format("%lfxS", 
-				    hash_string(&crypto_md5_algorithm, key, 0)), 
-			 2, 1),
+		       lsh_string_colonize(hash, 2, 1),
 		       lsh_string_bubblebabble( 
 			 hash_string(&crypto_sha1_algorithm, key, 0), 1));
 	lsh_string_free(key);
@@ -262,6 +263,7 @@ main_options[] =
 /* GABA:
 (class
   (name export_key_options)
+  (super werror_config)
   (vars
     (algorithms object alist)
     (mode . "enum output_mode")
@@ -275,6 +277,8 @@ static struct export_key_options *
 make_options(void)
 {
   NEW(export_key_options, self);
+  init_werror_config(&self->super);
+
   self->infile = NULL;
   self->subject = NULL;
   self->comment = NULL;
@@ -301,9 +305,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
       break;
     case ARGP_KEY_END:
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
       break;
     case OPT_INFILE:
       self->infile = arg;
@@ -354,7 +360,6 @@ int main(int argc, char **argv)
 {
   struct export_key_options *options = make_options();
 
-  const struct exception *e;
   int in = STDIN_FILENO;
   int out = STDOUT_FILENO;
   
@@ -402,14 +407,12 @@ int main(int argc, char **argv)
   if (!output)
     return EXIT_FAILURE;
 
-  e = write_raw(out, STRING_LD(output));
-  lsh_string_free(output);
-
-  if (e)
+  if (!write_raw(out, STRING_LD(output)))
     {
-      werror("%z\n", e->msg);
+      werror("Write failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
 
   gc_final();
   

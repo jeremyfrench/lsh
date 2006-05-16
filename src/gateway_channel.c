@@ -25,17 +25,15 @@
 #include "config.h"
 #endif
 
-#include "gateway_channel.h"
+#include <assert.h>
 
-#include "channel_commands.h"
+#include "gateway.h"
+
+#include "channel.h"
 #include "format.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#define GABA_DEFINE
-#include "gateway_channel.h.x"
-#undef GABA_DEFINE
 
 #include "gateway_channel.c.x"
 
@@ -57,24 +55,49 @@
  *    we chain the two channel objects together, and reply to the
  *    CHANNEL_OPEN request we received in (1). */
 
-/* FIXME: A gateway may want to handle unknown types of channel data. */
+/* This is a channel one of a pair of channels that are connected
+   together. */
+/* GABA:
+   (class
+     (name gateway_channel)
+     (super ssh_channel)
+     (vars
+       (chain object ssh_channel)))
+*/
+
+static void
+do_kill_gateway_channel(struct resource *s)
+{
+  CAST(gateway_channel, self, s);
+  if (self->super.super.alive)
+    {
+      trace("do_kill_gateway_channel\n");
+      self->super.super.alive = 0;
+
+      /* NOTE: We don't attempt to close or kill self->chain (since it
+	 may not yet be active). Instead, we leave to the connection's
+	 kill method handler to initiate close of all active
+	 channels. */
+
+    }
+}
+
 static void
 do_receive(struct ssh_channel *c,
 	   int type,
-	   struct lsh_string *data)
+	   uint32_t length, const uint8_t *data)
 {
-  CAST(gateway_channel, channel, c);
-  
+  CAST(gateway_channel, self, c);
+
   switch(type)
     {
     case CHANNEL_DATA:
-      connection_send(channel->chain->super.connection,
-		      channel_transmit_data(&channel->chain->super, data));
+      channel_transmit_data(self->chain, length, data);
+      
       break;
     case CHANNEL_STDERR_DATA:
-      connection_send(channel->chain->super.connection,
-		      channel_transmit_extended(&channel->chain->super,
-						CHANNEL_STDERR_DATA, data));
+      channel_transmit_extended(self->chain, SSH_EXTENDED_DATA_STDERR,
+				length, data);
       break;
     default:
       fatal("Internal error!\n");
@@ -84,314 +107,262 @@ do_receive(struct ssh_channel *c,
 /* We may send more data */
 static void
 do_send_adjust(struct ssh_channel *s,
-	       uint32_t i)
+               uint32_t i)
 {
   CAST(gateway_channel, self, s);
   if (i)
-    FLOW_CONTROL_REPORT(&self->chain->super.super, i);
+    channel_adjust_rec_window(self->chain, i);
 }
 
 static void
-do_eof(struct ssh_channel *c)
+do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 {
-  CAST(gateway_channel, channel, c);
-  channel_eof(&channel->chain->super);
+  CAST(gateway_channel, self, c);
+
+  switch(event)
+    {
+    case CHANNEL_EVENT_CONFIRM:
+      if (!self->chain->connection->super.alive)
+	{
+	  /* The other channel has disappeared, so close. */
+	  channel_close(&self->super);
+	}
+      else
+	{
+	  /* This method is invoked on the target channel. Propagate
+	     the target channel's send variables to the originating
+	     channel's receive variables. */
+	  self->chain->rec_window_size = self->super.send_window_size;
+	  self->chain->rec_max_packet = self->super.send_max_packet;
+
+	  self->super.receive = do_receive;
+	  self->super.send_adjust = do_send_adjust;
+
+	  self->chain->receive = do_receive;
+	  self->chain->send_adjust = do_send_adjust;
+
+	  ssh_connection_activate_channel(self->chain->connection,
+					  self->chain->local_channel_number);
+	  remember_resource(self->super.connection->resources,
+			    &self->super.super);
+	  
+	  /* We don't pass on any additional arguments. */
+	  SSH_CONNECTION_WRITE(self->chain->connection,
+			       format_open_confirmation(self->chain,
+							""));
+	}
+      break;
+    case CHANNEL_EVENT_DENY:
+      if (self->chain->connection->super.alive)
+	{
+	  /* FIXME: We should propagate the error code and message
+	     over the gateway. */
+	  SSH_CONNECTION_WRITE(self->chain->connection,
+			       format_open_failure(self->super.remote_channel_number,
+						   SSH_OPEN_RESOURCE_SHORTAGE,
+						   "Refused by server", ""));
+	  ssh_connection_dealloc_channel(self->super.connection,
+					 self->super.local_channel_number);
+	}
+      break;
+    case CHANNEL_EVENT_EOF:
+      channel_eof(self->chain);
+      break;
+
+    case CHANNEL_EVENT_CLOSE:
+      channel_close(self->chain);
+      break;
+
+    case CHANNEL_EVENT_STOP:
+    case CHANNEL_EVENT_START:
+      /* FIXME: Ignore; the entire gateway has to be stopped and
+	 started anyway. */
+      break;
+    }      
+}  
+
+static void
+do_gateway_channel_request(struct ssh_channel *c,
+			   const struct channel_request_info *info,
+			   struct simple_buffer *buffer)
+{
+  CAST(gateway_channel, self, c);
+  uint32_t arg_length;
+  const uint8_t *arg;
+
+  parse_rest(buffer, &arg_length, &arg);
+
+  /* FIXME: Use a format_channel_request function. */
+  SSH_CONNECTION_WRITE(self->chain->connection,
+		       ssh_format("%c%i%s%c%ls",
+				  SSH_MSG_CHANNEL_REQUEST,
+				  self->chain->remote_channel_number,
+				  info->type_length, info->type_data,
+				  info->want_reply,
+				  arg_length, arg));
 }
 
 static void
-do_close(struct ssh_channel *c)
+do_gateway_channel_success(struct ssh_channel *c)
 {
-  CAST(gateway_channel, channel, c);  
-  channel_close(&channel->chain->super);
+  CAST(gateway_channel, self, c);
+
+  SSH_CONNECTION_WRITE(self->chain->connection,
+		       format_channel_success(self->chain->remote_channel_number));
 }
 
 static void
-gateway_init_io(struct gateway_channel *channel)
+do_gateway_channel_failure(struct ssh_channel *c)
 {
-  channel->super.send_adjust = do_send_adjust;  
-  channel->super.receive = do_receive;
-  channel->super.eof = do_eof;
-  channel->super.close = do_close;
+  CAST(gateway_channel, self, c);
+
+  SSH_CONNECTION_WRITE(self->chain->connection,
+		       format_channel_failure(self->chain->remote_channel_number));
 }
 
-/* NOTE: We don't initialize the rec_window_size and rec_max_packet
- * fields here.
- *
- * The origin's rec_window_size and rec_max_packet are filled in
- * later, by do_gateway_channel_open_continuation. The target's
- * rec_window_size, on the other hand, must be filled in manually. */
-
-struct gateway_channel *
-make_gateway_channel(struct alist *request_types)
+static struct channel_request_methods
+gateway_request_methods =
 {
-  NEW(gateway_channel, self);
-  init_channel(&self->super);
+  do_gateway_channel_request,
+  do_gateway_channel_success,
+  do_gateway_channel_failure
+};
   
-  self->super.request_types = request_types;
-  
-  /* Never initiate close; let each end point decide when it is time
-   * to send SSH_MSG_CHANNEL_CLOSE. */
-  self->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
-
-  return self;
-}
-
-
-/* Command to request a channel open. Typically used after we have
- * received a CHANNEL_OPEN request from the originating end, to create
- * a channel to the target. */
-/* GABA:
-   (class
-     (name gateway_channel_open_command)
-     (super channel_open_command)
-     (vars
-       ; The channel type is represented as a string, as
-       ; we should be able to forward unknown channel
-       ; types (i.e. types not listed in atoms.in).
-       (type string)
-       (rec_window_size . uint32_t)
-       (rec_max_packet . uint32_t)
-       (requests object alist)
-       (args string)))
-*/
-
-static struct ssh_channel *
-do_gateway_channel_open(struct channel_open_command *c,
-			struct ssh_connection *connection,
-			uint32_t local_channel_number,
-			struct lsh_string **request)
+static int
+make_gateway_pair(struct gateway_connection *connection,
+		  struct channel_open_info *info,
+		  uint32_t arg_length, const uint8_t *arg)
 {
-  CAST(gateway_channel_open_command, closure, c);
-  
-  struct gateway_channel *target
-    = make_gateway_channel(closure->requests);
+  int origin_local_number;
 
-  target->super.rec_window_size = closure->rec_window_size;
-  target->super.rec_max_packet = closure->rec_max_packet;
-  
-  target->super.connection = connection;
+  origin_local_number
+    = ssh_connection_alloc_channel(&connection->super,
+				   CHANNEL_ALLOC_RECEIVED_OPEN);
 
-  *request = format_channel_open_s(closure->type,
-				   local_channel_number,
-				   &target->super,
-				   closure->args);
-  
-  return &target->super;
-}
+  if (origin_local_number < 0)
+    return 0;
+  else
+    {
+      NEW(gateway_channel, origin);
+      NEW(gateway_channel, target);
 
-struct command *
-make_gateway_channel_open_command(struct channel_open_info *info,
-				  struct lsh_string *args,
-				  struct alist *requests)
-{
-  NEW(gateway_channel_open_command, self);
-  
-  self->super.new_channel = do_gateway_channel_open;
-  self->super.super.call = do_channel_open_command;
+      init_channel(&origin->super,
+		   do_kill_gateway_channel, do_gateway_channel_event);
+      init_channel(&target->super,
+		   do_kill_gateway_channel, do_gateway_channel_event);
 
-  self->type = ssh_format("%ls", info->type_length,
-			  info->type_data);
+      origin->super.request_methods = &gateway_request_methods;
+      target->super.request_methods = &gateway_request_methods;
 
-  self->rec_window_size = info->send_window_size;
-  self->rec_max_packet = info->send_max_packet;
-  self->requests = requests;
-  self->args = args;
+      origin->chain = &target->super;
+      target->chain = &origin->super;
 
-  return &self->super.super;
-}
+      origin->super.send_max_packet = info->send_max_packet;
+      origin->super.send_window_size = info->send_window_size;
+      origin->super.remote_channel_number = info->remote_channel_number;
+      
+      target->super.rec_max_packet = origin->super.send_max_packet;
+      target->super.rec_window_size = origin->super.send_window_size;
 
+      /* Prevents the processing when sending and receiving CHANNEL_EOF from
+	 closing the channel. */
+      origin->super.sinks++;
+      target->super.sinks++;
+      
+      if (!channel_open_new_type(connection->shared,
+				 &target->super,
+				 info->type_length, info->type_data,
+				 "%ls", arg_length, arg))
+	{
+	  ssh_connection_dealloc_channel(&connection->super,
+					 origin_local_number);
+	  return 0;
+	}
+      ssh_connection_register_channel(&connection->super,
+				      origin_local_number,
+				      &origin->super);
 
-/* General channel requests */
-
-/* GABA:
-   (class
-     (name general_channel_request_command)
-     (super channel_request_command)
-     (vars
-       ; NOTE: This is only used once.
-       (request string)))
-*/
-
-static struct lsh_string *
-do_format_channel_general(struct channel_request_command *s,
-			  struct ssh_channel *ch UNUSED,
-			  struct command_continuation **c UNUSED)
-{
-  CAST(general_channel_request_command, self, s);
-
-  struct lsh_string *r = self->request;
-  self->request = NULL;
-  return r;
-}
-
-static struct command *
-make_general_channel_request_command(struct lsh_string *request)
-{
-  NEW(general_channel_request_command, self);
-  self->super.super.call = do_channel_request_command;
-  self->super.format_request = do_format_channel_general;
-  self->request = request;
-  return &self->super.super;
-}
-
-static void 
-do_gateway_channel_request(struct channel_request *s UNUSED,
-			   struct ssh_channel *ch,
-			   struct channel_request_info *info,
-			   struct simple_buffer *args,
-			   struct command_continuation *c,
-			   struct exception_handler *e)
-{
-  CAST(gateway_channel, channel, ch);
-  uint32_t args_length;
-  const uint8_t *args_data;
-  struct command *command;
-  
-  parse_rest(args, &args_length, &args_data);
-
-  command = make_general_channel_request_command
-    (format_channel_request_i(info, &channel->chain->super,
-			      args_length, args_data));
-
-  /* FIXME: Set up a continuation, so that we can return the correct
-     channel */ 
-  COMMAND_CALL(command, channel->chain, c, e);
-}
-
-struct channel_request gateway_channel_request =
-{ STATIC_HEADER, do_gateway_channel_request };
-
-
-/* GABA:
-   (class
-     (name general_global_request_command)
-     (super global_request_command)
-     (vars
-       (request string)))
-*/
-
-static struct lsh_string *
-do_format_general_global_request(struct global_request_command *s,
-			  	 struct ssh_connection *connection UNUSED,
-				 struct command_continuation **c UNUSED)
-{
-  CAST(general_global_request_command, self, s);
-
-  struct lsh_string *r = self->request;
-  self->request = NULL;
-  return r;
-}
-
-static struct command *
-make_general_global_request_command(struct lsh_string *request)
-{
-  NEW(general_global_request_command, self);
-  
-  self->super.super.call = do_channel_global_command;
-  self->super.format_request = do_format_general_global_request;
-  self->request = request;
-  return &self->super.super;
+      return 1;
+    }
 }
 
 static void
-do_gateway_global_request(struct global_request *s UNUSED,
-			  struct ssh_connection *connection,
-			  uint32_t type,
-			  int want_reply,
-			  struct simple_buffer *args,
-			  struct command_continuation *c,
-			  struct exception_handler *e)
+gateway_handle_channel_open(struct gateway_connection *connection,
+			    uint32_t length, const uint8_t *packet)
 {
-  struct lsh_string *request =
-    format_global_request(type, want_reply, "%ls",
-			  args->capacity - args->pos, &args->data[args->pos]);
+  struct simple_buffer buffer;
+  struct channel_open_info info;
+    
+  trace("gateway_handle_channel_open\n");
 
-  struct command *send = make_general_global_request_command(request);
-
-  COMMAND_CALL(send, connection->chain, c, e);
-}
-
-struct global_request gateway_global_request = 
-{ STATIC_HEADER, do_gateway_global_request };
-
-/* Continuation to handle the returned channel, and chain two channels
- * together.
- *
- * The argument to the continuation is a new channel connected to the
- * other end. We don't create the ORIGIN channel object until now,
- * because the channel's resources aren't attached to the connection's
- * resource list until the object is returned to
- * do_channel_open_continue. */
-
-/* GABA:
-   (class
-     (name gateway_channel_open_continuation)
-     (super command_continuation)
-     (vars
-       (up object command_continuation)
-       (fallback object channel_request fallback)))
-*/
-
-static void
-do_gateway_channel_open_continuation(struct command_continuation *c,
-				     struct lsh_object *x)
-{
-  CAST(gateway_channel_open_continuation, self, c);
-  CAST(gateway_channel, target, x);
-
-  struct gateway_channel *origin
-    = make_gateway_channel(NULL);
-
-  origin->super.request_fallback = &gateway_channel_request;
+  simple_buffer_init(&buffer, length, packet);
   
-  origin->chain = target;
-  target->chain = origin;
+  if (parse_string(&buffer, &info.type_length, &info.type_data)
+      && parse_uint32(&buffer, &info.remote_channel_number)
+      && parse_uint32(&buffer, &info.send_window_size)
+      && parse_uint32(&buffer, &info.send_max_packet))
+    {
+      uint32_t arg_length;
+      const uint8_t *arg;
 
-  origin->super.rec_window_size = target->super.send_window_size;
-  origin->super.rec_max_packet = target->super.send_max_packet;
+      trace("gateway_handle_channel_open: send_window_size = %i\n",
+	    info.send_window_size);
 
-  gateway_init_io(origin);
-  gateway_init_io(target);
+      parse_rest(&buffer, &arg_length, &arg);
+      
+      /* We don't support larger packets than the default,
+       * SSH_MAX_PACKET. */
+      if (info.send_max_packet > SSH_MAX_PACKET)
+	{
+	  werror("handle_gateway_channel_open: The gateway asked for really large packets.\n");
+	  info.send_max_packet = SSH_MAX_PACKET;
+	}
+      
+      if (connection->shared->pending_close)
+	{
+	  /* We are waiting for channels to close. Don't open any new ones. */
 
-  target->super.request_fallback = self->fallback;
-  
-  COMMAND_RETURN(self->up, origin);
+	  SSH_CONNECTION_WRITE(&connection->super,
+			       format_open_failure(
+				 info.remote_channel_number,
+				 SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+				 "Waiting for channels to close.", ""));
+	}
+      else if (!make_gateway_pair(connection, &info,
+				  arg_length, arg))
+	{
+	  SSH_CONNECTION_WRITE(&connection->super,
+			       format_open_failure(
+				 info.remote_channel_number,
+				 SSH_OPEN_RESOURCE_SHORTAGE,
+				 "Too many channels.", ""));
+	}
+    }
+  else
+    SSH_CONNECTION_ERROR(&connection->super,
+			 "Invalid SSH_MSG_CHANNEL_OPEN message.");
 }
 
-struct command_continuation *
-make_gateway_channel_open_continuation(struct command_continuation *up,
-				       struct channel_request *fallback)
+int
+gateway_packet_handler(struct gateway_connection *connection,
+		       uint32_t length, const uint8_t *packet)
 {
-  NEW(gateway_channel_open_continuation, self);
-  
-  self->super.c = do_gateway_channel_open_continuation;
-  self->fallback = fallback;
-  self->up = up;
+  assert(length > 0);
 
-  return &self->super;
+  switch (packet[0])
+    {
+      /* FIXME: When using local numbers like this, we must make sure
+	 to reject requests arriving over the network. */
+    case SSH_LSH_GATEWAY_STOP:
+      /* The correct behaviour is to kill the port object. */
+      fatal("Not implemented.\n");
+      
+    case SSH_MSG_CHANNEL_OPEN:
+      gateway_handle_channel_open(connection, length - 1, packet + 1);
+      break;
+
+    default:
+      return channel_packet_handler(&connection->super, length, packet);
+    }
+  return 1;
 }
-
-static void
-do_channel_open_forward(struct channel_open *s UNUSED,
-			struct ssh_connection *connection,
-			struct channel_open_info *info,
-			struct simple_buffer *args,
-			struct command_continuation *c,
-			struct exception_handler *e)
-{
-  struct command *command
-    = make_gateway_channel_open_command(info, parse_rest_copy(args), NULL);
-
-  COMMAND_CALL(command,
-	       connection->chain,
-	       make_gateway_channel_open_continuation
-	         (c, &gateway_channel_request),
-	       /* FIXME: Install a new exception handler that will
-		* propagate any CHANNEL_OPEN error to the originating
-		* channel. */
-	       e);
-}
-
-struct channel_open gateway_channel_open_forward =
-{ STATIC_HEADER, do_channel_open_forward };
-

@@ -94,8 +94,8 @@ lsh_string_free(const struct lsh_string *packet);
 
 /* Forward declarations of various structures */
 
-/* abstract_io.h */
-struct abstract_write;
+/* channel.h */
+struct ssh_channel;
 
 /* client_x11.c */
 struct client_x11_display;
@@ -106,7 +106,6 @@ struct command;
 struct command_2;
 struct command_3;
 struct command_4;
-struct catch_report_collect;
 
 /* connection.h */
 struct ssh_connection;
@@ -132,8 +131,5 @@ struct reaper;
 
 /* resource.h */
 struct resource;
-
-/* userauth.h */
-struct lsh_user;
 
 #endif /* LSH_H_INCLUDED */

@@ -1,3 +1,2436 @@
+2006-05-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/server-config-test.c: New file (merged manually
+	from experimental branch).
+
+	* src/lshd.c (make_lshd_config): Initialize werror_config.
+	(lshd_config_handler): Pass self->werror_config to child parser.
+	(main): Merged new daemonic handling from main branch.
+
+	* src/testsuite/functions.sh (spawn_lshd): Use --daemonic option.
+
+	* Merged experimental branch. Start of branch changes below.
+
+2006-05-11  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/lsh-encrypted-key-test: Disabled test for now.
+	* src/testsuite/login-auth-test: Likewise.
+
+2006-05-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added server-config-test.
+
+	* src/lsh-make-seed.c (get_dev_random): Use uint8_t for the read
+	buffer.
+
+	* src/channel.c (handle_open_confirm): Impose limit on
+	send_max_packet.
+
+2006-05-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Set version to lsh-2x1.
+
+	* src/channel_forward.c: Use CAST_SUBTYPE, not CAST, to allow for
+	subclassing.
+
+2006-02-28  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/setup-env: Create empty utmp and wtmp files.
+
+	* src/testsuite/lcp-test: Updated to use new gateway interface.
+
+	* src/testsuite/functions.sh (LSHD_PTY_HELPER, LSHD_UTMP)
+	(LSHD_WTMP): Define and export.
+	(run_lsh): Moved -nt flag before $LSH_FLAGS, so it can be
+	overridden.
+	(exec_lsh, exec_lshg): Removed -nt flag, as no tty is the default
+	behaviour.
+
+	* src/testsuite/Makefile.am (TS_SH): Added lsh-10-test.
+
+	* src/lshd-userauth.c (lookup_group): New function.
+	(spawn_helper): New function.
+	(main): Start a helper program, and pass an fd connected to the
+	helper to the started service, using the --helper-fd option.
+
+	* src/lshd-connection.c (lshd_connection_config): New class.
+	(class connection): New attribute config.
+	(make_connection): New argument config. Enable pty support.
+	(make_lshd_connection_config): New function.
+	(OPT_HELPER_FD): New constant.
+	(main_options): New options struct, and new option --helper-fd.
+	(main_argp_parser): New function.
+	(main_argp): Include new options.
+	(main): Use make_lshd_connection_config, and pass configuration to
+	make_connection.
+
+	* src/io.h (SHUT_RD_UNIX, SHUT_WR_UNIX, SHUT_RD_WR_UNIX): Deleted.
+
+	* src/io.c (fd2info): Deleted.
+	(lsh_make_pipe): Don't use SHUT_RD_UNIX and SHUT_WR_UNIX.
+	(choose_address, io_resolv_address, address_info2sockaddr): #if:ed
+	out.
+
+2006-02-27  Niels Möller  <niels@s3.kth.se>
+
+	* src/format.c (ssh_format): Fixed bug for the case DEBUG_ALLOC &&
+	!__GNUC__.
+	(write_decimal_length): Deleted function.
+	(format_decimal): Made static.
+	(format_string): New function, for the common parts of
+	ssh_vformat_write. Includes the code from...
+	(format_hex_string): Deleted function.
+	(ssh_vformat_write): Deleted the feature of including a sexp-style
+	decimal length, "3:foo". Unified handling of %s, %S and %z, using
+	the new function format_string.
+
+	* src/exception.c (make_exception_handler) 
+	(make_report_exception_info): Deleted.
+	(class report_exception_handler): Deleted.
+	(do_report_exception_handler, make_report_exception_handler):
+	Deleted. 
+
+	* src/command.h (CONTINUATION_USED_P): Deleted.
+	(class catch_report_collect): Deleted.
+	(STATIC_CATCH_REPORT): Deleted.
+	(PROGN, PROTECT): Deleted.
+
+	* src/command.c (class parallell_progn): Deleted.
+	(do_parallell_progn, make_parallell_progn)
+	(progn_command): Deleted.
+	(class catch_handler_info): Deleted.
+	(make_catch_handler_info): Deleted.
+	(class catch_handler): Deleted.
+	(do_catch_handler, make_catch_handler): Deleted.
+	(class catch_apply): Deleted.
+	(do_catch_apply, make_catch_apply): Deleted.
+	(class catch_report_apply): Deleted.
+	(do_catch_report_apply, make_catch_report_apply)
+	(do_catch_report_collect): Deleted.
+	(class protect_handler): Deleted.
+	(do_exc_protect_handler, make_protect_exception_handler)
+	(protect_command): Deleted.
+
+	* src/unix_process.c: Deleted old code to handle utmp and wtmp.
+	That work is now delegated to a helper process, which can run with
+	sufficient privileges.
+	(make_unix_process): Made static.
+	(send_helper_request): New function.
+	(class logout_notice): New attributes helper_fd and helper_ref.
+	(do_logout_notice): Send a PTY_REQUEST_LOGOUT to the helper
+	process.
+	(exec_shell): Made static.
+	(spawn_error): New arguments helper_fd and helper_ref. Send a
+	PTY_REQUEST_DESTROY to the helper process.
+	(make_logout_notice): New arguments helper_fd and helper_ref.
+	(spawn_parent): Pass helper_fd and helper_ref to
+	make_logout_notice.
+	(spawn_child): New arguments helper_fd and helper_ref. Send a
+	PTY_REQUEST_LOGIN to the helper process.
+	(spawn_shell): New arguments helper_fd. Send a PTY_REQUEST_CREATE
+	to the helper process. Pass on helper_Fd and helper_ref to help
+	functions.
+
+	* src/server_session.c (class server_session): New attribute
+	helper_fd.
+	(make_server_session): Made static. New argument helper_fd.
+	(class open_session): New attribute helper_fd.
+	(do_open_session): Pass helper_fd to make_server_session.
+	(make_open_session): New argument helper_fd.
+	(do_exit_shell): Updated calls of channel_send_request. Cosmetic
+	change to verbose message.
+	(make_pty): Dup the master fd for both stdin and stdout, and leave
+	the fd in the pty_info object intact.
+	(spawn_process): Pass helper_fd to spawn_shell. If we're using a
+	pty, set ignored_error = EIO on the read state correspondign to
+	stdout. If we don't have a separate stderr channel, set
+	channel->sources to 1, not 2.
+
+	* src/lshg.c: Deleted file.
+
+	* src/testsuite/lsh-10-test: New testcase, using a pty request.
+
+	* src/lsh_process.h: Deleted prototypes for make_unix_process and
+	exec_shell, and updated prototype for spawn_shell to include
+	helper_fd.
+
+	* src/lsh.h (struct catch_report_collect): Deleted forward
+	declaration.
+
+	* src/lsh.c (do_lsh_default_handler): Don't treat
+	EXC_CHANNEL_REQUEST as an error.
+	(transport_exit_callback): Fixed format strings.
+	(fork_lsh_transport): Deleted if:ed out code.
+
+	* src/lsh-decode-key.c (lsh_decode_key): Cosmetic changes to
+	werror messages.
+
+	* src/environ.h.in: Changed "_CONFIG_FILE" to "_CONF" in the names
+	of environment variables.
+	(FILE_LSHD_PTY_HELPER, ENV_LSHD_PTY_HELPER): New constants.
+	(ENV_LSHD_UTMP, ENV_LSHD_WTMP): Likewise.
+
+	* src/client_pty.c (class pty_request): Inherit command.
+	(do_client_winch_handler): Use channel_send_request.
+	(format_window_change): Deleted function.
+	(do_pty_continuation): Use the session's resource list; a general
+	channel no longer includes a resource list.
+	(do_pty_request): New function, replacing do_format_pty_request.
+	(do_format_pty_request): Deleted function.
+	(make_pty_request): Update for changed inheritance.
+
+	* src/client.h (class client_session): New attribute with the
+	channel's resources. Needed for the pty support.
+	* src/client_session.c (do_kill_client_session): Kill associated
+	resources.
+	(make_client_session_channel): Initialize resource list.
+
+	* src/client.c: Cosmetic changes to werror messages.
+	(request_shell, do_session_channel_request): Pass a NULL ctx to
+	channel_send_request.
+	(client_maybe_pty): Enabled pty allocation.
+
+	* src/channel_io.h (class channel_read_state): New attribute
+	ignored_error.
+
+	* src/channel_io.c (init_channel_read_state): Initialize
+	ignored_error.
+	(channel_io_read): If ignored_error is non-zero, tread read errors
+	with matching errno as EOF.
+	(channel_io_write, channel_io_flush): Fixed werror format string.
+
+	* src/channel.c (handle_channel_success, handle_channel_failure):
+	Use the command_context associated with the request, if it's
+	non-NULL.
+	(format_channel_request_i): Deleted function.
+	(channel_send_request): Changed arguments to include a want_reply
+	flag and a struct command_context *.
+
+	* src/Makefile.am: Deleted lshg rules.
+	(liblsh_a_SOURCES): Added client_pty.c.
+	
+
+	* src/lshd-pty-helper.c: Rewritten. Uses the functions in
+	pty-helper.c. Handle utmp and wtmp.
+
+	* src/pty-helper.h: New file.
+	* src/pty-helper.c: New file.
+
+2006-02-23  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/lshg-1-test: Use --start-gateway. Don't use
+	need_lshg.
+	* src/testsuite/lshg-cat-2-test: Likewise.
+	* src/testsuite/lshg-cat-test: Likewise.
+	* src/testsuite/lshg-tcpip-local-test: Likewise.
+
+	* src/testsuite/rapid7-lshd-test: Less verbosity.
+	* src/testsuite/rapid7-lsh-test: Likewise.
+
+	* src/testsuite/functions.sh: Use new gateway flags. Deleted
+	function need_lshg. 
+
+	* src/lsh.c (class lsh_connection): Renamed, was connection. New
+	attribute gateway_connections.
+	(oop_read_service): Fixed cut and paste errors in error messages.
+	(make_lsh_connection): Initialize gateway_connections.
+	(gateway_accept): New command.
+	(expr make_gateway_setup): Moved from gateway_commands.c.
+	(class lsh_options): New attributes, use_gateway, start_gateway,
+	stop_gateway, and gateway.
+	(make_options): Initialize gateway related attributes.
+	(main_options): Use an enum to define option values. New options
+	--use-gateway, --no-use-gateway, -G, --start-gateway,
+	--stop-gateway.
+	(main_argp_parser): Handle gateway related options.
+	(fork_lsh_transport): Return a plain fd, not an object.
+	(main): Start and stop gateway, as appropriate. Use a loop with
+	object_queue_is_empty and object_queue_remove_head, instead of the
+	FOR_OBJECT_QUEUE macro.
+
+	* src/gateway_channel.c: Much of the old implementation deleted.
+	(class gateway_channel): New class.
+	(do_kill_gateway_channel): New function.
+	(do_receive): Use channel_transmit_data and
+	channel_transmit_extended, on the chained channel.
+	(do_send_adjust): Use channel_adjust_rec_window.
+	(do_gateway_channel_event): New function.
+	(do_gateway_channel_request): New function.
+	(do_gateway_channel_success): New function.
+	(do_gateway_channel_failure): New function.
+	(gateway_request_methods): New method struct.
+	(make_gateway_pair): New function.
+	(gateway_handle_channel_open): New function.
+	(gateway_packet_handler): New function.
+
+	* src/gateway.h (class gateway_connection): New class.
+
+	* src/gateway.c (kill_gateway_connection): New function.
+	(gateway_write_packet): New function.
+	(gateway_disconnect): New function.
+	(oop_read_gateway): New function.
+	(gateway_start_read): New function.
+	(do_write_packet): New function.
+	(do_disconnect): New function.
+	(make_gateway_connection): New function.
+
+	* src/client_tcpforward.c (open_direct_tcpip_command): Don't setup
+	any channel_open_context.
+
+	* src/client.c (do_exit_status): Updated for const
+	channel_request_info.
+	(do_exit_signal): Updated for const channel_request_info. Use enum
+	lsh_atom.
+	(class session_open_command): New class, replacing command of the
+	same name.
+	(do_open_session_command): Don't setup any channel_open_context.
+	(make_open_session_command): New function.
+	(request_shell): Pass non-zero close_on_error to
+	channel_send_request. Mark continuation and exception arguments as
+	UNUSED.
+	(do_session_channel_request): Likewise.
+	(client_options): Cosmetic changes.
+	(expr make_start_session): Deleted.
+	(client_shell_session, client_subsystem_session) 
+	(client_command_session): Use request queue in client_session
+	object.
+	(make_client_session): Changed return type to struct
+	client_session *.
+
+	* src/client_session.c (do_client_session_event): On
+	CHANNEL_EVENT_CONFIRM, send all queued channel requests. On
+	CHANNEL_EVENT_DENY, raise an exception. On CHANNEL_EVENT_CLOSE, do
+	nothing.
+
+	* src/client.h (class client_session): Moved definition here, from
+	client_session.c. New queue of requests to send. New attribute
+	with an exception handler to use for failed CHANNEL_OPEN and
+	CHANNEL_REQUEST.
+
+	* src/server_session.c (do_server_session_event): Handle and
+	ignore CHANNEL_EVENT_CLOSE and CHANNEL_EVENT_DENY.
+	(do_exit_shell): Updated call to channel_send_request.
+	(shell_request_handler, exec_request_handler): Updated for const
+	channel_request_info.
+	(pty_request_handler): Likewise.
+
+	* src/server_tcpforward.c (open_forwarded_tcpip_command): Don't
+	setup any channel_open_context.
+
+	* src/socks.c (class socks_channel): Replaces class
+	socks_connection, and inherits channel_forward.
+	(class socks_continuation): Deleted.
+	(do_socks_continuation, make_socks_continuation): Deleted.
+	(class socks_exception_handler): Deleted.
+	(do_exc_socks_handler, make_socks_exception_handler): Deleted.
+	(do_socks_channel_event): New function, in particular handling
+	CHANNEL_EVENT_CONFIRM and CHANNEL_EVENT_DENY.
+
+	* src/channel_forward.c (channel_forward_shutdown): Made
+	non-static.
+	(channel_forward_start_read): New function.
+	(channel_forward_start_io): Use channel_forward_start_read.
+	(do_channel_forward_event): Use channel_forward_start_read.
+	Recognize CHANNEL_EVENT_DENY and CHANNEL_EVENT_CLOSE, and do
+	nothing.	
+	(init_channel_forward): Take event handler as argument.
+	(make_channel_forward): Pass do_channel_forward_event to
+	init_channel_forward.
+	(forward_open_report, catch_channel_open): Deleted.
+
+	* src/channel.h (format_channel_close, format_channel_eof):
+	Deleted prototypes.
+
+	* src/channel.c: Generally, use ssh_connection_lookup_channel with
+	type CHANNEL_ALLOC_ACTIVE.
+	(format_open_confirmation, format_open_failure)
+	(format_channel_success, format_channel_failure)
+	(format_channel_window_adjust): New function.
+	(lookup_channel, lookup_channel_reserved): Deleted, replaced by
+	ssh_connection_lookup_channel.
+	(ssh_connection_register_channel): Renamed, was register_channel.
+	(send_window_adjust): New function, replacing
+	prepare_window_adjust.
+	(channel_adjust_rec_window, channel_start_receive): Use
+	send_window_adjust.
+	(handle_global_request): Use enum lsh_atom.
+	(handle_channel_request): Use request_methods, if non-NULL. Treat
+	a request on non-existing channel as a protocol error.
+	(do_channel_open_continue): Use ssh_connection_register_channel
+	and ssh_connection_activate_channel.
+	(do_exc_channel_open_handler): Updated for in_use / alloc_state
+	renaming.
+	(handle_channel_open): Don't use open_fallback handler. Use type
+	CHANNEL_ALLOC_RECEIVED_OPEN when allocating the channel number.
+	(handle_channel_close): Generate CHANNEL_EVENT_CLOSE.
+	(handle_open_confirm): Use ssh_connection_activate_channel. Don't
+	use channel_open_context.
+	(handle_open_failure): Use ssh_connection_lookup_channel with type
+	CHANNEL_ALLOC_SENT_OPEN. Generate CHANNEL_EVENT_DENY. Don't use
+	channel_open_context.
+	(handle_channel_success, handle_channel_failure): Use
+	request_methods if non-NULL. For now, don't invoke any
+	continuation or exception.
+	(init_channel): Updated initialization for added and removed
+	attributes.
+	(channel_transmit_data): Use format_channel_data.
+	(channel_transmit_extended): Use format_channel_extended_data.
+	(channel_open_new_v): Alloc channel with type
+	CHANNEL_ALLOC_SENT_OPEN. Call ssh_connection_register_channel.
+	(channel_open_new_type): Replaced type argument, an atom, with
+	length and const uint8_t *
+	(channel_send_request): Replaced the context argument with a flag
+	saying if the channel should be closed on failure.
+
+	* src/channel.h (enum channel_event): New event types
+	CHANNEL_EVENT_DENY and CHANNEL_EVENT_CLOSE.
+	(struct channel_request_info): Use enum lsh_atom for the type.
+	(struct channel_request_methods): New struct, used by gateway
+	channels to replace the handling of channel requests.
+	(class ssh_channel): New attribute request_methods. Deleted
+	request_fallback and channel_open_context.
+	(class channel_request): Made the struct channel_request_info *
+	argument const.
+
+	* src/connection.c (init_ssh_connection): Initialize alloc_state.
+	(ssh_connection_alloc_channel): Added type argument. Proper
+	reallocation of alloc_state.
+	(ssh_connection_dealloc_channel): Updated for in_use / alloc_state
+	renaming.
+	(ssh_connection_activate_channel): Renamed function, was
+	ssh_connection_use_channel.
+	(ssh_connection_lookup_channel): New function, replacing
+	lookup_channel and lookup_channel_reserved in channel.c.
+
+	* src/connection.h (enum channel_alloc_state): New name for enum.
+	Replaced CHANNEL_RESERVED and CHANNEL_IN_USE with three values,
+	CHANNEL_ALLOC_SENT_OPEN, CHANNEL_ALLOC_RECEIVED_OPEN, and
+	CHANNEL_ALLOC_ACTIVE. 
+	(class ssh_connection): Deleted open_fallback. Renamed array
+	in_use to alloc_state.
+
+	* src/gateway_channel.h: Deleted obsolete file.
+	* src/gateway_commands.h: Likewise.
+	* src/gateway_commands.c: Likewise.
+	* src/debug.c: Likewise.
+	
+	* src/resource.c (resource_iterate): New function.
+	(do_mark_resources): Use resource_iterate.
+	(resource_list_foreach): New function.
+	(kill_resource): New function.
+	(do_kill_resource_list): Renamed, was do_kill_all. Use
+	resource_list_foreach.
+
+	* src/ssh.h (SSH_LSH_GATEWAY_STOP): New, local, message number.
+
+	* src/charset.c: No longer includes format.h.
+
+	* src/io_commands.c (listen_tcp_command): Use io_bind_sockaddr.
+	(listen_local_command): New command.
+
+	* src/io.c (io_bind_local, io_connect_local): Changed to return a
+	plain fd, no lsh_fd object.
+	(io_bind_sockaddr): New function, used for both AF_LOCAL and
+	AF_INET sockets.
+
+	* src/lsh_string.c (lsh_string_dup): New function, replacing...
+	* src/format.h (lsh_string_dup): ... deleted macro.
+
+	* src/dsa.c (do_dsa_verify, make_ssh_dss_verifier): Use enum
+	lsh_atom.
+	* src/rsa.c (do_rsa_verify, make_ssh_rsa_verifier): Likewise.
+	* src/lsh-decode-key.c (lsh_decode_key): Likewise.
+	* src/lshd-userauth.c (get_verifier, handle_publickey)
+	(handle_userauth): Likewise.
+	* src/spki.c (spki_algorithm_lookup): Likewise.
+
+	* src/sexp.c (lsh_sexp_to_atom, lsh_sexp_get_type): Return enum
+	lsh_atom, not int.
+
+	* src/process_atoms: For the header file, generate an enum, not a
+	list of #define:s.
+
+	* src/parse.c (parse_atom, parse_next_atom): Use enum lsh_atom for
+	result.
+	(parse_atoms): Convert from enum lsh_atom to int, when
+	constructing the list.
+
+	* src/atoms.in: Deleted unused spki-related atoms, p, q, g, y, x,
+	r, s, n, e, d, a, b, c.
+
+	* src/atoms.h (ATOM_LD): New macro.
+
+	* src/atoms.c (lookup_atom): Return enum lsh_atom, not int.
+
+	* src/Makefile.am (sbin_PROGRAMS): Added lshd-pty-helper.
+	(liblsh_a_SOURCES): Added gateway.c and gateway_channel.c.
+
+	* src/lshd-pty-helper.c: New program.
+
+	* src/server_config.h: Fixed include guard.
+	* src/tokenize_config.h: Likewise.
+
+	* src/arglist.h: Added missing include guard.
+	* src/channel_io.h: Likewise.
+	* src/lock_file.h: Likewise.
+	* src/environ.h.in: Likewise.
+	* src/transport_forward.h: Likewise.
+
+2006-02-14  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/parse-config-test.c (test_main): Pass dummy file
+	name to config_parse_string.
+
+	* src/testsuite/lshd-random-input-test: Use "localhost" instead of
+	$INTERFACE. 
+	* src/testsuite/rapid7-lshd-test: Likewise.
+
+
+	* src/testsuite/lshd-no-auth-test: Deleted --interface option.
+
+	* src/lshd_keyexchange.c: Deleted obsolete file.
+
+	* src/Makefile.am (lsh_execuv_LDADD): Deleted.
+
+	* src/unix_process.c (format_env_pair): Use const char * for the
+	value.
+	(format_env_pair_c): Deleted.
+	(exec_shell): Updated for above changes.
+
+	* src/transport_forward.c: Adapted event handler functions to
+	return void.
+	(oop_read_service): Fix cut and paste error, should use
+	SERVICE_READ_PUSH and SERVICE_READ_PENDING, not TRANSPORT_READ_*.
+
+	* src/transport.c (format_newkeys): Moved function here, and made
+	static. Used to be in format.c.
+	(transport_close): Clarified comment on disconnect handling.
+	The event handler no longer returns and value for
+	TRANSPORT_EVENT_CLOSE. Simplified logic deciding if the connection
+	should be closed immediately, or if we should allow some time for
+	the buffer to drain.
+
+	* src/server_session.c (make_server_session): Cleanup of
+	initialization. 
+	(init_spawn_info): Now plain const char * is used for environment
+	values.
+	(shell_request_handler): Deleted FIXME comment.
+	(lookup_subsystem): Deleted function, replaced by
+	server_lookup_module.
+	(do_spawn_subsystem): Use server_lookup_module.
+
+	* src/lshd.c (lshd_event_handler): Return void.
+	(lookup_service): Deleted function, replaced by
+	server_lookup_module.
+	(lshd_service_request_handler): Use server_lookup_module.
+
+	* src/server.c (server_lookup_module): New function, replacing
+	lookup_service and lookup_subsystem.
+
+	* src/lsh_string.h: Added include guards. Declare
+	lsh_string_colonize, lsh_string_bubblebabble_c and
+	lsh_string_bubblebabble. 
+
+	* src/lsh_string.c (lsh_string_colonize) 
+	(lsh_string_bubblebabble_c, lsh_string_bubblebabble): Functions
+	moved here, used to be in format.c.
+
+	* src/lsh_process.h (struct env_value): Use a const char * for the
+	value.
+
+	* src/lsh-transport.c (lsh_transport_event_handler): Changed
+	return type to void.
+	(lsh_transport_lookup_verifier): Use spki_add_acls.
+	(read_host_acls): Use spki_add_acls.
+
+	* src/spki.c (spki_add_acls): New function, replacing
+	spki_add_acl. The new function takes a string as argument,
+	containing zero or more acls.
+
+	* src/transport.h (class transport_connection): Changed the
+	event_handler method to return void.
+
+	* src/keyexchange.c (parse_kexinit, format_kexinit) 
+	(do_make_simple_kexinit): Use sizeof to get the size of
+	kex->cookie, instead of hardcoding the value 16.
+
+	* src/format.c (ssh_vformat_length): Removed support for negative
+	numbers.
+	(ssh_vformat_write): Likewise.
+	(format_newkeys): Function moved to transport.c.
+	(lsh_string_colonize): Function moved to lsh_string.c.
+	(lsh_string_bubblebabble_c): Likewise.
+	(lsh_string_bubblebabble): Likewise.
+
+	* src/dsa.c (DSA_BLOB_LENGTH): New constant.
+	(dsa_blob_length): Deleted function.
+	(dsa_blob_write): Deleted length argument.
+	(do_dsa_sign): Use a constant size DSA_BLOB_LENGTH for writing r
+	and s.
+
+	* src/channel_io.c (init_channel_read_state) 
+	(init_channel_write_state): Let fd < 0 mean that no buffer should
+	be allocated yet.
+
+2006-02-13  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/functions.sh (LSHD_CONFIG_DIR): Set and export.
+	(INTERFACE): Deleted variable.
+
+	* src/testsuite/config/lshd-connection.conf: New file.
+	* src/testsuite/config/lshd-userauth.conf: New file.
+	* src/testsuite/config/lshd.conf: New file.
+
+	* src/.dist_classes (dist_classes): Added lshd-userauth.c.x,
+	server.h.x and werror.h.x.
+
+
+	* src/Makefile.am (sbin_PROGRAMS): Deleted lsh-execuv.
+	(liblsh_a_SOURCES): Added server_config.c and tokenize_config.c.
+
+	* src/lshd.c (class lshd_configuration): Split in two classes,
+	lshd_config and lshd_context.
+	(lshd_packet_handler): Improved trace message. Never dump userauth
+	packets to the log.
+	(class lshd_port): Use lshd_context class.
+	(open_ports): Likewise.
+	(make_lshd_context): New function.
+	(class pid_file_resource): Use a proper string for saving the file
+	name.
+	(class lshd_config): New class.
+	(make_lshd_config): New function.
+	(main_options): Use uppercase for metasyntactic variables in help
+	output, to match other GNU programs.
+	(main_argp_children): Use server_argp as a child parser, making
+	werror_argp a grand child.
+	(main_argp_parser): At ARGP_KEY_INIT, set up child_inputs. At
+	ARGP_KEY_END, key handling etc has been moved to after the
+	configuration file is parsed, in lshd_config_handler.
+	(lshd_config_options): New config file keywords.
+	(lshd_config_handler): New function.
+	(lshd_config_children, lshd_config_parser): New constant structs.
+	(main): Adapted to lshd_config/lshd_context split.
+
+	* src/lshd-userauth.c (start_service): Propagate $LSHD_CONFIG_DIR
+	to the new process.
+	(main_argp_children): Use server_argp as child parser, which makes
+	werror_argp a grand child.
+	(class lshd_userauth_config): New class, inheriting server_config.
+	(make_lshd_userauth_config): New function.
+	(main_argp_parser): At ARGP_KEY_INIT, setup child_inputs[0].
+	(main): Use make_lshd_userauth_config. Deleted hack to
+	unconditionally pass -v and --trace to the child process.
+
+	* src/lshd-connection.c (main_argp_children): Use server_argp as
+	child parser, which makes werror_argp a grand child.
+	(main): Use make_server_config, with configuration file pointer
+	out by FILE_LSHD_CONNECTION_CONF and
+	ENV_LSHD_CONNECTION_CONFIG_FILE.
+
+	* src/transport.c (transport_process_packet): Improved trace
+	message.
+
+	* src/server.c (server_parse_config_file): New function.
+	(init_server_config, make_server_config): New functions.
+	(server_argp): New config file parser, responsible for options
+	related to the configuration files, and for processing of the
+	configuration file.
+
+	* src/lsh.c (main_argp_children): werror_argp is no longer a
+	direct child parser, it's a grand child via client_argp.
+	(main_argp_parser): At ARGP_KEY_INIT, no longer set
+	child_inputs[1]. At ARGP_KEY_END, deleted old transport-level
+	setup which has been  moved to lsh-transport.c.
+	(fork_lsh_transport): Examing the werror_config object to figure
+	out which flags to pass on, instead of using the global variables
+	quiet_flag and friends.
+
+	* src/lsh-transport.c (class lsh_transport_config): Include a
+	pointer to a werror_config.
+	(make_lsh_transport_config): Use make_werror_config.
+	(lsh_transport_packet_handler): Use debug, not werror, for dumping
+	packet contents.
+	(lsh_transport_lookup_verifier): Use werror_quiet_p.
+	(main_argp_parser): At ARGP_KEY_INIT, set child_inputs[1]. At
+	ARGP_KEY_END, call werror_init.
+
+	* src/client.c (do_exit_signal): Use int type for signal.
+	(init_client_options): Call init_werror_config.
+	(quiet_callback, verbose_callback, trace_callback)
+	(debug_callback): Call the correspnding toggle_* function.
+	(client_argp_parser): At ARGP_KEY_INIT, set child_inputs[0]. At
+	ARGP_KEY_END, call werror_init.
+	(client_argp_children, client_argp): Use werror_argp as a child
+	parser.
+
+	* src/client.h (class client_options): Inherit werror_config.
+
+	* src/xauth.c: Deleted obsolete xauth parsing code.
+
+	* src/xalloc.h (number_of_strings): Deleted declaration.
+
+	* src/werror.h (class werror_config): New class.
+
+	* src/werror.c (trace_flag, debug_flag, quiet_flag, verbose_flag):
+	Made static.	
+	(toggle_quiet, toggle_verbose, toggle_trace, toggle_debug): New
+	functions.
+	(set_error_syslog): Deleted argument.
+	(werror_format): Made non-static.
+	(werror_quiet_p, init_werror_config, make_werror_config): New
+	functions.
+	(werror_init): New function.
+	(werror_config_parser): New configuration file parser.
+
+	* src/unix_interact.c (read_password): Use werror_quiet_p.
+	(unix_yes_or_no): Don't check for quiet mode; let the caller do
+	that.
+
+	* src/io_commands.c (command listen_command): Deleted.
+	(resolve_exception):Deleted.
+	(command bind_address_command): Deleted.
+	(command bind_local_command): Deleted.
+	(class connect_continuation): Deleted.
+	(do_connect_continuation): Deleted.
+	(make_connect_continuation): Deleted.
+	(do_connect): Deleted.
+	(class connect_port): Deleted.
+	(do_connect_port): Deleted.
+	(make_connect_port): Deleted.
+	(command connect_simple_command): Deleted.
+	(command connect_list_command): Deleted.
+	(command connect_connection_command): Deleted.
+	(command connect_local_command): Deleted.
+
+	* src/lsh_string.c (lsh_string_put_base64_single): Deleted unused
+	function.
+
+	* src/srp-gen.c (class srp_gen_options): Inherit werror_config. 
+	(make_srp_gen_options): Call init_werror_config.
+	(main_argp_parser): At ARGP_KEY_INIT, set child_inputs[0]. At
+	ARGP_KEY_END, call werror_init.
+	* src/lsh-decode-key.c: Analogous changes.
+	* src/lsh-decrypt-key.c: Analogous changes.
+	* src/lsh-export-key.c: Analogous changes.
+	* src/lsh-keygen.c: Analogous changes.
+	* src/lsh-writekey.c: Analogous changes.
+	* src/lsh-make-seed.c: Analogous changes.
+	(main): Use werror_quiet_p.
+
+	* src/parse_config.c: Tokenizer code moved to a separate file,
+	tokenize_config.c.
+	(config_parse_string): Added file name argument.
+
+	* src/exception.h (class report_exception_info): Deleted.
+	(make_report_exception_info): Deleted.
+	(STATIC_REPORT_EXCEPTION_INFO): Deleted.
+	(make_report_exception_handler): Deleted.
+	(make_exception_handler): Deleted.
+	(class protocol_exception): Deleted.
+	(make_protocol_exception): Deleted.
+	(STATIC_PROTOCOL_EXCEPTION): Deleted.
+	(PROTOCOL_ERROR): Deleted.
+	(PROTOCOL_ERROR_DISCONNECT): Deleted.
+
+	* src/exception.c (default_exception_handler): Deleted.
+	(make_protocol_exception): Deleted.
+	
+	* src/environ.h.in (FILE_LSHD_CONFIG_DIR, FILE_LSHD_CONF) 
+	(FILE_LSHD_USERAUTH_CONF, FILE_LSHD_CONNECTION_CONF) 
+	(ENV_LSHD_CONFIG_DIR, ENV_LSHD_CONNECTION_CONFIG_FILE) 
+	(ENV_LSHD_USERAUTH_CONFIG_FILE): New string constants.
+
+	* src/dh_exchange.c (dh_make_client_msg, dh_process_server_msg):
+	Deleted obsolete functions. 
+
+	* src/connection.c (kill_ssh_connection): Deleted obsolete
+	function.
+
+	* src/client_session.c (client_start_io): Deleted obsolete
+	command.
+	(make_client_session_channel): Comment fix.
+
+	* src/channel_forward.c (channel_forward_start_io_read): Deleted
+	obsolete function.
+
+	* src/channel.c (lookup_channel, lookup_channel_reserved): Made
+	static. 
+
+	* src/algorithms.c (algorithms_options): Use uppercase for
+	metasyntactic variables in help output, to match other GNU
+	programs. 
+
+	* src/tokenize_config.h: New file.
+	* src/tokenize_config.c: New file.
+	* src/server_config.h: New file.
+	* src/server_config.c: New file.
+
+	* src/handshake.c, src/handshake.h, src/lsh-execuv.c,
+	src/oop-line-file.c, src/oop-line.h: Removed obsolete files.
+
+	* configure.ac: For gcc-4.x, add -Wno-pointer-sign to CFLAGS.
+
+2005-10-10  Niels Möller  <niels@s3.kth.se>
+
+	* src/.dist_classes (dist_classes): Removed a bunch of obsolete
+	class files.
+
+	* src/client_userauth.c: Deleted file.
+	* src/client_userauth.h: Deleted file.
+
+2005-10-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (client_argp_parser): Enable socks forwarding.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added socks.c.
+
+	* src/socks.c: Adapted to new i/o and channel_forward interfaces.
+
+2005-10-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io.c: Deleted obsoleted functionality.
+	(class io_listen_callback): Deleted class.
+	(do_listen_callback, make_listen_callback): Deleted functions.
+	(class io_connect_callback): Deleted class.
+	(do_connect_callback, make_connect_callback): Deleted functions.
+	(do_kill_fd, do_exc_io_handler): Deleted functions.
+	(read_raw): Deleted function.
+	(io_connect): Deleted old connect interface.
+	(do_connect_list_kill, make_connect_list_state): Deleted functions.
+	(class connect_list_callback): Deleted class.
+	(connect_attempt, do_connect_list_callback) 
+	(make_connect_list_callback, io_connect_list): Deleted functions.
+	(io_bind_sockaddr, io_listen, io_listen_list): Deleted old listen interface.
+	(io_read_write, io_read, io_write): Deleted old constructors.
+	(class write_only_file)): Deleted class.
+	(io_write_file): Deleted function.
+	(close_fd, close_fd_nicely, close_fd_read, close_fd_write):
+	Deleted old close interface.
+	(class exc_finish_read_handler)): Deleted class.
+	(finish_read_exception, finish_io_exception): Deleted exceptions.
+	(make_io_exception): Deleted function.
+	* src/io.h (connect_list_state): Deleted class.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed string_buffer.c.
+
+	* src/io.c: Don't include string_buffer.h.
+	(io_read_file_raw): Use lsh_string_realloc, not the
+	string_buffer abstraction.
+
+	* src/lsh_string.c (lsh_string_realloc): New function.
+
+	* src/string_buffer.c, src/string_buffer.h: Deleted files.
+
+2005-10-09  Niels Möller  <niels@s3.kth.se>
+
+	* src/gateway_commands.c: Don't include connection_commands.h.
+	* src/lsh.c: Likewise.
+	* src/socks.c: Likewise.
+
+	* src/connection_commands.c, src/connection_commands.h: Deleted
+	files.
+
+	* src/tcpforward_commands.c: Deleted file.
+
+	* src/tcpforward.h: Deleted old declarations.
+	(forward_remote_port): New declaration.
+
+	* src/tcpforward.c: Deleted old tcpforwarding code.
+
+	* src/server_tcpforward.c (do_tcpip_forward_request_continuation):
+	Fixed assert.
+
+	* src/server_session.c: Don't include channel_commands.h.
+	(format_exit_signal, format_exit): Deleted functions.
+	(do_exit_shell): Use channel_send_request.
+
+	* src/lsh.c: Enabled remote port forwarding.
+	(main): Add handler for CHANNEL_OPEN "forwarded-tcpip".
+
+	* src/client_pty.c: Don't include channel_commands.h.
+	* src/gateway_channel.c: Likewise.
+	* src/server_x11.c: Likewise.
+	* src/tcpforward.c: Likewise.
+
+	* src/client_tcpforward.c (forward_remote_port): Reimplemented.
+
+	* src/client_session.c: Include channel.h, not channel_commands.h.
+
+	* src/client.h: Don't include channel_commands.h.
+	(request_service): Deleted class.
+
+	* src/client.c (request_shell): Use channel_send_request.
+	(session_channel_request): New class, replacing exec_request and
+	subsystem_request. 
+	(do_session_channel_request, make_session_channel_request): New
+	functions, using channel_send_request. 
+	(make_exec_request, make_subsystem_request): Use
+	make_session_channel_request. 
+	(client_parse_forward_arg): Use client_arg_unsigned.
+
+	* src/channel_commands.c: Deleted file.
+	* src/channel_commands.h: Deleted file.
+
+	* src/channel.c (channel_send_request)
+	(channel_send_global_request): New functions. 
+	(format_channel_request, format_global_request): Deleted
+	functions.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed channel_commands.c.
+
+2005-10-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/tcpforward.h (remote_port): Removed class. Replaced by new
+	version in client_tcpforward.c.
+
+	* src/server_tcpforward.c (do_channel_open_direct_tcpip): Fixed
+	messages.
+
+	* src/server.h (make_offer_service): Deleted prototype.
+
+	* src/exception.h: Deleted old definition of exception type
+	constants.
+
+	* src/client_tcpforward.c (make_remote_port): New function.
+	(do_channel_open_forwarded_tcpip): New function.
+	(class remote_port): New class. Both replace older versions in
+	tcpforward.c
+
+	* src/channel_commands.h (class channel_open_command): Deleted class.
+	* src/channel_commands.c (do_channel_open_command): Deleted function.
+
+	* src/testsuite/functions.sh (need_lshg): New function.
+	* src/testsuite/lshg-1-test: Skip test if lshg isn't built.
+	* src/testsuite/lshg-cat-2-test: Likewise.
+	* src/testsuite/lshg-cat-test: Likewise.
+	* src/testsuite/lshg-tcpip-local-test: Likewise.
+
+	* src/client.c (client_parse_forward_arg): Use io_lookup_address.
+	(client_argp_parser): Use forward_local_port (renamed).
+
+	* src/tcpforward.c (class tcpforward_connect_state): New class.
+	(tcpforward_connect_done, tcpforward_connect_error) 
+	(tcpforward_connect): New functions, using the new io_connect
+	interface.
+
+	* src/tcpforward.h (TCPIP_WINDOW_SIZE): Moved constant definition
+	here.
+
+	* src/client_tcpforward.c (open_direct_tcpip_command): Call
+	io_register_fd. Added trace message.
+	(expr forward_local_port): Reverted earlier renaming, was called
+	tcpforward_direct_tcpip.
+
+	* src/server_tcpforward.c (open_forwarded_tcpip_command): Call
+	io_register_fd.
+	(do_channel_open_direct_tcpip): New function, replacing the old
+	one in tcpforward.c. Uses tcpforward_connect.
+
+	* src/server_session.c (do_server_session_event): Ignore
+	CHANNEL_EVENT_CONFIRM.
+
+	* src/lshd-connection.c (make_connection): Enabled direct-tcpip.
+
+	* src/io.c (kill_io_connect_state, init_io_connect_state) 
+	(oop_io_connect): New functions.
+	(io_connect): New different interface, using class
+	io_connect_state.
+	(get_portno): Changed return type to unsigned.
+	(io_make_sockaddr): Bug fixes. Now it seems to actually work.
+	(io_lookup_address): New function.
+
+	* src/io.h (class io_connect_state): New class.
+
+	* src/channel_forward.c (init_channel_forward): Don't call
+	io_register_fd; it's now the responsibility of the caller.
+
+	* src/channel.c (do_channel_open_continue): Generate a
+	CHANNEL_EVENT_CONFIRM.
+
+2005-10-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c (listen_tcp_command): Use io_make_sockaddr.
+
+	* src/io.c (io_make_sockaddr): New function.
+
+	* src/transport_write.c: Include werror.h, needed for trace.
+
+	* src/lshd.c (class lshd_configuration): Renamed, was
+	configuration. Merged attributes from class lshd_options.
+	(class lshd_options): Deleted class.
+	(main_argp_children): Use algorithms_argp as a child parser.
+	(main_argp_parser): When handling ARGP_KEY_END, read host key, and
+	set up kexinit according to the algorithm options.
+
+2005-09-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added client_tcpforward.c
+	and server_tcpforward.c. Removed tcpforward_commands.c.
+
+	* src/tcpforward_commands.c: Code related to direct-tcpip moved to
+	client_tcpforward.c.
+
+	* src/tcpforward.c: Code related to tcpip-forward moved to
+	server_tcpforward.c.
+	(tcpforward_lookup): Renamed, was lookup_forward, and made
+	non-static.
+	(tcpforward_remove_port): New function.
+
+	* src/server_tcpforward.c: New file. Moved handling of remote port
+	forwarding here, including open_forwarded_tcpip_command and
+	tcpip_forward_handler. 
+
+	* src/lshd-connection.c (make_connection): Enable global request
+	handlers for tcpip-forward and cancel-tcpip-forward.
+
+	* src/connection.c (init_ssh_connection): Initialize
+	connection->forwarded_ports. 
+
+	* src/connection.h (class ssh_connection): Replaced remote_ports
+	and local_ports with a single queue forwarded_ports..
+
+	* src/client.c (client_argp_parser): Use tcpforward_direct_tcpip,
+	not forward_local_port.
+
+	* src/client_tcpforward.c: New file. Moved
+	open_direct_tcpip_command and tcpforward_direct_tcpip. The latter
+	used to be called forward_local_port.
+
+2005-09-21  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/command.h (class command_2): Changed invoke to be a plain
+	function pointer, not a method.
+	(COMMAND_2_INVOKE): Deleted macro.
+	(DEFINE_COMMAND2): Deleted unused first argument. Updated all
+	users.
+
+	* src/command.c (do_command_2_invoke): Don't pass self when using
+	the invoke function pointer.
+
+	* src/unix_process.c (class utmp_cleanup): Commented out class.
+
+	* src/reaper.c (reaper_handle): Added trace message.
+
+	* src/lsh_proxy.c: Deleted file. Also deleted all other proxy*.c
+	and proxy*.h files.
+
+	* src/lsh.c (do_lsh_default_handler): Display errno string, for
+	i/o errors.
+	(fork_lsh_transport): Pass on -p option only if actually provided
+	on the command line.
+
+	* src/keyexchange.c (handle_kexinit): Fixed update to
+	self->read_state.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Readded tcpforward_commands.
+
+	* src/scm/gaba.scm (c-prototype, c-prototype*): New argument for
+	the storage type. Updated callers.
+	(process-expr): New storage attribute.
+
+	* src/transport_write.c (transport_write_packet): Trace call to
+	display sent message type.
+
+	* src/transport.c (transport_process_packet): USe trace, not
+	debug, for received message type.
+
+	* src/tcpforward_commands.c (open_direct_tcpip_command): New
+	command.
+	(forward_local_port): Use it. #if:ed out the old code.
+
+	* src/tcpforward.h (forward_local_port): Declare. #if:ed out the
+	rest of the declarations.
+
+	* src/socks.c (make_socks_server): Deleted wrapper function.
+	Renamed expression forward_socks -> make_socks_server.
+
+	* src/lshg.c (expr make_lshg_connect): Marked static.
+	* src/server_x11.c (expr server_x11_callback): Likewise.
+
+	* src/io_commands.c (listen_tcp_command): Reordered arguments,
+	callback comes first.
+
+	* src/gateway_commands.c (make_gateway_setup): Deleted wrapper
+	function. Renamed expression gateway_setup -> make_gateway_setup.
+
+	* src/connection.c (connection_remember): Moved command here. Use
+	CAST_SUBTYPE. Moved from...
+	* src/connection_commands.c: ... here.
+
+	* src/client.c (client_argp_parser): Enable local "-L" port
+	forwarding.
+	(expr make_start_session): Marked as static.
+
+	* src/channel_io.c (channel_io_read): Call channel_io_stop_read on eof.
+
+2005-09-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (open_session_command): New command.
+	(class session_open_command): Deleted class.
+	(new_session, make_open_session_command): Deleted functions.
+	(expr make_start_session): First argument is now the session.
+	Updated callers.
+
+	* src/channel_commands.c (do_channel_open_command): #if:ed out.
+
+	* src/channel.c (register_channel): Set up channel->connection
+	pointer. Removed corresponding code in callers.
+	(channel_open_new_v, channel_open_new_type): New functions,
+	replacing...
+	(format_channel_open_s, format_channel_open): Deleted functions.
+
+	* src/abstract_io.c, src/abstract_io.h, src/read_data.c,
+	src/read_data.h, src/read_file.c, src/read_line.c,
+	src/read_line.h, src/read_packet.c, src/read_packet.h,
+	src/write_buffer.c, src/write_buffer.h: Deleted obsolete files.
+
+2005-09-20  Niels Möller  <niels@s3.kth.se>
+
+	* src/server_session.c: Don't include read_data.h.
+	* src/lsh.h (struct abstract_write): Deleted declaration.
+	* src/keyexchange.c: Don't include abstract_io.h.
+	* src/io.h: Don't include abstract_io.h and write_buffer.h.
+	* src/client.c: Don't include abstract_io.h.
+	* src/channel.h: Don't include write_buffer.h.
+	* src/channel.c: Don't include read_data.h.
+
+	* src/Makefile.am (class-map): Depend on .dist_classes.
+
+	* misc/make-am: Use C locale, to get files sorted in sane order.
+
+	* src/server.c: Don't include abstract_io.h, format.h, ssh.h and
+	xalloc.h. Include atoms.h
+	(class service_handler, do_service_request)
+	(make_service_request_handler, class offer_service)
+	(do_offer_service, make_offer_service): Deleted.
+	
+	* src/testsuite/conv-1-test, src/testsuite/conv-2-test,
+	src/testsuite/conv-3-test, src/testsuite/export-1-test,
+	src/testsuite/lsh-cat-test, src/testsuite/lshg-cat-2-test,
+	src/testsuite/lshg-cat-test: Remove test.out1 before the test.
+	
+	* src/testsuite/login-auth-test: Reversed role of test.out1 and
+	test.out2. The latter is the reference data. Remove test.out1
+	before the test.
+
+	* src/tcpforward_commands.c (forward_local_port): Sketched new
+	version for improved channel open framework.
+
+	* src/server_session.c (do_server_session_event): New event
+	handler, replaces do_eof.
+	(spawn_process): If we have a non-zero send_window_size, start
+	reading stdout and stderr right away.
+
+	* src/connection.h (channel_open_exception): Deleted class.
+
+	* src/client_session.c (do_client_session_event): New event
+	handler. Replaces do_client_session_eof. Starts i/o on
+	CHANNEL_EVENT_CONFIRM. This change implies we we now enable i/o
+	before we have sent any shell or exec request.
+
+	* src/client.c (class client_start_session): Deleted.
+	(client_shell_session): Don't use client_start_session. No
+	CAST_SUBTYPE needed when calling make_start_session.
+	(client_command_session): Likewise.
+	(client_subsystem_session): Likewise.
+
+	* src/channel_forward.c (do_channel_forward_event): New event
+	handler. Replaces do_channel_forward_eof. Calls
+	channel_forward_start_io_read on CHANNEL_EVENT_CONFIRM.
+
+	* src/channel_commands.c (do_channel_open_command): Set
+	channel_open_context.
+
+	* src/channel.c (make_channel_open_exception): Use make_exception.
+	(handle_channel_eof): Generate CHANNEL_EVENT_EOF.
+	(handle_open_confirm): Use channel_open_context. Generate
+	CHANNEL_EVENT_CONFIRM.
+	(handle_open_failure): Use channel_open_context.
+	(init_channel): New argument event.
+
+	* src/channel.h (enum channel_event): New enum.
+	(class ssh_channel): Attributes open_continuation and e replaced
+	by channel_open_context. Method eof replaced by new method event.
+
+2005-09-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Compile io_commands.c.
+
+	* src/io_commands.c (class io_port): New class.
+	(listen_tcp_command): New command.
+
+	* src/srp-gen.c (main): Use write_raw.
+	(main_argp_parser): Don't use io_write_file.
+
+	* src/io.h (enum io_type, class io_callback, class lsh_fd)
+	(io_buffered_read, io_consuming_read, io_exception): Deleted
+	classes.
+	[!SHUTDOWN_WORKS_WITH_UNIX_SOCKETS]: Deleted workaround for old
+	linux bug.
+	(listen_value): Use a raw fd. Deleted local attribute.
+
+	* src/io.c: Deleted old code.
+	(lsh_oop_fd_read_callback, lsh_oop_register_read_fd)
+	(lsh_oop_cancel_read_fd, lsh_oop_fd_write_callback)
+	(lsh_oop_register_write_fd, lsh_oop_cancel_write_fd)
+	(list_files, do_buffered_read, make_buffered_read)
+	(do_consuming_read, init_consuming_read, do_write_callback)
+	(io_init_fd, make_lsh_fd, io_nfiles): Deleted functions.
+	(make_listen_value): Deleted local argument. Use a raw fd, not
+	struct lsh_fd.
+
+	* src/exception.h (enum exception_type): EXC_RESOLVE.
+
+	* src/exception.c: Don't include exception.c.x.
+
+	* src/client_escape.c (class escape_handler): Commented out class.
+
+2005-09-19  Niels Möller  <niels@s3.kth.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed read_data.c
+	read_file.c read_line.c.
+
+	* src/lsh-transport.c: Use global_oop_source.
+
+	* src/lshd.c: Use global_oop_source.
+	(make_lshd_connection): Deleted redundant function.
+
+	* src/transport.c: Use global_oop_source.
+	(init_transport_connection): Call io_register_fd.
+	(transport_connection_kill, transport_close): Call io_close_fd.
+	
+	* src/transport_forward.c: Use global_oop_source.
+
+	* src/transport.h (class transport_context): Deleted attribute
+	oop. global_oop_source should be used instead.
+
+	* src/server_session.c: Adapted to new simpler exception
+	abstraction. Use SSH_CONNECTION_ERROR.
+
+	* acinclude.m4 (LSH_GCC_FUNCTION_NAME): Deleted.
+	* configure.ac: Don't use LSH_GCC_FUNCTION_NAME.
+
+	* src/lsh_string.h (lsh_string_alloc) [DEBUG_ALLOC]: Don't use
+	FUNCTION_NAME.
+
+	* src/lsh.c (do_lsh_default_handler): Adapted to new simpler
+	exception abstraction.
+
+	* src/io.c (io_register_fd): Improved trace message.
+
+	* src/command.c (gaba_apply): Mark continuation with STACK_HEADER.
+	#if:ed out some old exception-related functions.
+	(class protect_handler): New parent attribute (used to be in the
+	super class).
+
+	* src/client.c (do_exit_status, do_exit_signal): Use
+	SSH_CONNECTION_ERROR. 
+
+	* src/channel_forward.c (catch_channel_open): #if:ed out.
+
+	* src/channel.c (do_exc_global_request_handler) 
+	(make_global_request_exception_handler, handle_global_request) 
+	(do_exc_channel_request_handler) 
+	(make_channel_request_exception_handler, handle_channel_request) 
+	(do_exc_channel_open_handler, make_exc_channel_open_handler) 
+	(handle_channel_open, handle_channel_failure): Adapted to new
+	simpler exception abstraction.
+
+	* src/exception.c: #if:ed out old code.
+
+	* src/exception.h: Simplified exception class. Now an exception
+	consistd of a type, a subtype, and a message, but no class
+	hierarchy and no type masks. Exception handlers don't have parents
+	by default.
+	(DEFINE_EXCEPTION_HANDLER): New macro.
+
+2005-09-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Readded channel_forward.c.
+
+	* src/channel_forward.c: Rewrote to use channel_io.c.
+
+2005-09-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_session.c (oop_write_stdin, do_receive, do_eof): Call
+	channel_write_state_close on EOF and error.
+	(oop_read_stdout, oop_read_stderr): Call channel_read_state_close
+	on EOF and error.
+
+	* src/client_session.c (oop_write_stdout, oop_write_stderr): Call
+	channel_write_state_close on EOF and error.
+	(do_receive): Likewise.
+	(oop_read_stdin): Call channel_read_state_close on EOF and error.
+
+	* src/channel.c (channel_adjust_rec_window): Check that written > 0.
+
+	* src/channel_io.c (channel_io_read): Return an enum
+	channel_io_status. Don't call channel_read_state_close on error;
+	leave that up to the caller.
+	(channel_io_start_read): Check that file->fd is valid.
+	(channel_io_write, channel_io_flush): Return an enum
+	channel_io_status. Don't call channel_write_state_close on error;
+	leave that up to the caller.
+	(channel_io_stop_write): Return CHANNEL_IO_EOF if all data has
+	been written.
+
+	* src/channel_io.h (enum channel_io_status): New enum.
+
+2005-09-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel_io.c (channel_io_write): Call
+	channel_adjust_rec_window.
+
+	* src/transport_read.c (decode_packet): Implemented inflating.
+
+	* src/encrypt.c (encrypt_packet): Adapted to new CODEC interface.
+
+	* src/zlib.c (class zlib_instance): Deleted attributes max and
+	rate.
+	(estimate_size, estimate_update): Deleted functions.
+	(do_zlib): Adapted to new CODEC interface, and simplified
+	significantly. 
+	(make_zlib_instance): Don't initialize max and rate.
+
+	* src/compress.h (class compress_instance): Changed interface for
+	the CODEC method. Output storage is a string and a start offset,
+	input is length and pointer.
+
+	* src/lshd.c (lshd_service_request_handler): Don't call
+	io_register_fd on the service pipe here; it's the responsibility
+	of the transport_forward class.
+
+	* src/transport_forward.c (transport_forward_close): Use io_close_fd.
+	(transport_forward_setup): Use io_register_fd.
+
+2005-09-16  Niels Möller  <niels@s3.kth.se>
+
+	* src/channel.c (receive_data_common): New function, with
+	processing and checks common for handle_channel_data and
+	handle_channel_extended_data. Invoke CHANNEL_RECEIVE with length
+	and pointer, avoiding allocation fo an extra copy.
+	(handle_channel_data, handle_channel_extended_data): Use it.
+
+	* src/channel.h (class ssh_channel): Changed the CHANNEL_RECEIVE
+	method to take a length and pointer, rather than an lsh_string.
+	Updated method implementations.
+
+	* src/server_session.c (do_exit_shell): Call
+	channel_maybe_close unconditionally.
+	(do_receive): Deallocate the packet.
+
+	* src/lshd.c (kill_port): Use io_close_fd.
+	(lshd_service_request_handler, make_lshd_port): Use
+	io_register_fd.
+
+	* src/lshd-connection.c (make_connection): Enable the "exec"
+	request on session channels.
+
+	* src/lsh.c (main): Put the resources generating by options
+	processing on the connection's resource list.
+
+	* src/lsh-export-key.c (sexp_to_ssh2_key): Due to the new debug
+	macrology of ssh_format, it no longer works to use ssh_format in
+	an argument of itself. So assign the fingerptint hash to a
+	variable before use.
+
+	* src/io.c (io_final): Deleted function.
+	(io_run): Cleanup processing, previously done by io_final.
+	* src/lsh-transport.c (main): No longer calls io_final.
+	* src/srp-gen.c (main): Likewise.
+
+	* src/format.h (ssh_format) [DEBUG_ALLOC]: If __GNUC__ is defined,
+	define as a varargs macro, calling ssh_format_clue with file and
+	line number as the first argument.
+	* src/format.c (ssh_format) [DEBUG_ALLOC]: Use the supplied clue.
+
+	* src/client_session.c (do_receive): Deallocate packet.
+
+	* src/client.c (do_exit_status, do_exit_signal): Call
+	channel_maybe_close.
+
+	* src/channel_io.c (channel_write_state_close): Call
+	channel_maybe_close unconditionally.
+
+	* src/channel.c (handle_channel_request): Added trace message with
+	request type.
+	(channel_maybe_close): Ignore channel->sinks counter, when
+	CHANNEL_NO_WAIT_FOR_EOF is set.
+
+2005-09-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added connection.c again.
+
+	* src/lsh.h: Declare struct ssh_channel.
+
+	* src/lsh.c: Updated for channel_table->ssh_connection renaming.
+	(disconnect): New argument for the reason code.
+	(do_disconnect): New method.
+	* src/lshd-connection.c: Analogous changes.
+
+	* src/channel_commands.c, src/channel_commands.h,
+	src/client.c,src/client_session.c, src/server_session.c: Updated
+	for channel_table->ssh_connection renaming.
+
+	* src/channel.c: Code moved to connection.c. Updated for
+	channel_table->ssh_connection renaming.
+
+	* src/connection.c (init_ssh_connection) 
+	(ssh_connection_alloc_channel, ssh_connection_dealloc_channel) 
+	(ssh_connection_use_channel, ssh_connection_pending_close): Moved
+	functions here, from channel.c. They used to be called
+	init_channel_table, alloc_channel, dealloc_channel, use_channel
+	and channel_pending_close.
+
+	* src/connection.h: Moved the channel_table from channels.h to
+	this file, and renamed the class ssh_connection. Deleted old
+	version of this class.
+
+2005-09-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/unix_random.c (do_device_source): Use the read system call
+	directly, not the read_raw function.
+
+	* src/lshd-userauth.c (read_packet): New argument for seqno
+	pointer. 
+	(write_packet): Don't use lsh_string_sequence_number.
+	(handle_userauth): Likewise. Use the new argument to read_packet
+	instead.
+
+	* src/lsh_string.c (struct lsh_string): Deleted sequence_number.
+	(lsh_string_sequence_number, lsh_string_set_sequence_number):
+	Deleted functions. 
+
+	* src/lsh.c (write_packet): Don't use lsh_string_sequence_number.
+	(do_lsh_default_handler): Don't handle EXC_USERAUTH.
+
+	* src/io.c (read_raw, finish_io_exception, make_io_exception):
+	#if:ed out.
+
+	* src/exception.h (EXC_AUTH, EXC_USERAUTH, EXC_USERAUTH_SPECIAL,
+	EXC_FINISH, EXC_FINISH_CHANNEL, EXC_FINISH_READ, EXC_FINISH_IO,
+	EXC_FINISH_PENDING): Deleted unused exception types.
+
+2005-09-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c (alloc_channel): Use lsh_space_realloc.
+	(send_global_request_responses): Deleted q argument. Updated callers.
+	(send_channel_request_responses): Likewise.
+	(parse_channel_request): Deleted function. Merged in
+	handle_channel_request.
+	(parse_channel_open): Deleted function. Merged in
+	handle_channel_open.
+	
+	* src/xalloc.c (debug_realloc, xrealloc, lsh_space_realloc): New functions.
+	(lsh_space_alloc) [!DEBUG_ALLOC]: Use xalloc.
+
+	* src/arglist.c: Use lsh_space_alloc, lsh_space_realloc and lsh_space_free.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added channel_io. Removed
+	channel_forward.c, client_pty.c, client_x11.c, gateway.c,
+	gateway_channel.c and server_x11.c, which are currently not working.
+
+	* src/transport_forward.c: Updated for changes to ssh_write.c.
+
+	* src/server_session.c (class server_session): Use
+	channel_write_state and channel_read_state instead of lsh_fd
+	objects.
+	(do_kill_server_session): New method.
+	(oop_write_stdin): New function.
+	(do_receive): Use channel_io_write.
+	(oop_read_stdout, oop_read_stderr): New functions.
+	(do_send_adjust): Use channel_io_start_read.
+	(do_eof): Send ^D if stdin is a pty. Call
+	channel_write_state_close if there's no buffered data. 
+	(do_exit_shell): Use channel_maybe_close.
+	(spawn_process): Rewrote i/o setup.
+	(x11_request_handler): #if:ed out x11 support for now.
+
+	* src/lshd.c (lshd_service_request_handler, lshd_packet_handler):
+	Use TRANSPORT_WRITE_FLAG_PUSH, not SSH_WRITE_FLAG_PUSH.
+
+	* src/lshd-connection.c (class connection): Inherit channel_table,
+	not resource.
+	(kill_connection): Check the alive flag, and don't call exit here.
+	(write_packet): Reintroduced connection argument. Use
+	KILL_RESOURCE on errors. Make sure the packet is deallocated.
+	(disconnect): Use KILL_RESOURCE, rather than exit.
+	(do_write_packet): This is now a method of the channel_table class.
+	(make_connection): Deleted exception_handler argument. Call
+	io_register_fd. Disabled pty support for now.
+	(do_exc_lshd_connection_handler): Deleted.
+
+	* src/lsh.c (class connection): Inherit channel_table, not resource.
+	(kill_connection): Check the alive flag, and don't call exit here.
+	(write_packet): Adapted to changes to ssh_write.c. Make sure the
+	packet is deallocated.
+	(do_write_packet): This is now a method of the channel_table class.
+	(make_connection): Deleted exception handler argument.
+	(fork_lsh_transport): Deleted exception handler argument. Don't
+	call io_set_nonblocking here.
+
+	* src/lsh-transport.c: Updated for changes to
+	transport_write.c/ssh_write.c.
+
+	* src/io.c: Deleted HAVE_POLL conditionals. #if:ed out most of the
+	old i/o code.
+	(global_oop_source, global_nfiles): Renamed, was source and
+	nfiles.
+	(io_register_fd, io_close_fd): New functions.
+	(io_init): Reverted back to returning void.
+
+	* src/client_pty.c (do_client_winch_handler): Use
+	CHANNEL_TABLE_WRITE, not A_WRITE.
+
+	* src/client_session.c (class client_session): Renamed, was
+	client_session_channel. Use channel_read_state and
+	channel_write_state instead of lsh_fd objects. 
+	(do_kill_client_session): New method.
+	(oop_write_stdout, oop_write_stderr): New functions.
+	(do_client_session_close): Deleted method.
+	(do_client_session_eof): Updated to use channel_write_state_close.	
+	(do_receive): Use channel_io_write.
+	(oop_read_stdin): New function.
+	(do_send_adjust): Use channel_io_start_read.
+	(command client_start_io): Rewritten.
+	(make_client_session_channel): Don't set up a close handler.
+	Rewritten i/o setup. Take fd:s rather than lsh_fd objects as
+	argument.
+
+	* src/client.c (do_exit_status, do_exit_signal): DEcrement the
+	sinks counter.
+	(class detach_callback): #if:ed out.
+	(make_client_start_session): Deleted wrapper function.
+	(client_maybe_pty): #if:ed out pty support for now.
+	(client_maybe_x11): #if:ed out x11 support for now.
+	(make_client_session): Adapted to changed make_client_session_channel.
+
+	* src/channel_commands.c: Use CHANNEL_TABLE_WRITE instead of
+	A_WRITE. Use CAST_SUBTYPE when casting to class channel_table.
+
+	* src/transport.c: Updated for changes to
+	transport_write.c/ssh_write.c.
+
+	* src/channel.c (format_open_failure, format_channel_success) 
+	(format_channel_failure): Made static.
+
+	* src/channel.h (enum channel_data_type): New enum.
+	(enum channel_flag): Use an enum to define the channel flags.
+	(CHANNEL_CLOSE_AT_EOF): Deleted.
+	(class ssh_channel): Inherit resource, not flow_controlled. New
+	attribute local_channel_number. Renamed channel_number to
+	remote_channel_number. Deleted resource list and close method.
+	New attribute sinks.
+	(class channel_table): Inherit resource. Changed attribute write
+	to a method. Deleted resource list. 
+	(CHANNEL_TABLE_WRITE): New method.
+
+	* src/channel.c (PROTOCOL_ERROR): Redefine macro (kind of kludgy).
+	(channel_pending_close, channel_finished): New functions, replacing the
+	EXC_FINISH_PENDING and EXC_FINISH_CHANNEL exceptions.
+	(format_global_failure, format_global_success) 
+	(format_open_confirmation, prepare_window_adjust): Made static.
+	(class exc_finish_channel_handler): Deleted.
+	(do_exc_finish_channel_handler, make_exc_finish_channel_handler):
+	Deleted.
+	(init_channel_table): Replaces make_channel_table. New arguments
+	write and kill.
+	(kill_channels): New function.
+	(use_channel): Removed argument local_channel_number.
+	(register_channel): Don't set up any exception handler. Initialize
+	channel->local_channel_number. 
+	(lookup_channel, lookup_channel_reserved): Added asserts.
+	(channel_adjust_rec_window): New function. Replaces
+	adjust_rec_window.
+	(channel_maybe_close): New function.
+	(handle_channel_eof, channel_eof): Use channel_maybe_close.
+	(handle_channel_close, handle_open_failure, channel_close): Use
+	channel_finished. 
+	(channel_transmit_data, channel_transmit_extended): Send the data,
+	rather than returning a formatted packet.
+
+	* src/channel_io.h, src/channel_io.c: New files.
+
+2005-09-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_write.c (make_transport_write_state): Initialize
+	ingore and threshold.
+	(select_write_size): New function, moved from ssh_write.c.
+	(update_status, write_data, write_flush): New functions, replacing
+	code in ssh_write.c.
+	(transport_write_packet, transport_write_line)
+	(transport_write_flush): Updated to changes in ssh_write_state. 
+
+	* src/transport.h (class transport_write_state): New attributes
+	threshold and ignore, moved from class ssh_write_state.
+	(enum transport_write_status): New status constants, replaces enum
+	ssh_write_status.
+	(enum transport_write_flag): New flags, replaces ssh_write_flag.
+
+	* src/ssh_write.c (init_ssh_write_state, make_ssh_write_state):
+	Deleted threshold argument.
+	(select_write_size): Moved to transport_write.c.
+	(ssh_write_flush): Return amount of data actually written rather
+	than buffered. New
+	argument to_write with the preferred write size.
+	(ssh_write_enqueue): Renamed and made non-static. Old name was enqueue.
+	(ssh_write_data): Rewritten, doesn't handle ignore packets. New
+	argument to_write, and returns amount of data actually written
+	rather than buffered.
+
+	* src/ssh_write.h (class ssh_write_state): Removed attributes
+	threshold and ignore (moved to class transport_write_state).
+	(enum ssh_write_status): Deleted.
+
+	* src/lsh_string.c (lsh_string_read): Loop on EINTR.
+
+2005-09-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/service_read.c (service_read_packet): Check if
+	self->packet_length is zero first. Fixes bug when reading small
+	packets.
+
+	* src/werror.c (werror_format): Made static. Don't write program
+	name.
+	(werror_hexdump): Use werror_format, to avoid redundant program
+	name output.
+	(werror_title): New function. Updated all users of werror_vformat
+	to use it.
+	(werror_vformat): Don't write program name. New specifier %T.
+	(packet_types): Include this generated array here, used for %T.
+
+2005-09-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c: Pass on --host-db option to lsh-transport.
+
+2005-09-07  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/functions.sh (run_lsh): For the time being, don't
+	use -z (it's not implemented at the server side).
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added arglist.h.
+
+	* src/lsh.c: Accept more options, which are passed on to the
+	lsh-transport program.
+
+	* src/lsh-transport.c: Use algorithms_argp, to accept algorithm
+	selection options.
+
+	* src/io.c (make_lsh_fd): Set neither the non-blocking nor the
+	close-on-exec flag on stdio file descriptors.
+	(io_init_fd): Made static, and removed argument.
+
+	* src/arglist.c, src/arglist.h: New files.
+
+	* src/testsuite/functions.sh: Use --background, not --daemon
+	--no-syslog, when starting lshd.
+
+	* src/ssh.h (SSH_DEFAULT_PORT): New constant.
+
+	* src/lshd.c: Option handling. Current options: -p, -h,
+	--daemonic, --background, --enable-core and --pid-file. Handle
+	SIGHUP. 
+
+	* src/testsuite/functions.sh: Fixed typo in definition of
+	LSH_TRANSPORT and friends.
+
+2005-09-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (oop_read_service): Adapted to channel_packet_handler
+	changes. 
+	* src/lshd-connection.c (oop_read_service): Likewise.
+
+	* src/channel.c (channel_packet_handler): Return 1 for success, or
+	zero if message type is unimplemented. Take length and pointer as
+	arguments, not a struct lsh_string *. All called functions
+	(handle_global_request, etc) changed to take a struct
+	simple_buffer * as argument, and made static.
+
+2005-09-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-connection.c (blocking_writev): New function.
+	(write_packet): Use blocking_writev, instead of the ssh_write
+	class.
+	(class connection): Deleted attribute writer.
+	(class connection_write): Deleted class.
+	(make_connection_write_handler): Deleted function.
+	(disconnect): Deleted connection argument.
+	(do_exc_lshd_connection_handler): New function.
+	(lshd_connection_exception_handler): New static object.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed some files:
+	client_userauth.c, connection_commands.c, debug.c,
+	gateway_commands.c, io_commands.c, read_packet.c, socks.c,
+	tcpforward.c, tcpforward_commands.c, and write_packet.c.
+
+	* src/lsh.c: Don't include io.h, io_commands.h and handshake.h.
+
+	* src/lsh-decrypt-key.c: Include io.h, not io_commands.h.
+	* src/lsh-writekey.c: Likewise.
+
+	* src/dh_exchange.c: Include keyexchange.h, not connection.h.
+
+	* src/command.c: Don't include connection.h.
+	* src/keyexchange.c: Likewise.
+	* src/server_pty.c: Likewise.
+
+	* src/client.c: Don't include connection.h. 
+	(client_argp_parser): Ifed out tcp-forward handling.
+
+	* src/channel.c (make_channel_table): Take an exception handler argument.
+
+	* src/testsuite/functions.sh: Set and export LSH_TRANSPORT,
+	LSHD_CONNECTION and LSHD_USERAUTH.
+
+	* src/Makefile.am (bin_PROGRAMS): Reenable building of the lsh binary.
+
+	* src/lsh.c (class connection): New class.
+	(class lsh_options): Deleted most options.
+	(read_known_hosts, read_user_keys, do_lsh_lookup,
+	make_lsh_host_db, make_lsh_login, make_lsh_connect): Deleted
+	functions that have moved to lsh-transport.
+	(class lsh_host_db): Deleted class.
+	(main_options): Ifed out unimplemented options.
+	(main_argp_parser): Likewise.
+	(transport_exit_callback, make_transport_exit_callback): New
+	functions.
+	(fork_lsh_transport): New function.
+	(main): Call fork_lsh_transport.
+
+	* src/lshd-userauth.c (main): Bugfix: Use LSHD_CONNECTION, not
+	LSHD_USERAUTH.
+
+	* src/lsh-transport.c (lsh_connect): New verbose messages.
+
+	* src/client.c (format_service_request, do_accept_service) 
+	(make_accept_service_handler, do_request_service) 
+	(make_request_service): Deleted obsolete functions.
+	(class accept_service_handler): Deleted.
+	(client_options): Ifed out unimplemented flags.
+	(client_argp_parser): Likewise.
+
+2005-08-31  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (read_host_acls): Use GET_FILE_ENV.
+	* src/lshd-userauth.c (main): Likewise.
+	* src/lshd.c (make_configuration): Likewise.
+
+	* src/environ.h.in (ENV_LSH_TRANSPORT, ENV_LSHD_CONNECTION) 
+	(ENV_LSHD_USERAUTH): New environment variables.
+	(GET_FILE_ENV): New macro.
+	(PATH_EXECUV): Deleted. Other PATH_* names renamed to FILE_*.
+	(FILE_LSHD_CONNECTION, FILE_LSHD_USERAUTH, FILE_LSH_TRANSPORT):
+	New filenames.
+
+2005-08-31  Niels Möller  <niels@s3.kth.se>
+
+	* src/io.c (lsh_copy_file): Deleted unused function.
+
+2005-08-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.h: Deleted file.
+
+	* src/transport.h (class transport_connection): New attribute
+	write_margin.
+
+	* src/transport.c (init_transport_connection): Initialize write_margin.
+	(transport_connection_kill): Renamed function. Was transport_kill.
+	(transport_write_almost_full): New function.
+	(transport_start_write): Use transport_write_almost_full.
+	(transport_stop_write): Likewise.
+	(transport_send_packet): Slight simplification, using local
+	variable writer.
+	(transport_send_kexinit): Generating
+	TRANSPORT_EVENT_STOP_APPLICATION, not
+	TRANSPORT_EVENT_START_APPLICATION.
+
+	* src/ssh.h (SSH_MAX_TRANSPORT_RESPONSE): New constant.
+
+	* src/lsh-transport.c: Use transport_forward.c. Deleted old code
+	for communicating with the service layer.
+	* src/lshd.c: Likewise.
+
+	* src/lsh-decode-key.c: Include parse.h.
+
+	* src/Makefile.am (lshd_SOURCES, lsh_transport_SOURCES): Added
+	transport_forward.c.
+
+	* src/transport_forward.c: New file, implementing the forwarding
+	of cleartext messages needed by lshd and lsh-transport.
+	* src/transport_forward.h: New file.
+
+2005-04-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/abstract_crypto.c, src/abstract_crypto.h,
+	src/publickey_crypto.c, src/publickey_crypto.h: Deleted files.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed abstract_crypto.c
+	and publickey_crypto.c.
+	(bin_PROGRAMS): For the time being, don't build lsh, lshg or
+	srp-gen. 
+
+	* src/crypto.c: Moved utility functions here, from abstract_crypto.c.
+
+	* src/crypto.h: Moved declarations here, from abstract_crypto.h
+	and publickey_crypto.h. Updated all users.
+
+	* src/werror.c (die): New function.
+
+	* src/ssh_write.c (enqueue): Fixed bug in SSH_WRITE_FLAG_IGNORE
+	handling.
+
+	* src/lshd.c (oop_read_service): Do only a single read call.
+
+	* src/lshd-userauth.c (write_packet): Use write_raw.
+	(die): Deleted function, moved to werror.c.
+
+	* src/lsh-transport.c (lsh_transport_event_handler): When handling
+	TRANSPORT_EVENT_PUSH, check that service_writer is non-NULL.
+	(make_lsh_transport_connection): Initialize service_reader and
+	service_writer to NULL.
+	(oop_read_service, oop_write_service): New functions.
+	(lsh_transport_service_start_read) 
+	(lsh_transport_service_stop_read) 
+	(lsh_transport_service_start_write) 
+	(lsh_transport_service_stop_write): Implemented.
+	(lsh_transport_packet_handler): Verbose message for
+	USERAUTH_SUCCESS. Don't try to display the message list for
+	USERAUTH_FAILURE.
+	(start_service): Initialize service_reader and service_writer, and
+	start reading.
+	(lsh_transport_lookup_verifier): Fixed handling of capture_fd.
+
+2005-04-29  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c (lsh_transport_packet_handler): Fixed
+	handling of SERVICE_ACCEPT. Handle USERAUTH_SUCCESS and
+	USERAUTH_FAILURE. 
+	(start_userauth): Try publickey authentication.
+	(read_user_key): New function, based on lsh.c:read_user_keys.
+	(main_argp_parser): Call read_user_key.
+
+2005-04-28  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c (enum lsh_transport_state): New type.
+	(class lsh_transport_connection): New attribute state.
+	(lsh_transport_event_handler): Send a service request after
+	keyexchange is complete.
+	(lsh_transport_packet_handler): Handle SSH_MSG_SERVICE_ACCEPT.
+	(main_options): New options --userauth and --no-userauth.
+
+2005-04-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (lsh_transport_lookup_verifier)
+	(make_lsh_transport_lookup_verifier): Host db handling, mostly
+	copied from lsh.c.
+
+	* src/io.c (write_raw): Return an integer success indication, not
+	an exception. Updated all callers.
+
+	* src/abstract_crypto.c (hash_string_l): New function.
+
+	* src/client_keyexchange.h: Deleted.
+	* src/transport_read.h: Deleted.
+
+	* src/Makefile.am (lsh_transport_SOURCES): Added client_keyexchange.c.
+	(liblsh_a_SOURCES): Deleted lookup_verifier.c.
+
+	* src/server_keyexchange.c (server_dh_init): Adapted to new
+	keyexchange_algorithm interface.
+	* src/transport.c (transport_kexinit_handler): Likewise.
+
+	* src/io.c (io_set_blocking): Deleted again.
+
+	* src/lshd-connection.c (oop_read_service): Do only a single read
+	call. Then we can keep the fd in blocking-mode at all times.
+
+	* src/lsh-transport.c: Reorganized to use transport_connection.
+
+	* src/lookup_verifier.c, src/lookup_verifier.h: Deleted files.
+	Moved declaration to keyexchange.c.
+
+	* src/keyexchange.h (class keyexchange_algorithm): Changed init
+	method to take a transport connection as argument.
+	(class lookup_verifier): Moved here, from lookup_verifier.h.
+
+	* src/client_keyexchange.c: Rewritten, to work with the new
+	transport layer.
+
+2005-04-26  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd-connection.c: Use service_read_state interface.
+	(make_connection): Set stdin into non-blocking mode, and use
+	atexit to restore it.
+
+	* src/io.c (io_set_blocking): Reintroduced function. Used by
+	lshd-connection.
+
+2005-04-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (oop_read_service, lshd_service_start_read) 
+	(lshd_service_stop_read): New functions, using the
+	service_read_state interface.
+	(oop_write_service): New function, replacing lshd_service_read_handler.
+	(lshd_service_request_handler): Set service pipe into non-blocking mode.
+
+	* src/lshd.h (class lshd_connection): New attributes
+	service_read_active and service_write_active. Use
+	service_read_state, not lshd_service_read_state.
+
+	* src/server_keyexchange.c (server_dh_handler): Pass zero flags to
+	transport_send_packet.
+
+	* src/transport.c (init_transport_connection): Allocate
+	read_packet.
+	(oop_timer_retry): New function.
+	(transport_start_read): Use oop_timer_retry to implement retrying.
+	(transport_write_pending): Split into two functions, ...
+	(transport_start_write, transport_stop_write): ... new functions.
+	(transport_send_packet): New argument flags. Let a NULL packet
+	imply a push of buffered data. Updated callers.
+
+	* src/transport.h (class transport_connection): Renamed
+	write_pending to write_active.
+
+	* src/ssh_write.c (ssh_write_available): New function.
+
+	* src/service_read.c: New file. Reads the service protocol using
+	an interface similar to transport_read.
+
+2005-04-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_read.c (class transport_read_state): New attribute
+	read_status. Deleted output_buffer.
+	(readable_p): New function.
+	(read_some): Determine if the read data needs to be pushed, and
+	storing this information in read_status.
+	(find_line, transport_read_line, decode_packet) 
+	(transport_read_packet): Changed return type to enum
+	transport_read_status.
+
+	* src/transport.c (transport_process_packet): New function,
+	extracted from...
+	(oop_read_ssh): ... Call transport_process_packet. Check return
+	value, on zero, prepare for retrying the packet later.
+
+	* src/transport.h (TRANSPORT_EVENT_PUSH): New event type.
+	(enum transport_read_status): Return type from transport read
+	calls.
+	(class transport_connection): New attributes read_buffer,
+	retry_length and retry_seqno. Changed packet_handler method to
+	return an int.
+
+2005-04-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport.h (class transport_write_state): Moved declaration
+	here. 
+	(transport_connection): New attribute read_active.
+
+	* src/transport.c (transport_start_read, transport_stop_read): New
+	functions.
+	(oop_write_ssh): Updated to new ssh_write_state interface.
+	(transport_handshake): Likewise.
+
+	* src/transport_write.c: Updated to new ssh_write_state interface.
+	(make_ignore_packet): New function.
+	(transport_write_packet): Generate SSH_MSG_IGNORE packets.
+	(transport_write_flush): Likewise.
+
+	* src/ssh_write.c: Rewritten. Now uses a hard limit on buffer
+	size, supports ignore-data, and a better push mechanism.
+
+	* src/lshd.c (lshd_event_handler): Implemented flow control.
+	(lshd_line_handler): Fixed format string for verbose output.
+	(lshd_service_handler): Updated to new ssh_write_state interface.
+	(lshd_service_request_handler): Likewise.
+	(make_configuration): Use make_server_dh_exchange and
+	make_dh_group14.
+	(SERVICE_WRITE_THRESHOLD, SERVICE_WRITE_BUFFER_SIZE): New constants.
+
+	* src/lshd-connection.c (CONNECTION_WRITE_THRESHOLD) 
+	(CONNECTION_WRITE_BUFFER_SIZE): New constants.
+	(write_packet): Updated to new ssh_write_state interface.
+	(make_connection): Likewise.
+
+	* src/server_keyexchange.c (server_dh_exchange): dh_params is a
+	class, not a struct.
+	(make_server_dh_exchange): Take a dh_params object as argument.
+	(make_server_dh_group1_sha1, make_server_dh_group14_sha1): Deleted
+	functions.
+
+	* src/dh_exchange.c (make_dh_params): Replaces init_dh_params.
+	(make_dh_group1): Replaces init_dh_group1.
+	(make_dh_group14): Replaces init_dh_group14.
+
+	* src/publickey_crypto.h (class dh_params): Should be a class, not
+	a struct.
+
+2005-04-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (kill_lshd_connection): Use transport_kill.
+	(lshd_event_handler): Enable service when receiving a
+	TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE event. Return 0 for all
+	events. 
+
+2005-04-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_read.c (make_transport_read_state): More thorough
+	initialization. 
+	(decode_packet): Update seqno properly.
+
+	* src/transport.h (class transport_connection): Event handler
+	method now returns an int.
+
+	* src/transport.c (transport_kill): New function.
+	(transport_close): Reorganized close handling. Book-keeping for buffers
+	to drain should be more sane now.
+	(oop_read_ssh): Pass on messages in the 0-19 range to the
+	application, including SERVICE_REQUEST and SERVICE_ACCEPT.
+	(transport_write_pending): New close logic.
+
+	* src/ssh.h (SSH_FIRST_KEYEXCHANGE_GENERIC): New constant.
+
+2005-04-20  Niels Möller  <niels@s3.kth.se>
+
+	* src/transport.c (packet_types): Table of packet type names.
+	(transport_kexinit_handler): The KEYEXCHANGE_INIT method takes a
+	randomness generator as the second argument. Disconnect if the
+	method returns NULL.
+	(oop_read_ssh): More debug messages. Call reset_kexinit_state when
+	handling NEWKEYS.
+	(transport_keyexchange_finish): Set kex state to
+	KEX_STATE_NEWKEYS.
+
+	* src/lshd.c (packet_types): Deleted table, moved to transport.c.
+
+	* src/kexinit.c, src/kexinit.h, src/kexinit_state.c: Deleted
+	files. 
+
+	* src/server_keyexchange.c (server_dh_handler): Fixed
+	diffie-hellman bug. Debug messages with session key and exchange
+	hash.
+
+	* src/lshd.h: Deleted unused declarations.
+
+	* src/lshd.c (make_configuration): Use
+	make_server_dh_group14_sha1.
+
+2005-04-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_write.c (transport_write_packet): Assert that
+	packet is non-empty.
+
+	* src/transport_read.c (find_line): Fixed off-by-one type.
+	(transport_read_packet): Fixed parsing of packet header.
+
+	* src/transport.c (class transport_timeout): New class.
+	(transport_timeout, transport_timeout_close): New functions.
+	(transport_close): New function.
+	(transport_kexinit_handler): New function.
+	(transport_timeout_reexchange, transport_timeout_keyexchange): New
+	functions.
+	(oop_read_ssh): Bug fixes.
+	(transport_write_pending): Generate events, depending on
+	kex.write_state.
+	(transport_send_kexinit): Implemented timeouts, tracking of the
+	write state, and partial support for sending a speculative first
+	keyexchange packet.
+	(transport_keyexchange_finish): New function.
+	(transport_handshake): New function.
+
+	* src/ssh_write.c (ssh_write_flush): Bugfixes for the cases that
+	the buffer is empty or is emtied.
+	(ssh_write_data): Fixed update of the total size.
+
+	* src/lshd.c: Updated to work with new transport code. Keyexchange
+	interface is incomplete.
+
+	* src/lsh_string.c (lsh_string_move): Typo fix.
+
+	* src/Makefile.am (lshd_SOURCES): Added server_keyexchange.c.
+	(liblsh_a_SOURCES): Removed some files that don't compile at the
+	moment.
+
+	* src/dh_exchange.c: Reorganized, to fit with new transport code.
+	Server-specific code moved to server_keyexchange; the same should
+	be done tot he client-specific code, but that's not done yet.
+
+	* src/publickey_crypto.h (class zn_group): Deleted, together with
+	the corresponding functions.
+	(struct dh_params): New struct, replacing the dh_method class.
+	(struct dh_state): New struct, replacing the dh_instance class.
+	
+	* src/keyexchange.c: Reorganized to fit with new transport code.
+	Moved code here from kexinit_state. Deleted code dealing with
+	timeouts. 
+
+	* src/server_keyexchange.c: Rewrote diffie-hellman key exchange.
+	Deleted SRP support.
+
+2005-04-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (lshd_SOURCES, lsh_transport_SOURCES): Added
+	transport.c and transport_write.c.
+
+	* src/lsh_string.h (lsh_string_move): Fixed typo in declaration.
+
+2005-04-18  Niels Möller  <niels@s3.kth.se>
+
+	* src/transport_read.c: Rewritten to not use ssh_read.
+
+	* src/ssh_write.h (class ssh_write_state): New attribute size,
+	with the total amount of buffered data.
+
+	* src/ssh_write.c (ssh_write_flush): New function, which doesn't
+	know about liboop.
+	(ssh_write_data): Call ssh_write_flush.
+
+	* src/transport_write.c: New file.
+
+2005-04-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh_string.c (lsh_string_move): New function.
+
+	* src/ssh.h (SSH_MAX_LINE): New constant.
+
+2005-04-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (bin_PROGRAMS): Added lsh-transport.
+	(lsh_transport_SOURCES): New variable.
+
+	* src/lsh-transport.c: Rough outline. Compiles, connects, and
+	doesn't do much more.
+
+	* src/server_authorization.c, src/server_authorization.h,
+	src/server_keyexchange.c, src/server_keyexchange.h,
+	src/server_password.c, src/server_publickey.c,
+	src/server_userauth.c, src/server_userauth.h, src/unix_user.c,
+	src/userauth.c, src/userauth.h: Deleted files.
+
+	* src/unix_process.c (spawn_parent): Use make_logout_notice,
+	to make sure that we don't try to send signals to children that
+	have been reaped.
+
+	* src/Makefile.am (lshd_SOURCES): Added transport_read.c.
+
+	* src/lshd.c (lshd_service_handler, lshd_service_request_handler):
+	Use plain functions, not packet_handler objects.
+	* src/lshd_keyexchange.c (lshd_kexinit_handler): Likewise.
+
+	* src/lshd.h (DEFINE_PACKET_HANDLER): Deleted macro.
+
+	* src/lshd-connection.c (write_packet): Don't call fatal on read errors.
+	(class connection_read_state): New class. Adapted to new
+	ssh_read interface.
+
+	* src/lshd_keyexchange.c (lshd_newkeys_handler): Install new keys
+	in the transport_read_state object.
+
+	* src/lshd.c: Updated to use new transport_read_state class.
+	(class lshd_read_error): Deleted class.
+
+	* src/lshd.h (class lshd_read_state): Inherit transport_read_state.
+	(class lshd_read_handler): Deleted class.
+	(class lshd_service_read_state): New class.
+	(class lshd_connection): Deleted attributes rec_max_packet,
+	rec_mac, rec_crypto and rec_compress, they're now in the
+	transport_read_state class. Changed type of service_reader to
+	lshd_service_read_state. 
+
+	* src/transport_read.h: New file.
+	(class transport_read_state): New class.
+
+	* src/transport_read.c: New file. Code moved from lshd_read.c
+
+	* src/ssh_read.h (error_callback): Deleted class.
+	(class ssh_read_state): Renamed process method to process_header.
+	Renamed handler to handle_data, error to io_error, and made them
+	methods of this class.
+	* src/ssh_read.c: Corresponding updates.
+	* src/service_read.c (service_process_header): Updated for
+	io_error rename.
+
+2005-04-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c: New file.
+
+	* src/ssh.h (SSH_DISCONNECT_RESERVED): Deleted.
+
+	* src/server_pty.c (pty_open_master): Removed #else.
+
+	* src/lshd.c (connection_write_data, lshd_service_handler): Better
+	error handlign when write fails.
+
+	* src/exception.c (make_protocol_exception): Don't refer to
+	SSH_DISCONNECT_RESERVED.
+
+2005-04-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Deleted obsolete files
+	server_authorization.c server_keyexchange.c, server_password.c
+	server_publickey.c, server_userauth.c, unix_user.c, and
+	userauth.c.
+
+	* src/unix_process.c: #if:ed out all utmp/wtmp code, since it
+	can't work without extra privileges.
+	(exec_shell, spawn_shell): New functions, replacing the obsolete
+	USER_SPAWN method.
+	
+	* src/server_x11.c (class server_x11_socket): Deleted uid
+	attribute.
+	(delete_x11_socket): Deleted function, folded into...
+	(do_kill_x11_socket): ... deleted uid-changing code.
+	(server_x11_listen) Deleted function responsible for uid changes.
+	open_x11_socket is sufficient.
+	(server_x11_setup): Deleted user argument. Use the display number
+	instead of the user name when forming the name of the Xauthority
+	file. Use the new function spawn_shell.
+
+	* src/server_session.c (spawn_process): Deleted user argument. Use
+	spawn_shell.
+	(spawn_process): Deleted support for peer.
+	(do_spawn_subsystem, shell_request_handler, exec_request_handler):
+	Updated to new spawn_shell conventions.
+	(pty_request_handler): Updated to new pty_open_master. Use
+	DEFINE_CHANNEL_REQUEST.
+	(x11_request_handler): Updated to new server_x11_setup. Use
+	DEFINE_CHANNEL_REQUEST.
+
+	* src/server_pty.c (pty_check_permissions, pty_grantpt_uid):
+	Deleted functions.
+	(pty_open_master): Deleted pty support for systems lacking UNIX98
+	pty:s. Deleted uid argument.
+
+	* src/reaper.c: Deleted the object-oriented interface.
+	(reaper_global): New global variable.
+	(reaper_init, reaper_handle): New functions.
+
+	* src/reaper.h (class reaper): Deleted.
+
+	* src/lshd.c: Friendlier error messages if initialization fails.
+
+	* src/lshd-connection.c (main): Call reaper_init.
+	(make_connection): Support for pty-req and x11-req.
+
+	* src/client_userauth.h: Don't include userauth.h.
+
+	* src/lookup_verifier.h (LOOKUP_VERIFIER): Deleted argument for
+	the key holder.
+
+	* src/lsh.h (struct lsh_user): Deleted declaration.
+
+	* src/lsh_process.h: New file.
+
+	* configure.ac: Warn if UNIX98 pty:s are unavailable.
+
+2005-02-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_session.c (shell_request_handler): Added trace output.
+
+	* src/lshd-userauth.c (main): Use argp for options parsing.
+	* src/lshd.c (main): Likewise.
+
+	* src/lshd-connection.c (write_packet): New function.
+	(disconnect): New function.
+	(read_handler): Implemented. Ignores userauth messages, and uses
+	channel_packet_handler. 
+	(write_handler): Use write_packet.
+	(make_connection): Make "session" a recognized channel type, and
+	"shell" a recognized channel request type.
+
+2005-02-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c (make_channel_table): Initialize self->resources.
+	(handle_channel_open): More debug output.
+	(channel_packet_handler): New function.
+
+2005-02-17  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd-connection.c: Implemented reading and writing of
+	packets for the ssh-connection service.
+
+	* src/service_read.c (service_process_header): New file and
+	function. Used to be lshd.c:lshd_process_service_header.
+
+	* src/lshd.h (lshd_read_state): Include a connection attribute.
+
+	* src/lshd_read.c (lshd_process_ssh_header): Deleted class.
+	(lshd_process_ssh_header): This function nowacts as a method for
+	the lshd_read_state class.
+
+	* src/ssh_read.h (class header_callback): Deleted. Instead, use a
+	method on the ssh_read_state class._
+
+	* src/handshake.c (init_connection_service): Pass a dummy argument
+	to make_channel_table.
+
+	* src/channel.c (make_channel_table): New argument write, saying
+	where to output ssh messages. For now, initialize the exception
+	handler to NULL.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Moved ssh_read.c and
+	ssh_write.c here.
+
+2005-02-16  Niels Möller  <niels@s3.kth.se>
+
+	* src/handshake.c (init_connection_service): Moved function here,
+	from channel.h. It doesn't really belong here, though.
+
+	* src/connection.h (ssh_connection): Removed attributes that have
+	been moved to the kexinit_state class.
+
+	* src/channel.h, src/channel.c: Purged dependence on
+	ssh_connection. Updated all users.
+
+2005-02-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (sbin_PROGRAMS): Added lshd-connection.
+
+	* src/lshd-connection.c: New file.
+
+	* src/lshd-userauth.c: Use the session-id provided by the
+	transport layer. Implemented the rest of publickey authentication.
+
+	* src/lshd.c (lshd_service_request_handler): Pass --session-id
+	option to child process.
+
+2005-02-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd-userauth.c (start_service): New function.
+	(service_error): New function.
+	(get_verifier): Implemented, except for the actual signature
+	verification.
+
+	* src/dsa.c (make_ssh_dss_verifier): Take length and pointer as
+	arguments, not a struct lsh_string *. Updated callers.
+	* src/rsa.c (make_ssh_rsa_verifier): Likewise.
+
+	* src/lshd-userauth.c: Implemented user lookup, and part of
+	publickey authentication.
+
+	* src/werror.c (werror_vformat): Call werror_flush here. Removed
+	corresponding calls from users of werror_vformat.
+
+	* src/Makefile.am (sbin_PROGRAMS): Added lshd-userauth.
+
+	* src/lshd-userauth.c: New file.
+
+	* src/lshd.c (lshd_service_handler): Don't free the packet.
+	(lshd_service_request_handler): Send a SERVICE_ACCEPT reply. 
+
+2005-02-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (connection_write_data): Use ssh_write_data. Proper
+	error handling still missing.
+	(lshd_process_service_header): New function and class.
+	(lshd_service_read_handler, make_lshd_service_read_handler): New functions.
+	(lshd_service_request_handler): Setup i/o with service process.
+	(lshd_handshake): Call ssh_read_start.
+
+	* src/lshd.h (class lshd_connection): New attributes: writer,
+	service_reader and service_writer.
+
+	* src/ssh_read.c (ssh_read_set_callback, ssh_read_stop) 
+	(ssh_read_start): New functions, to make it possible to stop and
+	restart reading. Use them through out the code.
+
+	* src/lshd.h, src/lshd_read.c, src/lshd_keyexchange.c: New file.
+
+2005-02-14  Niels Möller  <niels@s3.kth.se>
+
+	* src/Makefile.am (lshd_SOURCES): Added ssh_write.c.
+
+	* src/ssh_write.h, src/ssh_write.c: New files.
+
+	* src/queue.h (FOR_OBJECT_QUEUE): Check for end of queue *before*
+	casting the node to struct object_queue_node.
+	(FOR_STRING_QUEUE): New macro.
+
+2005-02-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (lshd_service_request_handler): New handler. Almost
+	implemented handling of service requests.
+
+2005-02-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/ssh_read.c (oop_ssh_read_packet): When a packet is finished,
+	register a callback for reading the next header. Replaced use of
+	the exception facility with a simpler error_callback.
+
+	* src/server.c (read_host_key): Deleted support for spki keys.
+	Also #if:ed out everything but this function.
+
+	* src/lshd.c (connection_write_data): Primitive function for
+	sending ssh messages over the network.
+	(connection_write_packet, connection_disconnect): New functions.
+	(lshd_handle_ssh_packet): Handle all messages (except
+	SERVICE_REQUEST) needed for the transport protocol.
+	(make_configuration): New function.
+
+	* src/lsh.c (main_argp_parser): Deleted support for the name
+	diffie-hellman-group2-sha1. 
+
+	* src/connection.c, src/connection.h: Use kexinit_state.
+	* src/handshake.c: Likewise.
+
+	* src/dh_exchange.c (init_dh_instance): Take a kexinit_state as
+	argument, instead of an ssh_connection. Updated callers.
+
+	* src/format.c (format_disconnect, format_unimplemented) 
+	(format_newkeys): Moved these trivial functions here, for lack of
+	a better place.
+
+	* src/atoms.in (diffie-hellman-group2-sha1): Deleted obsolete name.
+
+	* src/algorithms.c (algorithms_argp_parser): Use default_hostkey_algorithms.
+	(default_hostkey_algorithms): New function. Disabled spki support.
+	(default_compression_algorithms, default_mac_algorithms) 
+	(default_crypto_algorithms): Made non-static.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added encrypt.c, kexinit.c
+	and kexinit_state.c.
+	(lshd_SOURCES): Added lshd_read.c lshd_keyexchange.c.
+
+	* src/encrypt.c (encrypt_packet): New file. Function extracted
+	from write_packet.
+	* src/write_packet.c (do_write_packet): Use encrypt_packet.
+
+	* src/kexinit.h, src/kexinit.c, src/kexinit_state.c: New files.
+	Moved code here, that is independent from ssh_connection, from...
+	* src/keyexchange.c.
+	* src/kexinit.h (kexinit_state): New struct.
+
+2005-02-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (lshd_read_state): New class. Moved definition super
+	class ssh_read_state to ssh_read.h and ssh_read.c.
+
+	* src/exception.h (PROTOCOL_ERROR_DISCONNECT): New macro.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed oop-line-file.c.
+	(lshd_SOURCES): Include ssh_read.c.
+
+	* src/ssh_read.c, src/ssh_read.h: New files.
+
+2005-02-03  Niels Möller  <niels@s3.kth.se>
+
+	* src/resource.c (resource_list_is_empty): New function.
+
+	* src/io.c (io_init): Return the oop source. Also moved
+	the inclusion of oop.h from io.c to io.h.
+
+	* src/exception.h (PROTOCOL_ERROR): Use a static exception object.
+
+2005-02-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added oop-line-file.c.
+
+	* src/oop-line.h: Line reading interface, based on liboop.
+	* src/oop-line-file.c: Implementation of the interface.
+
+2006-05-16  Niels Möller  <nisse@lysator.liu.se>
+	* Merged experimental branch. Below changes are from the mainline.
+
 2006-05-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version number to 2.0.4.

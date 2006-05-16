@@ -98,7 +98,9 @@ make_escape_info(uint8_t escape)
   return self;
 }
 
-/* GABA:
+#if 0
+
+/* ;; GABA:
    (class
      (name escape_handler)
      (super abstract_write_pipe)
@@ -160,11 +162,6 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   uint32_t done;
   uint32_t length;
   const uint8_t *data;
-
-#if 0
-  trace("do_escape_handler: state = %i, packet length = %i\n",
-        self->state, packet->length);
-#endif
   
   if (!packet)
     {
@@ -288,3 +285,4 @@ make_handle_escape(struct escape_info *info, struct abstract_write *next)
   
   return &self->super.super;
 }
+#endif

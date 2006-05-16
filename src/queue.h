@@ -111,17 +111,22 @@ void object_queue_kill(struct object_queue *q);
 struct object_list *queue_to_list(struct object_queue *q);
 struct object_list *queue_to_list_and_kill(struct object_queue *q);
 
-#define FOR_OBJECT_QUEUE(oq, n)				\
+/* NOTE: Exits the loop prematurely if any of the objects is NULL. */
+/* We have to be careful, to not make execute the cast and reference
+
+     ((struct object_queue_node *) n##_this)->o
+
+   when we're exititing the loop, and the cast is invalid. */
+#define FOR_OBJECT_QUEUE(oq, n)					\
   struct lsh_queue_node *n##_this, *n##_next;			\
   struct lsh_object *n;						\
   for ( n##_this = (oq)->q.ht_links[LSH_QUEUE_HEAD];		\
-	( n = ((struct object_queue_node *) n##_this)->o,	\
-	  (n##_next = n##_this->np_links[LSH_QUEUE_NEXT]));	\
+	(n##_next = n##_this->np_links[LSH_QUEUE_NEXT])		\
+          && (n = ((struct object_queue_node *) n##_this)->o);	\
 	n##_this = n##_next)
 
 /* NOTE: You should probably use break or perhaps continue after
  * removing the current node. */
-/* FIXME: This name is rather ugly. */
 
 #define FOR_OBJECT_QUEUE_REMOVE(self, n) \
 do { (self)->q.length--; lsh_queue_remove(n##_this); } while(0)
@@ -151,6 +156,16 @@ struct lsh_string *string_queue_remove_tail(struct string_queue *q);
 
 struct lsh_string *string_queue_peek_head(struct string_queue *q);
 struct lsh_string *string_queue_peek_tail(struct string_queue *q);
+
+/* NOTE: Exits the loop prematurely if any of the objects is NULL. */
+#define FOR_STRING_QUEUE(sq, var)					\
+  struct lsh_queue_node *var##_node;					\
+  struct lsh_string *var;						\
+  for ( var##_node = (sq)->q.ht_links[LSH_QUEUE_HEAD];			\
+        var##_node->np_links[LSH_QUEUE_NEXT]				\
+	  && (var = ((struct string_queue_node *)var##_node)->s);	\
+        var##_node = var##_node->np_links[LSH_QUEUE_NEXT])
+
 
 /* addr_queue */
 struct addr_queue_node

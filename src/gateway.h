@@ -21,12 +21,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef GATEWAY_H_INCLUDED
-#define GATEWAY_H_INCLUDED
-
-/* FIXME: Do we really need this file? */
+#ifndef LSH_GATEWAY_H_INCLUDED
+#define LSH_GATEWAY_H_INCLUDED
 
 #include "lsh.h"
+
+#include "connection.h"
+
+#define GABA_DECLARE
+#include "gateway.h.x"
+#undef GABA_DECLARE
 
 /* Formats the address of the local gateway socket. */
 
@@ -34,4 +38,25 @@ struct local_info *
 make_gateway_address(const char *local_user, const char *remote_user,
 		     const char *target);
 
-#endif /* GATEWAY_H_INCLUDED */
+/* Keeps track of one connection to the gateway. */
+
+/* GABA:
+   (class
+     (name gateway_connection)
+     (super ssh_connection)
+     (vars
+       (shared object ssh_connection)
+       (fd . int)
+       (reader object service_read_state)
+       (writer object ssh_write_state)))
+*/
+
+struct gateway_connection *
+make_gateway_connection(struct ssh_connection *shared, int fd);
+
+int
+gateway_packet_handler(struct gateway_connection *connection,
+		       uint32_t length, const uint8_t *packet);
+
+
+#endif /* LSH_GATEWAY_H_INCLUDED */

@@ -25,12 +25,47 @@
 #define LSH_SERVER_H_INCLUDED
 
 #include "alist.h"
+#include "server_config.h"
+#include "werror.h"
 
-struct command *make_offer_service(struct alist *services);
+#define GABA_DECLARE
+#include "server.h.x"
+#undef GABA_DECLARE
 
 int
 read_host_key(const char *file,
               struct alist *signature_algorithms,
               struct alist *keys);
 
+const char *
+server_lookup_module(const char **modules,
+		     uint32_t length, const uint8_t *name);
+
+/* GABA:
+   (class
+     (name server_config)
+     (super werror_config)
+     (vars
+       (parser . "const struct config_parser *")
+       (default_file . "const char *")
+       (env_variable . "const char *")
+       
+       (config_file . "const char *")
+       (use_example . int)))
+*/
+
+void
+init_server_config(struct server_config *self,
+		   const struct config_parser *parser,
+		   const char *default_file,			
+		   const char *env_variable);
+
+struct server_config *
+make_server_config(const struct config_parser *parser,
+		   const char *default_file,			
+		   const char *env_variable);
+
+extern const struct argp server_argp;
+
 #endif /* LSH_SERVER_H_INCLUDED */
+

@@ -15,11 +15,11 @@ werror "Testing lshd"
 spawn_lshd
 
 for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
-    werror "Testing $f"
-    tcpconnect $INTERFACE $PORT < "$f" > /dev/null \
-	|| die "Connect failed"
+    # werror "Testing $f"
+    tcpconnect localhost $PORT < "$f" > /dev/null \
+	|| die "Connect failed, test $f"
 
-    kill -0 `cat $PIDFILE` || die "Server died"
+    kill -0 `cat $PIDFILE` || die "Server died, test $f"
 done
 
 werror "Test done"

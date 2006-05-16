@@ -2,7 +2,6 @@
  *
  * Traditional O_EXCL-style file locking.
  *
- * $id:$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -28,6 +27,7 @@
 #include "config.h"
 #endif
 
+/* FIXME: It's probably better to use fcntl style file locking. */
 #include <errno.h>
 
 #if HAVE_UNISTD_H

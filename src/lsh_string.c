@@ -46,7 +46,7 @@
 
 #include "lsh_string.h"
 
-#include "abstract_crypto.h"
+#include "crypto.h"
 #include "randomness.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -94,6 +94,175 @@ lsh_string_random(struct randomness *r, uint32_t length)
   return s;
 }
 
+/* FIXME: Inefficient allocate-copy-free implementation */
+struct lsh_string *
+lsh_string_realloc(struct lsh_string *s, uint32_t size)
+{  
+  struct lsh_string *n;
+  uint32_t length = lsh_string_length(s);
+
+  /* NOTE: Currently, only growing strings is supported. */
+  assert(size > length);
+  
+  n = lsh_string_alloc(size);
+  lsh_string_write_string(n, 0, s);
+
+  lsh_string_free(s);
+  return n;
+}
+
+struct lsh_string *
+lsh_string_dup(const struct lsh_string *s)
+{
+  uint32_t length = lsh_string_length(s);
+  struct lsh_string *n = lsh_string_alloc(length);
+  lsh_string_write(n, 0, length, lsh_string_data(s));
+
+  return n;
+}
+
+/* FIXME: Could move some of the more obscure utility functions to a
+   separate file. */
+
+struct lsh_string *
+lsh_string_colonize(const struct lsh_string *s, int every, int freeflag)
+{
+  uint32_t i = 0;
+  uint32_t j = 0;
+
+  struct lsh_string *packet;
+  const uint8_t *data;
+  uint32_t length;
+  uint32_t size;
+  int colons;
+
+  /* No of colonds depens on length, 0..every => 0, 
+   * every..2*every => 1 */
+  length = lsh_string_length(s);
+  data = lsh_string_data(s);
+  
+  colons = length ? (length - 1) / every : 0;
+  size = length + colons;
+
+  packet = lsh_string_alloc(size);
+
+  for (; i<length; i++)
+    {
+      if (i && !(i%every))  /* Every nth position except at the beginning */
+	lsh_string_putc(packet, j++, ':');
+
+      lsh_string_putc(packet, j++, data[i]);
+    }
+
+  assert(j == size);
+
+  if (freeflag) /* Throw away the source string? */
+    lsh_string_free( s );
+
+  return packet;
+}
+
+static uint8_t 
+lsh_string_bubblebabble_c(const struct lsh_string *s, uint32_t i)
+{ 
+  /* Recursive, should only be used for small strings */
+
+  uint8_t c;
+  uint32_t j;
+  uint32_t k;
+  uint32_t length = lsh_string_length(s);
+  const uint8_t *data = lsh_string_data(s);
+  assert( 0 != i);
+
+  if (1==i)
+    return 1;
+
+  j = i*2-3-1;
+  k = i*2-2-1;
+
+  assert( j < length && k < length );
+
+  c = lsh_string_bubblebabble_c( s, i-1 );
+ 
+  return (5*c + (data[j]*7+data[k])) % 36;
+}
+
+struct lsh_string *
+lsh_string_bubblebabble(const struct lsh_string *s, int freeflag)
+{
+  /* Implements the Bubble Babble Binary Data Encoding by Huima as
+   * posted to the secsh list in August 2001 by Lehtinen.*/
+
+  uint32_t length = lsh_string_length(s);
+  uint32_t i = 0;
+  uint32_t babblelen = 2 + 6*(length/2) + 3;
+  struct lsh_string *p = lsh_string_alloc( babblelen );
+  
+  uint32_t r = 0;
+  const uint8_t *q = lsh_string_data(s);
+
+  uint8_t a;
+  uint8_t b;
+  uint8_t c;
+  uint8_t d;
+  uint8_t e;
+
+  char vowels[6] = { 'a', 'e', 'i', 'o', 'u', 'y' };
+
+  char cons[17] = { 'b', 'c', 'd', 'f', 'g', 'h', 'k',  'l', 'm',
+		    'n', 'p', 'r', 's', 't', 'v', 'z', 'x' }; 
+
+  lsh_string_putc(p, r++, 'x');
+  
+  while( i < length/2 )
+    {
+      assert( i*2+1 < length );
+
+      a = (((q[i*2] >> 6) & 3) + lsh_string_bubblebabble_c( s, i+1 )) % 6;
+      b = (q[i*2] >> 2) & 15;
+      c = ((q[i*2] & 3) + lsh_string_bubblebabble_c( s, i+1 )/6 ) % 6;
+      d = (q[i*2+1] >> 4) & 15; 
+      e = (q[i*2+1]) & 15;
+
+      lsh_string_putc(p, r++, vowels[a]);
+      lsh_string_putc(p, r++, cons[b]);
+      lsh_string_putc(p, r++, vowels[c]);
+      lsh_string_putc(p, r++, cons[d]);
+      lsh_string_putc(p, r++, '-');
+      lsh_string_putc(p, r++, cons[e]);
+
+      i++;
+    }
+
+  if( length % 2 ) /* Odd length? */
+    {
+      a = (((q[length-1] >> 6) & 3) + lsh_string_bubblebabble_c( s, i+1 )) % 6;
+      b = (q[length-1] >> 2) & 15;
+      c = ((q[length-1] & 3) + lsh_string_bubblebabble_c( s, i+1 )/6 ) % 6;
+    }
+  else
+    {
+      a = lsh_string_bubblebabble_c( s, i+1 ) % 6;
+      b = 16;
+      c = lsh_string_bubblebabble_c( s, i+1 ) / 6;
+    }
+
+  lsh_string_putc(p, r++, vowels[a]);
+  lsh_string_putc(p, r++, cons[b]);
+  lsh_string_putc(p, r++, vowels[c]);
+  
+  lsh_string_putc(p, r++, 'x');
+  
+  assert(r == lsh_string_length(p));
+  
+  if( freeflag )
+    lsh_string_free( s );
+
+  return p;
+}
+
+/* Functions that depend on the internal structure. */
+
 #if DEBUG_ALLOC
 struct lsh_string_header
 {
@@ -110,9 +279,6 @@ struct lsh_string
 #if DEBUG_ALLOC
   struct lsh_string_header header;
 #endif
-  /* Attached to read packets. Used only for generating proper
-     SSH_MSG_UNIMPLEMENTED replies. */
-  uint32_t sequence_number;
   /* NOTE: The allocated size may be larger than the string length. */
   uint32_t length; 
   uint8_t data[1];
@@ -137,18 +303,6 @@ const char *
 lsh_get_cstring(const struct lsh_string *s)
 {
   return (s && !memchr(s->data, '\0', s->length) ? s->data : NULL);
-}
-
-uint32_t
-lsh_string_sequence_number(const struct lsh_string *s)
-{
-  return s->sequence_number;
-}
-
-void
-lsh_string_set_sequence_number(struct lsh_string *s, uint32_t n)
-{
-  s->sequence_number = n;
 }
 
 void
@@ -180,6 +334,15 @@ lsh_string_write(struct lsh_string *s, uint32_t start, uint32_t length,
   memcpy(s->data + start, data, length);
 
   assert(!s->data[s->length]);
+}
+
+void
+lsh_string_move(struct lsh_string *s,
+		uint32_t start, uint32_t length, uint32_t from)
+{
+  ASSERT_ROOM(s, start, length);
+  assert(start != from);
+  memmove(s->data + start, s->data + from, length);
 }
 
 void
@@ -354,8 +517,10 @@ lsh_string_read(struct lsh_string *s, uint32_t start,
   assert(length);
   ASSERT_ROOM(s, start, length);
 
-  res = read(fd, s->data + start, length);
-
+  do
+    res = read(fd, s->data + start, length);
+  while (res < 0 && errno == EINTR);
+  
   assert(!s->data[s->length]);
 
   return res;
@@ -428,19 +593,6 @@ lsh_string_base64_decode(struct lsh_string *s)
     }
   return 0;
 }
-
-#if 0
-unsigned
-lsh_string_put_base64_single(struct lsh_string *s, uint32_t start,
-			     struct base64_encode_ctx *ctx, uint8_t c)
-{
-  unsigned res;
-  ASSERT_ROOM(s, start, 2);
-  res = base64_encode_single(ctx, s->data + start, c);
-  assert(!s->data[s->length]);
-  return res;    
-}
-#endif
 
 unsigned
 lsh_string_base64_encode_update(struct lsh_string *s, uint32_t start,
@@ -523,7 +675,6 @@ lsh_string_alloc(uint32_t length)
 
   s->length = length;
   s->data[length] = '\0';
-  s->sequence_number = 0;
   
   return s;
 }

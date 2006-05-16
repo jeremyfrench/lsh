@@ -32,9 +32,13 @@
 /lsh-krb-checkpw
 /lsh-make-seed
 /lsh-pam-checkpw
+/lsh-transport
 /lsh-writekey
 /lsh_proxy
 /lshd
+/lshd-connection
+/lshd-pty-helper
+/lshd-userauth
 /lshg
 /packet_types.h
 /pkcs5-test

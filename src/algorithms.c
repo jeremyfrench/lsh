@@ -32,7 +32,6 @@
 #include "atoms.h"
 #include "compress.h"
 #include "crypto.h"
-#include "publickey_crypto.h"
 #include "xalloc.h"
 
 #include "lsh_argp.h"
@@ -90,7 +89,7 @@ filter_algorithms_l(struct alist *algorithms, unsigned n, ...);
 
 /* Includes only reasonably old algorithms and well studied
  * algorithms. */
-static struct int_list *
+struct int_list *
 default_crypto_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 4,
@@ -117,16 +116,23 @@ all_crypto_algorithms(struct alist *algorithms)
 			     ATOM_ARCFOUR, -1);
 }
 
-static struct int_list *
+struct int_list *
 default_mac_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
 }
 
-static struct int_list *
+struct int_list *
 default_compression_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 2, ATOM_NONE, ATOM_ZLIB, -1);
+}
+
+/* NOTE: Unfiltered */
+struct int_list *
+default_hostkey_algorithms(void)
+{
+  return make_int_list(2, ATOM_SSH_RSA, ATOM_SSH_DSS, -1);
 }
 
 static struct int_list *
@@ -428,11 +434,11 @@ algorithms_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { NULL, 0, NULL, 0, "Algorithm selection:", 0},
-  { "crypto", 'c', "Algorithm", 0, "", 0 },
-  { "compression", 'z', "Algorithm",
+  { "crypto", 'c', "ALGORITHM", 0, "", 0 },
+  { "compression", 'z', "ALGORITHM",
     OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
-  { "mac", 'm', "Algorithm", 0, "", 0 },
-  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHMS, "Algorithm", 0, "", 0 }, 
+  { "mac", 'm', "ALGORITHM", 0, "", 0 },
+  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHMS, "ALGORITHM", 0, "", 0 }, 
   { "list-algorithms", OPT_LIST_ALGORITHMS, NULL, 0,
     "List supported algorithms.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }  
@@ -476,8 +482,7 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->compression_algorithms)
 	self->compression_algorithms = default_compression_algorithms(self->algorithms);
       if (!self->hostkey_algorithms)
-	self->hostkey_algorithms = make_int_list(4, ATOM_SSH_RSA, ATOM_SSH_DSS,
-						 ATOM_SPKI_SIGN_RSA, ATOM_SPKI_SIGN_DSS, -1);
+	self->hostkey_algorithms = default_hostkey_algorithms();
       break;
     case 'c':
       {

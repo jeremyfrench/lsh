@@ -32,7 +32,7 @@
 #include "nettle/sexp.h"
 #include "nettle/sha.h"
 
-#include "publickey_crypto.h"
+#include "crypto.h"
 
 #include "atoms.h"
 #include "format.h"
@@ -52,6 +52,9 @@
 
 #define DSA_MAX_OCTETS 256
 #define DSA_MAX_BITS (8 * DSA_MAX_OCTETS)
+
+/* The size (in octets) used for encoding r and s in a signature */
+#define DSA_BLOB_LENGTH 20
 
 /* DSA signatures */
 
@@ -111,7 +114,7 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	
 	uint32_t buf_length;
 	const uint8_t *buf;
-	int atom;
+	enum lsh_atom atom;
       
 	simple_buffer_init(&buffer, signature_length, signature_data);
 	if (!(parse_atom(&buffer, &atom)
@@ -235,22 +238,14 @@ parse_ssh_dss_public(struct simple_buffer *buffer)
   
 /* Creating signatures */
 
-static uint32_t
-dsa_blob_length(const struct dsa_signature *signature)
-{
-  uint32_t r_length = nettle_mpz_sizeinbase_256_u(signature->r);
-  uint32_t s_length = nettle_mpz_sizeinbase_256_u(signature->s);
-
-  return MAX(r_length, s_length);
-}
-
 static void
 dsa_blob_write(struct lsh_string *buf, uint32_t pos,
-	       const struct dsa_signature *signature,
-	       uint32_t length)
+	       const struct dsa_signature *signature)
 {
-  lsh_string_write_bignum(buf, pos, length, signature->r);
-  lsh_string_write_bignum(buf, pos + length, length, signature->s);
+  lsh_string_write_bignum(buf, pos, DSA_BLOB_LENGTH,
+			  signature->r);
+  lsh_string_write_bignum(buf, pos + DSA_BLOB_LENGTH, DSA_BLOB_LENGTH,
+			  signature->s);
 }
 
 static struct lsh_string *
@@ -281,12 +276,12 @@ do_dsa_sign(struct signer *c,
     case ATOM_SSH_DSS:
       {
 	uint32_t blob_pos;
-	uint32_t buf_length = dsa_blob_length(&sv);
 	
 	/* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
 	 * length field, which should be removed in the next version. */
-	signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &blob_pos);
-	dsa_blob_write(signature, blob_pos, &sv, buf_length);
+	signature = ssh_format("%a%r", ATOM_SSH_DSS,
+			       2 * DSA_BLOB_LENGTH, &blob_pos);
+	dsa_blob_write(signature, blob_pos, &sv);
 
 	break;
       }
@@ -371,12 +366,12 @@ make_dsa_algorithm(struct randomness *random)
 
 
 struct verifier *
-make_ssh_dss_verifier(const struct lsh_string *public)
+make_ssh_dss_verifier(uint32_t length, const uint8_t *key)
 {
   struct simple_buffer buffer;
-  int atom;
+  enum lsh_atom atom;
   
-  simple_buffer_init(&buffer, STRING_LD(public));
+  simple_buffer_init(&buffer, length, key);
 
   return ( (parse_atom(&buffer, &atom)
 	    && (atom == ATOM_SSH_DSS))

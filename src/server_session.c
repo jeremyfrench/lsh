@@ -38,12 +38,13 @@
 
 #include "server_session.h"
 
-#include "channel_commands.h"
+#include "channel_io.h"
 #include "environ.h"
 #include "format.h"
+#include "lsh_process.h"
 #include "lsh_string.h"
-#include "read_data.h"
 #include "reaper.h"
+#include "server.h"
 #include "server_pty.h"
 #include "server_x11.h"
 #include "ssh.h"
@@ -62,11 +63,11 @@
      (name server_session)
      (super ssh_channel)
      (vars
-       ; User information
-       ;; (user object lsh_user)
-
        (initial_window . uint32_t)
 
+       ; Communication with the helper process
+       (helper_fd . int)
+       
        ; Resource to kill when the channel is closed. 
        (process object lsh_process)
 
@@ -80,36 +81,125 @@
        (term string)
 
        ; Value for the SSH_CLIENT environment variable.
+       ; FIXME: Currently not implemented.
        (client string)
        
-       ; Child process's stdio 
-       (in object lsh_fd)
-       (out object lsh_fd)
-
-       ; err may be NULL, if there's no separate stderr channel.
-       ; This happens if we use a pty, and the bash workaround is used.
-       (err object lsh_fd)))
+       ; Child process stdio
+       (in struct channel_write_state)
+       (out struct channel_read_state)
+       (err struct channel_read_state)))
 */
 
-/* Receive channel data */
 static void
-do_receive(struct ssh_channel *c,
-	   int type, struct lsh_string *data)
+do_kill_server_session(struct resource *s)
+{  
+  CAST(server_session, self, s);
+  if (self->super.super.alive)
+    {
+      trace("do_kill_server_session\n");
+
+      self->super.super.alive = 0;
+
+      if (self->process)
+	KILL_RESOURCE(&self->process->super);
+
+      if (self->pty)
+	KILL_RESOURCE(&self->pty->super);
+      
+      /* Doesn't use channel_write_state_close, since the channel is
+	 supposedly dead already. */
+      io_close_fd(self->in.fd);
+      self->in.fd = -1;
+
+      channel_read_state_close(&self->out);
+      channel_read_state_close(&self->err);
+
+      io_close_fd(self->out.fd);
+      self->out.fd = -1;
+
+      io_close_fd(self->err.fd);
+      self->err.fd = -1;
+    }
+}
+
+/* Receive channel data */
+
+static void *
+oop_write_stdin(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
 {
-  CAST(server_session, closure, c);
+  CAST_SUBTYPE(server_session, session, (struct lsh_object *) state);
+
+  assert(event == OOP_WRITE);
+  assert(fd == session->in.fd);
+
+  if (channel_io_flush(&session->super, &session->in) != CHANNEL_IO_OK)
+    channel_write_state_close(&session->super, &session->in);
+
+  return OOP_CONTINUE;
+}
+
+static void
+do_receive(struct ssh_channel *s, int type,
+	   uint32_t length, const uint8_t *data)
+{
+  CAST(server_session, session, s);
 
   switch(type)
     {
     case CHANNEL_DATA:
-      A_WRITE(&closure->in->write_buffer->super, data);
+      if (channel_io_write(&session->super, &session->in,
+			   oop_write_stdin,
+			   length, data) != CHANNEL_IO_OK)
+	channel_write_state_close(&session->super, &session->in);
+
       break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
-      lsh_string_free(data);
       break;
     default:
       fatal("Internal error!\n");
     }
+}
+
+static void *
+oop_read_stdout(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
+{
+  CAST(server_session, session, (struct lsh_object *) state);
+  uint32_t done;
+  
+  assert(fd == session->out.fd);
+  assert(event == OOP_READ);
+
+  if (channel_io_read(&session->super, &session->out, &done) != CHANNEL_IO_OK)
+    channel_read_state_close(&session->out);
+
+  else if (done > 0)
+    channel_transmit_data(&session->super,
+			  done, lsh_string_data(session->out.buffer));
+
+  return OOP_CONTINUE;
+}
+
+static void *
+oop_read_stderr(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
+{
+  CAST(server_session, session, (struct lsh_object *) state);
+  uint32_t done;
+  
+  assert(fd == session->err.fd);
+  assert(event == OOP_READ);
+
+  if (channel_io_read(&session->super, &session->err, &done) != CHANNEL_IO_OK)
+    channel_read_state_close(&session->err);
+
+  else if (done > 0)
+    channel_transmit_extended(&session->super, SSH_EXTENDED_DATA_STDERR,
+			      done, lsh_string_data(session->err.buffer));
+
+  return OOP_CONTINUE;
 }
 
 /* We may send more data */
@@ -119,42 +209,66 @@ do_send_adjust(struct ssh_channel *s,
 {
   CAST(server_session, session, s);
 
-  /* FIXME: Perhaps it's better to just check the read pointers, and
-   * not bother with the alive-flags? */
-  if (session->out->super.alive)
-    {
-      assert(session->out->read);
-
-      lsh_oop_register_read_fd(session->out);
-    }
-  
-  if (session->err && session->err->super.alive)
-    {
-      assert(session->err->read);
-  
-      lsh_oop_register_read_fd(session->err);
-    }
+  channel_io_start_read(&session->super, &session->out, oop_read_stdout);
+  channel_io_start_read(&session->super, &session->err, oop_read_stderr);
 }
 
 static void
-do_eof(struct ssh_channel *channel)
+do_server_session_event(struct ssh_channel *channel, enum channel_event event)
 {
   CAST(server_session, session, channel);
 
-  trace("server_session.c: do_eof\n");
-  
-  close_fd_write(session->in);
+  trace("server_session.c: do_server_session_event %i\n", event);
+
+  switch(event)
+    {
+    case CHANNEL_EVENT_CLOSE:
+    case CHANNEL_EVENT_CONFIRM:
+    case CHANNEL_EVENT_DENY:
+      /* Do nothing; i/o isn't started until after a child process has
+	 been spawned. */
+      break;
+
+    case CHANNEL_EVENT_EOF:
+      if (session->pty)
+	{
+	  static const uint8_t eof[1] = { 4 }; /* ^D */
+	  if (channel_io_write(channel, &session->in,
+			       oop_write_stdin, sizeof(eof), eof) != CHANNEL_IO_OK)
+
+	    channel_write_state_close(&session->super, &session->in);	
+	}
+
+      if (!session->in.state->length)
+	channel_write_state_close(&session->super, &session->in);
+      break;
+
+    case CHANNEL_EVENT_STOP:
+      channel_io_stop_read(&session->out);
+      channel_io_stop_read(&session->err);
+      break;
+
+    case CHANNEL_EVENT_START:
+      if (session->super.send_window_size)
+	{
+	  channel_io_start_read(&session->super,
+				&session->out, oop_read_stdout);
+	  channel_io_start_read(&session->super,
+				&session->err, oop_read_stderr);
+	}
+      break;
+    }
 }
 
-struct ssh_channel *
+static struct ssh_channel *
 make_server_session(uint32_t initial_window,
-		    struct alist *request_types)
+		    struct alist *request_types,
+		    int helper_fd)
 {
   NEW(server_session, self);
 
-  init_channel(&self->super);
-
-  self->initial_window = initial_window;
+  init_channel(&self->super,
+	       do_kill_server_session, do_server_session_event);
 
   /* We don't want to receive any data before we have forked some
    * process to receive it. */
@@ -164,18 +278,20 @@ make_server_session(uint32_t initial_window,
   self->super.rec_max_packet = SSH_MAX_PACKET;
   self->super.request_types = request_types;
 
-  /* Note: We don't need a close handler; the channels resource list
-   * is taken care of automatically. */
-  
+  self->initial_window = initial_window;
+
+  self->helper_fd = helper_fd;
+
   self->process = NULL;
 
   self->pty = NULL;
+  self->x11 = NULL;
   self->term = NULL;
   self->client = NULL;
-  
-  self->in = NULL;
-  self->out = NULL;
-  self->err = NULL;
+
+  init_channel_write_state(&self->in, -1, 0);
+  init_channel_read_state(&self->out, -1, 0);
+  init_channel_read_state(&self->err, -1, 0);
   
   return &self->super;
 }
@@ -186,6 +302,7 @@ make_server_session(uint32_t initial_window,
      (name open_session)
      (super channel_open)
      (vars
+       (helper_fd . int)
        (session_requests object alist)))
 */
 
@@ -193,64 +310,39 @@ make_server_session(uint32_t initial_window,
 
 static void
 do_open_session(struct channel_open *s,
-		struct ssh_connection *connection UNUSED,
+		struct ssh_connection *connection,
 		struct channel_open_info *info UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
-		struct exception_handler *e)
+		struct exception_handler *e UNUSED)
 {
   CAST(open_session, self, s);
 
   debug("server.c: do_open_session\n");
 
-  assert(connection->user);
-  
   if (parse_eod(args))
     {
       COMMAND_RETURN(c,
-		     make_server_session(WINDOW_SIZE, self->session_requests));
+		     make_server_session(WINDOW_SIZE,
+					 self->session_requests,
+					 self->helper_fd));
     }
   else
     {
-      PROTOCOL_ERROR(e, "trailing garbage in open message");
+      SSH_CONNECTION_ERROR(connection, "trailing garbage in open message");
     }
 }
 
 struct channel_open *
-make_open_session(struct alist *session_requests)
+make_open_session(struct alist *session_requests, int helper_fd)
 {
-  NEW(open_session, closure);
+  NEW(open_session, self);
 
-  closure->super.handler = do_open_session;
-  closure->session_requests = session_requests;
+  self->super.handler = do_open_session;
+  self->helper_fd = helper_fd;
+  self->session_requests = session_requests;
   
-  return &closure->super;
-}
-
-
-struct lsh_string *
-format_exit_signal(struct ssh_channel *channel,
-		   int core, int signal)
-{
-  struct lsh_string *msg
-    = ssh_format("%lz.\n", STRSIGNAL(signal));
-  
-  return format_channel_request(ATOM_EXIT_SIGNAL,
-				channel,
-				0,
-				"%a%c%fS%z",
-				signal_local_to_network(signal),
-				core,
-				msg, "");
-}
-
-struct lsh_string *
-format_exit(struct ssh_channel *channel, int value)
-{
-  return format_channel_request(ATOM_EXIT_STATUS,
-				channel,
-				0,
-				"%i", value);
+  return &self->super;
 }
 
 /* GABA:
@@ -275,26 +367,31 @@ do_exit_shell(struct exit_callback *c, int signaled,
 
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
-      verbose("server_session.c: Sending %a message on channel %i\n",
+      verbose("Sending %a message on channel %i.\n",
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
-	      channel->channel_number);
-      
-      connection_send(channel->connection,
-		      (signaled
-		       ? format_exit_signal(channel, core, value)
-		       : format_exit(channel, value)) );
+	      channel->remote_channel_number);
+
+      if (signaled)
+	channel_send_request(&session->super, ATOM_EXIT_SIGNAL,
+			     0, NULL,
+			     "%a%c%z%z",
+			     signal_local_to_network(value),
+			     core,
+			     STRSIGNAL(value), "");
+      else
+	channel_send_request(&session->super, ATOM_EXIT_STATUS,
+			     0, NULL, "%i", value);
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from
        * the client, most clients never sends that. */
       
-      channel->flags |= (CHANNEL_NO_WAIT_FOR_EOF | CHANNEL_CLOSE_AT_EOF);
-      
-      if (channel->flags & CHANNEL_SENT_EOF)
-	{
-	  /* We have sent EOF already, so initiate close */
-	  channel_close(channel);
-	}
+      channel->flags |= CHANNEL_NO_WAIT_FOR_EOF;
+
+      /* This message counts as one "sink" (bad name, right) */
+      assert(channel->sinks);
+      channel->sinks--;
+      channel_maybe_close(channel);
     }
 }
 
@@ -373,25 +470,26 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
 
       pty->super.alive = 0;
       
-      /* FIXME: It seems unnecessary to dup all the fd:s here. We
-       * could use a single lsh_fd object for the master side of the
-       * pty. */
+      /* FIXME: It seems unnecessary to dup the master fd here. But
+	 for simplicity of ownership, keep one copy in the pty_info
+	 object, one for stdin, and one for stdout. */
 
       /* -1 means opening deferred to the child */
       in[0] = -1;
-      in[1] = pty->master;
-      
+      if ((in[1] = dup(pty->master)) < 0)
+        {
+          werror("make_pty: duping master pty for stdin failed %e.\n", errno);
+
+          return 0;
+        }      
       if ((out[0] = dup(pty->master)) < 0)
         {
-          werror("make_pty: duping master pty to stdout failed %e\n", errno);
+          werror("make_pty: duping master pty for stdout failed %e.\n", errno);
 
           return 0;
         }
 
       out[1] = -1;
-
-      /* pty_info no longer owns the pty fd */
-      pty->master = -1;
 
 #if BASH_WORKAROUND
       /* Don't use a separate stderr channel; just dup the
@@ -420,17 +518,16 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
+#define SERVER_READ_BUFFER_SIZE 0x4000
+
 static int
 spawn_process(struct server_session *session,
-	      struct lsh_user *user,
 	      /* All information but the fd:s should be filled in
 	       * already */
 	      struct spawn_info *info)
 {
-  struct lsh_callback *read_close_callback;
-  
   assert(!session->process);
-
+  
   if (session->pty && !make_pty(session->pty,
 				info->in, info->out, info->err))
     {
@@ -442,88 +539,69 @@ spawn_process(struct server_session *session,
   if (!session->pty && !make_pipes(info->in, info->out, info->err))
     return 0;
 
-  session->process = USER_SPAWN(user, info, make_exit_shell(session));
+  /* NOTE: Uses the info->pty->master. After this, it's ok to close
+     that fd, but we currently don't do that until session death. */
+  session->process = spawn_shell(info, session->helper_fd,
+				 make_exit_shell(session));
 
   if (!session->process)
     return 0;
-  
-  /* Close callback for stderr and stdout */
-  read_close_callback
-    = make_channel_read_close_callback(&session->super);
-  
-  session->in
-    = io_write(make_lsh_fd
-	       (info->in[1], session->pty ? IO_PTY : IO_NORMAL,
-		"child stdin",
-		make_channel_io_exception_handler(&session->super,
-						  "Child stdin: ", 0,
-						  &default_exception_handler,
-						  HANDLER_CONTEXT)),
-	       SSH_MAX_PACKET, NULL);
 
-  /* Flow control */
-  session->in->write_buffer->report = &session->super.super;
-  
-  /* FIXME: Should we really use the same exception handler,
-   * which will close the channel on read errors, or is it
-   * better to just send EOF on read errors? */
-  session->out
-    = io_read(make_lsh_fd
-	      (info->out[0], IO_NORMAL, "child stdout",
-	       make_channel_io_exception_handler(&session->super,
-						 "Child stdout: ", 1,
-						 &default_exception_handler,
-						 HANDLER_CONTEXT)),
-	      make_channel_read_data(&session->super),
-	      read_close_callback);
-  session->err 
-    = ( (info->err[0] != -1)
-	? io_read(make_lsh_fd
-		  (info->err[0], IO_NORMAL, "child stderr",
-		   make_channel_io_exception_handler(&session->super,
-						     "Child stderr: ", 0,
-						     &default_exception_handler,
-						     HANDLER_CONTEXT)),
-		  make_channel_read_stderr(&session->super),
-		  read_close_callback)
-	: NULL);
+  /* One extra character, to make sure we can send a final ^D. */
+  init_channel_write_state(&session->in, info->in[1], session->initial_window + 1);
+  init_channel_read_state(&session->out, info->out[0], SERVER_READ_BUFFER_SIZE);
+  io_register_fd(info->in[1], "process stdin");
+  io_register_fd(info->out[0], "process stdout");
 
+  if (session->pty)
+    /* When the child process has exited, and hence the slave side of
+       the pty is closed, then read, at least on linux, returns EIO.
+       This should be treated as an EOF event, not an error. */
+    session->out.ignored_error = EIO;
+
+  session->super.sources++;
+
+  if (info->err[0] < 0)
+    {
+      session->err.fd = -1;
+      session->err.buffer = NULL;
+    }
+  else
+    {
+      init_channel_read_state(&session->err, info->err[0], SERVER_READ_BUFFER_SIZE);
+      io_register_fd(info->err[0], "process stderr");
+
+      session->super.sources++;
+    }
+
+  if (session->super.send_window_size)
+    {
+      channel_io_start_read(&session->super, &session->out, oop_read_stdout);
+      channel_io_start_read(&session->super, &session->err, oop_read_stderr);
+    }
+  
   session->super.receive = do_receive;
   session->super.send_adjust = do_send_adjust;
-  session->super.eof = do_eof;
-	  
-  /* Make sure that the process and it's stdio is
-   * cleaned up if the channel or connection dies. */
-  remember_resource(session->super.resources, &session->process->super);
-
-  /* FIXME: How to do this properly if in and out may use the
-   * same fd? */
-  remember_resource(session->super.resources, &session->in->super);
-  remember_resource(session->super.resources, &session->out->super);
-  if (session->err)
-    remember_resource(session->super.resources, &session->err->super);
-
-  /* Don't close channel immediately at EOF, as we want to
-   * get a chance to send exit-status or exit-signal. */
-  session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+  
+  /* One reference for stdin, and one for the exit-status/exit-signal
+     message */
+  session->super.sinks += 2;
 
   channel_start_receive(&session->super, session->initial_window);
-  
+
   return 1;
 }
 
 static void
 init_spawn_info(struct spawn_info *info, struct server_session *session,
-		unsigned argc, const char **argv,
+		const char **argv,
 		unsigned env_length, struct env_value *env)
 {
   unsigned i = 0;
   
   memset(info, 0, sizeof(*info));
-  info->peer = session->super.connection->peer;
-  info->pty = session->pty;
 
-  info->argc = argc;
+  info->pty = session->pty;
   info->argv = argv;
   
   assert(env_length >= 5);
@@ -532,36 +610,14 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   if (session->term)
     {
       env[i].name = ENV_TERM;
-      env[i].value = session->term;
+      env[i].value = lsh_get_cstring(session->term);
       i++;
     }
 
   if (info->pty && info->pty->tty_name)
     {
       env[i].name = ENV_SSH_TTY;
-      env[i].value = info->pty->tty_name;
-      i++;
-    }
-
-  if (info->peer)
-    {
-      /* Save string in the session object, so that it can be garbage
-       * collected properly. */
-      assert(!session->client);
-      
-      if (session->super.connection->local)
-	session->client = ssh_format("%lS %di %di", 
-				      info->peer->ip,
-				      info->peer->port,
-				      session->super.connection->local->port);
-      else
-	session->client = ssh_format("%lS %di UNKNOWN", 
-				     info->peer->ip,
-				     info->peer->port
-				     );
-      env[i].name = ENV_SSH_CLIENT;
-      env[i].value = session->client;
-
+      env[i].value = lsh_get_cstring(info->pty->tty_name);
       i++;
     }
 
@@ -569,11 +625,11 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   if (session->x11)
     {
       env[i].name = ENV_DISPLAY;
-      env[i].value = session->x11->display;
+      env[i].value = lsh_get_cstring(session->x11->display);
       i++;
 
       env[i].name = ENV_XAUTHORITY;
-      env[i].value = session->x11->xauthority;
+      env[i].value = lsh_get_cstring(session->x11->xauthority);
       i++;
     }
 #endif /* WITH_X11_FORWARD */
@@ -585,7 +641,7 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 DEFINE_CHANNEL_REQUEST(shell_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      struct channel_request_info *info UNUSED,
+      const struct channel_request_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -595,11 +651,13 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   struct env_value env[5];
   
   static const struct exception shell_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Shell request failed");
 
+  trace("shell_request_handler\n");
   if (!parse_eod(args))
     {
-      PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
+      SSH_CONNECTION_ERROR(channel->connection,
+			   "Invalid shell CHANNEL_REQUEST message.");
       return;
     }
     
@@ -607,10 +665,10 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
     /* Already spawned a shell or command */
     goto fail;
 
-  init_spawn_info(&spawn, session, 0, NULL, 5, env);
+  init_spawn_info(&spawn, session, NULL, 5, env);
   spawn.login = 1;
-    
-  if (spawn_process(session, channel->connection->user, &spawn))
+
+  if (spawn_process(session, &spawn))
     COMMAND_RETURN(c, channel);
   else
     {
@@ -622,7 +680,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
 DEFINE_CHANNEL_REQUEST(exec_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      struct channel_request_info *info UNUSED,
+      const struct channel_request_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -630,7 +688,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   CAST(server_session, session, channel);
 
   static const struct exception exec_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Exec request failed");
   
   uint32_t command_len;
   const uint8_t *command;
@@ -638,7 +696,8 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   if (!(parse_string(args, &command_len, &command)
 	&& parse_eod(args)))
     {
-      PROTOCOL_ERROR(e, "Invalid exec CHANNEL_REQUEST message.");
+      SSH_CONNECTION_ERROR(channel->connection,
+			   "Invalid exec CHANNEL_REQUEST message.");
       return;
     }
     
@@ -651,18 +710,16 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   else
     {
       struct spawn_info spawn;
-      const char *args[2];
+      const char *args[4] = { NULL, "-c", NULL, NULL };
       struct env_value env[5];
 
       struct lsh_string *s = ssh_format("%ls", command_len, command);
+      args[2] = lsh_get_cstring(s);
       
-      init_spawn_info(&spawn, session, 2, args, 5, env);
-      spawn.login = 0;
+      init_spawn_info(&spawn, session, args, 5, env);
+      spawn.login = 0;      
       
-      args[0] = "-c";
-      args[1] = lsh_get_cstring(s);
-
-      if (spawn_process(session, channel->connection->user, &spawn))
+      if (spawn_process(session, &spawn))
 	COMMAND_RETURN(c, channel);
       else
 	EXCEPTION_RAISE(e, &exec_request_failed);
@@ -684,35 +741,10 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
        (subsystems . "const char **")))
 */
 
-/* ;; GABA:
-   (class
-     (name sybsystem_info)
-     (vars
-       (name "const char *")))
-*/
-
-static const char *
-lookup_subsystem(struct subsystem_request *self,
-		 uint32_t length, const uint8_t *name)
-{
-  unsigned i;
-  if (memchr(name, 0, length))
-    return NULL;
-
-  for (i = 0; self->subsystems[i]; i+=2)
-    {
-      assert(self->subsystems[i+1]);
-      if ((length == strlen(self->subsystems[i]))
-	  && !memcmp(name, self->subsystems[i], length))
-	return self->subsystems[i + 1];
-    }
-  return NULL;
-}
-
 static void
 do_spawn_subsystem(struct channel_request *s,
 		   struct ssh_channel *channel,
-		   struct channel_request_info *info UNUSED,
+		   const struct channel_request_info *info UNUSED,
 		   struct simple_buffer *args,
 		   struct command_continuation *c,
 		   struct exception_handler *e)
@@ -720,8 +752,8 @@ do_spawn_subsystem(struct channel_request *s,
   CAST(subsystem_request, self, s);
   CAST(server_session, session, channel);
 
-  static struct exception subsystem_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Subsystem request failed");
+  static const struct exception subsystem_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Subsystem request failed");
 
   const uint8_t *name;
   uint32_t name_length;
@@ -730,16 +762,17 @@ do_spawn_subsystem(struct channel_request *s,
       
   if (! (parse_string(args, &name_length, &name) && parse_eod(args)))
     {
-      PROTOCOL_ERROR(e, "Invalid subsystem CHANNEL_REQUEST message.");
+      SSH_CONNECTION_ERROR(channel->connection,
+			   "Invalid subsystem CHANNEL_REQUEST message.");
       return;
     }
   
-  program = lookup_subsystem(self, name_length, name);
+  program = server_lookup_module(self->subsystems, name_length, name);
   
   if (!session->process && program)
     {
       struct spawn_info spawn;
-      const char *args[2];
+      const char *args[4] = { NULL, "-c", NULL, NULL };
       struct env_value env[5];
 
       /* Don't use any pty */
@@ -749,16 +782,16 @@ do_spawn_subsystem(struct channel_request *s,
 	  session->pty = NULL;
 	}
 
-      args[0] = "-c"; args[1] = program;
+      args[2] = program;
       
-      init_spawn_info(&spawn, session, 2, args, 5, env);
+      init_spawn_info(&spawn, session, args, 5, env);
       spawn.login = 0;
 
-      if (spawn_process(session, channel->connection->user, &spawn))
+      if (spawn_process(session, &spawn))
 	{
 	  COMMAND_RETURN(c, channel);
 	  return;
-	}  
+	}
     }
   EXCEPTION_RAISE(e, &subsystem_request_failed);
 }
@@ -778,22 +811,21 @@ make_subsystem_handler(const char **subsystems)
 #if WITH_PTY_SUPPORT
 
 /* pty_handler */
-static void
-do_alloc_pty(struct channel_request *c UNUSED,
-	     struct ssh_channel *channel,
-	     struct channel_request_info *info UNUSED,
-	     struct simple_buffer *args,
-	     struct command_continuation *s,
-	     struct exception_handler *e)
+DEFINE_CHANNEL_REQUEST(pty_request_handler)
+     (struct channel_request *c UNUSED,
+      struct ssh_channel *channel,
+      const struct channel_request_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *s,
+      struct exception_handler *e)
 {
+  CAST(server_session, session, channel);
   struct lsh_string *term = NULL;
 
-  static struct exception pty_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
+  static const struct exception pty_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "pty request failed");
 
   struct pty_info *pty = make_pty_info();
-  
-  CAST(server_session, session, channel);
 
   verbose("Client requesting a tty...\n");
 
@@ -807,8 +839,9 @@ do_alloc_pty(struct channel_request *c UNUSED,
     {
       /* The client may only request one tty, and only before
        * starting a process. */
+
       if (session->pty || session->process
-	  || !pty_open_master(pty, channel->connection->user->uid))
+	  || !pty_open_master(pty))
 	{
 	  verbose("Pty allocation failed.\n");
 	  EXCEPTION_RAISE(e, &pty_request_failed);
@@ -819,20 +852,19 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	   * on the master pty? */
 	  session->term = term;
 	  session->pty = pty;
-	  remember_resource(channel->resources, &pty->super);
 
 	  verbose(" ... granted.\n");
+	  debug("pty master fd: %i\n", pty->master);
 	  COMMAND_RETURN(s, channel);
 
 	  /* Success */
 	  return;
 	}
-
     }
   else
     {
       werror("Invalid pty request.\n");
-      PROTOCOL_ERROR(e, "Invalid pty request.");
+      SSH_CONNECTION_ERROR(channel->connection, "Invalid pty request.");
     }
   /* Cleanup for failure cases. */
   lsh_string_free(term);
@@ -840,20 +872,17 @@ do_alloc_pty(struct channel_request *c UNUSED,
   KILL(pty);
 }
 
-struct channel_request
-pty_request_handler =
-{ STATIC_HEADER, do_alloc_pty };
-
+/* FIXME: Use DEFINE_CHANNEL_REQUEST */
 static void
 do_window_change_request(struct channel_request *c UNUSED,
 			 struct ssh_channel *channel,
-			 struct channel_request_info *info UNUSED,
+			 const struct channel_request_info *info UNUSED,
 			 struct simple_buffer *args,
 			 struct command_continuation *s,
 			 struct exception_handler *e)
 {
-  struct terminal_dimensions dims;
   CAST(server_session, session, channel);
+  struct terminal_dimensions dims;
 
   verbose("Receiving window-change request...\n");
 
@@ -864,17 +893,19 @@ do_window_change_request(struct channel_request *c UNUSED,
       && parse_eod(args))
     {
       static const struct exception winch_request_failed =
-	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "window-change request failed: No pty");
+	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0,
+			 "window-change request failed: No pty");
 
-      if (session->pty && session->in && session->in->super.alive
-          && tty_setwinsize(session->in->fd, &dims))
+      if (session->pty && session->in.fd >= 0
+          && tty_setwinsize(session->in.fd, &dims))
         /* Success. Rely on the terminal driver sending SIGWINCH */
         COMMAND_RETURN(s, channel);
       else
         EXCEPTION_RAISE(e, &winch_request_failed);
     }
   else
-    PROTOCOL_ERROR(channel->connection->e, "Invalid window-change request.");
+    SSH_CONNECTION_ERROR(channel->connection,
+			 "Invalid window-change request.");
 }
 
 struct channel_request
@@ -883,19 +914,22 @@ window_change_request_handler =
 
 #endif /* WITH_PTY_SUPPORT */
 
+#if 0
 #if WITH_X11_FORWARD
 
 /* FIXME: We must delay the handling of any shell request until
  * we have responded to the x11-req message. */
-static void
-do_x11_req(struct channel_request *s UNUSED,
-	   struct ssh_channel *channel,
-	   struct channel_request_info *info UNUSED,
-	   struct simple_buffer *args,
-	   struct command_continuation *c,
-	   struct exception_handler *e)
+DEFINE_CHANNEL_REQUEST(x11_request_handler)
+     (struct channel_request *s UNUSED,
+      struct ssh_channel *channel,
+      struct channel_request_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  static struct exception x11_request_failed =
+  CAST(server_session, session, channel);
+
+  static const struct exception x11_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "x11-req failed");
 
   const uint8_t *protocol;
@@ -904,8 +938,6 @@ do_x11_req(struct channel_request *s UNUSED,
   uint32_t cookie_length;
   uint32_t screen;
   unsigned single;
-  
-  CAST(server_session, session, channel);
 
   verbose("Client requesting x11 forwarding...\n");
 
@@ -918,7 +950,6 @@ do_x11_req(struct channel_request *s UNUSED,
        * before starting a process. */
       if (session->x11 || session->process
 	  || !(session->x11 = server_x11_setup(channel,
-					       channel->connection->user,
 					       single,
 					       protocol_length, protocol,
 					       cookie_length, cookie,
@@ -935,12 +966,9 @@ do_x11_req(struct channel_request *s UNUSED,
   else
     {
       werror("Invalid x11 request.\n");
-      PROTOCOL_ERROR(e, "Invalid x11 request.");
+      SSH_CONNECTION_ERROR(channel->connection, "Invalid x11 request.");
     }
 }
 
-struct channel_request
-x11_req_handler =
-{ STATIC_HEADER, do_x11_req };
-
 #endif /* WITH_X11_FORWARD */
+#endif

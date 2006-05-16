@@ -21,6 +21,7 @@ parse-config-test
 rijndael-test
 rsa-test
 serpent-test
+server-config-test
 sha1-test
 sockaddr2info-test
 spki-tag-test

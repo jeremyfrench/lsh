@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lsh], [2.0.4], [bug-lsh@gnu.org]) 
+AC_INIT([lsh], [2x1], [bug-lsh@gnu.org]) 
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/lsh.c])
 # Needed to stop autoconf from looking for files in parent directories.
@@ -569,6 +569,7 @@ if test x$lsh_cv_sys_ai_numerichost = xyes ; then
   AC_DEFINE(HAVE_AI_NUMERICHOST)
 fi
 
+# Used only by lsh-make-seed, the rest of te code uses liboop
 AC_CHECK_FUNCS(poll,,[AC_LIBOBJ([jpoll])])
 
 # Test if the libc includes a good enough argp.
@@ -737,6 +738,8 @@ AH_TEMPLATE([HAVE_UNIX98_PTYS],
 	    [Define if a we have working UNIX98 pty handling])
 if test x$lsh_cv_sys_unix98_ptys = xyes; then
   AC_DEFINE(HAVE_UNIX98_PTYS)
+else
+  AC_MSG_WARN([No support for UNIX98 PTYs. PTY support disabled.])
 fi
 
 LSH_GCC_ATTRIBUTES
@@ -791,6 +794,7 @@ if test x$GCC = xyes ; then
     CFLAGS="$CFLAGS -ggdb3"
   fi
   # FIXME: It would be better to actually test if this option works and/or is needed.
+  # Or perhaps use -funsigned-char.
   if "$CC" --version | grep 'gcc.* 4\.' 1>/dev/null 2>&1; then
     CFLAGS="$CFLAGS -Wno-pointer-sign"
   fi
@@ -805,6 +809,7 @@ if test x$GCC = xyes ; then
 
 fi
 
+# Used by contrib/solpkg.sh.in.
 AC_SUBST(BUILD_ARCH, `uname -p`)
 AC_SUBST(BUILD_OSSYS,`uname -s`)
 AC_SUBST(BUILD_OSREV,`uname -r`)

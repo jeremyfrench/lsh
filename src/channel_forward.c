@@ -34,6 +34,7 @@
 #include "channel_forward.h"
 
 #include "io.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -42,79 +43,96 @@
 #include "channel_forward.h.x"
 #undef GABA_DEFINE
 
-/* NOTE: Adds the socket to the channel's resource list */
-void
-init_channel_forward(struct channel_forward *self,
-		     struct lsh_fd *socket, uint32_t initial_window)
-{
-  assert(socket);
-  
-  init_channel(&self->super);
-
-  /* The rest of the callbacks are not set up until
-   * channel_forward_start_io. */
-
-  /* NOTE: We don't need a close handler, as the channel's resource
-   * list is taken care of automatically. */
-  
-  self->super.rec_window_size = initial_window;
-
-  /* FIXME: Make maximum packet size configurable. */
-  self->super.rec_max_packet = SSH_MAX_PACKET;
-  
-  self->socket = socket;
-
-  remember_resource(self->super.resources, &socket->super);
-}
-
-struct channel_forward *
-make_channel_forward(struct lsh_fd *socket, uint32_t initial_window)
-{
-  NEW(channel_forward, self);
-  init_channel_forward(self, socket, initial_window);
-  
-  return self;
-}
-
+/* We don't use channel_read_state_close and channel_write_state_close. */
 static void
-do_channel_forward_receive(struct ssh_channel *c,
-			   int type, struct lsh_string *data)
-{
-  CAST_SUBTYPE(channel_forward, closure, c);
-  
-  switch (type)
+do_kill_channel_forward(struct resource *s)
+{  
+  CAST_SUBTYPE(channel_forward, self, s);
+  if (self->super.super.alive)
     {
-    case CHANNEL_DATA:
-      A_WRITE(&closure->socket->write_buffer->super, data);
-      break;
-    case CHANNEL_STDERR_DATA:
-      werror("Ignoring unexpected stderr data.\n");
-      lsh_string_free(data);
-      break;
-    default:
-      fatal("Internal error. do_channel_forward_receive");
+      trace("do_kill_channel_forward\n");
+      
+      self->super.super.alive = 0;
+      io_close_fd(self->read.fd);
     }
 }
 
+void
+channel_forward_shutdown(struct channel_forward *self)
+{
+  if (shutdown (self->write.fd, SHUT_WR) < 0)
+    werror("close_fd_write, shutdown failed, %e\n", errno);
+
+  assert(self->super.sinks);
+  self->super.sinks--;
+  channel_maybe_close(&self->super);  
+}
+
+static void *
+oop_write_socket(oop_source *source UNUSED,
+		 int fd, oop_event event, void *state)
+{
+  CAST_SUBTYPE(channel_forward, self, (struct lsh_object *) state);
+  
+  assert(event == OOP_WRITE);
+  assert(fd == self->write.fd);
+
+  if (channel_io_flush(&self->super, &self->write) == CHANNEL_IO_EOF)
+    channel_forward_shutdown(self);
+
+  return OOP_CONTINUE;
+}
+
+static void
+do_channel_forward_receive(struct ssh_channel *s, int type,
+			   uint32_t length, const uint8_t *data)
+{
+  CAST_SUBTYPE(channel_forward, self, s);
+
+  if (type != CHANNEL_DATA)
+    werror("Ignoring unexpected extended data on forwarded channel.\n");
+  else
+    {
+      if (channel_io_write(&self->super, &self->write, oop_write_socket,
+			   length, data) == CHANNEL_IO_EOF)
+	channel_forward_shutdown(self);
+    }
+}
+
+static void *
+oop_read_socket(oop_source *source UNUSED,
+		int fd, oop_event event, void *state)
+{
+  CAST_SUBTYPE(channel_forward, self, (struct lsh_object *) state);
+  uint32_t done;
+  
+  assert(fd == self->read.fd);
+  assert(event == OOP_READ);
+
+  if (channel_io_read(&self->super, &self->read, &done) == CHANNEL_IO_OK
+      && done > 0)
+    channel_transmit_data(&self->super,
+			  done, lsh_string_data(self->read.buffer));
+
+  return OOP_CONTINUE;
+}
+
+/* We may send more data */
 static void
 do_channel_forward_send_adjust(struct ssh_channel *s,
 			       uint32_t i UNUSED)
 {
   CAST_SUBTYPE(channel_forward, self, s);
-  
-  lsh_oop_register_read_fd(self->socket);
+
+  channel_io_start_read(&self->super, &self->read, oop_read_socket);
 }
 
-static void
-do_channel_forward_eof(struct ssh_channel *s)
+void
+channel_forward_start_read(struct channel_forward *self)
 {
-  CAST_SUBTYPE(channel_forward, self, s);
-
-  /* We won't write any more. io.c should make sure that shutdown is called
-   * once the write_buffer is empty. */
-  close_fd_write(self->socket);
+  if (self->super.send_window_size)
+    channel_io_start_read(&self->super, &self->read, oop_read_socket);
 }
-
 
 /* NOTE: Because this function is called by
  * do_open_forwarded_tcpip_continuation, the same restrictions apply.
@@ -122,39 +140,76 @@ do_channel_forward_eof(struct ssh_channel *s)
  * (channel_open_continuation has not yet done its work), and we can't
  * send any packets. */
 void
-channel_forward_start_io(struct channel_forward *channel)
+channel_forward_start_io(struct channel_forward *self)
 {
-  channel->super.receive = do_channel_forward_receive;
-  channel->super.send_adjust = do_channel_forward_send_adjust;
-  channel->super.eof = do_channel_forward_eof;
-  
-  /* Install callbacks on the local socket.
-   * NOTE: We don't install any channel_io_exception_handler. */
-  io_read_write(channel->socket,
-		make_channel_read_data(&channel->super),
-		/* FIXME: Make this configurable */
-		SSH_MAX_PACKET * 10, /* self->block_size, */
-		make_channel_read_close_callback(&channel->super));
-  
-  /* Flow control */
-  channel->socket->write_buffer->report = &channel->super.super;
+  self->super.receive = do_channel_forward_receive;
+  self->super.send_adjust = do_channel_forward_send_adjust;
+
+  self->super.sources++;
+  self->super.sinks ++;
+
+  channel_forward_start_read(self);
 }
 
-/* Like above, but doesn't install a new write buffer. Used by the socks server. */
-void
-channel_forward_start_io_read(struct channel_forward *channel)
+static void
+do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
 {
-  channel->super.receive = do_channel_forward_receive;
-  channel->super.send_adjust = do_channel_forward_send_adjust;
-  channel->super.eof = do_channel_forward_eof;
+  CAST_SUBTYPE(channel_forward, self, s);
+
+  switch(event)
+    {
+    case CHANNEL_EVENT_CONFIRM:
+      channel_forward_start_io(self);
+      break;
+    case CHANNEL_EVENT_DENY:
+    case CHANNEL_EVENT_CLOSE:
+      /* Do nothing */
+      break;      
+    case CHANNEL_EVENT_EOF:
+      if (!self->write.state->length)
+	channel_forward_shutdown(self);
+      break;
+    case CHANNEL_EVENT_STOP:
+      channel_io_stop_read(&self->read);
+      break;
+    case CHANNEL_EVENT_START:
+      channel_forward_start_read(self);
+      break;
+    }
+}
+
+#define FORWARD_READ_BUFFER_SIZE 0x4000
+
+/* NOTE: It's the caller's responsibility to call io_register_fd. */
+void
+init_channel_forward(struct channel_forward *self,
+		     int socket, uint32_t initial_window,
+		     void (*event)(struct ssh_channel *, enum channel_event))
+{
+  init_channel(&self->super,
+	       do_kill_channel_forward, event);
+
+  /* The rest of the callbacks are not set up until
+   * channel_forward_start_io. */
+
+  self->super.rec_window_size = initial_window;
+
+  /* FIXME: Make maximum packet size configurable. */
+  self->super.rec_max_packet = SSH_MAX_PACKET;
+
+  init_channel_read_state(&self->read, socket, FORWARD_READ_BUFFER_SIZE);
+  init_channel_write_state(&self->write, socket, initial_window);
+}
+
+/* NOTE: It's the caller's responsibility to call io_register_fd. */
+struct channel_forward *
+make_channel_forward(int socket, uint32_t initial_window)
+{
+  NEW(channel_forward, self);
+  init_channel_forward(self, socket, initial_window,
+		       do_channel_forward_event);
   
-  /* Install callbacks on the local socket. Leave write callbacks alone */
-  io_read(channel->socket,
-	  make_channel_read_data(&channel->super),
-	  make_channel_read_close_callback(&channel->super));
-  
-  /* Flow control */
-  channel->socket->write_buffer->report = &channel->super.super;
+  return self;
 }
 
 /* Used by the party requesting tcp forwarding, i.e. when a socket is
@@ -162,7 +217,7 @@ channel_forward_start_io_read(struct channel_forward *channel)
  * a channel as argument, and connects it to the socket. Returns the
  * channel. */
 
-DEFINE_COMMAND(start_io_command)
+DEFINE_COMMAND(forward_start_io_command)
      (struct command *s UNUSED,
       struct lsh_object *x,
       struct command_continuation *c,
@@ -176,12 +231,3 @@ DEFINE_COMMAND(start_io_command)
 
   COMMAND_RETURN(c, channel);  
 }
-
-/* FIXME: Arrange so that the forwarded socket is closed if
-   EXC_CHANNEL_OPEN is caught. And write some docs. */
-static const struct report_exception_info forward_open_report =
-STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN,
-			     "Forwarding failed, could not open channel");
-
-struct catch_report_collect catch_channel_open
-= STATIC_CATCH_REPORT(&forward_open_report);

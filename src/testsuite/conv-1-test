@@ -19,6 +19,8 @@ exec 1>&2
 
 echo "conv-1-test: Testing ssh-conv and sexp-conv"
 
+rm -f test.out1
+
 ($srcdir/../ssh-conv --decode-with ../lsh-decode-key | "$SEXP_CONV" -w 61 |tee test.out1) <<EOF
 ---- BEGIN SSH2 PUBLIC KEY ----
 Subject: markus

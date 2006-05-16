@@ -27,140 +27,26 @@
 
 #include <assert.h>
 #include <errno.h>
-
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 
 #include "server.h"
 
-#include "abstract_io.h"
-#include "channel.h"
-#include "compress.h"
-#include "connection.h"
+#include "atoms.h"
+#include "environ.h"
 #include "format.h"
-#include "keyexchange.h"
+#include "io.h"
 #include "lsh_string.h"
-#include "read_line.h"
-#include "read_packet.h"
-#include "reaper.h"
 #include "sexp.h"
 #include "spki.h"
-#include "ssh.h"
-#include "werror.h"
 #include "xalloc.h"
 
-#include "server.c.x"
-
-
-static struct lsh_string *
-format_service_accept(int name)
-{
-  return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
-}
-
-
-/* GABA:
-   (class
-     (name service_handler)
-     (super packet_handler)
-     (vars
-       (services object alist)
-       (c object command_continuation)
-       (e object exception_handler)))
-*/
-
-static void
-do_service_request(struct packet_handler *c,
-		   struct ssh_connection *connection,
-		   struct lsh_string *packet)
-{
-  CAST(service_handler, closure, c);
-
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  int name;
-  
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_SERVICE_REQUEST)
-      && parse_atom(&buffer, &name)
-      && parse_eod(&buffer))
-    {
-      if (name)
-	{
-	  CAST_SUBTYPE(command, service, ALIST_GET(closure->services, name));
-	  if (service)
-	    {
-	      /* Don't accept any further service requests */
-	      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
-		= &connection_fail_handler;
-
-	      /* Start service */
-	      connection_send(connection, format_service_accept(name));
-	      
-	      COMMAND_CALL(service, connection,
-			   closure->c, closure->e);
-	      return;
-	    }
-	}
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE, NULL));
-      
-    }
-  else
-    PROTOCOL_ERROR(connection->e, "Invalid SERVICE_REQUEST message");
-}
-
-static struct packet_handler *
-make_service_request_handler(struct alist *services,
-			     struct command_continuation *c,
-			     struct exception_handler *e)
-{
-  NEW(service_handler, self);
-
-  self->super.handler = do_service_request;
-  self->services = services;
-  self->c = c;
-  self->e = e;
-  
-  return &self->super;
-}
-
-     
-/* GABA:
-   (class
-     (name offer_service)
-     (super command)
-     (vars
-       (services object alist)))
-*/
-
-static void
-do_offer_service(struct command *s,
-		 struct lsh_object *x,
-		 struct command_continuation *c,
-		 struct exception_handler *e)
-{
-  CAST(offer_service, self, s);
-  CAST(ssh_connection, connection, x);
-
-  connection->dispatch[SSH_MSG_SERVICE_REQUEST]
-    = make_service_request_handler(self->services, c, e);
-}
-
-struct command *make_offer_service(struct alist *services)
-{
-  NEW(offer_service, self);
-
-  self->super.call = do_offer_service;
-  self->services = services;
-
-  return &self->super;
-}
+#define GABA_DEFINE
+#include "server.h.x"
+#undef GABA_DEFINE
 
 /* Read server's private key */
-/* Used by both lshd.c and lsh_proxy.c */
 
 static void
 add_key(struct alist *keys,
@@ -180,7 +66,6 @@ read_host_key(const char *file,
   struct lsh_string *contents;
   struct signer *s;
   struct verifier *v;
-  struct lsh_string *spki_public;
   
   int algorithm_name;
 
@@ -213,31 +98,225 @@ read_host_key(const char *file,
   v = SIGNER_GET_VERIFIER(s);
   assert(v);
 
-  spki_public = PUBLIC_SPKI_KEY(v, 0);
-  
   switch (algorithm_name)
     {
     case ATOM_DSA:
       add_key(keys,
               make_keypair(ATOM_SSH_DSS, PUBLIC_KEY(v), s));
-      add_key(keys,
-              make_keypair(ATOM_SPKI_SIGN_DSS, spki_public, s));
       break;
 
     case ATOM_RSA_PKCS1:
     case ATOM_RSA_PKCS1_SHA1:
       add_key(keys,
               make_keypair(ATOM_SSH_RSA, PUBLIC_KEY(v), s));
-      /* Fall through */
-
-    case ATOM_RSA_PKCS1_MD5:
-      add_key(keys,
-              make_keypair(ATOM_SPKI_SIGN_RSA, spki_public, s));
       break;
 
     default:
       werror("read_host_key: Unexpected algorithm %a.\n", algorithm_name);
-      lsh_string_free(spki_public);
     }
   return 1;
 }
+
+/* Handles lists of services or subsystems. MODULES is a list { name,
+   program, name, program, ..., NULL }. */ 
+const char *
+server_lookup_module(const char **modules,
+		     uint32_t length, const uint8_t *name)
+{
+  unsigned i;
+  if (memchr(name, 0, length))
+    return NULL;
+
+  for (i = 0; modules[i]; i+=2)
+    {
+      assert(modules[i+1]);
+      if ((length == strlen(modules[i]))
+	  && !memcmp(name, modules[i], length))
+	return modules[i+1];
+    }
+  return NULL;
+}
+
+/* The config file is located, in order of decreasing precendence:
+ *
+ *   1. The --config-file command line option.
+ *
+ *   2. The <PROGRAM>_CONF environment variable.
+ *
+ *   3. The LSHD_CONFIG_DIR environment variable, combined with the
+ *      default file name.
+ *
+ *   4. The default directory, and the default file name, e.g.,
+ *       /etc/lshd/lshd_config.
+ */ 
+static int
+server_parse_config_file(const char *file,
+			 const char *default_file,			
+			 const char *env_file,
+			 const struct config_parser *parser,
+			 void *input)
+{
+  struct lsh_string *s = NULL;
+  struct lsh_string *contents;
+  int res;
+
+  int fd;
+
+  if (!file)
+    file = getenv(env_file);
+
+  if (!file)
+    {
+      const char *dir;
+
+      GET_FILE_ENV(dir, LSHD_CONFIG_DIR);
+      s = ssh_format("%lz/%lz", dir, default_file);
+      file = lsh_get_cstring(s);
+    }
+
+  fd = open(file, O_RDONLY);
+  if (fd < 0)
+    {
+      werror("Opening config file `%z' failed: %e.\n",
+	     file, errno);
+      lsh_string_free(s);
+      return errno;
+    }
+
+  contents = io_read_file_raw(fd, 10000);
+  close(fd);
+  if (!contents)
+    {
+      werror("Reading config file `%z' failed: %e.\n",
+	     file, errno);
+
+      lsh_string_free(s);
+      return errno;
+    }
+
+  res = server_config_parse_string(parser, lsh_get_cstring(s),
+				   STRING_LD(contents),
+				   input);
+  lsh_string_free(s);
+  lsh_string_free(contents);  
+
+  return res;
+}
+
+void
+init_server_config(struct server_config *self,
+		   const struct config_parser *parser,
+		   const char *default_file,			
+		   const char *env_variable)
+{
+  init_werror_config(&self->super);
+
+  self->parser = parser;
+  self->default_file = default_file;
+  self->env_variable = env_variable;
+
+  self->config_file = NULL;
+  self->use_example = 0;
+}
+
+struct server_config *
+make_server_config(const struct config_parser *parser,
+		   const char *default_file,			
+		   const char *env_variable)
+{
+  NEW(server_config, self);
+  init_server_config(self, parser, default_file, env_variable);
+  return self;
+}
+
+enum {  
+  OPT_CONFIG_FILE = 0x200,
+  OPT_PRINT_EXAMPLE,
+  OPT_USE_EXAMPLE,
+};
+
+static const struct argp_option
+server_options[] =
+{
+  { NULL, 0, NULL, 0, "Config file use:", 0 },
+  { "config-file", OPT_CONFIG_FILE, "FILE", 0,
+    "Location of configuration file.", 0 },
+  { "print-example-config", OPT_PRINT_EXAMPLE, NULL, 0,
+    "Print an example configuration file.", 0 },
+  { "use-example-config", OPT_USE_EXAMPLE, NULL, 0,
+    "Don't read any config file; use the example configuration." ,0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static const struct argp_child
+server_argp_children[] =
+{
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static error_t
+server_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST_SUBTYPE(server_config, self, state->input);
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &self->super;
+      break;
+
+    case ARGP_KEY_END:
+      if (self->config_file && self->use_example)
+	argp_error(state, "The options --config-file "
+		   "and --use-example-config are mutually exclusive.");
+
+      if (self->use_example)
+	{
+	  int err = server_config_parse_example(self->parser, self);
+	  if (err)
+	    argp_failure(state, EXIT_FAILURE, err,
+			 "Processing of the example configuration failed");
+	}
+      else
+	{
+	  int err = server_parse_config_file(self->config_file,
+					     self->default_file,
+					     self->env_variable,
+					     self->parser,
+					     self);
+	  if (err)
+	    argp_failure(state, EXIT_FAILURE, err,
+			 "Processing of the configuration file failed.");
+	}
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
+      break;
+
+    case OPT_CONFIG_FILE:
+      self->config_file = arg;
+      break;
+
+    case OPT_PRINT_EXAMPLE:
+      server_config_print_example(self->parser, stdout);
+      exit(EXIT_SUCCESS);
+
+    case OPT_USE_EXAMPLE:
+      self->use_example = 1;
+      break;
+    }
+  return 0;
+}
+
+const struct argp
+server_argp =
+{
+  server_options,
+  server_argp_parser,
+  NULL, NULL,
+  server_argp_children,
+  NULL, NULL
+};

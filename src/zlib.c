@@ -31,7 +31,6 @@
 #include "format.h"
 #include "lsh_string.h"
 #include "ssh.h"
-#include "string_buffer.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -52,9 +51,6 @@ static void do_free_zstream(z_stream *z);
      (name zlib_instance)
      (super compress_instance)
      (vars
-       ; Fail before producing larger packets than this
-       (max . uint32_t)
-       (rate . uint32_t)
        (f pointer (function int "z_stream *" int))
        (z indirect-special z_stream
           #f do_free_zstream)))
@@ -111,182 +107,67 @@ do_free_zstream(z_stream *z)
 	  type->operation, z->msg ? z->msg : "No error");
 }
 
-/* Estimates of the resulting packet sizes. We use fixnum arithmetic,
- * with one represented as 1<<10=1024. Only rates between 1/16 and 16
- * are used. This may be a little too conservative; I have observed
- * compression ratios of about 50. */
- 
-#define RATE_UNIT 1024
-#define RATE_MAX (RATE_UNIT * 16)
-#define RATE_MIN (RATE_UNIT / 16)
-#define MARGIN 200
-#define INSIGNIFICANT 100
-
-static uint32_t estimate_size(uint32_t rate, uint32_t input, uint32_t max)
-{
-  uint32_t guess = rate * input / RATE_UNIT + MARGIN;
-  return MIN(max, guess);
-}
-
-/* Assumes that input is nonzero */
-static uint32_t estimate_update(uint32_t rate, uint32_t input, uint32_t output)
-{
-  /* Decay old estimate */
-  rate = rate * 15 / 16;
-
-  /* NOTE: Following the envelope is suboptimal for small inputs. We
-   * do it only for input packets of reasonable size. This method
-   * could be improved.
-   *
-   * Perhaps a linear combination k * rate + (1-k) estimate, where k
-   * depends on the size of the sample (i.e. input) would make sense?
-   * Or use different rate estimates for different lengths? */
-  
-  if (input > INSIGNIFICANT)
-    {
-      uint32_t estimate = output * RATE_UNIT / input;
-
-      if (estimate > RATE_MAX)
-	return RATE_MAX;
-
-      /* Follow the "envelope" */
-      rate = MAX(estimate, rate);
-    }
-  
-  return MAX(rate, RATE_MIN);
-}
-
 /* Compress incoming data */
-static struct lsh_string *
+static uint32_t
 do_zlib(struct compress_instance *c,
-	struct lsh_string *packet,
-	int free)
+	struct lsh_string *output, uint32_t start,
+	uint32_t length, const uint8_t *input)
 {
   CAST(zlib_instance, self, c);
-  struct string_buffer buffer;
+  uint32_t space;
+  int rc;
+
+  assert(length > 0);
   
-  /* LIMIT keeps track of the amount of storage we may still need to
-   * allocate. To detect that a packet grows unexpectedly large, we
-   * need a little extra buffer space beyond the maximum size. */
-  uint32_t limit = self->max + 1;
-  uint32_t input = lsh_string_length(packet);
-  uint32_t estimate;
-  
-  debug("do_zlib (%z): length in: %i\n",
-	ZLIB_TYPE(&self->z)->operation, input);
-  
-  if (!input)
-    {
-      werror("do_zlib (%z): Compressing empty packet.\n",
-	     ZLIB_TYPE(&self->z)->operation);
-      return free ? packet : lsh_string_dup(packet);
-    }
-
-  estimate = estimate_size(self->rate, input, limit);
-  debug("do_zlib (%z): estimate:  %i\n",
-	ZLIB_TYPE(&self->z)->operation,
-	estimate);
-
-  string_buffer_init(&buffer, estimate);
-
-  limit -= lsh_string_length(buffer.partial);
-
   /* The cast is needed because zlib, at least version 1.1.4, doesn't
      use const */
-  self->z.next_in = (uint8_t *) lsh_string_data(packet);
-  self->z.avail_in = input;
+  self->z.next_in = (uint8_t *) input;
+  self->z.avail_in = length;
 
-  for (;;)
+  space = lsh_string_length(output) - start;
+  
+  rc = lsh_string_zlib(output, start,
+		       self->f, &self->z, Z_SYNC_FLUSH,
+		       space);
+  switch (rc)
     {
-      int rc;
+    case Z_BUF_ERROR:
+      /* If avail_in is zero, this just means that all data have
+       * been flushed. */
+      if (self->z.avail_in)
+	werror("do_zlib (%z): Z_BUF_ERROR (probably harmless),\n"
+	       "  avail_in = %i, avail_out = %i\n",
+	       ZLIB_TYPE(&self->z)->operation,
+	       self->z.avail_in, self->z.avail_out);
+      /* Fall through */
+    case Z_OK:
+      break;
+    default:
+      werror("do_zlib: %z failed: %z\n",
+	     ZLIB_TYPE(&self->z)->operation,
+	     self->z.msg ? self->z.msg : "No error(?)");
       
-      assert(buffer.left);
-      
-      rc = lsh_string_zlib(buffer.partial, buffer.pos,
-			   self->f, &self->z, Z_SYNC_FLUSH,
-			   buffer.left);
-
-      switch (rc)
-	{
-	case Z_BUF_ERROR:
-	  /* If avail_in is zero, this just means that all data have
-	   * been flushed. */
-	  if (self->z.avail_in)
-	    werror("do_zlib (%z): Z_BUF_ERROR (probably harmless),\n"
-		   "  avail_in = %i, avail_out = %i\n",
-		   ZLIB_TYPE(&self->z)->operation,
-		   self->z.avail_in, self->z.avail_out);
-	  /* Fall through */
-	case Z_OK:
-	  break;
-	default:
-	  werror("do_zlib: %z failed: %z\n",
-		 ZLIB_TYPE(&self->z)->operation,
-		 self->z.msg ? self->z.msg : "No error(?)");
-	  if (free)
-	    lsh_string_free(packet);
-	  
-	  return NULL;
-	}
-      
-      /* NOTE: It's not enough to check that avail_in is zero to
-       * determine that all data have been flushed. avail_in == 0 and
-       * avail_out > 0 implies that all data has been flushed, but if
-       * avail_in == avail_out == 0, we have to allocate more output
-       * space. */
-	 
-      if (!self->z.avail_in && !self->z.avail_out)
-	debug("do_zlib (%z): Both avail_in and avail_out are zero.\n",
-	      ZLIB_TYPE(&self->z)->operation);
-      
-      if (!self->z.avail_out)
-	{ /* All output space consumed */
-	  uint32_t plength = lsh_string_length(buffer.partial);
-	  
-	  if (!limit)
-	    {
-	      werror("do_zlib (%z): Packet grew too large!\n",
-		     ZLIB_TYPE(&self->z)->operation);
-	      
-	      if (free)
-		lsh_string_free(packet);
-
-	      string_buffer_clear(&buffer);
-	      return NULL;
-	    }
-
-	  /* Grow to about double size. */
-	  string_buffer_grow(&buffer,
-			     MIN(limit, plength + buffer.total + 100));
-	  limit -= plength;
-	}
-      else if (!self->z.avail_in)
-	{ /* Compressed entire packet */
-	  uint32_t output;
-	  
-	  if (free)
-	    lsh_string_free(packet);
-	  
-	  packet =
-	    string_buffer_final(&buffer, self->z.avail_out);
-
-	  output = lsh_string_length(packet);
-	  assert(output <= self->max);
-
-	  debug("do_zlib (%z): length out: %i\n",
-		ZLIB_TYPE(&self->z)->operation,
-		output);
-
-	  if (output > estimate)
-	    debug("do_zlib (%z): Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
-		  ZLIB_TYPE(&self->z)->operation,
-		  input, estimate, output);
-	  
-	  self->rate = estimate_update(self->rate, input, output);
-
-	  return packet;
-	}
+      return 0;
     }
+      
+  /* NOTE: It's not enough to check that avail_in is zero to determine
+     that all data have been flushed. avail_in == 0 and avail_out > 0
+     implies that all data has been flushed, but if avail_in ==
+     avail_out == 0, we have to allocate more output space. */
+	 
+  if (!self->z.avail_out)
+    {
+      /* All output space consumed. This is an error, since the
+	 available space is one byte more than the maximum packet
+	 size */
+      return 0;
+    }
+
+  /* Output space available, and no error. Then we must have processed all input. */
+  assert(!self->z.avail_in);
+
+  return space - self->z.avail_out;
+
 }
 
 static struct compress_instance *
@@ -305,16 +186,6 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 	res->f = deflate;
         res->super.codec = do_zlib;
 
-	/* Maximum expansion is 0.1% + 12 bytes. We use 1% + 12, to be
-	 * conservative.
-	 *
-	 * FIXME: These figures are documented for the entire stream,
-	 * does they really apply to all segments, separated by
-	 * Z_SYNC_FLUSH ? */
-
-	res->max = SSH_MAX_PACKET + SSH_MAX_PACKET / 100 + 12;
-	res->rate = RATE_UNIT;
-	
         if (deflateInit(&res->z, closure->level) != Z_OK)
           {
             werror("deflateInit failed: %z\n",
@@ -329,11 +200,6 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 	res->f = inflate;
         res->super.codec = do_zlib;
 
-	/* FIXME: Perhaps we ought to use the connection's
-	 * rec_max_packet size? */
-	res->max = SSH_MAX_PACKET;
-	res->rate = 2 * RATE_UNIT;
-	
         if (inflateInit(&res->z) != Z_OK)
           {
             werror("inflateInit failed: %z\n",

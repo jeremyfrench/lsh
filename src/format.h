@@ -76,37 +76,48 @@
  * "u" (as in unsigned). Used with bignums, to use unsigned-only
  * number format. */
 
-struct lsh_string *ssh_format(const char *format, ...);
+#if DEBUG_ALLOC && __GNUC__
+
+struct lsh_string *
+ssh_format_clue(const char *clue, const char *format, ...);
+
+#define ssh_format(format, ...) \
+ssh_format_clue(__FILE__ ":" STRING_LINE, format, ## __VA_ARGS__)
+
+#else /* !DEBUG_ALLOC */
+
+struct lsh_string *
+ssh_format(const char *format, ...);
+
+#endif /* !DEBUG_ALLOC */
+
 uint32_t ssh_format_length(const char *format, ...);
-void ssh_format_write(const char *format,
+void
+ssh_format_write(const char *format,
 		      struct lsh_string *buffer, uint32_t pos, ...);
 
-uint32_t ssh_vformat_length(const char *format, va_list args);
-void ssh_vformat_write(const char *format,
+uint32_t
+ssh_vformat_length(const char *format, va_list args);
+
+void
+ssh_vformat_write(const char *format,
 		       struct lsh_string *buffer, uint32_t pos, va_list args);
 
-void
-format_hex_string(struct lsh_string *buffer, uint32_t pos,
-		  uint32_t length, const uint8_t *data);
-
      
-/* Short cuts */
-#define lsh_string_dup(s) (ssh_format("%lS", (s)))
-
+/* Short cut */
 #define make_string(s) (ssh_format("%lz", (s)))
 
-unsigned format_size_in_decimal(uint32_t n);
-void
-format_decimal(struct lsh_string *buffer, uint32_t pos,
-	       uint32_t length, uint32_t n);
+unsigned
+format_size_in_decimal(uint32_t n);
 
-/* FIXME: These functions don't really belong here */
 
+/* Helper functions for formatting particular ssh messages */
+struct lsh_string *
+format_disconnect(int code, const char *msg, 
+		  const char *language);
 
 struct lsh_string *
-lsh_string_colonize(const struct lsh_string *s, int every, int freeflag);
+format_unimplemented(uint32_t seqno);
 
-struct lsh_string *
-lsh_string_bubblebabble(const struct lsh_string *s, int freeflag);
 
 #endif /* LSH_FORMAT_H_INCLUDED */

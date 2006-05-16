@@ -26,17 +26,12 @@
 
 #include "channel.h"
 #include "io.h"
-#include "server_userauth.h"
 
 #include <assert.h>
 #include <string.h>
 
-struct ssh_channel *
-make_server_session(uint32_t initial_window,
-		    struct alist *request_types);
-
 struct channel_open *
-make_open_session(struct alist *session_requests);
+make_open_session(struct alist *session_requests, int helper_fd);
 
 extern struct channel_request
 shell_request_handler;
@@ -59,6 +54,7 @@ pty_request_handler;
 extern struct channel_request
 window_change_request_handler;
 
-struct channel_request x11_req_handler;
+extern struct channel_request
+x11_request_handler;
 
 #endif /* LSH_SERVER_SESSION_H_INCLUDED */

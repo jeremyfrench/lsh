@@ -10,17 +10,27 @@ set -e
 
 # For lsh-authorize
 : ${SEXP_CONV:="`pwd`/../nettle/tools/sexp-conv"}
+: ${LSH_TRANSPORT:="`pwd`/../lsh-transport"}
+: ${LSHD_CONNECTION:="`pwd`/../lshd-connection"}
+: ${LSHD_PTY_HELPER:="`pwd`/../lshd-pty-helper"}
+: ${LSHD_USERAUTH:="`pwd`/../lshd-userauth"}
 
-export LSH_YARROW_SEED_FILE SEXP_CONV
+: ${LSHD_UTMP:="`pwd`/home/utmpx"}
+: ${LSHD_WTMP:="`pwd`/home/wtmpx"}
 
-: ${LSHD_FLAGS:='-q --enable-core'}
+: ${LSHD_CONFIG_DIR:="$srcdir/config"}
+
+export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT
+export LSHD_CONNECTION LSHD_PTY_HELPER LSHD_USERAUTH
+export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
+
+: ${LSHD_FLAGS:=''}
 : ${LSH_FLAGS:=-q}
 : ${LSHG_FLAGS:=-q}
 : ${HOSTKEY:="$srcdir/key-1.private"}
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
-: ${INTERFACE:=localhost}
 
 # Ignore any options the tester might have put in the environment.
 
@@ -92,12 +102,9 @@ spawn_lshd () {
     # local is not available in /bin/sh
     # local delay
 
-    # Note that --daemon not only forks into the background, it also changes
-    # the cwd, uses syslog, etc.
-    
     HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
 	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
-	--pid-file $PIDFILE --daemon --no-syslog "$@" || return 1
+	--pid-file $PIDFILE --daemonic "$@" || return 1
     
     # lshd should release its port after receiving HUP, but we may get
     # timing problems when the next lshd process tries to bind the
@@ -119,17 +126,19 @@ spawn_lshd () {
     return 1
 }
 
+# FIXME: Enable -z, when implemented on the server side.
 run_lsh () {
     cmd="$1"
     shift
-    echo "$cmd" | HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt \
-	--sloppy-host-authentication \
-	--capture-to /dev/null -z -p $PORT "$@" localhost
+    echo "$cmd" | HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
+	--no-use-gateway --sloppy-host-authentication \
+	--capture-to /dev/null -p $PORT "$@" localhost
 
 }
 
 exec_lsh () {
-    HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+    HOME="$TEST_HOME" ../lsh $LSH_FLAGS --sloppy-host-authentication \
+	--no-use-gateway \
 	--capture-to /dev/null -z -p $PORT localhost "$@"
 }
 
@@ -137,18 +146,19 @@ exec_lsh () {
 spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+	--no-use-gateway \
 	--capture-to /dev/null -z -p $PORT "$@" --write-pid -B localhost > "$LSH_PIDFILE"
 
     at_exit 'kill `cat $LSH_PIDFILE`'
 }
 
 exec_lshg () {
-    ../lshg $LSHG_FLAGS -nt -p $PORT localhost "$@"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT localhost "$@"
 }
 
 spawn_lshg () {
     # echo spawn_lshg "$@"
-    ../lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
     at_exit 'kill `cat $LSHG_PIDFILE`'
 }
 

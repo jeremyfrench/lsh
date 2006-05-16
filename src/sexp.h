@@ -29,13 +29,13 @@
 /* Forward declaration, real declaration in nettle/sexp.h. */
 struct sexp_iterator;
 
-int
+enum lsh_atom
 lsh_sexp_to_atom(struct sexp_iterator *i);
 
 int
 lsh_sexp_to_uint32(struct sexp_iterator *i, uint32_t *x);
 
-int
+enum lsh_atom
 lsh_sexp_get_type(struct sexp_iterator *i);
 
 struct lsh_string *

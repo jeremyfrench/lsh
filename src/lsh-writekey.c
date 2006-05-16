@@ -45,10 +45,9 @@
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
-#include "io_commands.h"
 #include "interact.h"
+#include "io.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
@@ -68,6 +67,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_writekey_options)
+     (super werror_config)
      (vars
        ; Base filename
        (public_file string)
@@ -94,6 +94,8 @@ static struct lsh_writekey_options *
 make_lsh_writekey_options(void)
 {
   NEW(lsh_writekey_options, self);
+  init_werror_config(&self->super);
+
   self->public_file = NULL;
   self->private_file = NULL;
   self->server = 0;
@@ -154,10 +156,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
       break;
 
     case ARGP_KEY_END:
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
+
       if (!self->private_file)
 	{
 	  if (self->server)
@@ -417,7 +422,6 @@ main(int argc, char **argv)
   int public_fd;
   struct lsh_string *input;
   struct lsh_string *output;
-  const struct exception *e;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -447,15 +451,12 @@ main(int argc, char **argv)
   if (private_fd < 0)
     return EXIT_FAILURE;
 
-  e = write_raw(private_fd, STRING_LD(output));
-  lsh_string_free(output);
-
-  if (e)
+  if (!write_raw(private_fd, STRING_LD(output)))
     {
-      werror("Writing private key failed: %z\n",
-             e->msg);
+      werror("Writing private key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
 
   output = process_public(input, options);
   lsh_string_free(input);
@@ -467,15 +468,12 @@ main(int argc, char **argv)
   if (public_fd < 0)
     return EXIT_FAILURE;
   
-  e = write_raw(public_fd, STRING_LD(output));
-  lsh_string_free(output);
-  
-  if (e)
+  if (!write_raw(public_fd, STRING_LD(output)))
     {
-      werror("Writing public key failed: %z\n",
-             e->msg);
+      werror("Writing public key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
   
   gc_final();
   

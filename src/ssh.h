@@ -16,12 +16,15 @@
 
 /* 20-29 Algorithm negotiation */
 
+#define SSH_FIRST_KEYEXCHANGE_GENERIC  20
+
 #define SSH_MSG_KEXINIT                20
 #define SSH_MSG_NEWKEYS                21
 
-#define SSH_FIRST_KEYEXCHANGE_SPECIFIC 30
 /* 30-49 Key exchange method specific (numbers can be reused for
  *       different authentication methods) */
+
+#define SSH_FIRST_KEYEXCHANGE_SPECIFIC 30
 
 #define SSH_MSG_KEXDH_INIT             30
 #define SSH_MSG_KEXDH_REPLY            31
@@ -97,14 +100,16 @@
 /* 192-255 Local extensions */
 #define SSH_FIRST_LOCAL 192
 
+#define SSH_LSH_GATEWAY_STOP 192
+
 /* Disconnecting */
 
 #define SSH_DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT      1
 #define SSH_DISCONNECT_PROTOCOL_ERROR                   2
 #define SSH_DISCONNECT_KEY_EXCHANGE_FAILED              3
 
-/* Formely known as SSH_DISCONNECT_HOST_AUTHENTICATION_FAILED */
-#define SSH_DISCONNECT_RESERVED                         4
+/* The value 4 was formely known as
+   SSH_DISCONNECT_HOST_AUTHENTICATION_FAILED */
 
 #define SSH_DISCONNECT_MAC_ERROR                        5
 #define SSH_DISCONNECT_COMPRESSION_ERROR                6
@@ -187,7 +192,12 @@
 #define SSH_TTY_OP_OSPEED  129
 #define SSH_TTY_OP_RESERVED 160
 
+/* Default port number, in host byte order */
+#define SSH_DEFAULT_PORT 22
+
 /* Limits */
+
+#define SSH_MAX_LINE 255
 
 /* Default max length of packet payload */
 #define SSH_MAX_PACKET 0x8000
@@ -198,6 +208,10 @@
 
 /* Subtract this to get a reasonable max_packet value for a channel. */
 #define SSH_CHANNEL_MAX_PACKET_FUZZ 100
+
+/* The maximum amount of transport packets (KEXINIT, KEX_DHREPLY, UNIMPLEMENTED, etc)
+   we are willing to buffer in response to messages from the remote end. */
+#define SSH_MAX_TRANSPORT_RESPONSE 20000
 
 /* Largest block size we support (NOTE: This is not a protocol limit) */
 #define SSH_MAX_BLOCK_SIZE 16

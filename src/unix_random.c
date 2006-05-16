@@ -80,20 +80,15 @@ static int
 write_seed_file(struct yarrow256_ctx *ctx,
 	       int fd)
 {
-  const struct exception *e;
-  
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
       werror("Seeking to beginning of seed file failed!? %e\n", errno);
       return 0;
     }
 
-  e = write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file);
-
-  if (e)
+  if (!write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file))
     {
-      werror("Overwriting seed file failed: %z\n",
-	     e->msg);
+      werror("Overwriting seed file failed: %e\n", errno);
       return 0;
     }
 
@@ -267,15 +262,28 @@ do_device_source(struct unix_random *self, int init)
     {
       /* More than a minute since we last read the device */
       uint8_t buf[DEVICE_READ_SIZE];
-      const struct exception *e
-	= read_raw(self->device_fd, sizeof(buf), buf);
+      uint32_t done;
 
-      if (e)
+      /* FIXME: Use lsh_string_read instead? */
+      for (done = 0; done < sizeof(buf) ;)
 	{
-	  werror("Failed to read /dev/urandom %e\n", errno);
-	  return 0;
-	}
+	  int res;
+	  do
+	    res = read(self->device_fd, buf + done, sizeof(buf) - done);
+	  while (res < 0 && errno == EINTR);
 
+	  if (res <= 0)
+	    {
+	      if (res < 0)
+		werror("Failed to read /dev/urandom %e\n", errno);
+	      else
+		werror("Failed to read /dev/urandom: end of filee\n");
+
+	      return 0;
+	    }
+
+	  done += res;
+	}
       self->device_last_read = now;
       
       return yarrow256_update(&self->yarrow, RANDOM_SOURCE_DEVICE,

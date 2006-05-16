@@ -40,10 +40,10 @@
 
 /* Conversions */
 
-int
+enum lsh_atom
 lsh_sexp_to_atom(struct sexp_iterator *i)
 {
-  int type;
+  enum lsh_atom type;
   
   if (i->type != SEXP_ATOM || i->display)
     return 0;
@@ -54,7 +54,7 @@ lsh_sexp_to_atom(struct sexp_iterator *i)
 }
 
 /* Returns 0 or an atom */
-int
+enum lsh_atom
 lsh_sexp_get_type(struct sexp_iterator *i)
 {
   if (!sexp_iterator_enter_list(i))

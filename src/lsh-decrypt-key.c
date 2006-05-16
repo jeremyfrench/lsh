@@ -42,10 +42,9 @@
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
-#include "io_commands.h"
 #include "interact.h"
+#include "io.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
@@ -69,6 +68,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_decryptkey_options)
+     (super werror_config)
      (vars
        ; Base filename
        (tty object interact)
@@ -80,7 +80,9 @@ static struct lsh_decryptkey_options *
 make_lsh_decryptkey_options(void)
 {
   NEW(lsh_decryptkey_options, self);
-  
+
+  init_werror_config(&self->super);
+
   /* We don't need window change tracking. */
   self->tty = make_unix_interact();
 
@@ -125,7 +127,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
+      break;
+
+    case ARGP_KEY_END:      
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
       break;
 
     case OPT_ASKPASS:
@@ -155,9 +162,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       else
 	self->out_fd = i;
       break;
-
-    case ARGP_KEY_END:      
-      break;
     }
   return 0;
 }
@@ -178,7 +182,6 @@ main(int argc, char **argv)
   struct lsh_decryptkey_options *options = make_lsh_decryptkey_options();
   struct lsh_string *input;
   struct lsh_string *output;
-  const struct exception *e;
   struct alist *mac = make_alist(0, -1);
   struct alist *crypto = make_alist(0, -1);
   
@@ -210,15 +213,12 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     
-  e = write_raw(options->out_fd, STRING_LD(output));
-  lsh_string_free(output);
-  
-  if (e)
+  if (!write_raw(options->out_fd, STRING_LD(output)))
     {
-      werror("Writing decrypted key failed: %z\n",
-             e->msg);
+      werror("Writing decrypted key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
   
   gc_final();
   

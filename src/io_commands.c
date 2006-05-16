@@ -26,23 +26,173 @@
 #endif
 
 #include <assert.h>
-/* Needed only to get the error code from failed calls to io_connect */
 #include <errno.h>
+
 /* For STDIN_FILENO */
 #include <unistd.h>
 
 #include "io_commands.h"
 
 #include "command.h"
-#include "connection.h"
-/* For lsh_get_cstring */
-#include "format.h"
-#include "io.h"
-#include "queue.h"
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
+#include "io_commands.c.x"
 
+/* (listen_tcp_command address callback)
+
+   Returns a resource. The callback gets a listen-value as argument.
+*/
+
+/* GABA:
+   (class
+     (name io_port)
+     (super resource)
+     (vars
+       (fd . int)
+       (callback object command)))
+*/
+
+static void
+kill_io_port(struct resource *s)
+{
+  CAST(io_port, self, s);
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      io_close_fd(self->fd);
+      self->fd = -1;
+    }
+};
+
+static struct io_port *
+make_io_port(int fd, struct command *callback)
+{
+  NEW(io_port, self);
+  init_resource(&self->super, kill_io_port);
+
+  io_register_fd(fd, "listen port");
+
+  self->fd = fd;
+  self->callback = callback;
+
+  return self;
+}
+
+static void *
+oop_io_port_accept(oop_source *source UNUSED,
+		   int fd, oop_event event, void *state)
+{
+  CAST(io_port, self, (struct lsh_object *) state);
+
+#if WITH_IPV6
+  struct sockaddr_storage peer;
+#else
+  struct sockaddr_in peer;
+#endif
+
+  socklen_t peer_length = sizeof(peer);
+  int s;
+  
+  assert(event == OOP_READ);
+  assert(self->fd == fd);
+
+  s = accept(self->fd, (struct sockaddr *) &peer, &peer_length);
+  if (s < 0)
+    {
+      werror("accept failed, fd = %i: %e\n", self->fd, errno);
+    }
+  else
+    COMMAND_CALL(self->callback,
+		 make_listen_value(s, sockaddr2info(peer_length,
+						    (struct sockaddr *)&peer)),
+		 &discard_continuation, &ignore_exception_handler);
+
+  return OOP_CONTINUE;  
+}
+
+/* (listen_tcp callback port) */
+DEFINE_COMMAND2(listen_tcp_command)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, callback, a1);
+  CAST(address_info, a, a2);
+  struct sockaddr *addr;
+  socklen_t addr_length;
+  struct io_port *port;
+  int fd;
+
+  addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
+  if (!addr)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
+      return;
+    }
+
+  fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
+
+  if (fd < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "socket failed"));
+      lsh_space_free(addr);
+      return;
+    }
+
+  if (listen(fd, 256) < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
+      close(fd);
+      return;
+    }    
+
+  port = make_io_port(fd, callback);
+  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
+			   oop_io_port_accept, port);
+
+  COMMAND_RETURN(c, port);
+}
+
+/* (listen_local callback port) */
+DEFINE_COMMAND2(listen_local_command)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, callback, a1);
+  CAST(local_info, a, a2);
+
+  struct io_port *port;
+  int fd;
+
+  fd = io_bind_local(a);
+  if (fd < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno,
+					"binding local socket failed"));
+      return;
+    }
+
+  if (listen(fd, 256) < 0)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno,
+					"listen on local socket failed"));
+      close(fd);
+      return;
+    }    
+
+  port = make_io_port(fd, callback);
+  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
+			   oop_io_port_accept, port);
+
+  COMMAND_RETURN(c, port);
+}
+
+#if 0
 #if WITH_TCPWRAPPERS
 #include <tcpd.h> 
 
@@ -53,248 +203,6 @@ int allow_severity = LOG_INFO;
 int deny_severity = LOG_INFO;
 
 #endif /* WITH_TCPWRAPPERS */
-
-#include "io_commands.c.x"
-
-/* (listen callback fd) */
-DEFINE_COMMAND2(listen_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST_SUBTYPE(command, callback, a1);
-  CAST(lsh_fd, fd, a2);
-
-  if (io_listen(fd, make_listen_callback(callback, e)))
-    COMMAND_RETURN(c, fd);
-  else
-    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
-					 NULL, errno, NULL));
-}
-
-static struct exception resolve_exception =
-STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
-
-DEFINE_COMMAND(bind_address_command)
-     (struct command *self UNUSED,
-      struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST(address_info, a, x);
-  struct sockaddr *addr;
-  socklen_t addr_length;
-  
-  struct lsh_fd *fd;
-
-  addr = address_info2sockaddr(&addr_length, a, NULL, 0);
-  if (!addr)
-    {
-      EXCEPTION_RAISE(e, &resolve_exception);
-      return;
-    }
-
-  fd = io_bind_sockaddr(addr, addr_length, e);
-  lsh_space_free(addr);
-  
-  if (fd)
-    COMMAND_RETURN(c, fd);
-  else
-    /* FIXME: Do we need an EXC_IO_BIND ? */
-    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
-					 NULL, errno, NULL));
-}
-
-DEFINE_COMMAND(bind_local_command)
-     (struct command *self UNUSED,
-      struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST(local_info, info, x);
-  struct lsh_fd *fd = io_bind_local(info, e);
-
-  if (fd)
-    COMMAND_RETURN(c, fd);
-  else
-    /* FIXME: Do we need an EXC_IO_BIND ? */
-    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
-					 NULL, errno, NULL));
-}
-
-
-/* GABA:
-   (class
-     (name connect_continuation)
-     (super command_continuation)
-     (vars
-       (target object address_info)
-       (up object command_continuation)))
-*/
-
-static void
-do_connect_continuation(struct command_continuation *c,
-			struct lsh_object *x)
-{
-  CAST(connect_continuation, self, c);
-  CAST(lsh_fd, fd, x);
-
-  COMMAND_RETURN(self->up, make_listen_value(fd, self->target, fd2info(fd,0)));
-}
-
-/* FIXME: Return an io_callback instead */
-static struct command_continuation *
-make_connect_continuation(struct address_info *target,
-			  struct command_continuation *up)
-{
-  NEW(connect_continuation, self);
-  self->super.c = do_connect_continuation;
-  self->target = target;
-  self->up = up;
-
-  return &self->super;
-}
-     
-static void
-do_connect(struct address_info *a,
-	   struct resource_list *resources,
-	   struct command_continuation *c,
-	   struct exception_handler *e)
-{
-  struct sockaddr *addr;
-  socklen_t addr_length;
-  struct lsh_fd *fd;
-
-  /* Address must specify a host */
-  assert(a->ip);
-
-  /* Performs dns lookups */
-  addr = address_info2sockaddr(&addr_length, a, NULL, 1);
-  if (!addr)
-    {
-      EXCEPTION_RAISE(e, &resolve_exception);
-      return;
-    }
-
-  /* If the name is canonicalized in any way, we should pass the
-   * canonical name to make_connect_continuation .*/
-  fd = io_connect(addr, addr_length, 
-		  make_connect_callback(make_connect_continuation(a, c)),
-		  e);
-  lsh_space_free(addr);
-
-  if (!fd)
-    {
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_CONNECT, NULL, errno, NULL));
-      return;
-    }
-
-  if (resources)
-    remember_resource(resources,
-		      &fd->super);
-}
-
-
-/* Connect variant, taking a connection object as argument (used for
- * rememembering the connected fd).
- *
- * (connect port connection) -> fd */
-
-/* GABA:
-   (class
-     (name connect_port)
-     (super command)
-     (vars
-       (target object address_info)))
-*/
-
-static void
-do_connect_port(struct command *s,
-		struct lsh_object *x,
-		struct command_continuation *c,
-		struct exception_handler *e)
-{
-  CAST(connect_port, self, s);
-  CAST(ssh_connection, connection, x);
-  
-  do_connect(self->target, connection->resources, c, e);
-}
-
-
-struct command *
-make_connect_port(struct address_info *target)
-{
-  NEW(connect_port, self);
-  self->super.call = do_connect_port;
-  self->target = target;
-
-  return &self->super;
-}
-
-/* (connect address) */
-DEFINE_COMMAND(connect_simple_command)
-     (struct command *self UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST(address_info, address, a);
-
-  do_connect(address, NULL, c, e);
-}
-
-/* (connect addresses) */
-DEFINE_COMMAND(connect_list_command)
-     (struct command *self UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST(connect_list_state, addresses, a);
-
-  io_connect_list(addresses,
-		  /* FIXME: Fix handshake_command to take a plain fd
-		     as argument, not a listen value. */
-		  make_connect_continuation(NULL, c), e);
-}
-
-/* (connect_connection connection port) */
-DEFINE_COMMAND2(connect_connection_command)
-     (struct command_2 *self UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(ssh_connection, connection, a1);
-  CAST(address_info, address, a2);
-
-  do_connect(address, connection->resources, c, e);
-}
-
-
-DEFINE_COMMAND(connect_local_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(local_info, info, a);
-  
-  static struct exception gateway_exception =
-    STATIC_EXCEPTION(EXC_IO_CONNECT, "no usable gateway socket found");
-  
-  struct lsh_fd *fd = io_connect_local(info,
-				       make_connect_continuation(NULL, c),
-				       e);
-  
-  if (!fd)
-    EXCEPTION_RAISE(e, &gateway_exception);
-}
-
-
 
 /* Takes a listen_value as argument, logs the peer address, and
  * returns the fd object. */
@@ -318,7 +226,7 @@ DEFINE_COMMAND(io_log_peer_command)
 
 
 
-/* GABA:
+/* ;;GABA:
    (class
      (name tcp_wrapper)
      (super command)
@@ -400,3 +308,4 @@ make_tcp_wrapper(struct lsh_string *name, struct lsh_string *msg )
              (lambda (peer)
                 (start-io peer (request-forwarded-tcpip connection peer)))))
  */
+#endif

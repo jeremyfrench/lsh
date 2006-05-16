@@ -33,6 +33,7 @@
 #include "format.h"
 #include "lsh_string.h"
 #include "parse.h"
+#include "tokenize_config.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -81,132 +82,12 @@
        (hosts object config_host)))
 */
 
-enum token_type
-  { TOK_EOF, TOK_BEGIN_GROUP, TOK_END_GROUP, TOK_STRING, TOK_ERROR };
 
-struct tokenizer
-{
-  struct simple_buffer buffer;
-  unsigned lineno;
-  enum token_type type;
-  unsigned token_length;
-  const char *token;
-};
 
-static void
-tokenizer_init(struct tokenizer *self,
-	       unsigned length, const unsigned char *data)
-{
-  simple_buffer_init(&self->buffer, length, data);
-  self->lineno = 1;
-}
-
-static enum token_type
-next_token(struct tokenizer *self)
-{
-  static const char char_class[0x100] =
-    {
-      /* HT, LF, VT, FF, CR */
-      0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      /* SPACE */
-      1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      /* '{', '}' */
-      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,2,0,2,0,0,
-
-      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    };
-#define IS_SPACE(c) (char_class[c] & 1)
-#define IS_SEPARATOR(c) (char_class[c] & 3)
-  for (;;)
-    {
-      while (LEFT && IS_SPACE(*HERE))
-	{
-	  if (*HERE == '\n')
-	    self->lineno++;
-	  ADVANCE(1);
-	}
-
-      if (!LEFT)
-	self->type = TOK_EOF;
-      else switch(*HERE)
-	{
-	case '{':
-	  self->type = TOK_BEGIN_GROUP;
-	  ADVANCE(1);
-	  break;
-	case '}':
-	  self->type = TOK_END_GROUP;
-	  ADVANCE(1);
-	  break;
-	case '#':
-	  /* comment */
-	  while (LEFT && *HERE != '\n')
-	    ADVANCE(1);
-	  continue;
-	  
-	default:
-	  {
-	    unsigned i;
-	    self->type = TOK_STRING;
-	
-	    self->token = HERE;
-	
-	    for (i = 0; i<LEFT && !IS_SEPARATOR(HERE[i]); i++)
-	      ;
-	    self->token_length = i;
-	    ADVANCE(i);
-	  }
-	}
-      DEBUG (("next_token: %i\n", self->type));
-  
-      return self->type;
-    }
-}
-
-/* Display file name as well? */
-static void
-parse_error(struct tokenizer *self, const char *msg)
-{
-  werror("Parse error: %z, config file:%i\n",
-	 msg, self->lineno);
-}
-
-#define PARSE_ERROR(msg) parse_error(self, (msg))
-
-/* Can only be called if self->type == TOK_STRING */
-static int
-looking_at(struct tokenizer *self, const char *word)
-{
-  unsigned length = strlen(word);
-
-  if (length == self->token_length
-      && !memcmp(self->token, word, length))
-    {
-      next_token(self);
-      return 1;
-    }
-  else
-    return 0;
-}
-
-static struct lsh_string *
-parse_word(struct tokenizer *self)
-{
-  struct lsh_string *s;
-  if (self->type != TOK_STRING)
-    { PARSE_ERROR("expected word"); return NULL; }
-
-  s = ssh_format("%ls", self->token_length, self->token);
-  next_token(self);
-  return s;
-}
+#define PARSE_ERROR(msg) config_tokenizer_error(self, (msg))
 
 static int
-parse_setting(struct tokenizer *self, struct config_setting **settings)
+parse_setting(struct config_tokenizer *self, struct config_setting **settings)
 {
   struct lsh_string *s;
   enum config_type type;
@@ -214,22 +95,22 @@ parse_setting(struct tokenizer *self, struct config_setting **settings)
   if (self->type != TOK_STRING)
     { PARSE_ERROR("syntax error"); return 0; }
   
-  if (looking_at(self, "address"))
+  if (config_tokenizer_looking_at(self, "address"))
     type = CONFIG_ADDRESS;
-  else if (looking_at(self, "user"))
+  else if (config_tokenizer_looking_at(self, "user"))
     type = CONFIG_USER;
   else
     {
       werror("Unknown keyword `%s'\n", self->token_length, self->token);
-      next_token(self);
+      config_tokenizer_next(self);
       
       if (self->type == TOK_STRING)
-	next_token(self);
+	config_tokenizer_next(self);
 
       return 1;
     }
   
-  s = parse_word(self);
+  s = config_tokenizer_get_string(self);
   if (!s)
     return 0;
   
@@ -247,7 +128,7 @@ parse_setting(struct tokenizer *self, struct config_setting **settings)
 
 
 static struct config_setting *
-parse_host_settings(struct tokenizer *self)
+parse_host_settings(struct config_tokenizer *self)
 {
   struct config_setting *settings = NULL;
 
@@ -259,20 +140,9 @@ parse_host_settings(struct tokenizer *self)
   return settings;
 }
 
-static int
-parse_token(struct tokenizer *self, enum token_type type)
-{
-  if (self->type == type)
-    {
-      next_token(self);
-      return 1;
-    }
-  else
-    { PARSE_ERROR("syntax error"); return 0; }
-}
 
 static int
-parse_hosts(struct tokenizer *self, struct config_host **hosts)
+parse_hosts(struct config_tokenizer *self, struct config_host **hosts)
 {
   while (self->type == TOK_STRING)
     {
@@ -282,13 +152,13 @@ parse_hosts(struct tokenizer *self, struct config_host **hosts)
 	n->next = *hosts;
 	*hosts = n;
 	
-	n->name = parse_word(self);
+	n->name = config_tokenizer_get_string(self);
 	assert(n->name);
 	if (self->type == TOK_BEGIN_GROUP)
 	  {
-	    next_token(self);
+	    config_tokenizer_next(self);
 	    n->settings = parse_host_settings(self);
-	    if (!parse_token(self, TOK_END_GROUP))
+	    if (!config_tokenizer_skip_token(self, TOK_END_GROUP))
 	      return 0;
 	  }
       }
@@ -297,7 +167,7 @@ parse_hosts(struct tokenizer *self, struct config_host **hosts)
 }
 
 static struct config_group *
-parse_groups(struct tokenizer *self)
+parse_groups(struct config_tokenizer *self)
 {
   struct config_group *groups = NULL;
   while (self->type != TOK_EOF)
@@ -309,26 +179,23 @@ parse_groups(struct tokenizer *self)
 	groups = n;
       }
       /* Name is optional */
-      if (self->type == TOK_STRING)
-	groups->name = parse_word(self);
-      else
-	groups->name = NULL;
+      groups->name = config_tokenizer_get_string(self);
       groups->settings = NULL;
       groups->hosts = NULL;
       
-      if (!parse_token(self, TOK_BEGIN_GROUP))
+      if (!config_tokenizer_skip_token(self, TOK_BEGIN_GROUP))
 	return NULL;
 
       while (self->type != TOK_END_GROUP)
 	{
-	  if (looking_at(self, "hosts"))
+	  if (config_tokenizer_looking_at(self, "hosts"))
 	    {
-	      if (!parse_token(self, TOK_BEGIN_GROUP))
+	      if (!config_tokenizer_skip_token(self, TOK_BEGIN_GROUP))
 		return NULL;
 
 	      if (!parse_hosts(self, &groups->hosts))
 		return NULL;
-	      if (!parse_token(self, TOK_END_GROUP))
+	      if (!config_tokenizer_skip_token(self, TOK_END_GROUP))
 		return NULL;
 	    }
 	  else
@@ -337,18 +204,18 @@ parse_groups(struct tokenizer *self)
 		return NULL;
 	    }
 	}
-      if (!parse_token(self, TOK_END_GROUP))
+      if (!config_tokenizer_skip_token(self, TOK_END_GROUP))
 	return NULL;
     }
   return groups;
 }
 
 struct config_group *
-config_parse_string(uint32_t length, const uint8_t *data)
+config_parse_string(const char *file, uint32_t length, const uint8_t *data)
 {
-  struct tokenizer t;
-  tokenizer_init(&t, length, data);
-  next_token(&t);
+  struct config_tokenizer t;
+  config_tokenizer_init(&t, file, length, data);
+  config_tokenizer_next(&t);
 
   return parse_groups(&t);
 }

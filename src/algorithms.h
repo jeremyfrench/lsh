@@ -9,6 +9,8 @@
 
 #include "alist.h"
 #include "compress.h"
+#include "crypto.h"
+#include "list.h"
 #include "lsh_argp.h"
 #include "randomness.h"
 
@@ -21,7 +23,6 @@
      (name algorithms_options)
      (vars
        (algorithms object alist)
-       ; (pubkey_algorithms object alist)
        
        (crypto_algorithms object int_list)
        (mac_algorithms object int_list)
@@ -31,6 +32,18 @@
 
 struct alist *all_symmetric_algorithms(void);
 struct alist *all_signature_algorithms(struct randomness *r);
+
+struct int_list *
+default_crypto_algorithms(struct alist *algorithms);
+
+struct int_list *
+default_mac_algorithms(struct alist *algorithms);
+
+struct int_list *
+default_compression_algorithms(struct alist *algorithms);
+
+struct int_list *
+default_hostkey_algorithms(void);
 
 struct int_list *
 filter_algorithms(struct alist *algorithms,

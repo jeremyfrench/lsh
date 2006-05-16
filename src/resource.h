@@ -73,4 +73,12 @@ void remember_resource(struct resource_list *self,
 /* Allocates an empty list. */
 struct resource_list *make_resource_list(void);
 
+/* Are there any live resources on the list? */
+int
+resource_list_is_empty(struct resource_list *self);
+
+void
+resource_list_foreach(struct resource_list *self,
+		      void (*f)(struct resource *r));
+
 #endif /* LSH_RESOURCE_H_INCLUDED */

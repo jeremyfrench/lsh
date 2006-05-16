@@ -23,6 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_STRING_H_INCLUDED
+#define LSH_STRING_H_INCLUDED
+
 #include "lsh.h"
 
 /* Can we avoid this dependency? */
@@ -30,18 +33,12 @@
 #include "nettle/base64.h"
 #include "nettle/nettle-meta.h"
 
-/* The memory allocation model (for strings) is as follows:
- *
- * Packets are allocated when they are needed. A packet may be passed
- * through a chain of processing functions, until it is finally
- * discarded or transmitted, at which time it is deallocated.
- * Processing functions may deallocate their input packets and
- * allocate fresh packets to pass on; therefore, any data from a
- * packet that is needed later must be copied into some other storage.
- *
- * At any time, each packet is own by a a particular processing
- * function. Pointers into a packet are valid only while you own it.
- * */
+/* The memory allocation for strings does not use the garbage
+   collector. Each string must have an owner. Strings are often passed
+   over a producer/consumer interface, where a producer allocates a
+   string, passed the string and ownership over to a consumer, which
+   deallocates the string (or passes it on to another consumer) when
+   done with it. */
 
 #if WITH_ZLIB
 #if HAVE_ZLIB_H
@@ -66,6 +63,12 @@ lsh_get_number_of_strings(void);
 struct lsh_string *
 lsh_string_alloc(uint32_t size);
 #endif /* !DEBUG_ALLOC */
+
+struct lsh_string *
+lsh_string_realloc(struct lsh_string *s, uint32_t size);
+
+struct lsh_string *
+lsh_string_dup(const struct lsh_string *s);
 
 uint32_t
 lsh_string_length(const struct lsh_string *s);
@@ -92,13 +95,6 @@ int
 lsh_string_prefixp(const struct lsh_string *prefix,
 		       const struct lsh_string *s);
 
-uint32_t
-lsh_string_sequence_number(const struct lsh_string *s);
-
-void
-lsh_string_set_sequence_number(struct lsh_string *s, uint32_t n);
-
-
 void
 lsh_string_putc(struct lsh_string *s, uint32_t i, uint8_t c);
 
@@ -111,6 +107,10 @@ lsh_string_write(struct lsh_string *s, uint32_t start, uint32_t length,
 
 void
 lsh_string_write_uint32(struct lsh_string *s, uint32_t start, uint32_t n);
+
+void
+lsh_string_move(struct lsh_string *s,
+		uint32_t start, uint32_t length, uint32_t from);
 
 void
 lsh_string_write_xor(struct lsh_string *s, uint32_t start, uint32_t length,
@@ -207,3 +207,10 @@ int
 lsh_string_transport_iterator_first(struct lsh_string *s,
 				    struct sexp_iterator *iterator);
 
+struct lsh_string *
+lsh_string_colonize(const struct lsh_string *s, int every, int freeflag);
+
+struct lsh_string *
+lsh_string_bubblebabble(const struct lsh_string *s, int freeflag);
+
+#endif /* LSH_STRING_H_INCLUDED */

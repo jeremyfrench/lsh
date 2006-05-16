@@ -27,6 +27,8 @@
 #include "config.h"
 #endif
 
+#if 0 && WITH_SRP
+
 #include <assert.h>
 
 #include "nettle/bignum.h"
@@ -47,7 +49,6 @@
 #include "srp.h.x"
 #undef GABA_DEFINE
 
-#if WITH_SRP
 
 /* We use the following syntax for verifiers:
  *

@@ -52,17 +52,25 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "parse.h"
+#include "server_config.h"
 #include "xalloc.h"
 
+#define GABA_DEFINE
+#include "werror.h.x"
+#undef GABA_DEFINE
 
-/* Global flags */
-int trace_flag = 0;
-int debug_flag = 0;
-int quiet_flag = 0;
-int verbose_flag = 0;
+static const char *packet_types[0x100] =
+#include "packet_types.h"
+;
+
+static int trace_flag = 0;
+static int debug_flag = 0;
+static int quiet_flag = 0;
+static int verbose_flag = 0;
 
 static const char *program_name = NULL;
 
+#if 0
 #define WERROR_TRACE -1
 #define WERROR_DEBUG -2
 #define WERROR_LOG -3
@@ -130,6 +138,7 @@ const struct argp werror_argp =
   NULL, NULL, NULL, NULL, NULL
 };
 
+#endif
 static int error_fd = STDERR_FILENO;
 
 #define BUF_SIZE 500
@@ -137,11 +146,11 @@ static uint8_t error_buffer[BUF_SIZE];
 static uint32_t error_pos = 0;
 static int error_raw = 0;
 
-static const struct exception *
+static int
 (*error_write)(int fd, uint32_t length, const uint8_t *data) = write_raw;
 
 #if HAVE_SYSLOG
-static const struct exception *
+static int
 write_syslog(int fd UNUSED, uint32_t length, const uint8_t *data)
 {
   struct lsh_string *s;
@@ -158,23 +167,22 @@ write_syslog(int fd UNUSED, uint32_t length, const uint8_t *data)
   syslog(LOG_NOTICE, "%s", lsh_get_cstring(s));
   lsh_string_free(s);
   
-  return NULL;
+  return 1;
 }
 
-/* FIXME: Delete argument and use program_name. */
 void
-set_error_syslog(const char *id)
+set_error_syslog(void)
 {
-  openlog(id, LOG_PID | LOG_CONS, LOG_DAEMON);
+  openlog(program_name, LOG_PID | LOG_CONS, LOG_DAEMON);
   error_write = write_syslog;
   error_fd = -1;
 }
 #endif /* HAVE_SYSLOG */
 
-static const struct exception *
+static int
 write_ignore(int fd UNUSED,
 	     uint32_t length UNUSED, const uint8_t *data UNUSED)
-{ return NULL; }
+{ return 1; }
 
 void
 set_error_stream(int fd)
@@ -361,7 +369,7 @@ werror_hexdump(uint32_t length, const uint8_t *data)
 {
   uint32_t i = 0;
   
-  werror("(size %i = 0x%xi)\n", length, length);
+  werror_format("(size %i = 0x%xi)\n", length, length);
 
   for (i = 0; i<length; i+= 16)
     {
@@ -420,15 +428,19 @@ werror_paranoia_putc(uint8_t c)
     }
 }
 
-void
-werror_vformat(const char *f, va_list args)
+static void
+werror_title(void)
 {
   if (program_name)
     {
       werror_write(strlen(program_name), program_name);
       werror_write(2, ": ");
-    }
-  
+    }  
+}
+
+static void
+werror_vformat(const char *f, va_list args)
+{
   while (*f)
     {
       if (*f == '%')
@@ -577,6 +589,18 @@ werror_vformat(const char *f, va_list args)
 
 		break;
 	      }
+	    case 'T':
+	      {
+		int type = va_arg(args, int);
+		const char *name;
+		
+		assert(type >= 0);
+		assert(type < sizeof(packet_types));
+		name = packet_types[type];
+
+		werror_write(strlen(name), name);
+		break;
+	      }
 	    case 'z':
 	      {
 		char *s = va_arg(args, char *);
@@ -610,10 +634,11 @@ werror_vformat(const char *f, va_list args)
       else
 	werror_putc(*f++);
     }
+  werror_flush();  
 }
 
 /* Unconditionally display message. */
-static void
+void
 werror_format(const char *format, ...) 
 {
   va_list args;
@@ -621,7 +646,6 @@ werror_format(const char *format, ...)
   va_start(args, format);
   werror_vformat(format, args);
   va_end(args);
-  werror_flush();
 }
 
 void
@@ -633,10 +657,10 @@ werror(const char *format, ...)
    * werror()-messages should be displayed. */
   if (verbose_flag || !quiet_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -657,10 +681,10 @@ trace(const char *format, ...)
 
   if (trace_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -671,10 +695,10 @@ debug(const char *format, ...)
 
   if (debug_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -685,10 +709,10 @@ verbose(const char *format, ...)
 
   if (verbose_flag)
     {
+      werror_title();
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -702,10 +726,10 @@ fatal(const char *format, ...)
 {
   va_list args;
 
+  werror_title();
   va_start(args, format);
   werror_vformat(format, args);
   va_end(args);
-  werror_flush();
 
 #if FATAL_SLEEP
   werror_format("attach gdb to process %i. Going to sleep...\n", getpid());
@@ -723,6 +747,20 @@ fatal(const char *format, ...)
   
   abort();
 }
+
+void
+die(const char *format, ...)
+{
+  va_list args;
+
+  werror_title();
+  va_start(args, format);  
+  werror_vformat(format, args);
+  va_end(args);
+
+  exit(EXIT_FAILURE);
+}
+
 
 static unsigned
 format_size_in_hex(uint32_t n)
@@ -750,3 +788,248 @@ format_size_in_hex(uint32_t n)
   return e+1;
 }
 
+void
+toggle_quiet(void)
+{
+  if (quiet_flag)
+    {
+      quiet_flag = 0;
+      werror("Enabling warning messages.\n");      
+    }
+  else
+    {
+      werror("Disabling warning messages.\n");
+      quiet_flag = 1;
+    }
+}
+
+void
+toggle_verbose(void)
+{
+  if (verbose_flag)
+    {
+      verbose("Disabling verbose messages.\n");
+      verbose_flag = 0;
+    }
+  else
+    {
+      verbose_flag = 1;
+      verbose("Enabling verbose messages.\n");
+    }
+}
+
+void
+toggle_trace(void)
+{
+  if (trace_flag)
+    {
+      trace("Disabling trace messages.\n");
+      trace_flag = 0;
+    }
+  else
+    {
+      trace_flag = 1;
+      trace("Enabling trace messages.\n");
+    }
+}
+
+void
+toggle_debug(void)
+{
+  if (debug_flag)
+    {
+      debug("Disabling debug messages.\n");
+      debug_flag = 0;
+    }
+  else
+    {
+      debug_flag = 1;
+      debug("Enabling debug messages.\n");
+    }
+}
+
+int
+werror_quiet_p(void)
+{
+  return quiet_flag;
+}
+
+void
+init_werror_config(struct werror_config *self)
+{
+  self->logfile = NULL;
+  self->syslog = -1;
+  self->quiet = -1;
+  self->verbose = -1;
+  self->trace = -1;
+  self->debug = -1;
+}
+
+struct werror_config *
+make_werror_config(void)
+{
+  NEW(werror_config, self);
+
+  init_werror_config(self);
+  return self;
+}
+
+#define WERROR_TRACE -1
+#define WERROR_DEBUG -2
+#define WERROR_LOGFILE -3
+#define WERROR_SYSLOG -4
+
+static const struct argp_option
+werror_options[] =
+{
+  { "quiet", 'q', NULL, 0, "Suppress all warnings and diagnostic messages", 0 },
+  { "verbose", 'v', NULL, 0, "Verbose diagnostic messages", 0},
+  { "trace", WERROR_TRACE, NULL, 0, "Detailed trace", 0 },
+  { "debug", WERROR_DEBUG, NULL, 0, "Print huge amounts of debug information", 0 },
+  { "log-file", WERROR_LOGFILE, "FILE", 0,
+    "Append messages to this file.", 0},
+  /* Note: No syslog option here, since it's not available for clients */
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static error_t
+werror_argp_parser(int key, char *arg,
+		   struct argp_state *state)
+{
+  CAST_SUBTYPE(werror_config, self, (struct lsh_object *) state->input);
+  
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_END:
+    case ARGP_KEY_INIT:
+      program_name = state->name;
+      break;
+    case 'q':
+      self->quiet = 1;
+      break;
+    case 'v':
+      self->verbose = 1;
+      break;
+    case WERROR_TRACE:
+      self->trace = 1;
+      break;
+    case WERROR_DEBUG:
+      self->debug = 1;
+      break;
+    case WERROR_LOGFILE:
+      if (!self->logfile)
+	{
+	  self->logfile = make_string(arg);
+	  self->syslog = 0;
+	}
+      break;
+    }
+  return 0;
+}
+
+const struct argp werror_argp =
+{
+  werror_options,
+  werror_argp_parser,
+  NULL, NULL, NULL, NULL, NULL
+};
+
+static const struct config_option
+werror_config_options[] = {
+  { WERROR_LOGFILE, "log-file", CONFIG_TYPE_STRING, "File to log messages to.", NULL },
+#if HAVE_SYSLOG
+  { WERROR_SYSLOG, "use-syslog", CONFIG_TYPE_BOOL, "Use the syslog facility.", "no" },
+#endif
+  { 'q', "quiet", CONFIG_TYPE_BOOL, "Supress warning messages.", "no" },
+  { 'v', "verbose", CONFIG_TYPE_BOOL, "Enable verbose logging", "yes" },
+  { WERROR_TRACE, "trace", CONFIG_TYPE_BOOL, "Enable trace messages to the log.", "no" },
+  { WERROR_DEBUG, "debug", CONFIG_TYPE_BOOL, "Enable debug messages to the log.", "no" },
+  { 0, NULL, 0, NULL, NULL }
+};
+
+static int
+werror_config_handler(int key, uint32_t value, const uint8_t *data,
+		      struct config_parser_state *state)
+{
+  CAST_SUBTYPE(werror_config, self, state->input);
+  switch (key)
+    {
+    case WERROR_LOGFILE:
+      if (!self->logfile)
+	self->logfile = ssh_format("%ls", value, data);
+      break;
+#if HAVE_SYSLOG
+    case WERROR_SYSLOG:
+      if (self->syslog < 0)
+	self->syslog = value;
+      break;
+#endif
+    case 'q':
+      if (self->quiet < 0)
+	self->quiet = value;
+      break;
+
+    case 'v':
+      if (self->verbose < 0)
+	self->verbose = value;
+      break;
+
+    case WERROR_TRACE:
+      if (self->trace < 0)
+	self->trace = value;
+      break;
+
+    case WERROR_DEBUG:
+      if (self->debug < 0)
+	self->debug = value;
+    }
+  return 0;
+}
+
+const struct config_parser
+werror_config_parser = {
+  werror_config_options,
+  werror_config_handler,
+  NULL
+};
+
+int
+werror_init(struct werror_config *config)
+{
+  if (config->quiet > 0)
+    quiet_flag = 1;
+  if (config->verbose > 0)
+    verbose_flag = 1;
+  if (config->trace > 0)
+    trace_flag = 1;
+  if (config->debug > 0)
+    debug_flag = 1;
+#ifdef HAVE_SYSLOG
+  if (config->syslog > 0)
+    set_error_syslog();
+  else
+#endif
+    if (config->logfile)
+      {
+	/* FIXME: For clients, this is right: We only get lsh-related
+	 * messages to the log file, and child processes are not
+	 * affected. But for the server, perhaps we should also dup
+	 * the logfile over stderr? */
+	
+	int fd = open(lsh_get_cstring(config->logfile),
+		      O_WRONLY | O_CREAT | O_APPEND, 0666);
+	if (fd < 0)
+	  {
+	    werror("Failed to open log file `%S'.", config->logfile);
+	    return 0;
+	  }
+	else
+	  {
+	    io_set_close_on_exec(fd);
+	    set_error_stream(fd);
+	  }
+      }
+  return 1;
+}

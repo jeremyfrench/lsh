@@ -24,9 +24,11 @@
 #ifndef LSH_CLIENT_H_INCLUDED
 #define LSH_CLIENT_H_INCLUDED
 
-#include "channel_commands.h"
 #include "io.h"
 #include "keyexchange.h"
+#include "channel.h"
+#include "channel_io.h"
+#include "werror.h"
 
 #define GABA_DECLARE
 #include "client.h.x"
@@ -35,29 +37,6 @@
 /* The argp option group for actions. */
 #define CLIENT_ARGP_ACTION_GROUP 100
 #define CLIENT_ARGP_MODIFIER_GROUP 200
-
-struct packet_handler *
-make_accept_service_handler(uint32_t service,
-			    struct command_continuation *c);
-
-/* GABA:
-   (class
-     (name request_service)
-     (super command)
-     (vars
-       (service . int)))
-*/
-
-void
-do_request_service(struct command *s,
-		   struct lsh_object *x,
-		   struct command_continuation *c,
-		   struct exception_handler *e);
-
-#define STATIC_REQUEST_SERVICE(service) \
-{ STATIC_COMMAND(do_request_service), service } 
-
-struct command *make_request_service(int service);
 
 /* GABA:
    (class
@@ -92,16 +71,47 @@ struct channel_request *make_handle_exit_signal(int *exit_code);
 struct command *make_open_session_command(struct ssh_channel *session);
 
 
-extern struct channel_request_command request_shell;
-#define REQUEST_SHELL (&request_shell.super.super)
+extern struct command request_shell;
+#define REQUEST_SHELL (&request_shell.super)
 
-extern struct command client_io;
-#define CLIENT_START_IO (&client_io.super)
+struct command *
+make_session_channel_request(int type, struct lsh_string *arg);
 
-struct ssh_channel *
-make_client_session_channel(struct lsh_fd *in,
-			    struct lsh_fd *out,
-			    struct lsh_fd *err,
+extern struct command client_start_io;
+#define CLIENT_START_IO (&client_start_io.super)
+
+/* Initiate and manage a session */
+/* GABA:
+   (class
+     (name client_session)
+     (super ssh_channel)
+     (vars
+       ; Session stdio. The fd:s should be distinct, for simplicity in
+       ; the close logic.       
+       (in struct channel_read_state)
+       (out struct channel_write_state)
+       (err struct channel_write_state)
+
+       ; The pty-allocation code adds resources here.
+       (resources object resource_list)
+
+       ; Commands to be invoked after the session is opened.
+       (requests struct object_queue)
+
+       ; For errors when opening the channel, or when sending the
+       ; channel requests. It's not clear what's the proper place for
+       ; the error handling.
+       (e object exception_handler)
+
+       ; Escape char handling
+       (escape object escape_info)
+       ; Where to save the exit code.
+       (exit_status . "int *")))
+*/
+
+struct client_session *
+make_client_session_channel(int in, int out, int err,
+			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status);
@@ -127,6 +137,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
 /* GABA:
    (class
      (name client_options)
+     (super werror_config)
      (vars
        ;; Used only by lsh, NULL for lshg.
        (random object randomness)
@@ -136,7 +147,6 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        ; -1 means default.
        (escape . int)
        
-       ; For i/o exceptions 
        (handler object exception_handler)
 
        (exit_code . "int *")
@@ -198,7 +208,7 @@ client_prepend_action(struct client_options *options,
 
 int
 client_parse_forward_arg(char *arg,
-			 uint32_t *listen_port,
+			 unsigned long *listen_port,
 			 struct address_info **target);
 
 extern const struct argp client_argp;

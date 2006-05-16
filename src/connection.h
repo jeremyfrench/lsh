@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 2005 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -24,270 +24,199 @@
 #ifndef LSH_CONNECTION_H_INCLUDED
 #define LSH_CONNECTION_H_INCLUDED
 
-#include "abstract_io.h"
-#include "compress.h"
+#include "exception.h"
+#include "parse.h"
 #include "queue.h"
 #include "resource.h"
-#include "randomness.h"
 
+struct channel_open;
+struct channel_open_info;
 
-/* NOTE: CONNECTION_CLIENT and CONNECTION_SERVER are used both for
- * indexing the two-element arrays in the connection object, and in
- * the flags field, to indicate our role in the protocol. For
- * instance,
- *
- *   connection->versions[connection->flags & CONNECTION_MODE]
- *
- * is the version string we sent. Furthermore, install_keys() depends
- * on the numerical values of CONNECTION_SERVER and CONNECTION_CLIENT. */
-
-enum connection_flag
-  {
-    CONNECTION_MODE = 1, 
-    CONNECTION_CLIENT = 0,
-    CONNECTION_SERVER = 1,
-    CONNECTION_SRP = 2
-  };
-
-/* FIXME: Delete permanently? */
-enum peer_flag
-  {
-    PEER_NONE = 0,
-  };
-
-/* State affecting incoming keyexchange packets */
-enum kex_state
-  {
-    /* A KEX_INIT msg can be accepted. This is true, most of the
-     * time. */
-    KEX_STATE_INIT,
-
-    /* Ignore next packet, whatever it is. */
-    KEX_STATE_IGNORE,
-
-    /* Key exchange is in progress. Neither KEX_INIT or NEWKEYS
-     * messages, nor upper-level messages can be received. */
-    KEX_STATE_IN_PROGRESS,
-
-    /* Key exchange is finished. A NEWKEYS message should be received,
-     * and nothing else. */
-    KEX_STATE_NEWKEYS
-  };
+enum channel_alloc_state {
+  /* Values used in the alloc_flags array. */
+  /* FIXME: Move the SENT_CLOSED and RECEIVED_CLOSED flags here? */
+  CHANNEL_FREE = 0,
+  CHANNEL_ALLOC_SENT_OPEN,
+  CHANNEL_ALLOC_RECEIVED_OPEN,
+  CHANNEL_ALLOC_ACTIVE,
+};
 
 #define GABA_DECLARE
 #include "connection.h.x"
 #undef GABA_DECLARE
 
-/* This is almost a write handler; difference is that it gets an extra
- * argument with a connection object. */
-
-/* GABA:
-   (class
-     (name packet_handler)
-     (vars
-       (handler method void
-               "struct ssh_connection *connection"
-	       "struct lsh_string *packet")))
-*/
-
-#define HANDLE_PACKET(closure, connection, packet) \
-((closure)->handler((closure), (connection), (packet)))
-
-#define DEFINE_PACKET_HANDLER(SPEC, NAME, CARG, PARG)	\
-static void						\
-do_##NAME(struct packet_handler *,			\
-	  struct ssh_connection *,			\
-	  struct lsh_string *);				\
-							\
-SPEC struct packet_handler NAME =			\
-{ STATIC_HEADER, do_##NAME };				\
-							\
-static void						\
-do_##NAME(struct packet_handler *s UNUSED,		\
-	  struct ssh_connection *CARG,			\
-	  struct lsh_string *PARG)
-
-
-
 /* GABA:
    (class
      (name ssh_connection)
-     (super abstract_write)
+     (super resource)
      (vars
-       ; Where to pass errors
-       (e object exception_handler)
+       ; Communication with the transport layer
+       (write method void "struct lsh_string *")
+       (disconnect method void "uint32_t reason" "const char *msg")
 
-       ; Connection flags
-       (flags . "enum connection_flag")
-
-       ; Sent and received version strings
-       (versions array (string) 2)
-       (session_id string)
-       
-       ; Connection description, used for debug messages.
-       (debug_comment . "const char *")
-
-       ; Features or bugs peculiar to the peer
-       (peer_flags . "enum peer_flag")
-
-       ; Timer, used both for initial handshake timeout
-       (timer object resource)
-       
-       ; Information about a logged in user. NULL unless some kind of
-       ; user authentication has been performed.
-       (user object lsh_user)
-
-       ; The chained connection in the proxy, or gateway.
-       (chain object ssh_connection)
-
-       ; Cleanup
+       ; Resources associated with the connection, including the channels.
        (resources object resource_list)
-
-       ; Connected peer and local
-       ; FIXME: Perhaps this should be a sockaddr or some other object
-       ; that facilitates reverse lookups?
-       (peer object address_info)
-       (local object address_info)
-
-       ; Keyexchange
-       (kexinit object make_kexinit)
        
-       ; Receiving
-       (rec_max_packet . uint32_t)
-       (rec_mac    object mac_instance)
-       (rec_crypto object crypto_instance)
-       (rec_compress object compress_instance)
+       ; Channels are indexed by local number
+       (channels space (object ssh_channel) used_channels)
+       
+       ; Global requests that we support
+       (global_requests object alist)
+       ; Channel types that we can open
+       (channel_types object alist)
 
-       ; Sending 
-       (socket object lsh_fd)    ; Socket connected to the other end 
-       ; When crossing the soft_limit we stop reading data on user
-       ; channels, and set hard_limit to the current size plus some
-       ; margin. When crossing the hard_limit, the connection is closed.
-       (soft_limit . uint32_t)
-       (hard_limit . uint32_t)
+       ; Allocation of local channel numbers is managed using the same
+       ; method as is traditionally used for allocation of unix file 
+       ; descriptors.
 
-       (write_packet object abstract_write)  ; Where to send packets
-       					     ; through the pipeline
+       ; A channel number can be reserved before there is any actual
+       ; channel object created for it. In particular, this is the
+       ; case for channel numbers allocated by the CHANNEL_OPEN
+       ; handler. So the channels table is not enough for keeping
+       ; track of which numbers are in use.       
+       (alloc_state space "enum channel_alloc_state")
 
-       (send_mac object mac_instance)
-       (send_crypto object crypto_instance)
-       (send_compress object compress_instance)
+       ; Allocated size of the arrays.
+       (allocated_channels . uint32_t)
 
-       ; For operations that require serialization. In particular
-       ; the server side of user authentication. 
-       
-       (paused . int)
-       (pending struct string_queue)
-       
-       ; Key exchange 
-       (read_kex_state . "enum kex_state")
+       ; Number of entries in the arrays that are in use and
+       ; initialized.
+       (used_channels . uint32_t)
 
-       ; While in the middle of a key exchange, messages of most types
-       ; must be queued up waiting for the key exchange to complete.
-       (send_kex_only . int)
-       (send_queue struct string_queue)
-       
-       ; For the key re-exchange logic
-       (key_expire object resource)
-       (sent_data . uint32_t)
-       
-       ; Invoked at the end of keyexchange.
-       ; Automatically reset to zero after each invocation.
-       ; Gets the connection as argument.
-       (keyexchange_done object command_continuation)
-       ; Called when key(re)exchange is finished, and when our
-       ; write buffer shrinks anough to allow more channel data.
-       (wakeup object command_continuation)
-       
-       (kexinits array (object kexinit) 2)
-       (literal_kexinits array (string) 2)
+       ; The smallest channel number that is likely to be free
+       (next_channel . uint32_t)
 
-       ; Table of all known message types 
-       (dispatch array (object packet_handler) "0x100")
+       ; Number of currently allocated channel numbers.
+       (channel_count . uint32_t)
        
-       ; Table of all opened channels
-       (table object channel_table)
+       (max_channels . uint32_t) ; Max number of channels allowed 
+
+       ; Forwarded TCP ports. On the server side, it's ports we listen
+       ; on. On the client side, it's remote ports for which we have
+       ; requested forwarding, and expect to get receive CHANNEL_OPEN
+       ; forwarded-tcpip requests on.       
+       (forwarded_ports struct object_queue)
+
+       ; Used if we're currently forwarding X11. To support several
+       ; screens at the same time, this should be replaced with a
+       ; list, analogous to the remote_ports list above. Perhaps it
+       ; could be moved to the lcient side subclass?       
+       (x11_display object client_x11_display)
        
-       ; (provides_privacy . int)
-       ; (provides_integrity . int)
-       ))
+       ; Global requests that we have received, and should reply to
+       ; in the right order
+       (active_global_requests struct object_queue)
+
+       ; Queue of global requests that we expect replies on.
+       (pending_global_requests struct object_queue)
+       
+       ; If non-zero, close connection after all active channels have
+       ; died, and don't allow any new channels to be opened.
+       (pending_close . int)))
 */
 
-struct ssh_connection *
-make_ssh_connection(enum connection_flag flags,
-		    struct address_info *peer,
-		    struct address_info *local,
-		    const char *id_comment,
-		    struct exception_handler *e);
+#define SSH_CONNECTION_WRITE(c, s) ((c)->write((c), (s)))
+#define SSH_CONNECTION_DISCONNECT(c, r, msg) ((c)->disconnect((c), (r), (msg)))
+#define SSH_CONNECTION_ERROR(c, msg) \
+  SSH_CONNECTION_DISCONNECT((c), SSH_DISCONNECT_PROTOCOL_ERROR, (msg))
 
 void
-connection_init_io(struct ssh_connection *connection,
-		   struct lsh_fd *socket);
+init_ssh_connection(struct ssh_connection *table,
+		    void (*kill)(struct resource *),
+		    void (*write)(struct ssh_connection *, struct lsh_string *),
+		    void (*disconnect)(struct ssh_connection *, uint32_t, const char *));
 
 void
-connection_after_keyexchange(struct ssh_connection *self,
-			     struct command_continuation *c);
+ssh_connection_pending_close(struct ssh_connection *table);
+
+int
+ssh_connection_alloc_channel(struct ssh_connection *connection,
+			     enum channel_alloc_state type);
 
 void
-connection_wakeup(struct ssh_connection *self,
-		  struct command_continuation *c);
-
-struct lsh_callback *
-make_connection_close_handler(struct ssh_connection *c);
-
-/* Processes the packet at once, passing it on to the write buffer. */
+ssh_connection_dealloc_channel(struct ssh_connection *connection,
+			       uint32_t local_channel_number);
 void
-connection_send_kex(struct ssh_connection *self,
-		    struct lsh_string *message);
-
-/* Sending ordinary (non keyexchange) packets */
+ssh_connection_register_channel(struct ssh_connection *connection,
+				uint32_t local_channel_number,
+				struct ssh_channel *channel);
 void
-connection_send(struct ssh_connection *self,
-		struct lsh_string *message);
+ssh_connection_activate_channel(struct ssh_connection *connection,
+				uint32_t local_channel_number);
 
-void
-connection_send_kex_start(struct ssh_connection *self);
+struct ssh_channel *
+ssh_connection_lookup_channel(struct ssh_connection *connection,
+			      uint32_t local_channel_number,
+			      enum channel_alloc_state flag);
 
-void
-connection_send_kex_end(struct ssh_connection *self);
+/* SSH_MSG_GLOBAL_REQUEST */
 
-/* Serialization */
-void connection_lock(struct ssh_connection *self);
-void connection_unlock(struct ssh_connection *self);
+/* GABA:
+   (class
+     (name global_request)
+     (vars
+       (handler method void "struct ssh_connection *table"
+                            "uint32_t type"
+			    ; want-reply is needed only by
+			    ; do_gateway_global_request.
+                            "int want_reply"
+                            "struct simple_buffer *args"
+			    "struct command_continuation *c"
+			    "struct exception_handler *e")))
+*/
 
-/* Timeouts */
-void
-connection_set_timeout(struct ssh_connection *connection,
-		       unsigned seconds,
-		       const char *msg);
+#define GLOBAL_REQUEST(r, c, t, w, a, n, e) \
+((r)->handler((r), (c), (t), (w), (a), (n), (e)))
 
-void
-connection_clear_timeout(struct ssh_connection *connection);
+/* SSH_MSG_CHANNEL_OPEN */
 
-/* Table of packet types */
-extern const char *packet_types[0x100];
+struct channel_open_info
+{
+  uint32_t type_length;
 
-/* Simple packet handlers. */
-extern struct packet_handler connection_ignore_handler;
-extern struct packet_handler connection_unimplemented_handler;
-extern struct packet_handler connection_fail_handler;
-extern struct packet_handler connection_forward_handler;
-extern struct packet_handler connection_disconnect_handler;
+  /* NOTE: This is a pointer into the packet, so if it is needed later
+   * it must be copied. */
+  const uint8_t *type_data;
+  
+  int type;
 
-/* Implemented in write_packet.h */
-struct abstract_write *
-make_write_packet(struct ssh_connection *connection,
-		  struct randomness *random,
-		  struct abstract_write *next);
+  uint32_t remote_channel_number;
+  uint32_t send_window_size;
+  uint32_t send_max_packet;
+};
 
-/* Implemented in debug.c */
-struct abstract_write *
-make_packet_debug(struct abstract_write *continuation,
-		  struct lsh_string *prefix);
+struct exception *
+make_channel_open_exception(uint32_t error_code, const char *msg);
 
-void send_debug_message(struct ssh_connection *connection,
-			const char *msg, int always_display);
+/* GABA:
+   (class
+     (name channel_open)
+     (vars
+       (handler method void
+                "struct ssh_connection *connection"
+		"struct channel_open_info *info"
+                "struct simple_buffer *data"
+                "struct command_continuation *c"
+		"struct exception_handler *e")))
+*/
 
-extern struct packet_handler connection_debug_handler;
+#define CHANNEL_OPEN(o, c, i, d, r, e) \
+((o)->handler((o), (c), (i), (d), (r), (e)))
+
+#define DEFINE_CHANNEL_OPEN(name)			\
+static void do_##name(struct channel_open *s,		\
+		      struct ssh_connection *c,	\
+		      struct channel_open_info *info,	\
+		      struct simple_buffer *args,	\
+		      struct command_continuation *c,	\
+		      struct exception_handler *e);	\
+							\
+struct channel_open name =				\
+{ STATIC_HEADER, do_##name };				\
+							\
+static void do_##name
+
+extern struct command_2 connection_remember;
+#define CONNECTION_REMEMBER (&connection_remember.super.super)
 
 #endif /* LSH_CONNECTION_H_INCLUDED */

@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998, 1999, 2000 Niels Möller
+ * Copyright (C) 1998, 1999, 2000, 2005 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,74 +27,136 @@
 
 #include <assert.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "client.h"
 
-#include "channel_commands.h"
+#include "channel.h"
+#include "channel_io.h"
 #include "client.h"
 #include "io.h"
-#include "read_data.h"
+#include "lsh_string.h"
 #include "ssh.h"
+#include "ssh_write.h"
 #include "werror.h"
 #include "xalloc.h"
 
-#include "client_session.c.x"
-
-/* Initiate and manage a session */
-/* GABA:
-   (class
-     (name client_session_channel)
-     (super ssh_channel)
-     (vars
-       ; To access stdio
-       (in object lsh_fd)
-       (out object lsh_fd)
-       (err object lsh_fd)
-
-       ; Escape char handling
-       (escape object escape_info)
-       ; Where to save the exit code.
-       (exit_status . "int *")))
-*/
-
-/* Callback used when the server sends us eof */
 
 static void
-do_client_session_eof(struct ssh_channel *c)
+do_kill_client_session(struct resource *s)
+{  
+  CAST(client_session, self, s);
+  if (self->super.super.alive)
+    {
+      trace("do_kill_client_session\n");
+
+      self->super.super.alive = 0;
+
+      channel_read_state_close(&self->in);
+
+      /* Doesn't use channel_write_state_close, since the channel is
+	 supposedly dead already. */
+      io_close_fd(self->out.fd);
+      self->out.fd = -1;
+
+      io_close_fd(self->err.fd);
+      self->err.fd = -1;
+
+      KILL_RESOURCE_LIST(self->resources);
+      ssh_connection_pending_close(self->super.connection);
+    }
+}
+
+static void *
+oop_write_stdout(oop_source *source UNUSED,
+		 int fd, oop_event event, void *state)
 {
-  CAST(client_session_channel, session, c);
+  CAST(client_session, session, (struct lsh_object *) state);
 
-  close_fd_nicely(session->out);
-  close_fd_nicely(session->err);
-}  
+  assert(event == OOP_WRITE);
+  assert(fd == session->out.fd);
 
-static void
-do_client_session_close(struct ssh_channel *c)
+  if (channel_io_flush(&session->super, &session->out) != CHANNEL_IO_OK)
+    channel_write_state_close(&session->super, &session->out);
+  
+  return OOP_CONTINUE;
+}
+
+static void *
+oop_write_stderr(oop_source *source UNUSED,
+		 int fd, oop_event event, void *state)
 {
-  static const struct exception finish_exception
-    = STATIC_EXCEPTION(EXC_FINISH_PENDING, "Session closed.");
+  CAST_SUBTYPE(client_session, session, (struct lsh_object *) state);
 
-  EXCEPTION_RAISE(c->e, &finish_exception);
+  assert(event == OOP_WRITE);
+  assert(fd == session->err.fd);
+
+  if (channel_io_flush(&session->super, &session->err) != CHANNEL_IO_OK)
+    channel_write_state_close(&session->super, &session->err);
+  
+  return OOP_CONTINUE;
 }
 
 
 /* Receive channel data */
 static void
-do_receive(struct ssh_channel *c,
-	   int type, struct lsh_string *data)
+do_receive(struct ssh_channel *s, int type,
+	   uint32_t length, const uint8_t *data)
 {
-  CAST(client_session_channel, closure, c);
+  CAST(client_session, session, s);
   
   switch(type)
     {
     case CHANNEL_DATA:
-      A_WRITE(&closure->out->write_buffer->super, data);
+      if (channel_io_write(&session->super, &session->out,
+			   oop_write_stdout,
+			   length, data) != CHANNEL_IO_OK)
+	channel_write_state_close(&session->super, &session->out);
+
       break;
     case CHANNEL_STDERR_DATA:
-      A_WRITE(&closure->err->write_buffer->super, data);
+      if (channel_io_write(&session->super, &session->err,
+			   oop_write_stderr,
+			   length, data) != CHANNEL_IO_OK)
+	channel_write_state_close(&session->super, &session->err);
+
       break;
     default:
       fatal("Internal error!\n");
     }
+}
+
+/* Reading stdin */
+/* FIXME: Escape char handling */
+
+static void *
+oop_read_stdin(oop_source *source UNUSED,
+	       int fd, oop_event event, void *state)
+{
+  CAST(client_session, session, (struct lsh_object *) state);
+  uint32_t done;
+  
+  assert(fd == session->in.fd);
+  assert(event == OOP_READ);
+
+  if (channel_io_read(&session->super, &session->in, &done) != CHANNEL_IO_OK)
+    channel_read_state_close(&session->in);
+
+  else if (done > 0)
+    {
+      /* FIXME: Look for escape char */
+      channel_transmit_data(&session->super,
+			    done, lsh_string_data(session->in.buffer));
+    }
+  else
+    {
+      /* FIXME: We ought to warn the user if we're out of window
+	 space, and turn the terminal back into canonical mode. */
+      ;
+    }
+  return OOP_CONTINUE;
 }
 
 /* We may send more data */
@@ -102,132 +164,113 @@ static void
 do_send_adjust(struct ssh_channel *s,
 	       uint32_t i UNUSED)
 {
-  CAST(client_session_channel, self, s);
+  CAST(client_session, session, s);
 
-  assert(self->in->read);
-
-  lsh_oop_register_read_fd(self->in);
+  channel_io_start_read(&session->super, &session->in, oop_read_stdin);
 }
 
-/* Escape char handling */
-
-static struct io_callback *
-client_read_stdin(struct client_session_channel *session)
-{
-  struct abstract_write *write = make_channel_write(&session->super);
-
-  if (session->escape)
-    write = make_handle_escape(session->escape, write);
-  
-  return make_read_data(&session->super, write);
-}
-
-/* We have a remote shell */
 static void
-do_client_io(struct command *s UNUSED,
-	     struct lsh_object *x,
-	     struct command_continuation *c,
-	     struct exception_handler *e UNUSED)
-
+do_client_session_event(struct ssh_channel *c, enum channel_event event)
 {
-  CAST(client_session_channel, session, x);
-  struct ssh_channel *channel = &session->super;
-  assert(x);
+  CAST(client_session, session, c);
 
-  /* Set up write fd:s. */
-  
-  channel->receive = do_receive;
+  switch(event)
+    {
+    case CHANNEL_EVENT_CONFIRM:
+      session->super.receive = do_receive;
+      session->super.send_adjust = do_send_adjust;
 
-  /* FIXME: It seems a little kludgy to modify exception handlers
-   * here; it would be better to create the fd-objects at a point
-   * where the right exception handlers can be installed from the
-   * start. */
-  session->out->e
-    = make_channel_io_exception_handler(channel,
-					"stdout: ", 0,
-					session->out->e,
-					HANDLER_CONTEXT);
+      session->super.sources ++;
 
-  session->err->e
-    = make_channel_io_exception_handler(channel,
-					"stderr: ", 0,
-					session->err->e,
-					HANDLER_CONTEXT);
+      /* One reference each for stdout and stderr, and one more for the
+	 exit-status/exit-signal message */
+      session->super.sinks += 3;
 
-  /* Set up the fd we read from. */
-  channel->send_adjust = do_send_adjust;
+      /* FIXME: Setup escape handler, and raw tty? */
+      if (session->super.send_window_size)
+	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
 
-  /* Setup escape char handler, if appropriate. */
-  session->in->read = client_read_stdin(session);
+      ALIST_SET(session->super.request_types, ATOM_EXIT_STATUS,
+		&make_handle_exit_status(session->exit_status)->super);
+      ALIST_SET(session->super.request_types, ATOM_EXIT_SIGNAL,
+		&make_handle_exit_signal(session->exit_status)->super);
 
-  /* FIXME: Perhaps there is some way to arrange that channel.c calls
-   * the CHANNEL_SEND_ADJUST method instead? */
-  if (session->super.send_window_size)
-    lsh_oop_register_read_fd(session->in);
+      while (!object_queue_is_empty(&session->requests))
+	{
+	  CAST_SUBTYPE(command, request,
+		       object_queue_remove_head(&session->requests));
+	  COMMAND_CALL(request, &session->super.super.super,
+		       &discard_continuation, session->e);
+	}
 
-  /* FIXME: We should also arrange so that the tty is reset before we
-   * close it. */
-  session->in->close_callback
-    = make_channel_read_close_callback(channel);
+      channel_start_receive(&session->super,
+			    lsh_string_length(session->out.state->buffer));
 
-  /* Make sure stdio is closed properly if the channel or connection dies */
-  remember_resource(channel->resources, &session->in->super);
-  remember_resource(channel->resources, &session->out->super);
-  remember_resource(channel->resources, &session->err->super);
-  
-  ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
-	    &make_handle_exit_status(session->exit_status)->super);
-  ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
-	    &make_handle_exit_signal(session->exit_status)->super);
+      break;
 
-  channel->eof = do_client_session_eof;
-      
-  COMMAND_RETURN(c, channel);
-}
+    case CHANNEL_EVENT_DENY:
+      EXCEPTION_RAISE(session->e,
+		      make_exception(EXC_CHANNEL_OPEN, 0,
+				     "Failed to open session channel."));
+      break;
+    case CHANNEL_EVENT_EOF:
+      if (!session->out.state->length)
+	channel_write_state_close(&session->super, &session->out);
 
-struct command client_io =
-{ STATIC_HEADER, do_client_io };
+      if (!session->err.state->length)
+	channel_write_state_close(&session->super, &session->err);
+      break;
 
+    case CHANNEL_EVENT_CLOSE:
+      /* Do nothing */
+      break;
 
-struct ssh_channel *
-make_client_session_channel(struct lsh_fd *in,
-			    struct lsh_fd *out,
-			    struct lsh_fd *err,
+    case CHANNEL_EVENT_STOP:
+      channel_io_stop_read(&session->in);
+      break;
+    case CHANNEL_EVENT_START:
+      if (session->super.send_window_size)
+	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
+      break;
+    }
+}  
+
+#define CLIENT_READ_BUFFER_SIZE 0x4000
+
+struct client_session *
+make_client_session_channel(int in, int out, int err,
+			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status)
 {
-  NEW(client_session_channel, self);
+  NEW(client_session, self);
 
-  trace("make_client_session_channel\n");
-  init_channel(&self->super);
-
-  /* Makes sure the pending_close bit is set whenever this session
-   * dies, no matter when or how. */
-  self->super.close = do_client_session_close;
-
-  /* We could miss the server's exit-status or exit-signal message if
-   * we close the channel directly at EOF. So don't do that.
-   *
-   * FIXME: Perhaps we need to set this bit again in do_exit_status
-   * and do_exit_signal. */
-  self->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+  trace("make_client_session\n");
+  init_channel(&self->super, do_kill_client_session, do_client_session_event);
   
-  /* FIXME: We make rec_window_size non-zero here, but we don't setup
-   * the receive pointer until later, in do_client_io. That's bad. Do
-   * something similar to server_session.c: Add an inital_window
-   * attribute, and call channel_start_receive from client_io. */
-  self->super.rec_window_size = initial_window;
+  /* Set to initial_window when channel_start_receive is called, in
+     do_client_session_event. */
+  self->super.rec_window_size = 0;
 
   /* FIXME: Make maximum packet size configurable */
   self->super.rec_max_packet = SSH_MAX_PACKET;
 
   self->super.request_types = make_alist(0, -1);
 
-  /* self->expect_close = 0; */
-  self->in = in;
-  self->out = out;
-  self->err = err;
+  init_channel_read_state(&self->in, in, CLIENT_READ_BUFFER_SIZE);
+  init_channel_write_state(&self->out, out, initial_window);
+  init_channel_write_state(&self->err, err, initial_window);
+
+  io_register_fd(in, "session stdin");
+  io_register_fd(out, "session stdout");
+  io_register_fd(err, "session stderr");
+
+  self->resources = make_resource_list();
+
+  object_queue_init(&self->requests);
+  self->e = e;
+
   self->escape = escape;
 
 #if 0
@@ -235,15 +278,8 @@ make_client_session_channel(struct lsh_fd *in,
   if (self->escape)
     self->escape->dispatch['b'] = make_send_break(self->super);
 #endif
-  remember_resource(self->super.resources, &in->super);
-  remember_resource(self->super.resources, &out->super);
-  remember_resource(self->super.resources, &err->super);
-  
-  /* Flow control */
-  out->write_buffer->report = &self->super.super;
-  err->write_buffer->report = &self->super.super;
-  
+
   self->exit_status = exit_status;
   
-  return &self->super;
+  return self;
 }

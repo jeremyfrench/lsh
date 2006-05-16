@@ -18,7 +18,7 @@ at_exit "kill $pid; rm -f current" 0
 werror "Testing lsh"
 
 for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
-    echo 1>&2 "Testing $f"
+    # werror "Testing $f"
     rm -f current    || die "Deleting symlink current failed"
     ln -s $f current || die "Creating symlink current -> $f failed"
 
@@ -33,7 +33,7 @@ for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
 	    :
 	;;
 	*)
-	    die "Strange exit code $status from client"
+	    die "Strange exit code $status from client, test $f"
 	;;
     esac
 done

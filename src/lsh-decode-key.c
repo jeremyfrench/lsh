@@ -13,11 +13,12 @@
 
 #include "nettle/sexp.h"
 
+#include "crypto.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_argp.h"
 #include "lsh_string.h"
-#include "publickey_crypto.h"
+#include "parse.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
@@ -35,6 +36,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 /* GABA:
    (class
      (name lsh_decode_key_options)
+     (super werror_config)
      (vars
        ; Output filename
        (file string)
@@ -47,6 +49,8 @@ static struct lsh_decode_key_options *
 make_lsh_decode_key_options(void)
 {
   NEW(lsh_decode_key_options, self);
+  init_werror_config(&self->super);
+
   self->file = NULL;
   self->base64 = 0;
 
@@ -79,7 +83,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
 
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &self->super;
+      break;
+      
     case ARGP_KEY_END:
+      if (!werror_init(&self->super))
+	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
       break;
       
     case 'b':
@@ -108,7 +118,7 @@ static struct lsh_string *
 lsh_decode_key(struct lsh_string *contents)
 {
   struct simple_buffer buffer;
-  int type;
+  enum lsh_atom type;
 
   simple_buffer_init(&buffer, STRING_LD(contents));
 
@@ -163,7 +173,6 @@ lsh_decode_key(struct lsh_string *contents)
 int main(int argc, char **argv)
 {
   struct lsh_decode_key_options *options = make_lsh_decode_key_options();
-  const struct exception *e;
   struct lsh_string *input;
   struct lsh_string *output;
   
@@ -211,15 +220,12 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     
-  e = write_raw(out, STRING_LD(output));
-  lsh_string_free(output);
-  
-  if (e)
+  if (!write_raw(out, STRING_LD(output)))
     {
-      werror("Write failed: %z\n",
-             e->msg);
+      werror("Write failed: %e\n", errno);
       return EXIT_FAILURE;
     }
+  lsh_string_free(output);
   
   gc_final();
   

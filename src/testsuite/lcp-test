@@ -11,12 +11,12 @@ fi
 [ -x /bin/bash ] || test_skip
 
 spawn_lshd || die "spawn_lshd failed"
-spawn_lsh -G || die "spawn_lsh failed"
+spawn_lsh --start-gateway || die "spawn_lsh failed"
 
 rm -rf "$TEST_HOME"/files
 mkdir "$TEST_HOME"/files
 
-LCP_RSH=../lshg
+LCP_RSH=../lsh
 export LCP_RSH
 LCP="$srcdir/../lcp"
 

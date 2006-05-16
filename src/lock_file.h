@@ -24,6 +24,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_LOCK_FILE_H_INCLUDED
+#define LSH_LOCK_FILE_H_INCLUDED
+
 #include "lsh.h"
 
 struct lsh_file_lock_info;
@@ -50,3 +53,5 @@ struct lsh_file_lock_info;
  * without ".lock"-suffix? */
 struct lsh_file_lock_info *
 make_lsh_file_lock_info(struct lsh_string *name);
+
+#endif /* LSH_LOCK_FILE_H_INCLUDED */

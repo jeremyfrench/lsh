@@ -78,7 +78,8 @@ parse_string(struct simple_buffer *buffer,
   return 1;
 }
 
-/* FIXME: Get rid of this memcpy? */
+/* NOTE: This is used in one single place: For copying the cookie in
+   received KEYEXCHANGE_INIT messages. */
 int
 parse_octets(struct simple_buffer *buffer,
 	     uint32_t length, uint8_t *start)
@@ -277,7 +278,7 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result, uint32_t limit)
 }
 
 int
-parse_atom(struct simple_buffer *buffer, int *result)
+parse_atom(struct simple_buffer *buffer, enum lsh_atom *result)
 {
   uint32_t length;
   const uint8_t *start;
@@ -295,7 +296,7 @@ parse_atom(struct simple_buffer *buffer, int *result)
  * the buffer by setting the position to *beyond* the end of the
  * buffer. */
 static int
-parse_next_atom(struct simple_buffer *buffer, int *result)
+parse_next_atom(struct simple_buffer *buffer, enum lsh_atom *result)
 {
   uint32_t i;
 
@@ -355,11 +356,14 @@ parse_atoms(struct simple_buffer *buffer, unsigned limit)
 
   for (i = 0; i < count; i++)
     {
-      if (!parse_next_atom(buffer, LIST(res)+i))
+      enum lsh_atom atom;
+      
+      if (!parse_next_atom(buffer, &atom))
 	{
 	  KILL(res);
 	  return NULL;
 	}
+      LIST(res)[i] = atom;
     }
 
   return res;

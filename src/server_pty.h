@@ -64,7 +64,7 @@ struct pty_info *
 make_pty_info(void);
 
 int
-pty_open_master(struct pty_info *pty, uid_t user);
+pty_open_master(struct pty_info *pty);
 
 int
 pty_open_slave(struct pty_info *pty);

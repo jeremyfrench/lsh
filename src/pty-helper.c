@@ -1,0 +1,256 @@
+/* pty-helper.c
+ *
+ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 2006 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* Only for debugging */
+#include <stdio.h>
+
+#include "pty-helper.h"
+
+/* Returns 0 on success, errno value on error */
+int
+pty_send_message(int socket, const struct pty_message *message)
+{
+  struct msghdr hdr;
+  struct cmsghdr *cmsg;
+  struct iovec io;
+  char buf[CMSG_SPACE(sizeof(message->creds))
+	   + CMSG_SPACE(sizeof(message->fd))];
+  int controllen;
+  int res;
+
+  io.iov_base = (void *) &message->header;
+  io.iov_len = sizeof(message->header);
+
+  hdr.msg_name = NULL;
+  hdr.msg_namelen = 0;
+  hdr.msg_iov = &io;
+  hdr.msg_iovlen = 1;
+  hdr.msg_control = buf;
+  hdr.msg_controllen = sizeof(buf);
+
+  /* We rely on CMSG_NXTHDR doing the right thing when cmsg is NULL */
+  cmsg = NULL;
+  controllen = 0;
+
+  if (message->has_creds)
+    {
+      cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
+
+      cmsg->cmsg_level = SOL_SOCKET;
+      cmsg->cmsg_type = SCM_CREDENTIALS;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(message->creds));
+
+      memcpy(CMSG_DATA(cmsg), &message->creds, sizeof(message->creds));
+      controllen += CMSG_SPACE(sizeof(message->creds));
+    }
+  if (message->fd != -1)
+    {
+      cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
+
+      cmsg->cmsg_level = SOL_SOCKET;
+      cmsg->cmsg_type = SCM_RIGHTS;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(message->fd));
+
+      memcpy(CMSG_DATA(cmsg), &message->fd, sizeof(message->fd));
+      controllen += CMSG_SPACE(sizeof(message->fd));
+    }
+  hdr.msg_controllen = controllen;
+
+  do
+    res = sendmsg(socket, &hdr, 0);
+  while (res < 0 && errno == EINTR);
+
+  if (res < 0)
+    return errno;
+
+  if (res != sizeof(message->header))
+    return EIO;
+
+  if (message->header.length)
+    {
+      io.iov_base = message->data;
+      io.iov_len = message->header.length;
+
+      hdr.msg_control = NULL;
+      hdr.msg_controllen = 0;
+
+      do
+	res = sendmsg(socket, &hdr, 0);
+      while (res < 0 && errno == EINTR);
+
+      if (res < 0)
+	return errno;
+
+      if (res != message->header.length)
+	return EIO;
+    }
+
+  return 0;
+}
+
+#define PTY_MESSAGE_MAX_LENGTH 1000
+
+/* Returns 0 on success, errno value on error, -1 on EOF */
+int
+pty_recv_message(int socket, struct pty_message *message)
+{
+  struct msghdr hdr;
+  struct cmsghdr *cmsg;
+  struct iovec io;
+  char buf[CMSG_SPACE(sizeof(message->creds))
+	   + CMSG_SPACE(sizeof(message->fd))];
+  int res;
+
+  message->has_creds = 0;
+  message->fd = -1;
+  message->data = NULL;
+
+  io.iov_base = &message->header;
+  io.iov_len = sizeof(message->header);
+
+  hdr.msg_name = NULL;
+  hdr.msg_namelen = 0;
+  hdr.msg_iov = &io;
+  hdr.msg_iovlen = 1;
+  hdr.msg_control = buf;
+  hdr.msg_controllen = sizeof(buf);
+
+  do
+    res = recvmsg(socket, &hdr, 0);
+  while (res < 0 && errno == EINTR);
+
+  if (res < 0)
+    return errno;
+
+  if (res == 0)
+    return -1;
+
+  /* Process any ancillary data before examining the regular data */
+  for (cmsg = CMSG_FIRSTHDR(&hdr); cmsg; cmsg = CMSG_NXTHDR(&hdr, cmsg))
+    {
+      if (cmsg->cmsg_level != SOL_SOCKET)
+	continue;
+      switch (cmsg->cmsg_type)
+	{
+	case SCM_CREDENTIALS:
+	  if (cmsg->cmsg_len != CMSG_LEN(sizeof(message->creds)))
+	    continue;
+
+	  if (message->has_creds)
+	    /* Shouldn't be multiple credentials, but if there are,
+	       ignore all but the first. */
+	    continue;
+
+	  memcpy(&message->creds, CMSG_DATA(cmsg), sizeof(message->creds));
+	  message->has_creds = 1;
+
+	  break;
+
+	case SCM_RIGHTS:
+	  {
+	    int *fd = (int *) CMSG_DATA(cmsg);
+	    int i = 0;
+
+	    /* Is there any simple and portable way to get the number
+	       of fd:s? */
+	    
+	    if (message->fd == -1 && CMSG_LEN(message->fd) <= cmsg->cmsg_len)
+	      {
+		message->fd = fd[i++];
+		fprintf(stderr, "Got fd %d\n", message->fd);
+	      }
+	    /* We want only one fd; if we receive any more, close
+	       them */
+	    for (; CMSG_LEN( (i+1) * sizeof(message->fd)) <= cmsg->cmsg_len; i++)
+	      {
+		fprintf(stderr, "Got unwanted fd %d, closing\n", fd[i]);
+		
+		close(fd[i]);
+	      }
+	  }
+	default:
+	  /* Ignore */
+	  ;
+	}
+    }
+  if (res != sizeof(message->header))
+    {
+      if (message->fd != -1)
+	{
+	  close(message->fd);
+	  message->fd = -1;
+	}
+      return EIO;
+    }
+
+  if (message->header.length)
+    {
+      if (message->header.length > PTY_MESSAGE_MAX_LENGTH
+	  || !(message->data = malloc(message->header.length)))
+	{
+	  if (message->fd != -1)
+	    {
+	      close(message->fd);
+	      message->fd = -1;
+	    }
+	  return ENOMEM;
+	}
+
+      io.iov_base = message->data;
+      io.iov_len = message->header.length;
+
+      hdr.msg_control = NULL;
+      hdr.msg_controllen = 0;
+
+      do
+	res = recvmsg(socket, &hdr, 0);
+      while (res < 0 && errno == EINTR);
+
+      if (res != message->header.length)
+	{
+	  int err = (res < 0) ? errno : EIO;
+
+	  /* Clean up */
+
+	  if (message->fd != -1)
+	    {
+	      close(message->fd);
+	      message->fd = -1;
+	    }
+	  free(message->data);
+	  message->data = NULL;
+
+	  return err;
+	}
+    }
+  return 0;
+}

@@ -267,7 +267,7 @@ unix_yes_or_no(struct interact *s,
 #define TTY_BUFSIZE 10
 
   CAST(unix_interact, self, s);
-  if (!IS_TTY(self) || quiet_flag)
+  if (!IS_TTY(self))
     {
       if (free)
 	lsh_string_free(prompt);
@@ -276,14 +276,14 @@ unix_yes_or_no(struct interact *s,
   else    
     {
       uint8_t buffer[TTY_BUFSIZE];
-      const struct exception *e;
+      int res;
   
-      e = write_raw(self->tty_fd, STRING_LD(prompt));
+      res = write_raw(self->tty_fd, STRING_LD(prompt));
 
       if (free)
 	lsh_string_free(prompt);
 
-      if (e)
+      if (!res)
 	return def;
 
       if (!read_line(self->tty_fd, TTY_BUFSIZE, buffer))
@@ -309,12 +309,9 @@ unix_dialog(struct interact *s,
 {
 #define DIALOG_BUFSIZE 150
   CAST(unix_interact, self, s);
-  const struct exception *e;
   unsigned i;
   
-  e = write_raw(self->tty_fd, STRING_LD(dialog->instruction));
-
-  if (e)
+  if (!write_raw(self->tty_fd, STRING_LD(dialog->instruction)))
     return 0;
 
   for (i = 0; i < dialog->nprompt; i++)
@@ -325,8 +322,7 @@ unix_dialog(struct interact *s,
 	  uint8_t buffer[DIALOG_BUFSIZE];
 	  uint32_t length;
 	  
-	  e = write_raw(self->tty_fd, STRING_LD(prompt));
-	  if (e)
+	  if (!write_raw(self->tty_fd, STRING_LD(prompt)))
 	    return 0;
 	  length = read_line(self->tty_fd, DIALOG_BUFSIZE, buffer);
 	  if (!length)
@@ -500,7 +496,7 @@ struct interact *
 make_unix_interact(void)
 {
   NEW(unix_interact, self);
-  
+
   self->super.is_tty = unix_is_tty;
   self->super.read_password = unix_read_password;
   self->super.set_askpass = unix_set_askpass;

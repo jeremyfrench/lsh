@@ -33,7 +33,7 @@ struct config_setting;
 struct config_group;
 
 struct config_group *
-config_parse_string(uint32_t length, const uint8_t *data);
+config_parse_string(const char *file, uint32_t length, const uint8_t *data);
 
 struct config_match
 {

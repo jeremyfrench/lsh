@@ -14,11 +14,14 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
-bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
-	       lsh-decode-key lsh-export-key lsh-make-seed \
-	       @SRP_PROGRAM@
+# @SRP_PROGRAM@ are broken at the moment
+bin_PROGRAMS = lsh lsh-transport lsh-keygen lsh-writekey lsh-decrypt-key \
+	       lsh-decode-key lsh-export-key lsh-make-seed
+	       
 
-sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
+sbin_PROGRAMS = lshd lshd-userauth lshd-connection lshd-pty-helper \
+	@KRB_PROGRAM@ @PAM_PROGRAM@
+
 bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp
 noinst_LIBRARIES = liblsh.a
 
@@ -34,44 +37,58 @@ generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 bootstrap: $(generated_sources) $(dist_classes)
 	(cd spki && $(MAKE) bootstrap)
 
-liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
-	algorithms.c alist.c atoms.c \
-	channel.c channel_commands.c channel_forward.c \
+# Old files:
+#
+# client_keyexchange.c client_userauth.c connection_commands.c
+# 
+# read_packet.c write_packet.c
+# client_x11.c server_x11.c tcpforward_commands.c
+
+# Obsoleted files: read_data.c read_file.c read_line.c abstract_io.c
+# write_buffer.c channel_commands.c string_buffer.c handshake.c
+# lshd_keyexchange.c debug.c gateway_commands.c lshg.c
+
+
+liblsh_a_SOURCES = algorithms.c alist.c arglist.c atoms.c \
+	channel.c channel_io.c channel_forward.c \
 	charset.c \
-	client.c client_escape.c client_keyexchange.c \
-	client_pty.c client_session.c client_userauth.c client_x11.c \
+	client.c client_escape.c \
+	client_pty.c client_session.c client_tcpforward.c \
 	combinators.c command.c compress.c \
-	parse_config.c connection.c connection_commands.c \
+	connection.c \
 	crypto.c \
 	daemon.c \
-	debug.c dh_exchange.c \
+	dh_exchange.c \
 	dsa.c \
+	encrypt.c \
 	exception.c \
 	format.c gc.c \
-	gateway.c gateway_channel.c gateway_commands.c \
-	handshake.c \
 	interact.c io.c io_commands.c \
+	gateway.c gateway_channel.c \
 	keyexchange.c \
-	list.c lookup_verifier.c \
+	list.c \
 	lock_file.c \
 	lsh_string.c parse.c \
+	parse_config.c \
 	pkcs5.c \
-	publickey_crypto.c queue.c \
+	pty-helper.c \
+	queue.c \
 	randomness.c \
-	read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
 	rsa.c \
-	server.c server_authorization.c server_keyexchange.c \
-	server_password.c server_publickey.c \
-	server_pty.c server_session.c server_userauth.c \
-	server_x11.c sexp.c socks.c \
+	server.c \
+	server_pty.c server_session.c server_tcpforward.c \
+	server_config.c \
+	service_read.c \
+	sexp.c socks.c \
 	spki.c srp_exchange.c \
-	string_buffer.c suspend.c \
-	tcpforward.c tcpforward_commands.c \
+	ssh_read.c ssh_write.c \
+	suspend.c \
+	tcpforward.c \
+	tokenize_config.c \
 	translate_signal.c tty.c \
-	unix_interact.c unix_process.c unix_random.c unix_user.c \
-	userauth.c \
-	werror.c write_buffer.c write_packet.c \
+	unix_interact.c unix_process.c unix_random.c \
+	werror.c \
 	xalloc.c xauth.c zlib.c
 
 liblsh_a_LIBADD = @LIBOBJS@
@@ -114,20 +131,22 @@ packet_types.h: ssh.h invert-defs
 
 lsh_krb_checkpw_LDADD=@KRB_LIBS@
 
-lsh_execuv_LDADD=
-
 LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
-# To avoid having to link lshg with nettle, link with dummy.o.
-
 # FIXME: We still link with gmp and zlib, to avoid that we'd need to
-# remove them from LIBS. The only libraries really needed for lshg is
-# liboop and perhaps libXau.
+# remove them from LIBS. The only libraries really needed by
+# non-transport programs are liboop and perhaps libXau.
 
-lshg_SOURCES = lshg.c dummy.c
-lshg_LDADD = liblsh.a @LIBARGP@
+lshd_pty_helper_SOURCES = lshd-pty-helper.c pty-helper.c 
+lshd_pty_helper_LDADD =
 
-class-map: $(srcdir)/make-class-map $(dist_classes)
+lshd_SOURCES = lshd.c transport.c transport_read.c transport_write.c \
+	transport_forward.c server_keyexchange.c
+
+lsh_transport_SOURCES = lsh-transport.c transport.c transport_read.c transport_write.c \
+	transport_forward.c client_keyexchange.c
+
+class-map: $(srcdir)/make-class-map .dist_classes $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
 	| sort | awk -f $(srcdir)/make-class-map > $@
 

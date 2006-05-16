@@ -94,6 +94,39 @@ debug_free(const void *m)
       free(p-2);
     }
 }
+
+void *
+debug_realloc(void *m, size_t real_size)
+{
+  if (!real_size)
+    {
+      debug_free(m);
+      return NULL;
+    }
+  else if (!m)
+    return debug_malloc(real_size);
+  else
+    {
+      UNIT *p = (UNIT *) m;
+      UNIT *res;
+      UNIT old_size = p[-1];
+      UNIT size = SIZE_IN_UNITS(real_size);
+      
+      if (~p[-2] != p[SIZE_IN_UNITS(old_size)])
+	fatal("Memory corrupted!\n");
+
+      res = realloc(p-2, (size + 3) * sizeof(UNIT)); 
+      if (!res)
+	return NULL;
+
+      res += 2;
+      res[-1] = real_size;
+      res[size] = ~res[-2];
+
+      return res;      
+    }
+    }
+
 #endif /* DEBUG_ALLOC */
 
 static void *xalloc(size_t size)
@@ -109,6 +142,15 @@ static void *xalloc(size_t size)
    * unnecessary clearing, and also initialize mpz objects
    * automatically. */
   memset(res, 0, size);
+
+  return res;
+}
+
+static void *xrealloc(void *p, size_t size)
+{
+  void *res = lsh_realloc(p, size);
+  if (size && !res)
+    fatal("Virtual memory exhausted");
 
   return res;
 }
@@ -249,9 +291,30 @@ void lsh_space_free(const void *p)
   m = (UNIT *) p;
   
   if (m[-1] != (UNIT) -1919)
-    fatal("lsh_free_space: Type error!\n");
+    fatal("lsh_space_free: Type error!\n");
 
   lsh_free(m-1);
+}
+
+void *lsh_space_realloc(void *p, size_t size)
+{
+
+  if (!size)
+    {
+      lsh_space_free(p);
+      return NULL;
+    }
+  else if (!p)
+    return lsh_space_alloc(size);
+  else
+    {
+      UNIT *m = p;
+      if (m[-1] != (UNIT) -1919)
+	fatal("lsh_space_realloc: Type error!\n");
+
+      m = xrealloc(m - 1, size + sizeof(UNIT));
+      return m + 1;
+    }
 }
 
 #else /* !DEBUG_ALLOC */
@@ -259,7 +322,7 @@ void lsh_space_free(const void *p)
 /* FIXME: Why not use macros for this? */
 void *lsh_space_alloc(size_t size)
 {
-  return lsh_malloc(size);
+  return xalloc(size);
 }
 
 void lsh_space_free(const void *p)
