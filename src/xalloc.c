@@ -298,7 +298,6 @@ void lsh_space_free(const void *p)
 
 void *lsh_space_realloc(void *p, size_t size)
 {
-
   if (!size)
     {
       lsh_space_free(p);
@@ -330,4 +329,8 @@ void lsh_space_free(const void *p)
   lsh_free(p);
 }
 
+void *lsh_space_realloc(void *p, size_t size)
+{
+  return xrealloc(p, size);
+}
 #endif /* !DEBUG_ALLOC */

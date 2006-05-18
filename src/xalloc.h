@@ -49,6 +49,7 @@ debug_free(const void *m);
  * of the few things that C++ gets right). */
 #define lsh_free(p) free((void *) (p))
 #define lsh_malloc malloc
+#define lsh_realloc realloc
 
 #endif /* !DEBUG_ALLOC */
 
