@@ -1,3 +1,23 @@
+2006-05-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/parse_config.c (parse_groups): Made group name optional.
+	This change from 2005-09-06 was appearantly lost in the merge.
+
+	* src/lshd.c (main): Moved call of make_lshd_config after
+	daemon_close_fds.
+
+	* src/io.c (lsh_pushd): Close fd if stat fails.
+	(lsh_pushd): Set close-on-exec flag on the fd that may be returned
+	in *result.
+	(lsh_pushd): Fixed EINTR handling for fchdir.
+
+	* src/daemon.c: Don't include wait.h.
+
+	* src/atoms.in: Deleted serpent-cbc@lysator.liu.se.
+	* src/algorithms.c (all_symmetric_algorithms): Deleted
+	ATOM_SERPENT_CBC_LOCAL.
+	(all_crypto_algorithms): Likewise.
+
 2006-05-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/server-config-test.c: New file (merged manually
