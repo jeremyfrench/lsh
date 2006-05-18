@@ -801,25 +801,26 @@ lshd_config_parser = {
 int
 main(int argc, char **argv)
 {
-  struct lshd_config *config
-    = make_lshd_config(make_lshd_context());
+  struct lshd_config *config;
   enum daemon_mode mode = DAEMON_NORMAL;
 	  
   struct resource_list *resources = make_resource_list();;
 
-#if HAVE_SETRLIMIT && HAVE_SYS_RESOURCE_H
-  /* Try to increase max number of open files, ignore any error */
-
-  struct rlimit r;
-
-  r.rlim_max = RLIM_INFINITY;
-  r.rlim_cur = RLIM_INFINITY;
-
-  setrlimit(RLIMIT_NOFILE, &r);
-#endif
-
   /* Do this first and unconditionally, before we start to initialize i/o */
   daemon_close_fds();
+  
+#if HAVE_SETRLIMIT && HAVE_SYS_RESOURCE_H
+  {
+    /* Try to increase max number of open files, ignore any error */
+
+    struct rlimit r;
+
+    r.rlim_max = RLIM_INFINITY;
+    r.rlim_cur = RLIM_INFINITY;
+
+    setrlimit(RLIMIT_NOFILE, &r);
+  }
+#endif
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -827,7 +828,9 @@ main(int argc, char **argv)
 
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
-  
+
+  config = make_lshd_config(make_lshd_context());
+
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
   /* FIXME: Missing: setrlimit(RLIMIT_NOFILE, &r), setlocale,
