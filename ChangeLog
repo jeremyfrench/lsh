@@ -1,5 +1,16 @@
 2006-05-18  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/pty-helper.c (pty_send_message, pty_recv_message): Make
+	linux style ucred handling conditional on SCM_CREDENTIALS being
+	defined.
+
+	* src/pty-helper.h (struct pty_message): Don't depend on the
+	system to define struct ucred, instead, inline a struct with pid,
+	uid and gid.
+
+	* src/xalloc.h (lsh_realloc): New define.
+	* src/xalloc.c (lsh_space_realloc): New function.
+
 	* src/parse_config.c (parse_groups): Made group name optional.
 	This change from 2005-09-06 was appearantly lost in the merge.
 
