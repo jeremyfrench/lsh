@@ -179,7 +179,10 @@ parse_groups(struct config_tokenizer *self)
 	groups = n;
       }
       /* Name is optional */
-      groups->name = config_tokenizer_get_string(self);
+      if (self->type == TOK_STRING)
+	groups->name = config_tokenizer_get_string(self);
+      else
+	groups->name = NULL;	
       groups->settings = NULL;
       groups->hosts = NULL;
       
