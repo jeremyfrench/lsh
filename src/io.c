@@ -1225,10 +1225,13 @@ lsh_pushd(const char *directory,
   if (fd < 0)
     return -1;
 
+  io_set_close_on_exec(fd);
+  
   if (fstat(fd, &sbuf) < 0)
     {
       werror("io.c: Failed to stat `%z'.\n"
 	     "  %e\n", directory, errno);
+      close(fd);
       return -1;
     }
   
@@ -1287,11 +1290,12 @@ lsh_pushd(const char *directory,
    * probably fchdir back to old_cd later. */
 
   while (fchdir(fd) < 0)
-    {
-      close(fd);
-      close(old_cd);
-      return -1;
-    }
+    if (errno != EINTR)
+      {
+	close(fd);
+	close(old_cd);
+	return -1;
+      }
 
   if (result)
     *result = fd;
