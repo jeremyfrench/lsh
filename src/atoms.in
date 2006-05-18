@@ -36,9 +36,6 @@ cast128-cbc      OPTIONAL          CAST-128 in CBC mode
 cast128-ctr      OPTIONAL          CAST-128 in SDCTR mode,
 # none           OPTIONAL          no encryption; NOT RECOMMENDED
 
-# Old lsh aliases
-serpent-cbc@lysator.liu.se      EXPERIMENTAL      Serpent cipher in CBC mode
-
 # MAC algorithms
 
 hmac-sha1         REQUIRED         HMAC-SHA1 (length = 20)

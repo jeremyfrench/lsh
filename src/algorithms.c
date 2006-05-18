@@ -47,7 +47,7 @@
 struct alist *
 all_symmetric_algorithms()
 {
-  return make_alist(11
+  return make_alist(10
 #if WITH_ZLIB
 		    +1
 #endif
@@ -58,7 +58,6 @@ all_symmetric_algorithms()
                     ATOM_AES256_CBC, &crypto_aes256_cbc_algorithm,
                     ATOM_AES256_CTR, &crypto_aes256_ctr_algorithm,
 		    ATOM_SERPENT256_CBC, &crypto_serpent256_cbc_algorithm,
-		    ATOM_SERPENT_CBC_LOCAL, &crypto_serpent256_cbc_algorithm,
 		    ATOM_3DES_CBC, &crypto_des3_cbc_algorithm,
 		    ATOM_CAST128_CBC, &crypto_cast128_cbc_algorithm,
 		    ATOM_HMAC_SHA1,
@@ -104,14 +103,13 @@ default_crypto_algorithms(struct alist *algorithms)
 static struct int_list *
 all_crypto_algorithms(struct alist *algorithms)
 {
-  return filter_algorithms_l(algorithms, 9,
+  return filter_algorithms_l(algorithms, 8,
                              ATOM_AES256_CBC,
                              ATOM_AES256_CTR,
 			     ATOM_3DES_CBC,
 			     ATOM_TWOFISH_CBC, 
 			     ATOM_CAST128_CBC,
 			     ATOM_SERPENT256_CBC,
-			     ATOM_SERPENT_CBC_LOCAL,
 			     ATOM_BLOWFISH_CBC,
 			     ATOM_ARCFOUR, -1);
 }
