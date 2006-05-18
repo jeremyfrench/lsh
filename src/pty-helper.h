@@ -4,7 +4,7 @@
 /* For pid_t */
 #include <unistd.h>
 
-/* For struct ucreds */
+/* For struct ucred */
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -39,7 +39,13 @@ struct pty_message
   
   /* Transferred credentials */
   int has_creds;
-  struct ucred creds;
+
+  /* Same fields as linux' struct ucred */
+  struct {
+    pid_t pid;
+    uid_t uid;
+    gid_t gid;
+  } creds;
 
   /* Transferred fd (-1 if none) */
   int fd;

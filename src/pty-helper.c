@@ -65,12 +65,22 @@ pty_send_message(int socket, const struct pty_message *message)
     {
       cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
 
-      cmsg->cmsg_level = SOL_SOCKET;
-      cmsg->cmsg_type = SCM_CREDENTIALS;
-      cmsg->cmsg_len = CMSG_LEN(sizeof(message->creds));
+#ifdef SCM_CREDENTIALS
+      {
+	struct ucred *creds;
+	/* Linux style credentials */
+	cmsg->cmsg_level = SOL_SOCKET;
+	cmsg->cmsg_type = SCM_CREDENTIALS;
+	cmsg->cmsg_len = CMSG_LEN(sizeof(*creds));
 
-      memcpy(CMSG_DATA(cmsg), &message->creds, sizeof(message->creds));
-      controllen += CMSG_SPACE(sizeof(message->creds));
+	creds = (struct ucred *) CMSG_DATA(cmsg);
+	creds->pid = message->creds.pid;
+	creds->uid = message->creds.uid;
+	creds->gid = message->creds.gid;
+	
+	controllen += CMSG_SPACE(sizeof(*creds));
+      }
+#endif
     }
   if (message->fd != -1)
     {
@@ -161,20 +171,27 @@ pty_recv_message(int socket, struct pty_message *message)
 	continue;
       switch (cmsg->cmsg_type)
 	{
+#ifdef SCM_CREDENTIALS
 	case SCM_CREDENTIALS:
-	  if (cmsg->cmsg_len != CMSG_LEN(sizeof(message->creds)))
-	    continue;
+	  {
+	    struct ucred *creds;
+	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
+	      continue;
 
-	  if (message->has_creds)
-	    /* Shouldn't be multiple credentials, but if there are,
-	       ignore all but the first. */
-	    continue;
+	    if (message->has_creds)
+	      /* Shouldn't be multiple credentials, but if there are,
+		 ignore all but the first. */
+	      continue;
 
-	  memcpy(&message->creds, CMSG_DATA(cmsg), sizeof(message->creds));
-	  message->has_creds = 1;
-
+	    creds = (struct ucred *) CMSG_DATA(cmsg);
+	    message->creds.pid = creds->pid;
+	    message->creds.uid = creds->uid;
+	    message->creds.gid = creds->gid;
+	    
+	    message->has_creds = 1;
+	  }
 	  break;
-
+#endif
 	case SCM_RIGHTS:
 	  {
 	    int *fd = (int *) CMSG_DATA(cmsg);
