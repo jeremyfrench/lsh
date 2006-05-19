@@ -160,7 +160,6 @@ EXTRA_DIST = lsh-authorize ssh-conv lcp \
 	invert-defs \
 	$(generated_sources) \
 	sexp_chars.in \
-	jpoll.h jpoll.c \
 	$(dist_headers) $(dist_classes)
 
 CLEANFILES = *.hT *.cT *.xT
