@@ -29,10 +29,6 @@
 
 /* FIXME: Rewrite using select. Then we won't need jpoll.c anymore */
    
-/* The zlib using code isn't used now */
-#undef WITH_ZLIB
-#define WITH_ZLIB 0
-
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -75,12 +71,6 @@
 #endif /* !POLLRDNORM */
 
 
-#if WITH_ZLIB
-# if HAVE_ZLIB_H
-#  include <zlib.h>
-# endif
-#endif /* WITH_ZLIB */
-
 #include "nettle/yarrow.h"
 
 #include "environ.h"
@@ -91,23 +81,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#if WITH_ZLIB
-/* FIXME: Duplicated in zlib.c */
-
-/* zlib memory functions */
-static void *
-zlib_alloc(void *opaque UNUSED, unsigned int items, unsigned int size)
-{
-  return lsh_space_alloc(items * size);
-}
-
-static void
-zlib_free(void *opaque UNUSED, void *address)
-{
-  lsh_space_free(address);
-}
-#endif /* WITH_ZLIB */
 
 #include "lsh-make-seed.c.x"
 
@@ -325,137 +298,6 @@ get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
   close(fd);
 }
 
-#define BUF_SIZE 16384
-
-#if WITH_ZLIB
-static int
-update_zlib(struct yarrow256_ctx *ctx, enum source_type source,
-            z_stream *z, int flush,
-            unsigned length, uint8_t *buf)
-{
-  /* Maximum expansion is 0.1% + 12 bytes. We use 1% + 12, to be
-   * conservative.
-   *
-   * FIXME: These figures are documented for the entire stream,
-   * does they really apply to all segments? */
-  
-  uint8_t out[BUF_SIZE + BUF_SIZE / 100 + 12];
-
-  unsigned compressed;
-  int rc;
-  
-  z->next_in = buf;
-  z->avail_in = length;
-  z->next_out = out;
-  z->avail_out = sizeof(out);
-  
-  if ((rc = deflate(z, flush)) != Z_OK)
-    {
-      werror("deflate failed: %z\n",
-             z->msg ? z->msg : "No error(?)");
-      werror("rc = %i, flush = %i, avail_in = %i, avail_out = %i\n",
-             rc, flush, z->avail_in, z->avail_out);
-      return 0;
-    }
-
-  compressed = z->next_out - out;
-          
-  yarrow256_update(ctx, source, compressed / 1024, compressed, out);
-
-  return 1;
-}
-#endif /* WITH_ZLIB */
-
-static void
-get_dev_mem(struct yarrow256_ctx *ctx, enum source_type source)
-{
-  /* /dev/mem provides access to physical memory, if we
-   * have enough privileges.
-   *
-   * Count 1 bit of entropy compressed KB, or per 10 KB uncompressed.
-   */
-
-  /* FIXME: Reading /dev/mem in this was is inappropriate, as we may
-   * accidentally read memory mapped i/o devices. How do we get oonly
-   * the RAM? */
-#if 0
-  
-  int fd = open("/dev/mem", O_RDONLY);
-  
-  if (fd < 0)
-    {
-      if (!getuid() || (errno != EACCES))
-        werror("Couldn't open /dev/mem %e\n", errno);
-    }
-  else
-    {
-      char buf[BUF_SIZE];
-      size_t total_read = 0;
-
-#if WITH_ZLIB
-      z_stream z;
-
-      z.zalloc = zlib_alloc;
-      z.zfree = zlib_free;
-      
-      if (deflateInit(&z, Z_DEFAULT_COMPRESSION) != Z_OK)
-        {
-          werror("deflateInit failed: %z\n",
-                 z.msg ? z.msg : "No error(?)");
-          close(fd);
-
-          return;
-        }
-#endif /* WITH_ZLIB */
-
-      werror("Reading /dev/mem...\n");
-      for (;;)
-        {
-          int res;
-          do
-            res = read(fd, buf, BUF_SIZE);
-          while ( (res < 0) && (errno != EINTR));
-
-          if (!res)
-            break;
-          if (res < 0)
-            {
-              werror("Reading /dev/mem failed %e\n", errno);
-              break;
-            }
-
-          total_read += res;
-#if WITH_ZLIB
-          if (!update_zlib(ctx, source,
-                           &z, 0,
-                           res, buf))
-            break;
-          
-#else /* !WITH_ZLIB */
-          yarrow256_update(ctx, source, res / 10240, res, buf);
-#endif /* !WITH_ZLIB */
-        }
-#if WITH_ZLIB
-
-      update_zlib(ctx, source,
-                  &z, Z_FINISH,
-                  0, buf);
-
-      verbose("Read %i MB from /dev/mem, %i MB after compression.\n",
-              total_read >> 20, z.total_out >> 20);
-      
-      deflateEnd(&z);
-
-#else /* !WITH_ZLIB */
-      verbose("Read %i MB from /dev/mem.\n",
-              total_read >> 20);
-      
-#endif /* !WITH_ZLIB */
-
-      close(fd);
-    }
-#endif
-}
 
 /* List of commands based on Peter Gutmann's cryptlib,
  * misc/rndunix.c. <URL:
@@ -1266,7 +1108,6 @@ main(int argc, char **argv)
   yarrow256_init(&yarrow, NSOURCES, sources);
 
   get_dev_random(&yarrow, SOURCE_DEV_RANDOM);
-  get_dev_mem(&yarrow, SOURCE_DEV_MEM);
   get_system(&yarrow, SOURCE_SYSTEM);
 
   if (!yarrow256_is_seeded(&yarrow))
