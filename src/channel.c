@@ -44,13 +44,14 @@
 #include "channel.c.x"
 
 /* Opening a new channel: There are two cases, depending on which side
-   sends the CHANNEL_OPEN_REQUEST. When we send it, the following
+   sends the CHANNEL_OPEN. When we send it, the following
    steps are taken:
 
    1. Create a new channel object of the appropriate type.
    
-   2. Call request_channel_open. This allocates a channel number,
-      registers the object, and sends a CHANNEL_OPEN request.
+   2. Call channel_open_new_v or channel_open_new_type. This allocates
+      a channel number, registers the object, and sends a CHANNEL_OPEN
+      request.
 
    3. If the remote end replies with CHANNEL_OPEN_CONFIRMATION, the
       channel's event handler is invoked, with CHANNEL_EVENT_CONFIRM.
@@ -60,8 +61,8 @@
 
    When the other side requests a new channel, the steps are:
 
-   1. Receive CHANNEL_OPEN. Reserve a channel number, and invoke the
-      command associated with the channel type.
+   1. Receive CHANNEL_OPEN. Allocate a channel number, and invoke the
+      CHANNEL_OPEN method corresponding to the channel type.
 
    2. This command returns a new channel object, or raises an
       exception.
@@ -70,9 +71,6 @@
       CHANNEL_OPEN_CONFIRMATION. Generate a CHANNEL_EVENT_CONFIRM on
       the channel. On error, deallocate channel number, and reply with
       CHANNEL_OPEN_FAILURE.
-
-   FIXME: The first part of this description is correct, but the
-   second half is not yet accurate.
 */
 
 struct exception *
