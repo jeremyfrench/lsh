@@ -1,5 +1,13 @@
 2006-05-19  Niels Möller  <niels@s3.kth.se>
 
+	* src/lshd-userauth.c (canonicalize_file_name): As a fallback, try
+	implementing canonicalize_file_name on top of the broken realpath
+	function. Not 100% robust.
+	(start_service): Avoid using canonicalize_file_name for absolute
+	filenames.
+
+	* configure.ac: Check for canonicalize_file_name.
+
 	* src/lsh-transport.c: Include sys/stat.h.
 
 2006-05-19  Niels Möller  <nisse@lysator.liu.se>
