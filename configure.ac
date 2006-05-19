@@ -253,7 +253,6 @@ AC_CHECK_HEADERS(shadow.h)
 if test x$with_zlib = xyes; then
   AC_CHECK_HEADERS(zlib.h,, [with_zlib=no])
 fi
-AC_CHECK_HEADERS(poll.h sys/poll.h)
 AC_CHECK_HEADERS(libutil.h)
 AC_CHECK_HEADERS(crypt.h)
 AC_CHECK_HEADERS(pty.h)
@@ -568,9 +567,6 @@ AH_TEMPLATE([HAVE_AI_NUMERICHOST], [Define if AI_NUMERICHOST exists])
 if test x$lsh_cv_sys_ai_numerichost = xyes ; then
   AC_DEFINE(HAVE_AI_NUMERICHOST)
 fi
-
-# Used only by lsh-make-seed, the rest of te code uses liboop
-AC_CHECK_FUNCS(poll,,[AC_LIBOBJ([jpoll])])
 
 # Test if the libc includes a good enough argp.
 if test x$with_system_argp = xyes ; then
