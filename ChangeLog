@@ -1,5 +1,17 @@
 2006-05-19  Niels Möller  <niels@s3.kth.se>
 
+	* configure.ac: Deleted canonicalize_file_name check, reverting
+	earlier change.
+
+	* src/lshd-userauth.c (main): Display a warning if the name of the
+	lshd-connectiion executable doesn't start with a "/".
+	(canonicalize_file_name): Deleted function, reverting earlier
+	change.
+	(start_service): For simplicity, removed special handling of
+	relative file names and the canonicalize_file_name call. If user
+	insists on using a relative file name, it will be interpreted
+	relative to the logged in user's home directory.
+
 	* src/lshd-userauth.c (canonicalize_file_name): As a fallback, try
 	implementing canonicalize_file_name on top of the broken realpath
 	function. Not 100% robust.
