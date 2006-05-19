@@ -1,3 +1,13 @@
+2006-05-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/xalloc.c, src/xalloc.h: Some cleanup.
+	(lsh_space_alloc, lsh_space_free, lsh_space_realloc): Don't use
+	these wrapper functions in the !DEBUG_ALLOC case, instead, use
+	xalloc, free and xrealloc directly using some preprocessor
+	hacks.
+
+	* src/lshd-pty-helper.c (main): Declare argc and argv UNUSED.
+
 2006-05-19  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Deleted canonicalize_file_name check, reverting
