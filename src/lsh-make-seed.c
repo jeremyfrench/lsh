@@ -27,8 +27,6 @@
 #include "config.h"
 #endif
 
-/* FIXME: Rewrite using select. Then we won't need jpoll.c anymore */
-   
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -49,27 +47,10 @@
 #include <grp.h>
 
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/wait.h>
-
-#ifdef HAVE_POLL
-# if HAVE_POLL_H
-#  include <poll.h>
-# elif HAVE_SYS_POLL_H
-#  include <sys/poll.h>
-# endif
-#else
-# include "jpoll.h"
-#endif
-
-/* Workaround for some version of FreeBSD. */
-#ifdef POLLRDNORM
-# define MY_POLLIN (POLLIN | POLLRDNORM)
-#else /* !POLLRDNORM */
-# define MY_POLLIN POLLIN
-#endif /* !POLLRDNORM */
-
 
 #include "nettle/yarrow.h"
 
@@ -638,7 +619,7 @@ nobody_ids(uid_t *uid, gid_t *gid)
 }
 
 /* Spawn this number of processes. */
-#define UNIX_RANDOM_POLL_PROCESSES 10
+#define NPROCESSES 10
 
 /* Count entropy bits of entropy if we can read at least limit bytes
  * of data. */
@@ -683,7 +664,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
   uid_t uid;
   gid_t gid;
 
-  struct unix_random_source_state state[UNIX_RANDOM_POLL_PROCESSES];
+  struct unix_random_source_state state[NPROCESSES];
   unsigned running = 0;
   unsigned i;
   unsigned index = 0;
@@ -721,10 +702,10 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 		   0,
 		   sizeof(unique), (uint8_t *) &unique);
   
-  for (i = 0; i < UNIX_RANDOM_POLL_PROCESSES; i++)
+  for (i = 0; i < NPROCESSES; i++)
     state[i].fd = -1;
 
-  for (running = 0; running<UNIX_RANDOM_POLL_PROCESSES; running++)
+  for (running = 0; running < NPROCESSES; running++)
     {
       if (!spawn_source_process(&index, state + running, dev_null,
 				uid, gid))
@@ -733,87 +714,79 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 
   while (running)
     {
-      struct pollfd fds[UNIX_RANDOM_POLL_PROCESSES];
-      unsigned nfds;
+      fd_set read_fds;
+      int maxfd;
       unsigned i;
+      int res;
 
-      for (i = 0, nfds = 0; i < UNIX_RANDOM_POLL_PROCESSES; i++)
+      FD_ZERO(&read_fds);
+      
+      for (i = 0, maxfd = 0; i < NPROCESSES; i++)
 	if (state[i].fd > 0)
 	  {
-	    fds[nfds].fd = state[i].fd;
-	    fds[nfds].events = MY_POLLIN;
-	    nfds++;
+	    FD_SET(state[i].fd, &read_fds);
+	    if (state[i].fd > maxfd)
+	      maxfd = state[i].fd;
 	  }
 
-      assert(nfds == running);
+      trace("get_system: calling select, maxfd = %i\n", maxfd);
 
-      trace("get_system: calling poll, nfds = %i\n", nfds);
-      if (poll(fds, nfds, -1) < 0)
+      do
+	res = select(maxfd + 1, &read_fds, NULL, NULL, NULL);
+      while (res < 0 && errno == EINTR);
+	
+      if (res < 0)
 	{
-	  werror("get_system: poll failed %e\n", errno);
+	  werror("get_system: select failed %e\n", errno);
 	  break;
 	}
 
-      trace("get_system: returned from poll.\n");
+      trace("get_system: returned from select.\n");
 
-      for (i = 0; i<nfds; i++)
+      for (i = 0; i < NPROCESSES; i++)
 	{
-	  trace("get_system: poll for fd %i: events = 0x%xi, revents = 0x%xi.\n",
-		fds[i].fd, fds[i].events, fds[i].revents);
+	  int fd = state[i].fd;
 
-	  /* Linux sets POLLHUP on EOF */
-#ifndef POLLHUP
-#define POLLHUP 0
-#endif
-	  if (fds[i].revents & (MY_POLLIN | POLLHUP))
+	  if (fd > 0 && FD_ISSET(fd, &read_fds))
 	    {
 #define BUFSIZE 1024
 	      uint8_t buffer[BUFSIZE];
+#undef BUFSIZE
 	      int res;
-	      unsigned j;
-	    
-	      for (j = 0; j<UNIX_RANDOM_POLL_PROCESSES; j++)
-		if (fds[i].fd == state[j].fd)
-		  break;
-
-	      assert(j < UNIX_RANDOM_POLL_PROCESSES);
 
 	      trace("get_system: reading from source %z\n",
-		    state[j].source->path);
-	      
-	      res = read(fds[i].fd, buffer, BUFSIZE);
-#undef BUFSIZE
+		    state[i].source->path);
+
+	      do
+		res = read(fd, buffer, sizeof(buffer));
+	      while (res < 0 && errno == EINTR);
 	    
 	      if (res < 0)
 		{
-		  if (errno != EINTR)
-		    {
-		      werror("get_system: background_poll read failed %e\n",
-			     errno);
-		      return;
-		    }
+		  werror("get_system: read failed %e\n", errno);
+		  return;
 		}
 	      else if (res > 0)
 		{
 		  /* Estimate entropy */
 
 		  unsigned entropy;
-		  unsigned old_length = state[j].length;
-		  state[j].length += res;
+		  unsigned old_length = state[i].length;
+		  state[i].length += res;
 		  
-		  state[j].remainder += state[j].source->quality * res;
+		  state[i].remainder += state[i].source->quality * res;
 
 		  /* Small sources are credited 1K of input as soon is
 		   * we get the "small" number of input butes. */
-		  if ( (old_length < state[j].source->small) &&
-		       (state[j].length >= state[j].source->small) )
-		    state[j].remainder += state[j].source->quality * 1024;
+		  if ( (old_length < state[i].source->small) &&
+		       (state[i].length >= state[i].source->small) )
+		    state[i].remainder += state[i].source->quality * 1024;
 
-		  entropy = state[j].remainder / UNIX_RANDOM_SOURCE_SCALE;
+		  entropy = state[i].remainder / UNIX_RANDOM_SOURCE_SCALE;
 		  if (entropy)
-		    state[j].remainder %= UNIX_RANDOM_SOURCE_SCALE;
+		    state[i].remainder %= UNIX_RANDOM_SOURCE_SCALE;
 
-		  state[j].entropy += entropy;
+		  state[i].entropy += entropy;
 		  
 		  yarrow256_update(ctx, source,
 				   entropy,
@@ -823,18 +796,18 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 		{ /* EOF */
 		  int status;
 		
-		  close(fds[i].fd);
+		  close(fd);
 
-		  state[j].fd = -1;
+		  state[i].fd = -1;
 
 		  verbose("Read %i bytes from %z %z, entropy estimate: %i bits\n",
-			  state[j].length,
-			  state[j].source->path,
-			  state[j].source->arg ? state[j].source->arg : "",
-			  state[j].entropy);
-		  count += state[j].entropy;
+			  state[i].length,
+			  state[i].source->path,
+			  state[i].source->arg ? state[i].source->arg : "",
+			  state[i].entropy);
+		  count += state[i].entropy;
 		  
-		  if (waitpid(state[j].pid, &status, 0) < 0)
+		  if (waitpid(state[i].pid, &status, 0) < 0)
 		    {
 		      werror("waitpid failed %e\n", errno);
 		      return;
@@ -843,19 +816,19 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 		    {
 		      if (WEXITSTATUS(status))
 			verbose("Command %z %z failed.\n",
-				state[j].source->path,
-				state[j].source->arg ? state[j].source->arg : "");
+				state[i].source->path,
+				state[i].source->arg ? state[i].source->arg : "");
 		    }
 		  else if (WIFSIGNALED(status))
 		    {
 		      werror("Command %z %z died from signal %i (%z).\n",
-			     state[j].source->path,
-			     state[j].source->arg ? state[j].source->arg : "",
+			     state[i].source->path,
+			     state[i].source->arg ? state[i].source->arg : "",
 			     WTERMSIG(status),
 			     STRSIGNAL(WTERMSIG(status)));
 		    }
 
-		  if (!spawn_source_process(&index, state + j, dev_null,
+		  if (!spawn_source_process(&index, state + i, dev_null,
 					    uid, gid))
 		    running--;
 		}
@@ -875,7 +848,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	  
 	  do
 	    res = read(fd, buffer, sizeof(buffer));
-	  while ( (res < 0) && (errno == EINTR) );
+	  while (res < 0 && errno == EINTR);
 
 	  if (res < 0)
 	    werror("Reading %z failed %e\n",
