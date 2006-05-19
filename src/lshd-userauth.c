@@ -536,6 +536,50 @@ format_env_pair(const char *name, const char *value)
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
 }
 
+#if !HAVE_CANONICALIZE_FILE_NAME
+
+/* NOTE: This is a best effort function. It's really not possible to
+   use realpath in a safe and robust way. This function is used only
+   for the name of the service executable, from the configuration file
+   or the LSHD_CONNECTION environment variable, not on any names
+   supplied by the remote user. */
+
+/* FIXME: Some alternatives: Use getcwd and catenate cwd "/" name. Or
+   refuse to handle absolute filenames at all? */
+static char *
+canonicalize_file_name (const char *name)
+{  
+  char *res;
+  long path_max; /* Must use a signed type, to check for errors from pathconf */
+
+#ifdef PATH_MAX
+  path_max = PATH_MAX;
+#else
+  path_max = pathconf (path, _PC_PATH_MAX);
+  if (path_max <= 0)
+    path_max = 4096;
+#endif
+  
+  res = malloc(path_max + 1);
+  if (!res)
+    return NULL;
+
+  /* To ensure NUL-termination, and to try to detect buffer overruns
+     by realpath. */
+  res[path_max] = '\0';
+  
+  if (!realpath(name, res))
+    {
+      free(res);
+      return NULL;
+    }
+  if (res[path_max])
+    fatal("realpath overwriting it's buffer!\n");
+
+  return res;
+}
+#endif /* !HAVE_CANONICALIZE_FILE_NAME */
+
 /* Change persona, set up new environment, change directory, and exec
    the service process. */
 static void
@@ -575,7 +619,7 @@ start_service(struct lshd_user *user, char **argv)
   assert(i <= ENV_MAX);
   
   /* To allow for a relative path, even when we cd to $HOME. */
-  argv[0] = canonicalize_file_name(argv[0]);
+  argv[0] = (argv[0][0] == '/' ? argv[0] : canonicalize_file_name(argv[0]));
   if (!argv[0])
     {
       werror("start_service: canonicalize_file_name failed: %e\n", errno);
