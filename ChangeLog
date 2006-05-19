@@ -1,9 +1,15 @@
 2006-05-19  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/jpoll.c, src/jpoll.h: Deleted files.
+	* src/Makefile.am (EXTRA_DIST): Deleted jpoll.h and jpoll.c.
+	* configure.ac: Deleted tests for poll.h, sys/poll.h and the poll
+	function. 
+
 	* src/lsh-make-seed.c (get_dev_mem): Deleted function.
 	(main): Deleted call to get_dev_mem.
 	(update_zlib): Deleted function, and the rest of the zlib-related
 	code.
+	(get_system): Rewritten to use select instead of poll.
 
 	* src/xalloc.c, src/xalloc.h: Some cleanup.
 	(lsh_space_alloc, lsh_space_free, lsh_space_realloc): Don't use
