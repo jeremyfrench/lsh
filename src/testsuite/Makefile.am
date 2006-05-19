@@ -44,7 +44,7 @@ include .dist_rapid7
 EXTRA_DIST = testutils.h $(TS_SH) \
 	functions.sh run-tests setup-env key-1.private key-2.private \
 	$(dist_rapid7) UTF-8-test.txt \
-	config/lshd.conf config/lshd-connection.conf config/lshd.conf
+	config/lshd.conf config/lshd-connection.conf config/lshd-userauth.conf
 
 # FIXME: Move into some tmp directory.
 CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 lcp-file-*.txt
