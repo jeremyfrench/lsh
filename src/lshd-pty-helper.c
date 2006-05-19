@@ -544,7 +544,7 @@ process_request(struct pty_state *state,
 }
 
 int
-main (int argc, char **argv)
+main (int argc UNUSED, char **argv UNUSED)
 {
   struct pty_state state;
   struct pty_message request;
