@@ -1,3 +1,7 @@
+2006-05-19  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-transport.c: Include sys/stat.h.
+
 2006-05-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (EXTRA_DIST): Added configuration
