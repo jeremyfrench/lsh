@@ -37,9 +37,6 @@
 
 #if DEBUG_ALLOC
 
-#define lsh_free debug_free
-#define lsh_malloc debug_malloc
-
 /* There are two sets of allocation functions: Low level allocation *
  * that can allocate memory for any purpose, and object allocators
  * that assume that the allocated object begins with a type field. */
@@ -49,7 +46,7 @@
 
 /* NOTE: The code breaks horribly if UNIT is of the wrong size. But it
  * doesn't matter much if we guess wrong on some platforms, as this
- * affects only optionalal debug code. */
+ * affects only optional debug code. */
 
 #define UNIT unsigned long 
 
@@ -125,9 +122,18 @@ debug_realloc(void *m, size_t real_size)
 
       return res;      
     }
-    }
+}
+#else /* !DEBUG_ALLOC */
 
-#endif /* DEBUG_ALLOC */
+/* Simple hack to make xalloc and xrealloc accessible, under different
+   official names, to avoid trivial wrapper functions for
+   lsh_space_(re)alloc. */
+
+#define xalloc lsh_space_alloc
+#define xrealloc lsh_space_realloc
+#define static
+
+#endif /* !DEBUG_ALLOC */
 
 static void *xalloc(size_t size)
 {
@@ -269,9 +275,7 @@ lsh_object_check_subtype(struct lsh_class *class,
   fatal("lsh_object_check_subtype: Type error, expected %z, got %z!\n",
 	class->name, instance->isa->name);
 }
-#endif /* DEBUG_ALLOC */
 
-#if DEBUG_ALLOC
 void *lsh_space_alloc(size_t size)
 {
   UNIT *p = xalloc(size + sizeof(UNIT));
@@ -315,22 +319,4 @@ void *lsh_space_realloc(void *p, size_t size)
       return m + 1;
     }
 }
-
-#else /* !DEBUG_ALLOC */
-
-/* FIXME: Why not use macros for this? */
-void *lsh_space_alloc(size_t size)
-{
-  return xalloc(size);
-}
-
-void lsh_space_free(const void *p)
-{
-  lsh_free(p);
-}
-
-void *lsh_space_realloc(void *p, size_t size)
-{
-  return xrealloc(p, size);
-}
-#endif /* !DEBUG_ALLOC */
+#endif /* DEBUG_ALLOC */

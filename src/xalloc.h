@@ -30,30 +30,6 @@
 
 /* Allocation */
 
-#if DEBUG_ALLOC
-#define lsh_free debug_free
-#define lsh_malloc debug_malloc
-#define lsh_realloc debug_realloc
-
-void *
-debug_malloc(size_t real_size);
-
-void *
-debug_realloc(void *m, size_t real_size);
-
-void
-debug_free(const void *m);
-#else /* !DEBUG_ALLOC */
-
-/* ANSI-C free doesn't allow const pointers to be freed. (That is one
- * of the few things that C++ gets right). */
-#define lsh_free(p) free((void *) (p))
-#define lsh_malloc malloc
-#define lsh_realloc realloc
-
-#endif /* !DEBUG_ALLOC */
-
-
 struct lsh_object *
 lsh_var_alloc(struct lsh_class *class,
 	      size_t extra);
@@ -78,6 +54,18 @@ void *lsh_space_realloc(void *p, size_t size);
 void lsh_space_free(const void *p);
 
 #if DEBUG_ALLOC
+#define lsh_free debug_free
+#define lsh_malloc debug_malloc
+#define lsh_realloc debug_realloc
+
+void *
+debug_malloc(size_t real_size);
+
+void *
+debug_realloc(void *m, size_t real_size);
+
+void
+debug_free(const void *m);
 
 struct lsh_object *lsh_object_check(struct lsh_class *class,
 				    struct lsh_object *instance);
@@ -97,6 +85,14 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
    
 #else   /* !DEBUG_ALLOC */
 
+/* ANSI-C free doesn't allow const pointers to be freed. (That is one
+ * of the few things that C++ gets right). */
+#define lsh_free(p) free((void *) (p))
+#define lsh_malloc malloc
+#define lsh_realloc realloc
+
+#define lsh_space_free free
+
 #define CHECK_TYPE(c, o) ((struct lsh_object *)(o))
 #define CHECK_SUBTYPE(c, o) ((struct lsh_object *)(o))
      
@@ -104,7 +100,6 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
    struct class *(var) = (struct class *) (o)
 
 #define CAST_SUBTYPE(class, var, o) CAST(class, var, o)
-
      
 #endif  /* !DEBUG_ALLOC */
 
