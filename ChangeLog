@@ -1,5 +1,15 @@
 2006-05-23  Niels Möller  <niels@s3.kth.se>
 
+	* src/io.c (io_readable_p): New function, replacing the static
+	function readable_p in service_read.c and transport_read.c.
+
+	* src/service_read.c (readable_p): Deleted function.
+	(read_some): Use io_readable_p.
+	* src/transport_read.c (readable_p): Deleted function.
+	(read_some): Use io_readable_p.
+
+	* configure.ac (HAVE_IOCTL_FIONREAD): Improved test.
+	
 	* configure.ac: New check for filio.h.
 	(HAVE_IOCTL_FIONREAD): New check, if ioctl FIONREAD exists, and
 	takes an int argument.
