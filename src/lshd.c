@@ -405,7 +405,7 @@ open_ports(struct lshd_context *ctx, struct resource_list *resources,
   sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   sin.sin_port = port_number;
 
-  if (bind(s, &sin, sizeof(sin)) < 0)
+  if (bind(s, (struct sockaddr *) &sin, sizeof(sin)) < 0)
     {
       werror("bind failed: %e\n", errno);
       return 0;
