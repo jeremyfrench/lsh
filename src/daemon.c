@@ -28,6 +28,7 @@
 #include "config.h"
 #endif
 
+#include <limits.h> /* For INT_MAX */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -201,7 +202,7 @@ int
 getdtablesize(void)
 {
   long open_max = sysconf(_SC_OPEN_MAX);
-  if (open_max < 0 || open_max > MAX_INT)
+  if (open_max < 0 || open_max > INT_MAX)
     {
       werror("No limit on number of openfiles. Some high fd:s might be left open.\n");
       return MAX_CLOSE_FD;
