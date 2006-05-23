@@ -25,6 +25,9 @@
 #include "config.h"
 #endif
 
+/* For CMSG_SPACE and friends on Solaris */
+#define _XPG4_2
+
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
