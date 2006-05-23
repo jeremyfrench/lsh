@@ -26,6 +26,7 @@
 #endif
 
 #include <assert.h>
+#include <string.h>
 
 #include "arglist.h"
 
@@ -71,9 +72,15 @@ void
 arglist_push_optarg(struct arglist *args,
 		    const char *opt, const char *arg)
 {
-  char *s;
+  size_t optlen = strlen(opt);
+  size_t arglen = strlen(arg);
 
-  if (asprintf(&s, "%s%s", opt, arg) < 0)
+  char *s = malloc(optlen + arglen + 1);
+  if (!s)
     fatal("Virtual memory exhausted.\n");
+
+  strcpy(s, opt);
+  strcpy(s + optlen, arg);
+  
   arglist_push(args, s);  
 }
