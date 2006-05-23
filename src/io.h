@@ -214,6 +214,7 @@ void
 lsh_popd(int old_cd, const char *directory);
 
 
+/* FIXME: Is this needed anymore? */
 /* Socket workaround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
 
