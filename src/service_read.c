@@ -38,6 +38,7 @@
 
 #include "service.h"
 
+#include "io.h"
 #include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
