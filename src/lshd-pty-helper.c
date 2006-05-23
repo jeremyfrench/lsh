@@ -550,7 +550,6 @@ main (int argc UNUSED, char **argv UNUSED)
   struct pty_message request;
   struct pty_message response;
   const char *utmp_file;
-  int yes = 1;
   int err;
 
   utmp_file = getenv(ENV_LSHD_UTMP);
@@ -562,18 +561,30 @@ main (int argc UNUSED, char **argv UNUSED)
   
   wtmp_file = getenv(ENV_LSHD_WTMP);
   if (!wtmp_file)
-    wtmp_file = _PATH_WTMPX;
+    {
+#ifdef _WTMPX_FILE
+      wtmp_file = _WTMPX_FILE;
+#else
+      wtmp_file = _PATH_WTMPX;
+#endif
+    }
 
   werror("wtmp_file: %s\n", wtmp_file);
-  
-  /* Don't know if this is standard, but it's required on linux. */
-  if (setsockopt(STDIN_FILENO, SOL_SOCKET, SO_PASSCRED,
-		 &yes, sizeof(yes)) < 0)
-    {
-      die("setsockopt SO_PASSCRED failed: %s.\n", strerror(errno));
-      return EXIT_FAILURE;
-    }
-  
+
+  /* Needed on Linux */
+#ifdef SO_PASSCRED
+  {
+    int yes = 1;
+
+    if (setsockopt(STDIN_FILENO, SOL_SOCKET, SO_PASSCRED,
+		   &yes, sizeof(yes)) < 0)
+      {
+	die("setsockopt SO_PASSCRED failed: %s.\n", strerror(errno));
+	return EXIT_FAILURE;
+      }
+  }
+#endif
+
   init_pty_state(&state, getuid());
   if (!state.uid )
     {
