@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <limits.h>
 #include <stdio.h>
 
 #include <oop.h>
