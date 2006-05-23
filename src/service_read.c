@@ -78,21 +78,6 @@ make_service_read_state(void)
 }
 
 /* FIXME: Duplicated in transport_read.c */
-static int
-readable_p(int fd)
-{
-  /* FIXME: What's the proper type for FIONREAD? And where's FIONREAD
-     documented??? Is it better to use poll/select? */
-  long nbytes = 0;
-  if (ioctl(fd, FIONREAD, &nbytes) < 0)
-    {
-      debug("ioctl FIONREAD failed: %e\n", errno);
-      return 0;
-    }
-  return nbytes != 0;
-}
-
-/* FIXME: Duplicated in transport_read.c */
 /* Returns -1 on error, 0 at EOF, and 1 for success. */
 static int
 read_some(struct service_read_state *self, int fd, uint32_t limit)
@@ -122,7 +107,7 @@ read_some(struct service_read_state *self, int fd, uint32_t limit)
 
   self->length += res;
 
-  self->read_status = (res < left || !readable_p(fd))
+  self->read_status = (res < left || !io_readable_p(fd))
     ? SERVICE_READ_PUSH : SERVICE_READ_PENDING;
 
   return 1;
