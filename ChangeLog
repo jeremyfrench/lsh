@@ -1,3 +1,9 @@
+2006-05-23  Niels Möller  <niels@s3.kth.se>
+
+	* configure.ac: New check for filio.h.
+	(HAVE_IOCTL_FIONREAD): New check, if ioctl FIONREAD exists, and
+	takes an int argument.
+	
 2006-05-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/jpoll.c, src/jpoll.h: Deleted files.

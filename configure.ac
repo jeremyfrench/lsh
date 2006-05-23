@@ -260,6 +260,7 @@ AC_CHECK_HEADERS(stropts.h)
 AC_CHECK_HEADERS(syslog.h)
 AC_CHECK_HEADERS(argp.h)
 AC_CHECK_HEADERS(sys/resource.h)
+AC_CHECK_HEADERS(sys/filio.h)
 
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 AC_CHECK_HEADERS(utmpx.h, [have_utmpx_h=yes], [have_utmpx_h=no])
@@ -736,6 +737,59 @@ if test x$lsh_cv_sys_unix98_ptys = xyes; then
   AC_DEFINE(HAVE_UNIX98_PTYS)
 else
   AC_MSG_WARN([No support for UNIX98 PTYs. PTY support disabled.])
+fi
+
+# Check that FIONREAD exists, works, and uses an argument of type int, not long.  
+AC_CACHE_CHECK(
+  [for FIONREAD with int argument],
+  lsh_cv_sys_ioctl_fionread_int,
+[AC_TRY_RUN([
+#include <errno.h>
+#include <fcntl.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#if HAVE_SYS_FILIO_H
+#include <sys/filio.h>
+#endif
+int main(int argc, char **argv)
+{
+#ifdef FIONREAD
+  union {
+    int i[2];
+    long l;
+  } val;
+
+  int fds[2];
+
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
+    {
+      printf("socketpair failed: errno = %d.\n", errno);
+      return 1;
+    }
+    
+  val.i[0] = 0xdeadbeaf;
+  val.i[1] = 0xdeadbeaf;
+
+  if (ioctl(fds[0], FIONREAD, val.i) < 0)
+    {
+      printf("ioctl FIONREAD failed: errno = %d.\n", errno);
+      return 1;
+    }
+  if (val.i[0] == 0 && val.i[1] == 0xdeadbeaf)
+    return 0;
+#endif
+  return 1;
+}
+], lsh_cv_sys_ioctl_fionread_int=yes,
+   lsh_cv_sys_ioctl_fionread_int=no,
+   lsh_cv_sys_ioctl_fionread_int=no)])
+
+AH_TEMPLATE([HAVE_IOCTL_FIONREAD],
+	    [Define if the FIONREAD ioctl works, and uses an argument of type int])
+if test x$lsh_cv_sys_ioctl_fionread_int = xyes; then
+  AC_DEFINE([HAVE_IOCTL_FIONREAD])
 fi
 
 LSH_GCC_ATTRIBUTES
