@@ -1,3 +1,27 @@
+2006-05-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/pty-helper.c (_XPG4_2): Define before including system
+	headers. Needed for CMSG_SPACE and friends on Solaris.
+
+	* src/service_read.c: Include "io.h".
+	* src/transport_read.c: Likewise.
+
+	* src/lshd.c (open_ports): Cast second argument to bind to struct
+	sockaddr *.
+
+	* src/lshd-pty-helper.c (main): Use _WTMP_FILE, when defined.
+	Needed on Solaris. Otherwise, use _PATH_WTMPX.
+	(main): Call setsockopt with SO_PASSCRED only if SO_PASSCRED is
+	defined, which it is on Linux.
+
+	* src/lshd-connection.c: Include <limits.h>.
+
+	* src/daemon.c: Include <limits.h>.
+	(getdtablesize): Use INT_MAX, not MAX_INT.
+
+	* src/arglist.c (arglist_push_optarg): Use malloc + strcpy instead
+	of asprintf, for better portability.
+
 2006-05-23  Niels Möller  <niels@s3.kth.se>
 
 	* src/io.c (io_readable_p): New function, replacing the static
