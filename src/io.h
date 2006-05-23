@@ -153,6 +153,9 @@ write_raw(int fd, uint32_t length, const uint8_t *data);
 struct lsh_string *
 io_read_file_raw(int fd, uint32_t guess);
 
+int
+io_readable_p(int fd);
+
 void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);

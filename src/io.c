@@ -41,6 +41,12 @@
 #include <sys/un.h>
 /* For the popen code */
 #include <sys/wait.h>
+#include <sys/ioctl.h>
+
+/* Needed for FIONREAD on Solaris */
+#if HAVE_SYS_FILIO_H
+#include <sys/filio.h>
+#endif
 
 #include <arpa/inet.h>
 
@@ -531,6 +537,22 @@ io_read_file_raw(int fd, uint32_t guess)
       
       pos += res;
     }
+}
+
+int
+io_readable_p(int fd)
+{
+#if HAVE_IOCTL_FIONREAD
+  int nbytes = 0;
+  if (ioctl(fd, FIONREAD, &nbytes) < 0)
+    {
+      debug("ioctl FIONREAD failed: %e\n", errno);
+      return 0;
+    }
+  return nbytes != 0;
+#else /* ! HAVE_IOCTL_FIONREAD */
+  return 0;
+#endif /* !HAVE_IOCTL_FIONREAD */
 }
 
 /* Network utility functions */
