@@ -762,6 +762,7 @@ int main(int argc, char **argv)
   } val;
 
   int fds[2];
+  int res;
 
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
@@ -772,12 +773,22 @@ int main(int argc, char **argv)
   val.i[0] = 0xdeadbeaf;
   val.i[1] = 0xdeadbeaf;
 
+  do 
+    res = write(fds[1], "xxx", 3);
+  while (res < 0 && errno == EINTR);
+
+  if (res != 3)
+    {
+      printf("write failed: errno = %d.\n", errno);
+      return 1;
+    }
+  
   if (ioctl(fds[0], FIONREAD, val.i) < 0)
     {
       printf("ioctl FIONREAD failed: errno = %d.\n", errno);
       return 1;
     }
-  if (val.i[0] == 0 && val.i[1] == 0xdeadbeaf)
+  if (val.i[0] == 3 && val.i[1] == 0xdeadbeaf)
     return 0;
 #endif
   return 1;
