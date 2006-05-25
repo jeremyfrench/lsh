@@ -466,7 +466,7 @@ spawn_helper(const char *program, uid_t uid, gid_t gid)
   /* pipe[0] for the child, pipe[1] for the parent */ 
   int pipe[2];
   
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
+  if (socketpair(AF_UNIX, SOCK_DGRAM, 0, pipe) < 0)
     {
       werror("socketpair failed: %e.\n", errno);
       return -1;
