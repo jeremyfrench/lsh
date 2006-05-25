@@ -32,12 +32,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <fcntl.h>
-
 #if HAVE_UNISTD_H
 # include <unistd.h>
 #endif
 
+#include <fcntl.h>
+#include <signal.h>
 #include <termios.h>
 
 /* getpwnam needed to lookup the user "nobody" */
@@ -459,6 +459,7 @@ struct unix_random_source_state
 {
   const struct unix_random_source *source;
   pid_t pid;       /* Running process. */
+  time_t start_time;
   int fd;
   unsigned length; /* Amount of data read so far. */
 
@@ -527,6 +528,8 @@ spawn_source_process(unsigned *index,
       close (output[1]);
       state->fd = output[0];
       state->pid = pid;
+      time(&state->start_time);
+
       io_set_close_on_exec(state->fd);
       io_set_nonblocking(state->fd);
 
@@ -657,7 +660,11 @@ linux_proc_sources[] = {
   { "/proc/net/dev", 400, 5 },
   { NULL, 0, 0 }
 };
-  
+
+/* Don't let child processes run for longer than this number of
+   seconds. */
+#define SOURCE_TIMEOUT 30
+
 static void
 get_system(struct yarrow256_ctx *ctx, enum source_type source)
 {
@@ -718,6 +725,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
       int maxfd;
       unsigned i;
       int res;
+      struct timeval timeout;
 
       FD_ZERO(&read_fds);
       
@@ -729,10 +737,13 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	      maxfd = state[i].fd;
 	  }
 
+      timeout.tv_sec = SOURCE_TIMEOUT;
+      timeout.tv_usec = 0;
+
       trace("get_system: calling select, maxfd = %i\n", maxfd);
 
       do
-	res = select(maxfd + 1, &read_fds, NULL, NULL, NULL);
+	res = select(maxfd + 1, &read_fds, NULL, NULL, &timeout);
       while (res < 0 && errno == EINTR);
 	
       if (res < 0)
@@ -741,99 +752,122 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	  break;
 	}
 
-      trace("get_system: returned from select.\n");
+      trace("get_system: returned from select, %i sources ready.\n", res);
 
-      for (i = 0; i < NPROCESSES; i++)
+      if (!res)
 	{
-	  int fd = state[i].fd;
+	  /* timeout */
+	  time_t now = time(NULL);
 
-	  if (fd > 0 && FD_ISSET(fd, &read_fds))
-	    {
-#define BUFSIZE 1024
-	      uint8_t buffer[BUFSIZE];
-#undef BUFSIZE
-	      int res;
-
-	      trace("get_system: reading from source %z\n",
-		    state[i].source->path);
-
-	      do
-		res = read(fd, buffer, sizeof(buffer));
-	      while (res < 0 && errno == EINTR);
-	    
-	      if (res < 0)
-		{
-		  werror("get_system: read failed %e\n", errno);
-		  return;
-		}
-	      else if (res > 0)
-		{
-		  /* Estimate entropy */
-
-		  unsigned entropy;
-		  unsigned old_length = state[i].length;
-		  state[i].length += res;
-		  
-		  state[i].remainder += state[i].source->quality * res;
-
-		  /* Small sources are credited 1K of input as soon is
-		   * we get the "small" number of input butes. */
-		  if ( (old_length < state[i].source->small) &&
-		       (state[i].length >= state[i].source->small) )
-		    state[i].remainder += state[i].source->quality * 1024;
-
-		  entropy = state[i].remainder / UNIX_RANDOM_SOURCE_SCALE;
-		  if (entropy)
-		    state[i].remainder %= UNIX_RANDOM_SOURCE_SCALE;
-
-		  state[i].entropy += entropy;
-		  
-		  yarrow256_update(ctx, source,
-				   entropy,
-				   res, buffer);
-		}
-	      else
-		{ /* EOF */
-		  int status;
-		
-		  close(fd);
-
-		  state[i].fd = -1;
-
-		  verbose("Read %i bytes from %z %z, entropy estimate: %i bits\n",
-			  state[i].length,
-			  state[i].source->path,
-			  state[i].source->arg ? state[i].source->arg : "",
-			  state[i].entropy);
-		  count += state[i].entropy;
-		  
-		  if (waitpid(state[i].pid, &status, 0) < 0)
-		    {
-		      werror("waitpid failed %e\n", errno);
-		      return;
-		    }
-		  if (WIFEXITED(status))
-		    {
-		      if (WEXITSTATUS(status))
-			verbose("Command %z %z failed.\n",
-				state[i].source->path,
-				state[i].source->arg ? state[i].source->arg : "");
-		    }
-		  else if (WIFSIGNALED(status))
-		    {
-		      werror("Command %z %z died from signal %i (%z).\n",
-			     state[i].source->path,
-			     state[i].source->arg ? state[i].source->arg : "",
-			     WTERMSIG(status),
-			     STRSIGNAL(WTERMSIG(status)));
-		    }
-
-		  if (!spawn_source_process(&index, state + i, dev_null,
-					    uid, gid))
-		    running--;
-		}
-	    }
+	  for (i = 0; i < NPROCESSES; i++)
+	    if (state[i].fd > 0)
+	      {
+		if (state[i].start_time + SOURCE_TIMEOUT < now)
+		  {
+		    werror("Sending TERM signal to %z process.\n",
+			   state[i].source->path);
+		    kill(state[i].pid, SIGTERM);
+		  }
+		else if (state[i].start_time + 2*SOURCE_TIMEOUT < now)
+		  {
+		    werror("Sending KILL signal to %z process.\n",
+			   state[i].source->path);
+		    kill(state[i].pid, SIGKILL);
+		  }
+	      }
 	}
+      else
+	for (i = 0; i < NPROCESSES; i++)
+	  {
+	    int fd = state[i].fd;
+
+	    if (fd > 0 && FD_ISSET(fd, &read_fds))
+	      {
+#define BUFSIZE 1024
+		uint8_t buffer[BUFSIZE];
+#undef BUFSIZE
+		int res;
+
+		trace("get_system: reading from source %z\n",
+		      state[i].source->path);
+
+		do
+		  res = read(fd, buffer, sizeof(buffer));
+		while (res < 0 && errno == EINTR);
+	    
+		if (res < 0)
+		  {
+		    werror("get_system: read failed %e\n", errno);
+		    return;
+		  }
+		else if (res > 0)
+		  {
+		    /* Estimate entropy */
+
+		    unsigned entropy;
+		    unsigned old_length = state[i].length;
+		    state[i].length += res;
+		  
+		    state[i].remainder += state[i].source->quality * res;
+
+		    /* Small sources are credited 1K of input as soon is
+		     * we get the "small" number of input butes. */
+		    if ( (old_length < state[i].source->small) &&
+			 (state[i].length >= state[i].source->small) )
+		      state[i].remainder += state[i].source->quality * 1024;
+
+		    entropy = state[i].remainder / UNIX_RANDOM_SOURCE_SCALE;
+		    if (entropy)
+		      state[i].remainder %= UNIX_RANDOM_SOURCE_SCALE;
+
+		    state[i].entropy += entropy;
+		  
+		    yarrow256_update(ctx, source,
+				     entropy,
+				     res, buffer);
+		  }
+		else
+		  { /* EOF */
+		    int status;
+		
+		    close(fd);
+
+		    state[i].fd = -1;
+
+		    verbose("Read %i bytes from %z %z, entropy estimate: %i bits\n",
+			    state[i].length,
+			    state[i].source->path,
+			    state[i].source->arg ? state[i].source->arg : "",
+			    state[i].entropy);
+		    count += state[i].entropy;
+		  
+		    if (waitpid(state[i].pid, &status, 0) < 0)
+		      {
+			werror("waitpid failed %e\n", errno);
+			return;
+		      }
+		    if (WIFEXITED(status))
+		      {
+			if (WEXITSTATUS(status))
+			  verbose("Command %z %z failed.\n",
+				  state[i].source->path,
+				  state[i].source->arg ? state[i].source->arg : "");
+		      }
+		    else if (WIFSIGNALED(status))
+		      {
+			werror("Command %z %z died from signal %i (%z).\n",
+			       state[i].source->path,
+			       state[i].source->arg ? state[i].source->arg : "",
+			       WTERMSIG(status),
+			       STRSIGNAL(WTERMSIG(status)));
+		      }
+
+		    if (!spawn_source_process(&index, state + i, dev_null,
+					      uid, gid))
+		      running--;
+		  }
+	      }
+	  }
     }
   
   for (i = 0; linux_proc_sources[i].name; i++)
