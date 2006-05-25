@@ -549,9 +549,9 @@ start_service(struct lshd_user *user, char **argv)
      support providing command line options with the service, that
      might be a cleaner alternative. */
 
-#define ENV_MAX 7
+#define ENV_MAX 8
 
-  const char *env[ENV_MAX + 1];
+  const char *env[ENV_MAX];
   const char *tz = getenv(ENV_TZ);
   const char *cname = lsh_get_cstring(user->name);  
   const char *config_dir = getenv(ENV_LSHD_CONFIG_DIR);
