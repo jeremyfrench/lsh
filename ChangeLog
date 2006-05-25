@@ -1,3 +1,10 @@
+2006-05-25  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/lsh-10-test: Check that the client gets a tty.
+
+	* src/lshd-userauth.c (spawn_helper): Use SOCK_DGRAM for the
+	pty-helper socketpair.
+
 2006-05-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/setup-env: Pass -v flag to lsh-make-seed.
