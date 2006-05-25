@@ -1,3 +1,16 @@
+2006-05-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/setup-env: Pass -v flag to lsh-make-seed.
+
+	* src/lsh-make-seed.c (struct unix_random_source_state): New field
+	start_time.
+	(spawn_source_process): Save process start time.
+	(SOURCE_TIMEOUT): New constant.
+	(get_system): Use a 30 timeout for the select call, and kill
+	processes that run for too long.
+
+	* src/lshd-userauth.c (start_service): Fixed ENV_MAX handling.
+
 2006-05-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (_XPG4_2): Define before including system
