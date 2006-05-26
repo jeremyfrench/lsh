@@ -312,6 +312,8 @@ static void
 spawn_error(struct spawn_info *info, const int *sync,
 	    int helper_fd, int helper_ref)
 {
+  trace("unix_process: spawn_error\n");
+
   safe_close(sync[0]); safe_close(sync[1]);
   
   safe_close(info->in[0]);  safe_close(info->in[1]);
@@ -380,6 +382,8 @@ spawn_child(struct spawn_info *info, const int *sync,
 	    int helper_fd, int helper_ref)
 {
   int tty = -1;
+
+  trace("unix_process: spawn_child\n");
 
   /* We want to be a process group leader */
   if (setsid() < 0)
@@ -466,6 +470,8 @@ spawn_shell(struct spawn_info *info, int helper_fd,
   pid_t child;
   int helper_ref = -1;
 
+  trace("unix_process: spawn_shell\n");
+  
   if (!lsh_make_pipe(sync))
     {
       werror("do_spawn: Failed to create syncronization pipe.\n");
