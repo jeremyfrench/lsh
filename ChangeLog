@@ -1,3 +1,23 @@
+2006-05-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh: Don't use set -e, since it made the
+	cleanup code unreliable. FIXME: Check if any tests depended on this.
+
+	* src/testsuite/setup-env: Reverted previous change. No -v flag to
+	lsh-make-seed.
+
+	* src/pty-helper.c: Moved inclusion of sys/types.h and
+	sys/socket.h, from pty-helper.h.
+	(pty_send_message): Check if SCM_CREDENTIALS is defined.
+	(pty_recv_message): Check if SCM_CREDENTIALS or SCM_UCRED is
+	defined, and support both interfaces (for Linux and Solaris,
+	respectively).	
+
+	* src/lshd-pty-helper.c: Include sys/socket.h
+	(main): Use setsockopt SO_RECVUCRED, if available.
+
+	* configure.ac: Check for ucred.h.
+
 2006-05-25  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/lsh-10-test: Check that the client gets a tty.
