@@ -14,7 +14,7 @@ HOME="$TEST_HOME"
 export HOME
 
 echo "Creating seed file"
-../lsh-make-seed -q -v --sloppy
+../lsh-make-seed -q --sloppy
 
 echo "Creating identity.pub for tests"
 ../lsh-keygen -a dsa -l2 | ../lsh-writekey -c none
