@@ -63,7 +63,7 @@ pty_send_message(int socket, const struct pty_message *message)
   io.iov_len = sizeof(message->header);
 
 #ifdef SCM_CREDENTIALS
-  creds_size = sizeof(struct ucreds);
+  creds_size = sizeof(struct ucred);
 #else
   creds_size = 0;
 #endif
@@ -158,7 +158,7 @@ pty_recv_message(int socket, struct pty_message *message)
   int res;
 
 #if defined (SCM_CREDENTIALS)
-  creds_size = sizeof(struct ucreds);
+  creds_size = sizeof(struct ucred);
 #elif defined (SCM_UCRED)
   creds_size = ucred_size();
 #else

@@ -476,7 +476,7 @@ spawn_helper(const char *program, uid_t uid, gid_t gid)
   type = SOCK_STREAM;
 #endif
 
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
+  if (socketpair(AF_UNIX, type, 0, pipe) < 0)
     {
       werror("socketpair failed: %e.\n", errno);
       return -1;
