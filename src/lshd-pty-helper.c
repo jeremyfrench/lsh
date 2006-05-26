@@ -39,6 +39,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 #include <fcntl.h>
 #include <grp.h>
@@ -571,12 +572,23 @@ main (int argc UNUSED, char **argv UNUSED)
 
   werror("wtmp_file: %s\n", wtmp_file);
 
-  /* Needed on Linux */
-#ifdef SO_PASSCRED
+#if defined (SO_PASSCRED)
+  /* For Linux */
   {
     int yes = 1;
 
     if (setsockopt(STDIN_FILENO, SOL_SOCKET, SO_PASSCRED,
+		   &yes, sizeof(yes)) < 0)
+      {
+	die("setsockopt SO_PASSCRED failed: %s.\n", strerror(errno));
+	return EXIT_FAILURE;
+      }
+  }
+#elif defined (SO_RECVUCRED)
+  {
+    int yes = 1;
+
+    if (setsockopt(STDIN_FILENO, SOL_SOCKET, SO_RECVUCRED,
 		   &yes, sizeof(yes)) < 0)
       {
 	die("setsockopt SO_PASSCRED failed: %s.\n", strerror(errno));
