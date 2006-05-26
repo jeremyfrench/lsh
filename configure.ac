@@ -261,6 +261,7 @@ AC_CHECK_HEADERS(syslog.h)
 AC_CHECK_HEADERS(argp.h)
 AC_CHECK_HEADERS(sys/resource.h)
 AC_CHECK_HEADERS(sys/filio.h)
+AC_CHECK_HEADERS(ucred.h)
 
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 AC_CHECK_HEADERS(utmpx.h, [have_utmpx_h=yes], [have_utmpx_h=no])
