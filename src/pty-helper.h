@@ -4,10 +4,6 @@
 /* For pid_t */
 #include <unistd.h>
 
-/* For struct ucred */
-#include <sys/types.h>
-#include <sys/socket.h>
-
 enum pty_request_type
 {
   /* Creates a pty object reference, without doing anything with it. */

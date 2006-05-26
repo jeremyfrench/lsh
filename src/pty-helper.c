@@ -36,6 +36,16 @@
 /* Only for debugging */
 #include <stdio.h>
 
+/* Linux: For struct ucred */
+#include <sys/types.h>
+#include <sys/socket.h>
+
+/* Solaris ucred support */
+#if HAVE_UCRED_H
+#include <ucred.h>
+#endif
+   
+
 #include "pty-helper.h"
 
 /* Returns 0 on success, errno value on error */
@@ -45,30 +55,34 @@ pty_send_message(int socket, const struct pty_message *message)
   struct msghdr hdr;
   struct cmsghdr *cmsg;
   struct iovec io;
-  char buf[CMSG_SPACE(sizeof(message->creds))
-	   + CMSG_SPACE(sizeof(message->fd))];
+  size_t creds_size;
   int controllen;
   int res;
 
   io.iov_base = (void *) &message->header;
   io.iov_len = sizeof(message->header);
 
+#ifdef SCM_CREDENTIALS
+  creds_size = sizeof(struct ucreds);
+#else
+  creds_size = 0;
+#endif
+
   hdr.msg_name = NULL;
   hdr.msg_namelen = 0;
   hdr.msg_iov = &io;
   hdr.msg_iovlen = 1;
-  hdr.msg_control = buf;
-  hdr.msg_controllen = sizeof(buf);
+  hdr.msg_controllen = CMSG_SPACE(creds_size) + CMSG_SPACE(sizeof(message->fd));
+  hdr.msg_control = alloca(hdr.msg_controllen);
 
-  /* We rely on CMSG_NXTHDR doing the right thing when cmsg is NULL */
   cmsg = NULL;
   controllen = 0;
 
+#ifdef SCM_CREDENTIALS
   if (message->has_creds)
     {
       cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
 
-#ifdef SCM_CREDENTIALS
       {
 	struct ucred *creds;
 	/* Linux style credentials */
@@ -83,8 +97,9 @@ pty_send_message(int socket, const struct pty_message *message)
 	
 	controllen += CMSG_SPACE(sizeof(*creds));
       }
-#endif
     }
+#endif
+
   if (message->fd != -1)
     {
       cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
@@ -139,9 +154,16 @@ pty_recv_message(int socket, struct pty_message *message)
   struct msghdr hdr;
   struct cmsghdr *cmsg;
   struct iovec io;
-  char buf[CMSG_SPACE(sizeof(message->creds))
-	   + CMSG_SPACE(sizeof(message->fd))];
+  size_t creds_size;
   int res;
+
+#if defined (SCM_CREDENTIALS)
+  creds_size = sizeof(struct ucreds);
+#elif defined (SCM_UCRED)
+  creds_size = ucred_size();
+#else
+  creds_size = 0;
+#endif
 
   message->has_creds = 0;
   message->fd = -1;
@@ -154,8 +176,8 @@ pty_recv_message(int socket, struct pty_message *message)
   hdr.msg_namelen = 0;
   hdr.msg_iov = &io;
   hdr.msg_iovlen = 1;
-  hdr.msg_control = buf;
-  hdr.msg_controllen = sizeof(buf);
+  hdr.msg_controllen = CMSG_SPACE(creds_size) + CMSG_SPACE(sizeof(message->fd));
+  hdr.msg_control = alloca(hdr.msg_controllen);
 
   do
     res = recvmsg(socket, &hdr, 0);
@@ -174,7 +196,7 @@ pty_recv_message(int socket, struct pty_message *message)
 	continue;
       switch (cmsg->cmsg_type)
 	{
-#ifdef SCM_CREDENTIALS
+#if defined (SCM_CREDENTIALS)
 	case SCM_CREDENTIALS:
 	  {
 	    struct ucred *creds;
@@ -192,8 +214,28 @@ pty_recv_message(int socket, struct pty_message *message)
 	    message->creds.gid = creds->gid;
 	    
 	    message->has_creds = 1;
+
+	    break;
 	  }
-	  break;
+#elif defined (SCM_UCRED)
+	case SCM_UCRED:
+	  {
+	    ucred_t *creds;
+
+	    if (message->has_creds)
+	      /* Shouldn't be multiple credentials, but if there are,
+		 ignore all but the first. */
+	      continue;
+
+	    creds = (ucred_t *) CMSG_DATA(cmsg);
+	    message->creds.pid = ucred_getpid(creds);
+	    message->creds.uid = ucred_geteuid(creds);
+	    message->creds.gid = ucred_getegid(creds);
+
+	    message->has_creds = 1;
+
+	    break;
+	  }
 #endif
 	case SCM_RIGHTS:
 	  {
