@@ -1,8 +1,5 @@
 # Helper functions for the test scripts.
 
-# Any error count as failure.
-set -e
-
 # echo srcdir = $srcdir
 
 : ${TEST_HOME:=`pwd`/home}
@@ -32,6 +29,8 @@ export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
 
+# FIXME: Are these flags obsolete?
+
 # Ignore any options the tester might have put in the environment.
 
 # With bash, unset returns a non-zero exit status for non-existing
@@ -41,7 +40,7 @@ unset LSHGFLAGS || :
 unset LSHFLAGS || :
 
 PORT=11147
-ATEXIT='set +e'
+ATEXIT='true '
 
 # We start with EXIT_FAILURE, and changing it to EXIT_SUCCESS only if
 # test_success is invoked.
