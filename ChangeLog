@@ -1,3 +1,8 @@
+2006-12-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* .bootstrap: Commented out linking of install-sh, texinfo.tex,
+	INSTALL and COPYING into the nettle subdirectory.
+
 2006-05-26  Niels Möller  <niels@s3.kth.se>
 
 	* src/lshd_read.c: Deleted unused file.

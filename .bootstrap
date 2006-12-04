@@ -49,10 +49,10 @@ relative_symlink misc/getopt.h \
 relative_symlink config.guess src/nettle src/spki
 relative_symlink config.sub src/nettle src/spki
 
-relative_symlink install-sh src/nettle
-relative_symlink texinfo.tex src/nettle
-relative_symlink INSTALL src/nettle
-relative_symlink COPYING src/nettle
+# relative_symlink install-sh src/nettle
+# relative_symlink texinfo.tex src/nettle
+# relative_symlink INSTALL src/nettle
+# relative_symlink COPYING src/nettle
 
 if [ "$1" = "links" ] ; then
     # Skip the time consuming autoconf and automake stuff
