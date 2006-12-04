@@ -5,6 +5,7 @@
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
+datarootdir=@datarootdir@
 
 CURRENT_ARCH="@BUILD_ARCH@"
 CURRENT_OSREV="@BUILD_OSREV@"
