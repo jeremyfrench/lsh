@@ -43,7 +43,16 @@
 
 #include <fcntl.h>
 #include <grp.h>
-#include <utmpx.h>
+
+#if WITH_UTMP
+# if HAVE_UTMPX_H
+#  include <utmpx.h>
+#  define STRUCT_UTMP struct utmpx
+# elif HAVE_UTMP_H
+#  include <utmp.h>
+#  define STRUCT_UTMP struct utmp
+# endif /* HAVE_UTMP_H */
+#endif /* WITH_UTMP */
 
 #include "environ.h"
 #include "pty-helper.h"
@@ -67,8 +76,6 @@
 #ifndef ACCESS_TTY
 #define ACCESS_TTY 0620
 #endif
-
-static const char *wtmp_file;
 
 static void
 die(const char *format, ...)
@@ -118,8 +125,10 @@ struct pty_object
 
   /* Name of slave tty */
   const char *tty;
-
-  struct utmpx entry;
+#ifdef WITH_UTMP
+  const char *line;
+  STRUCT_UTMP entry;
+#endif
 };
 
 struct pty_state
@@ -132,10 +141,24 @@ struct pty_state
 
   unsigned nobjects;
   struct pty_object *objects;
+
+#if WITH_UTMP
+  const char *wtmp_file;
+  STRUCT_UTMP template;
+#endif
 };
 
+#define COPY_STRING(dst, src) (strncpy((dst), (src), sizeof(dst)))
+#define COPY_OFFSET(dst, offset, src) \
+  (strncpy((dst)+(offset), (src), sizeof(dst)-(offset)))
+#define COPY_FIELD(dst, src, field) \
+  (memcpy((dst).field, (src).field, sizeof((dst).field)))
+#define CLEAR_FIELD(dst) \
+  (memset(&(dst), 0, sizeof(dst)))
+
 static void
-init_pty_state(struct pty_state *state, uid_t uid)
+init_pty_state(struct pty_state *state, uid_t uid,
+	       const char *user, const char *host)
 {
   struct group *grp;
 
@@ -152,6 +175,55 @@ init_pty_state(struct pty_state *state, uid_t uid)
 
   state->nobjects = 0;
   state->objects = NULL;
+
+#if WITH_UTMP
+  {
+    const char *utmp_file;
+    utmp_file = getenv(ENV_LSHD_UTMP);
+    if (utmp_file)
+      {
+	werror("utmp_file: %s\n", utmp_file);
+	utmpxname(utmp_file);
+      }
+  
+    state->wtmp_file = getenv(ENV_LSHD_WTMP);
+    if (!state->wtmp_file)
+      {
+#ifdef _WTMPX_FILE
+	state->wtmp_file = _WTMPX_FILE;
+#else
+	state->wtmp_file = _PATH_WTMPX;
+#endif
+      }
+
+    werror("wtmp_file: %s\n", state->wtmp_file);
+
+    CLEAR_FIELD(state->template);
+  
+#if HAVE_UTMPX_H
+  
+#if HAVE_STRUCT_UTMPX_UT_USER
+    COPY_STRING(state->template.ut_user, user);
+#elif HAVE_STRUCT_UTMPX_UT_NAME
+    COPY_STRING(state->template.ut_name, user);
+#endif
+      
+#if HAVE_STRUCT_UTMPX_UT_HOST
+    COPY_STRING(state->template.ut_host, host);
+#endif
+      
+#elif HAVE_UTMP_H
+
+#if HAVE_STRUCT_UTMP_UT_NAME
+    COPY_STRING(state->template.ut_name, user);
+#endif
+#if HAVE_STRUCT_UTMP_UT_HOST
+    COPY_STRING(state->template.ut_host, host);
+#endif
+    
+#endif /* HAVE_UTMP_H */
+  }
+#endif /* WITH_UTMP */
 }
 
 static struct pty_object *
@@ -204,6 +276,121 @@ pty_object_free(struct pty_state *state, unsigned index)
   state->objects[index].free = 1;
 }
 
+static int
+strprefix_p(const char *prefix, const char *s)
+{
+  unsigned i;
+
+  for (i = 0; prefix[i]; i++)
+    if (prefix[i] != s[i])
+      return 0;
+  return 1;
+}
+
+static void
+record_login (const struct pty_state *state, struct pty_object *pty, pid_t pid)
+{
+#if WITH_UTMP
+  pty->entry = state->template;
+
+  if (pty->tty)
+    {
+      if (strprefix_p("/dev/", pty->tty))
+	pty->line = pty->tty + 5;
+      else
+	pty->line = pty->tty;
+    }
+  else
+    pty->line = NULL;
+
+# if HAVE_UTMPX_H  
+  pty->entry.ut_type = USER_PROCESS;
+  pty->entry.ut_pid = pid;
+
+#if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
+  gettimeofday(&pty->entry.ut_tv, NULL);
+#endif
+  if (pty->tty)
+    {
+      /* Set tty-related fields, and update utmp */
+
+      COPY_STRING(pty->entry.ut_line, pty->line);
+
+#if HAVE_STRUCT_UTMPX_UT_ID
+      if (strprefix_p("pts/", pty->line))
+	{
+	  pty->entry.ut_id[0] = 'p';
+	  COPY_OFFSET(pty->entry.ut_id, 1, pty->line + 4);
+	}
+      else if (strprefix_p("tty", pty->line))
+	COPY_STRING(pty->entry.ut_id, pty->line + 3);
+      else
+	COPY_STRING(pty->entry.ut_id, pty->line);
+#endif
+      setutxent();
+      pututxline(&pty->entry);
+    }
+  updwtmpx(state->wtmp_file, &pty->entry);
+# elif /* HAVE_UTMP_H */
+#if HAVE_STRUCT_UTMP_UT_TIME
+  entry.ut_time = time(NULL);
+#endif
+  COPY_STRING(pty->entry.ut_line, pty->line);
+
+  pututline(&pty->entry);
+  logwtmp(pty->line, state->user, state->host);  
+# endif /* HAVE_UTMP_H */
+#endif /* WITH_UTMP */
+}
+
+static void
+record_logout (struct pty_state *state, struct pty_object *pty)
+{
+#if WITH_UTMP
+  STRUCT_UTMP entry;
+
+  /* For utmp, we want most fields to be zero */
+  memset(&entry, 0, sizeof(entry));
+  
+# if HAVE_UTMPX_H
+  entry.ut_type = DEAD_PROCESS;
+
+#if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
+  gettimeofday(&entry.ut_tv, NULL);
+#endif
+
+  COPY_FIELD(entry, pty->entry, ut_line);
+
+#if HAVE_STRUCT_UTMPX_UT_ID
+  COPY_FIELD(entry, pty->entry, ut_id);
+#endif
+  
+  setutxent();
+  pututxline(&entry);
+
+  /* For wtmp, clear host and name */
+#if HAVE_STRUCT_UTMPX_UT_NAME
+  CLEAR_FIELD(pty->entry.ut_name);
+#elif HAVE_STRUCT_UTMPX_UT_USER
+  CLEAR_FIELD(pty->entry.ut_user);
+#endif
+
+  updwtmpx(state->wtmp_file, &pty->entry);
+  
+# elif /* HAVE_UTMP_H */
+#if HAVE_STRUCT_UTMPX_UT_TIME
+  entry->ut_time = time(NULL);
+#endif
+  COPY_FIELD(entry, pty->entry, ut_line);
+
+  setutent();
+  pututline(&entry);
+
+  logwtmp(record->line, "", "");
+# endif /* HAVE_UTMP_H */
+#endif /* WITH_UTMP */
+}
+
 /* Sets the permissions on the slave pty suitably for use by USER.
  * This function is derived from the grantpt function in
  * sysdeps/unix/grantpt.c in glibc-2.1. */
@@ -237,21 +424,6 @@ pty_set_permissions(const char *name, uid_t uid, gid_t gid)
   /* Everything is fine */
   return 0;
 }
-
-static int
-strprefix_p(const char *prefix, const char *s)
-{
-  unsigned i;
-
-  for (i = 0; prefix[i]; i++)
-    if (prefix[i] != s[i])
-      return 0;
-  return 1;
-}
-
-#define CP(dst, src) (strncpy((dst), (src), sizeof(dst)))
-#define CPN(dst, offset, src) \
-  (strncpy((dst)+(offset), (src), sizeof(dst)-(offset)))
 
 static void
 process_request(struct pty_state *state,
@@ -345,13 +517,12 @@ process_request(struct pty_state *state,
 
     case PTY_REQUEST_MASTER:
       werror("PTY_REQUEST_MASTER\n");
-      response->header.type = EOPNOTSUPP;
 
       /* Useful only for old bsd-style tty allocation. When using
 	 /devptmx and grantpt, it's better to let the client create
 	 the pty, since it will get the right ownership from the
 	 start. */
-#if 0
+
       if (request->header.ref != -1)
 	{
 	  response->header.type = EINVAL;
@@ -427,10 +598,10 @@ process_request(struct pty_state *state,
 	    } 
 
 	  response->header.ref = index;
-	  response->length = strlen(pty->tty);
-	  response->data = pty->tty;
+	  response->header.length = strlen(pty->tty);
+	  response->data = (char *) pty->tty;
 	}
-#endif
+
       break;
 
     case PTY_REQUEST_LOGIN:
@@ -451,47 +622,7 @@ process_request(struct pty_state *state,
 	{
 	  response->header.ref = request->header.ref;
 
-	  memset(&pty->entry, 0, sizeof(pty->entry));
-
-	  pty->entry.ut_type = USER_PROCESS;
-	  pty->entry.ut_pid = request->creds.pid;
-
-#if 0
-	  CP(pty->entry.ut_user, state->user_name);
-#endif
-	  
-	  gettimeofday(&pty->entry.ut_tv, NULL);
-	  
-	  if (pty->tty)
-	    {
-	      /* Set tty-related fields, and update utmp */
-
-	      const char *line;
-	      
-	      if (strprefix_p("/dev/", pty->tty))
-		line = pty->tty + 5;
-	      else
-		line = pty->tty;
-	  
-	      CP(pty->entry.ut_line, line);
-
-	      if (strprefix_p("pts/", line))
-		{
-		  pty->entry.ut_id[0] = 'p';
-		  CPN(pty->entry.ut_id, 1, line + 4);
-		}
-	      else if (strprefix_p("tty", line))
-		CP(pty->entry.ut_id, line + 3);
-	      else
-		CP(pty->entry.ut_id, line);
-
-	      setutxent();
-
-	      if (!pututxline(&pty->entry))
-		werror("pututxline failed.\n");
-	    }
-	  
-	  updwtmpx(wtmp_file, &pty->entry);
+	  record_login(state, pty, request->creds.pid);
 
 	  pty->active = 1;
 	  break;
@@ -506,19 +637,8 @@ process_request(struct pty_state *state,
       else
 	{
 	  if (pty->active)
-	    {
-	      pty->entry.ut_type = DEAD_PROCESS;
-	      gettimeofday(&pty->entry.ut_tv, NULL);
+	    record_logout(state, pty);
 
-	      if (pty->tty)
-		{
-		  setutxent();
-
-		  if (!pututxline(&pty->entry))
-		    werror("pututxline failed.\n");
-		}
-	      updwtmpx(wtmp_file, &pty->entry);
-	    }
 	  pty_object_free(state, request->header.ref);
 	}
       break;
@@ -531,8 +651,8 @@ process_request(struct pty_state *state,
 	}
       else
 	{
-	  /* This request shouldn't rellay be used for "active" ptys,
-	     i.e., if we have an utmp entry to clean up. */
+	  /* This request shouldn't be used for "active" ptys, i.e.,
+	     if we have an utmp entry to clean up. */
 	     
 	  pty_object_free(state, request->header.ref);
 	}
@@ -550,27 +670,7 @@ main (int argc UNUSED, char **argv UNUSED)
   struct pty_state state;
   struct pty_message request;
   struct pty_message response;
-  const char *utmp_file;
   int err;
-
-  utmp_file = getenv(ENV_LSHD_UTMP);
-  if (utmp_file)
-    {
-      werror("utmp_file: %s\n", utmp_file);
-      utmpxname(utmp_file);
-    }
-  
-  wtmp_file = getenv(ENV_LSHD_WTMP);
-  if (!wtmp_file)
-    {
-#ifdef _WTMPX_FILE
-      wtmp_file = _WTMPX_FILE;
-#else
-      wtmp_file = _PATH_WTMPX;
-#endif
-    }
-
-  werror("wtmp_file: %s\n", wtmp_file);
 
 #if defined (SO_PASSCRED)
   /* For Linux */
@@ -597,12 +697,11 @@ main (int argc UNUSED, char **argv UNUSED)
   }
 #endif
 
-  init_pty_state(&state, getuid());
+  /* FIXME: username and host should be command line args */
+  init_pty_state(&state, getuid(), "dummy_user", "dummy_host");
   if (!state.uid )
     {
-      /* Currently, doesn't support running as root. And it makes no
-	 sense to run as root unless SCM_CREDENTIALS passing is
-	 supported. */
+      /* Currently, doesn't support running as root. */
       return EXIT_FAILURE;
     }
 
