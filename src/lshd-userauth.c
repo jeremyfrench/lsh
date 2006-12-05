@@ -513,7 +513,7 @@ spawn_helper(const char *program, uid_t uid, gid_t gid)
 	    }
 	  if (setuid(uid) < 0)
 	    {
-	      werror("setgid failed: %e.\n", errno);
+	      werror("setuid failed: %e.\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	}
@@ -785,8 +785,10 @@ main(int argc, char **argv)
   GET_FILE_ENV(helper_program, LSHD_PTY_HELPER);
 
   /* With UNIX98-style ptys, utmp is sufficient privileges for the
-     helper program. FIXME: Make sure that the user can't attach a
-     debugger to this process. How? */
+     helper program. */
+
+  /* FIXME: Make sure that the user can't attach a debugger to this
+     process. How? */
   helper_fd = spawn_helper(helper_program, user.uid,
 			   lookup_group("utmp", user.gid));
 
