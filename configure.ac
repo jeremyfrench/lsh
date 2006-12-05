@@ -287,7 +287,10 @@ if test x$have_utmp_h = xyes; then
 		    struct utmp.ut_exit.ut_termination,
 		    struct utmp.ut_addr,
 		    struct utmp.ut_addr_v6],,,
-[# if HAVE_UTMP_H
+[# if HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+# #endif
+# if HAVE_UTMP_H
 #  include <utmp.h>
 # endif
 ])
