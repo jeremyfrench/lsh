@@ -1,5 +1,11 @@
 2006-12-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lshd-pty-helper.c: Attempted to make the utmp/wtmp handling
+	more portable.
+
+	* configure.ac: When checking for utmp members, first include
+	<sys/types.h>.
+
 	* contrib/solpkg.sh.in (datarootdir): New directory variable (for
 	autoconf-2.61).
 
