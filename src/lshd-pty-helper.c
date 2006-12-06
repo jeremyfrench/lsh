@@ -183,16 +183,24 @@ init_pty_state(struct pty_state *state, uid_t uid,
     if (utmp_file)
       {
 	werror("utmp_file: %s\n", utmp_file);
+#if HAVE_UTMPX_H
 	utmpxname(utmp_file);
+#else
+	utmpname(utmp_file);
+#endif
       }
   
     state->wtmp_file = getenv(ENV_LSHD_WTMP);
     if (!state->wtmp_file)
       {
-#ifdef _WTMPX_FILE
+#if HAVE_UTMPX_H
+# ifdef _WTMPX_FILE
 	state->wtmp_file = _WTMPX_FILE;
-#else
+# else
 	state->wtmp_file = _PATH_WTMPX;
+# endif
+#else /* !HAVE_UTMPX_H */
+	state->wtmp_file = _PATH_WTMP;
 #endif
       }
 
@@ -201,7 +209,7 @@ init_pty_state(struct pty_state *state, uid_t uid,
     CLEAR_FIELD(state->template);
   
 #if HAVE_UTMPX_H
-  
+
 #if HAVE_STRUCT_UTMPX_UT_USER
     COPY_STRING(state->template.ut_user, user);
 #elif HAVE_STRUCT_UTMPX_UT_NAME
@@ -331,7 +339,7 @@ record_login (const struct pty_state *state, struct pty_object *pty, pid_t pid)
       pututxline(&pty->entry);
     }
   updwtmpx(state->wtmp_file, &pty->entry);
-# elif /* HAVE_UTMP_H */
+# elif HAVE_UTMP_H
 #if HAVE_STRUCT_UTMP_UT_TIME
   entry.ut_time = time(NULL);
 #endif
@@ -377,7 +385,7 @@ record_logout (struct pty_state *state, struct pty_object *pty)
 
   updwtmpx(state->wtmp_file, &pty->entry);
   
-# elif /* HAVE_UTMP_H */
+# elif HAVE_UTMP_H
 #if HAVE_STRUCT_UTMPX_UT_TIME
   entry->ut_time = time(NULL);
 #endif
