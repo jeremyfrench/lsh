@@ -44,7 +44,21 @@
 #if HAVE_UCRED_H
 #include <ucred.h>
 #endif
-   
+
+/* At least Solaris 5.8 lacks CMSG_LEN and CMSG_SPACE. */
+#ifndef CMSG_LEN
+/* The safest way seems to be to extract the offset of the data */
+# define CMSG_LEN(l) ((size_t) CMSG_DATA((struct cmsghdr *) 0) + (l))
+#endif
+
+#ifndef CMSG_SPACE
+# if defined(__sparc) && defined(__sun__)
+#  define CMSG_HDR_ALIGN(x) (((x) + 7) & ~7)
+# else
+#  define CMSG_HDR_ALIGN(x) (((x) + 3) & ~3)
+# endif
+# define CMG_SPACE(l) CMSG_HDR_ALIGN(CMSG_LEN(l))
+#endif
 
 #include "pty-helper.h"
 
