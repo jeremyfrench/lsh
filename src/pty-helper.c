@@ -57,7 +57,7 @@
 # else
 #  define CMSG_HDR_ALIGN(x) (((x) + 3) & ~3)
 # endif
-# define CMG_SPACE(l) CMSG_HDR_ALIGN(CMSG_LEN(l))
+# define CMSG_SPACE(l) CMSG_HDR_ALIGN(CMSG_LEN(l))
 #endif
 
 #include "pty-helper.h"
