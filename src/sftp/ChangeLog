@@ -1,3 +1,8 @@
+2006-12-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.am (AM_CPPFLAGS): Added -I../nettle, needed for
+	locating nettle-stdint.h in the build tree.
+
 2006-05-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* Man pages: Applied patch from Stefan Pfetzing, addressing long

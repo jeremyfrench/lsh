@@ -1,7 +1,8 @@
 SUBDIRS = . testsuite
 
-# Needed for finding nettle-types.h in the build tree.
-AM_CPPFLAGS = -I..
+# Needed for finding the nettle include files in the source tree
+# and nettle-stdint.h in the build tree.
+AM_CPPFLAGS = -I$(srcdir)/.. -I../nettle
 
 AUTOMAKE_OPTIONS = foreign
 
