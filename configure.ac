@@ -167,11 +167,6 @@ AC_ARG_ENABLE(utmp,
   AC_HELP_STRING([--disable-utmp], [Disable utmp and wtmp support]),,
   [enable_utmp=yes])
 
-AH_TEMPLATE([WITH_UTMP], [For utmp support])
-if test x$enable_utmp = xyes ; then
-  AC_DEFINE(WITH_UTMP)
-fi
-
 AC_ARG_WITH(include-path,
   AC_HELP_STRING([--with-include-path], [A colon-separated list of directories to search for include files]),,
   [with_include_path=''])
@@ -271,6 +266,11 @@ dnl AC_CHECK_MEMBERS, but we can check for sub members. Leave the
 dnl ut_tv check for clarity.
 
 if test x$have_utmp_h = xyes; then
+  # Currently, no support for pure bsd systems where login(3) and
+  # friends are the only library functions for updating the utmp and
+  # wtmp data. FIXME: Don't do this if we're going to use the the utmpx
+  # functions instead.
+  AC_CHECK_FUNC([pututline],,[enable_utmp=no])
   AC_CHECK_MEMBERS([struct utmp.ut_host,
 		    struct utmp.ut_name,
 		    struct utmp.ut_user,
@@ -317,6 +317,11 @@ if test x$have_utmpx_h = xyes; then
 #  include <utmpx.h>
 # endif
 ])
+fi
+
+AH_TEMPLATE([WITH_UTMP], [For utmp support])
+if test x$enable_utmp = xyes ; then
+  AC_DEFINE(WITH_UTMP)
 fi
 
 AH_TEMPLATE([WITH_GSS_K5], [Whether to use gss K5 authorization (Heimdal/MIT)])
