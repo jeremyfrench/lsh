@@ -44,6 +44,10 @@
 #include <fcntl.h>
 #include <grp.h>
 
+/* FIXME: Require creds passing for utmp logging only. In is needed to
+   get the authentic pid into the utmp entry, so that utmp records for
+   orphaned processes can be cleaned up by init. */
+
 #if WITH_UTMP
 # if HAVE_UTMPX_H
 #  include <utmpx.h>
@@ -699,7 +703,7 @@ main (int argc UNUSED, char **argv UNUSED)
     if (setsockopt(STDIN_FILENO, SOL_SOCKET, SO_RECVUCRED,
 		   &yes, sizeof(yes)) < 0)
       {
-	die("setsockopt SO_PASSCRED failed: %s.\n", strerror(errno));
+	die("setsockopt SO_RECVUCRED failed: %s.\n", strerror(errno));
 	return EXIT_FAILURE;
       }
   }
