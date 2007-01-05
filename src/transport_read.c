@@ -47,6 +47,9 @@
 
 #include "transport_read.c.x"
 
+#ifndef DEBUG_PACKET_HEADER
+#define DEBUG_PACKET_HEADER 1
+#endif
 
 /* How much data to read ahead */
 #define TRANSPORT_READ_AHEAD 1000
@@ -321,7 +324,10 @@ transport_read_packet(struct transport_read_state *self, int fd,
     {
       uint32_t packet_length;
       const uint8_t *header;
-
+#if DEBUG_PACKET_HEADER
+      uint8_t *raw = alloca (block_size);
+      memcpy (raw, lsh_string_data(self->input_buffer) + self->start, block_size);
+#endif
       /* Process header */
       if (self->crypto)
 	{
@@ -348,6 +354,12 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	{      
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Bogus padding length";
+#if DEBUG_PACKET_HEADER
+	  werror("raw header: %xs\n"
+		 "decrypted header: %xs\n",
+		 block_size, raw,
+		 block_size, header);
+#endif
 	  return TRANSPORT_READ_PROTOCOL_ERROR;
 	}
 
@@ -357,6 +369,12 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	{
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Invalid packet length";
+#if DEBUG_PACKET_HEADER
+	  werror("raw header: %xs\n"
+		 "decrypted header: %xs\n",
+		 block_size, raw,
+		 block_size, header);
+#endif
 	  return TRANSPORT_READ_PROTOCOL_ERROR;
 	}
       
@@ -367,6 +385,12 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	{
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Packet too large";
+#if DEBUG_PACKET_HEADER
+	  werror("raw header: %xs\n"
+		 "decrypted header: %xs\n",
+		 block_size, raw,
+		 block_size, header);
+#endif
 	  return TRANSPORT_READ_PROTOCOL_ERROR;
 	}
 
@@ -378,6 +402,12 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	{
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Packet too large";
+#if DEBUG_PACKET_HEADER
+	  werror("raw header: %xs\n"
+		 "decrypted header: %xs\n",
+		 block_size, raw,
+		 block_size, header);
+#endif
 	  return TRANSPORT_READ_PROTOCOL_ERROR;
 	}
       self->start += 5;
