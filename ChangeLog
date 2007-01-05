@@ -1,3 +1,11 @@
+2007-01-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Disable utmp support if pututline is not
+	available.
+
+	* src/lshd-pty-helper.c (main): Fixed copy-paste error in error
+	message.
+
 2006-12-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (CMSG_SPACE): Fixed typo.
