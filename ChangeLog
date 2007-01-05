@@ -1,5 +1,8 @@
 2007-01-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/transport_read.c (transport_read_packet): Debug output in
+	the case that the packet header is invalid.
+
 	* configure.ac: Disable utmp support if pututline is not
 	available.
 
