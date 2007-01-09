@@ -1,3 +1,7 @@
+2007-01-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/write_packet.c: Deleted obsolete file.
+
 2007-01-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (transport_read_packet): Debug output in
