@@ -122,9 +122,9 @@ read_packet(uint32_t *seqno)
   for (done = 0; done < length; )
     {
       int res;
-      do
-	res = lsh_string_read(packet, done, STDIN_FILENO, length - done);
-      while (res < 0 && errno == EINTR);
+
+      res = lsh_string_read(packet, done, STDIN_FILENO, length - done);
+
       if (res <= 0)
 	{
 	  if (res == 0)
