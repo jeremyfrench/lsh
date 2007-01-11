@@ -355,7 +355,7 @@ oop_read_ssh(oop_source *source UNUSED,
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
   int error;
   const char *error_msg;
-  enum transport_read_status status;
+  enum ssh_read_status status;
 
   assert(event == OOP_READ);
   assert(fd == connection->ssh_input);
@@ -376,21 +376,21 @@ oop_read_ssh(oop_source *source UNUSED,
 	default:
 	  return OOP_CONTINUE;
 
-	case TRANSPORT_READ_IO_ERROR:
+	case SSH_READ_IO_ERROR:
 	  werror("Read error: %e\n", error);
 	  transport_close(connection, 0);
 	  break;
 
-	case TRANSPORT_READ_PROTOCOL_ERROR:
+	case SSH_READ_PROTOCOL_ERROR:
 	  transport_disconnect(connection, error, error_msg);
 	  break;
 
-	case TRANSPORT_READ_EOF:
+	case SSH_READ_EOF:
 	  werror("Unexpected EOF at start of line.\n");
 	  transport_close(connection, 0);
 	  break;
 
-	case TRANSPORT_READ_COMPLETE:
+	case SSH_READ_COMPLETE:
 	  connection->line_handler(connection, length, line);
 	  break;
 	}
@@ -406,27 +406,27 @@ oop_read_ssh(oop_source *source UNUSED,
 
       switch (status)
 	{
-	case TRANSPORT_READ_IO_ERROR:
+	case SSH_READ_IO_ERROR:
 	  werror("Read error: %e\n", error);
 	  transport_close(connection, 0);
 	  break;
 
-	case TRANSPORT_READ_PROTOCOL_ERROR:
+	case SSH_READ_PROTOCOL_ERROR:
 	  transport_disconnect(connection, error, error_msg);
 	  break;
 
-	case TRANSPORT_READ_EOF:
+	case SSH_READ_EOF:
 	  werror("Unexpected EOF at start of packet.\n");
 	  transport_close(connection, 0);	  
 	  break;
 
-	case TRANSPORT_READ_PUSH:
+	case SSH_READ_PUSH:
 	  connection->event_handler(connection, TRANSPORT_EVENT_PUSH);
 	  /* Fall through */
-	case TRANSPORT_READ_PENDING:
+	case SSH_READ_PENDING:
 	  return OOP_CONTINUE;
 	  
-	case TRANSPORT_READ_COMPLETE:
+	case SSH_READ_COMPLETE:
 	  if (!transport_process_packet(connection, seqno, length, connection->read_packet))
 	    {
 	      connection->retry_length = length;
@@ -466,7 +466,7 @@ oop_timer_retry(oop_source *oop UNUSED,
   /* Process any remaining buffered packets */
   while (connection->ssh_input >= 0)
     {
-      enum transport_read_status status;
+      enum ssh_read_status status;
       const char *error_msg;
       int error;
 
@@ -475,28 +475,28 @@ oop_timer_retry(oop_source *oop UNUSED,
 
       switch (status)
 	{
-	case TRANSPORT_READ_IO_ERROR:
+	case SSH_READ_IO_ERROR:
 	  werror("Read error: %e\n", error);
 	  transport_close(connection, 0);
 	  break;
 
-	case TRANSPORT_READ_PROTOCOL_ERROR:
+	case SSH_READ_PROTOCOL_ERROR:
 	  transport_disconnect(connection, error, error_msg);
 	  break;
 
-	case TRANSPORT_READ_EOF:
+	case SSH_READ_EOF:
 	  werror("Unexpected EOF at start of packet.\n");
 	  transport_close(connection, 0);	  
 	  break;
 
-	case TRANSPORT_READ_PUSH:
+	case SSH_READ_PUSH:
 	  connection->event_handler(connection, TRANSPORT_EVENT_PUSH);
 	  /* Fall through */
-	case TRANSPORT_READ_PENDING:
+	case SSH_READ_PENDING:
 	  transport_start_read(connection);
 	  return OOP_CONTINUE;
 	  
-	case TRANSPORT_READ_COMPLETE:
+	case SSH_READ_COMPLETE:
 	  if (!transport_process_packet(connection, seqno, length, connection->read_packet))
 	    {
 	      connection->retry_length = length;
