@@ -26,38 +26,20 @@
 #define LSH_SERVICE_H_INCLUDED
 
 #include "lsh.h"
+#include "ssh_read.h"
 
 struct service_read_state;
 
-/* FIXME: 1. Reuse status codes with the transport layer. 2. It would
-   be desirable to get the push indication together with the last read
-   packet. To get that to work, the reader must be able to decrypt the
-   next packet header. To do this, the handling of SSH_MSG_NEWKEYS
-   must be moved down to the reader layer, which does make some
-   sense. */
-
-enum service_read_status
-{
-  /* Read error, errno value stored in *error. */
-  SERVICE_READ_IO_ERROR = -1,
-  /* Protocol error, SSH_DISCONNECT reson code stored in *error and
-     error message in *msg. */
-  SERVICE_READ_PROTOCOL_ERROR = -2,
-  /* End of file reached. */
-  SERVICE_READ_EOF = 0,
-  /* Packet/line read successfully. */
-  SERVICE_READ_COMPLETE = 1,
-  /* There's more data available for the next read. */
-  SERVICE_READ_PENDING = 2,
-  /* No more data available now, so read data should be delivered
-     immediately. */
-  SERVICE_READ_PUSH = 3,
-};
+/* FIXME: It would be desirable to get the push indication together
+   with the last read packet. To get that to work, the reader must be
+   able to decrypt the next packet header. To do this, the handling of
+   SSH_MSG_NEWKEYS must be moved down to the reader layer, which does
+   make some sense. */
 
 struct service_read_state *
 make_service_read_state(void);
 
-enum service_read_status
+enum ssh_read_status
 service_read_packet(struct service_read_state *self, int fd,
 		    const char **msg,
 		    uint32_t *seqno,
