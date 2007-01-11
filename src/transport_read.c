@@ -57,18 +57,13 @@
 /* GABA:
    (class
      (name transport_read_state)
+     (super ssh_read_state)
      (vars
-       (input_buffer string)
-       (start . uint32_t)
-       (length . uint32_t)
-
        (mac object mac_instance)
        (crypto object crypto_instance)
        (inflate object compress_instance)
        (seqno . uint32_t)
 
-       (read_status . "enum transport_read_status")
-       
        (padding . uint8_t)
 
        ; The length of payload, padding and mac for current packet
@@ -82,15 +77,13 @@ struct transport_read_state *
 make_transport_read_state(void)
 {
   NEW(transport_read_state, self);
-  self->input_buffer = lsh_string_alloc(SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ);
-  self->start = self->length = 0;
+  init_ssh_read_state(&self->super, SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ);
 
   self->mac = NULL;
   self->crypto = NULL;
   self->inflate = NULL;
   self->seqno = 0;
 
-  self->read_status = TRANSPORT_READ_PUSH;
   self->padding = 0;
   self->total_length = 0;
   
@@ -99,44 +92,9 @@ make_transport_read_state(void)
   return self;
 }
 
-/* Returns -1 on error, 0 at EOF, and 1 for success. */
-static int
-read_some(struct transport_read_state *self, int fd, uint32_t limit)
-{
-  uint32_t left;
-  int res;
-  
-  assert(limit < lsh_string_length(self->input_buffer));
-  assert(self->length < limit);
-
-  if (self->start + limit > lsh_string_length(self->input_buffer))
-    {
-      assert(self->start > 0);
-      lsh_string_move(self->input_buffer, 0, self->length, self->start);
-      self->start = 0;
-    }
-  
-  left = limit - self->length;
-  do
-    res = lsh_string_read(self->input_buffer, self->start + self->length, fd, left);
-  while (res < 0 && errno == EINTR);
-
-  if (res < 0)
-    return -1;
-  else if (res == 0)
-    return 0;
-
-  self->length += res;
-
-  self->read_status = (res < left || !io_readable_p(fd))
-    ? TRANSPORT_READ_PUSH : TRANSPORT_READ_PENDING;
-
-  return 1;
-}
-
 /* Find line terminator */
-static enum transport_read_status
-find_line(struct transport_read_state *self,
+static enum ssh_read_status
+find_line(struct ssh_read_state *self,
 	  int *error, const char **msg,
 	  uint32_t *length, const uint8_t **line)
 {
@@ -157,66 +115,66 @@ find_line(struct transport_read_state *self,
       line_length++;
       self->start += line_length;
       self->length -= line_length;
-      return TRANSPORT_READ_COMPLETE;
+      return SSH_READ_COMPLETE;
     }
   else if (self->length >= SSH_MAX_LINE)
     {
     line_too_long:
       *error = 0;
       *msg = "Line too long";
-      return TRANSPORT_READ_PROTOCOL_ERROR;
+      return SSH_READ_PROTOCOL_ERROR;
     }
   else
     return self->read_status;
 }
 
-enum transport_read_status
+enum ssh_read_status
 transport_read_line(struct transport_read_state *self, int fd,
 		    int *error, const char **msg,
 		    uint32_t *length, const uint8_t **line)
 {
   int res;
   
-  if (self->length == 0)
-    self->start = 0;
+  if (self->super.length == 0)
+    self->super.start = 0;
 
   else
     {
-      enum transport_read_status status;
+      enum ssh_read_status status;
 
-      status = find_line(self, error, msg, length, line);
-      if (status <= TRANSPORT_READ_COMPLETE)
+      status = find_line(&self->super, error, msg, length, line);
+      if (status <= SSH_READ_COMPLETE)
 	return status;
     }
 
   if (fd < 0)
-    return self->read_status;
+    return self->super.read_status;
 
-  res = read_some(self, fd, TRANSPORT_READ_AHEAD);
+  res = ssh_read_some(&self->super, fd, TRANSPORT_READ_AHEAD);
   if (res == 0)
     { /* EOF */
-      if (self->length == 0)
+      if (self->super.length == 0)
 	{
-	  return TRANSPORT_READ_EOF;
+	  return SSH_READ_EOF;
 	}
       else
 	{
 	  *error = 0;
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
     }
   else if (res < 0)
     {
       if (errno == EWOULDBLOCK)
-	return TRANSPORT_READ_PUSH;
+	return SSH_READ_PUSH;
 
       *error = errno;
-      return TRANSPORT_READ_IO_ERROR;
+      return SSH_READ_IO_ERROR;
     }
-  return find_line(self, error, msg, length, line);
+  return find_line(&self->super, error, msg, length, line);
 }  
 
-static enum transport_read_status
+static enum ssh_read_status
 decode_packet(struct transport_read_state *self,
 	      int *error, const char **msg,
 	      uint32_t *seqno,
@@ -227,7 +185,7 @@ decode_packet(struct transport_read_state *self,
 
   uint32_t crypt_done = block_size - 5;
   uint32_t crypt_left = self->total_length - (crypt_done + mac_size);
-  const uint8_t *data = lsh_string_data(self->input_buffer) + self->start;
+  const uint8_t *data = lsh_string_data(self->super.input_buffer) + self->super.start;
 
   /* When inflating packets, we have to decrypt in place, and inflate
      into the output buffer. If we're not inflating, it is best to
@@ -239,8 +197,8 @@ decode_packet(struct transport_read_state *self,
 
   if (self->crypto && crypt_left > 0)
     CRYPT(self->crypto, crypt_left,
-	  self->input_buffer, self->start + crypt_done,
-	  self->input_buffer, self->start + crypt_done);
+	  self->super.input_buffer, self->super.start + crypt_done,
+	  self->super.input_buffer, self->super.start + crypt_done);
   
   if (self->mac)
     {      
@@ -255,13 +213,13 @@ decode_packet(struct transport_read_state *self,
 	{
 	  *error = SSH_DISCONNECT_MAC_ERROR;
 	  *msg = "Invalid MAC";
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
     }
 
   *length = self->total_length - mac_size - self->padding;
-  self->start += self->total_length;
-  self->length -= self->total_length;
+  self->super.start += self->total_length;
+  self->super.length -= self->total_length;
 
   /* Reset for next header */
   self->total_length = 0;
@@ -273,12 +231,12 @@ decode_packet(struct transport_read_state *self,
   else
     lsh_string_write(output, 0, *length, data);
 
-  return TRANSPORT_READ_COMPLETE;
+  return SSH_READ_COMPLETE;
 }
 		   
 /* First reads the entire packet into the input_buffer, decrypting it
    in place. Next, reads the mac and verifies it. */
-enum transport_read_status
+enum ssh_read_status
 transport_read_packet(struct transport_read_state *self, int fd,
 		      int *error, const char **msg,
 		      uint32_t *seqno,
@@ -286,39 +244,39 @@ transport_read_packet(struct transport_read_state *self, int fd,
 {
   uint32_t block_size = self->crypto ? self->crypto->block_size : 8;
 
-  if (self->length < block_size)
+  if (self->super.length < block_size)
     {
       int res;
       
       if (fd < 0)
-	return self->read_status;
+	return self->super.read_status;
 
-      res = read_some(self, fd, TRANSPORT_READ_AHEAD);
+      res = ssh_read_some(&self->super, fd, TRANSPORT_READ_AHEAD);
       fd = -1;
 
       if (res == 0)
 	{
-	  if (self->length == 0)
-	    return TRANSPORT_READ_EOF;
+	  if (self->super.length == 0)
+	    return SSH_READ_EOF;
 	  else
 	    {
 	      *error = 0;
 	      *msg = "Unexpected EOF";
-	      return TRANSPORT_READ_PROTOCOL_ERROR;
+	      return SSH_READ_PROTOCOL_ERROR;
 	    }
 	}
       else if (res < 0)
 	{
 	  if (errno == EWOULDBLOCK)
-	    return TRANSPORT_READ_PUSH;
+	    return SSH_READ_PUSH;
 
 	  *error = errno;
-	  return TRANSPORT_READ_IO_ERROR;
+	  return SSH_READ_IO_ERROR;
 	}
-      if (self->length < block_size)
-	return self->read_status;
+      if (self->super.length < block_size)
+	return self->super.read_status;
     }
-  assert(self->length >= block_size);
+  assert(self->super.length >= block_size);
 
   if (self->total_length == 0)
     {
@@ -326,17 +284,17 @@ transport_read_packet(struct transport_read_state *self, int fd,
       const uint8_t *header;
 #if DEBUG_PACKET_HEADER
       uint8_t *raw = alloca (block_size);
-      memcpy (raw, lsh_string_data(self->input_buffer) + self->start, block_size);
+      memcpy (raw, lsh_string_data(self->super.input_buffer) + self->super.start, block_size);
 #endif
       /* Process header */
       if (self->crypto)
 	{
 	  CRYPT(self->crypto, block_size,
-		self->input_buffer, self->start,
-		self->input_buffer, self->start);
+		self->super.input_buffer, self->super.start,
+		self->super.input_buffer, self->super.start);
 	}
 
-      header = lsh_string_data(self->input_buffer) + self->start;
+      header = lsh_string_data(self->super.input_buffer) + self->super.start;
       
       if (self->mac)
 	{
@@ -360,7 +318,7 @@ transport_read_packet(struct transport_read_state *self, int fd,
 		 block_size, raw,
 		 block_size, header);
 #endif
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
 
       if ( (packet_length < 12)
@@ -375,7 +333,7 @@ transport_read_packet(struct transport_read_state *self, int fd,
 		 block_size, raw,
 		 block_size, header);
 #endif
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
       
       /* Approximate test, to avoid overflow when computing the total
@@ -391,14 +349,14 @@ transport_read_packet(struct transport_read_state *self, int fd,
 		 block_size, raw,
 		 block_size, header);
 #endif
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
 
       self->total_length = packet_length - 1;
       if (self->mac)
 	self->total_length += self->mac->mac_size;
 
-      if (self->total_length > lsh_string_length(self->input_buffer))
+      if (self->total_length > lsh_string_length(self->super.input_buffer))
 	{
 	  *error = SSH_DISCONNECT_PROTOCOL_ERROR;
 	  *msg = "Packet too large";
@@ -408,37 +366,37 @@ transport_read_packet(struct transport_read_state *self, int fd,
 		 block_size, raw,
 		 block_size, header);
 #endif
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
-      self->start += 5;
-      self->length -= 5;
+      self->super.start += 5;
+      self->super.length -= 5;
     }
-  if (self->length < self->total_length)
+  if (self->super.length < self->total_length)
     {
       int res;
       
       if (fd < 0)
-	return self->read_status;
+	return self->super.read_status;
 
-      res = read_some(self, fd, self->total_length + TRANSPORT_READ_AHEAD);
+      res = ssh_read_some(&self->super, fd, self->total_length + TRANSPORT_READ_AHEAD);
 
       if (res == 0)
 	{
 	  *error = 0;
 	  *msg = "Unexpected EOF";
-	  return TRANSPORT_READ_PROTOCOL_ERROR;
+	  return SSH_READ_PROTOCOL_ERROR;
 	}
       else if (res < 0)
 	{
 	  if (errno == EWOULDBLOCK)
-	    return TRANSPORT_READ_PUSH;
+	    return SSH_READ_PUSH;
 
 	  *error = errno;
-	  return TRANSPORT_READ_IO_ERROR;
+	  return SSH_READ_IO_ERROR;
 	}
 
-      if (self->length < self->total_length)
-	return self->read_status;
+      if (self->super.length < self->total_length)
+	return self->super.read_status;
     }
   return decode_packet(self, error, msg,
 		       seqno, length, packet);
