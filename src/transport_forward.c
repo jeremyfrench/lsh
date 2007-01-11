@@ -122,7 +122,7 @@ oop_read_service(oop_source *source UNUSED,
 
   while (self->service_in >= 0 && self->service_read_active)
     {
-      enum service_read_status status;
+      enum ssh_read_status status;
       uint32_t seqno;
       uint32_t length;
       const uint8_t *packet;
@@ -134,29 +134,29 @@ oop_read_service(oop_source *source UNUSED,
 
       switch (status)
 	{
-	case SERVICE_READ_IO_ERROR:
+	case SSH_READ_IO_ERROR:
 	  transport_disconnect(&self->super,
 			       SSH_DISCONNECT_BY_APPLICATION,
 			       "Read from service layer failed.");
 	  break;
-	case SERVICE_READ_PROTOCOL_ERROR:
+	case SSH_READ_PROTOCOL_ERROR:
 	  werror("Invalid data from service layer: %z\n", msg);
 	  transport_disconnect(&self->super,
 			       SSH_DISCONNECT_BY_APPLICATION,
 			       "Invalid data from service layer.");
 	  break;
-	case SERVICE_READ_EOF:
+	case SSH_READ_EOF:
 	  transport_disconnect(&self->super,
 			       SSH_DISCONNECT_BY_APPLICATION,
 			       "Service done.");
 	  break;
-	case SERVICE_READ_PUSH:
+	case SSH_READ_PUSH:
 	  transport_send_packet(&self->super, 0, NULL);
 	  /* Fall through */
-	case SERVICE_READ_PENDING:
+	case SSH_READ_PENDING:
 	  return OOP_CONTINUE;
 
-	case SERVICE_READ_COMPLETE:
+	case SSH_READ_COMPLETE:
 	  if (!length)
 	    transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
 				 "Received empty packet from service layer.");
