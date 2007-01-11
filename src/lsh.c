@@ -175,7 +175,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 
   for (;;)
     {
-      enum service_read_status status;
+      enum ssh_read_status status;
 
       uint32_t seqno;
       uint32_t length;      
@@ -190,23 +190,23 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 
       switch (status)
 	{
-	case SERVICE_READ_IO_ERROR:
+	case SSH_READ_IO_ERROR:
 	  werror("Read failed: %e\n", errno);
 	  exit(EXIT_FAILURE);
 	  break;
-	case SERVICE_READ_PROTOCOL_ERROR:
+	case SSH_READ_PROTOCOL_ERROR:
 	  werror("Invalid data from transport layer: %z\n", error_msg);
 	  exit(EXIT_FAILURE);
 	  break;
-	case SERVICE_READ_EOF:
+	case SSH_READ_EOF:
 	  werror("Transport layer closed\n", error_msg);
 	  return OOP_HALT;
 	  break;
-	case SERVICE_READ_PUSH:
-	case SERVICE_READ_PENDING:
+	case SSH_READ_PUSH:
+	case SSH_READ_PENDING:
 	  return OOP_CONTINUE;
 
-	case SERVICE_READ_COMPLETE:
+	case SSH_READ_COMPLETE:
 	  if (!length)
 	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
 		       "lsh received an empty packet from the transport layer");
