@@ -1,4 +1,38 @@
+2007-01-11  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-userauth.c (read_packet): No need for EINTR loop around
+	lsh_string_read.
+
+	* src/transport_read.c (read_some): Deleted function.
+	(class transport_read_state): Inherit ssh_read_state.
+
+	* src/service_read.c (read_some): Deleted function.
+	(class service_read_state): Inherit ssh_read_state.
+
+	* src/transport.c: enum transport_read_status replaced by
+	ssh_read_status.
+
+	* src/gateway.c: enum service_read_status replaced by
+	ssh_read_status. 
+	* src/lsh.c (oop_read_service): Likewise.
+	* src/lshd-connection.c (oop_read_service): Likewise.
+	* src/transport_forward.c (oop_read_service): Likewise.
+
+	* src/transport.h (enum transport_read_status): Deleted, replaced
+	by enum ssh_read_status.
+	* src/service.h (enum service_read_status): Likewise.
+
+	* src/ssh_read.h (class ssh_read_state): New simpler class,
+	replacing the old and unused file of the same name. It is intended
+	as a base class for service_read_state and transport_read_state,
+	to reduce code duplication.
+	(enum ssh_read_status): New enum.
+
+	* src/ssh_read.c (ssh_read_some, init_ssh_read_state): New functions.
+
 2007-01-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/ssh_read.c, src/ssh_read.h: Deleted obsolete files.
 
 	* src/write_packet.c: Deleted obsolete file.
 
@@ -2476,7 +2510,7 @@
 	the lshd_read_state class.
 
 	* src/ssh_read.h (class header_callback): Deleted. Instead, use a
-	method on the ssh_read_state class._
+	method on the ssh_read_state class.
 
 	* src/handshake.c (init_connection_service): Pass a dummy argument
 	to make_channel_table.
