@@ -56,6 +56,7 @@
 #include "crypto.h"
 #include "keyexchange.h"
 #include "resource.h"
+#include "ssh_read.h"
 #include "ssh_write.h"
 
 struct transport_read_state;
@@ -84,37 +85,19 @@ enum transport_event {
 struct transport_read_state *
 make_transport_read_state(void);
 
-/* FIXME: 1. Some of this could perhaps be generalized to work with
-   the service reader too. 2. It would be desirable to get the push
-   indication together with the last read packet. To get that to work,
-   the reader must be able to decrypt the next packet header. To do
-   this, the handling of SSH_MSG_NEWKEYS must be moved down to the
+/* FIXME: 1. Some of more of this could perhaps be generalized to work
+   with the service reader too. 2. It would be desirable to get the
+   push indication together with the last read packet. To get that to
+   work, the reader must be able to decrypt the next packet header. To
+   do this, the handling of SSH_MSG_NEWKEYS must be moved down to the
    reader layer, which does make some sense. */
 
-enum transport_read_status
-{
-  /* Read error, errno value stored in *error. */
-  TRANSPORT_READ_IO_ERROR = -1,
-  /* Protocol error, SSH_DISCONNECT reson code stored in *error and
-     error message in *msg. */
-  TRANSPORT_READ_PROTOCOL_ERROR = -2,
-  /* End of file reached. */
-  TRANSPORT_READ_EOF = 0,
-  /* Packet/line read successfully. */
-  TRANSPORT_READ_COMPLETE = 1,
-  /* There's more data available for the next read. */
-  TRANSPORT_READ_PENDING = 2,
-  /* No more data available now, so read data should be delivered
-     immediately. */
-  TRANSPORT_READ_PUSH = 3,
-};
-  
-enum transport_read_status
+enum ssh_read_status
 transport_read_line(struct transport_read_state *self, int fd,
 		    int *error, const char **msg,
 		    uint32_t *length, const uint8_t **line);
 
-enum transport_read_status
+enum ssh_read_status
 transport_read_packet(struct transport_read_state *self, int fd,
 		      int *error, const char **msg,
 		      uint32_t *seqno,
