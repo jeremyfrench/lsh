@@ -1,3 +1,8 @@
+2007-01-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_tcpforward.c (do_channel_open_forwarded_tcpip): Fixed
+	bug in verbose message.
+
 2007-01-11  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (read_packet): No need for EINTR loop around
