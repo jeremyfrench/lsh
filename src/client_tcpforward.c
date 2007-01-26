@@ -152,8 +152,8 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 	{
 	  struct resource *r;
 
-	  verbose("forwarded-tcpip for %pS:%i, from %ps:%i.\n",
-		  listen_ip, listen_port, peer_ip_length, peer_ip, peer_port);
+	  verbose("forwarded-tcpip for %ps:%i, from %ps:%i.\n",
+		  listen_ip_length, listen_ip, listen_port, peer_ip_length, peer_ip, peer_port);
 	  
 	  r = tcpforward_connect(port->target, c, e);
 	  if (r)
