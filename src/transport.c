@@ -47,16 +47,13 @@
 #define TRANSPORT_TIMEOUT_KEYEXCHANGE (10 * 60)
 
 /* Session key lifetime */
-#define TRANSPORT_TIMEOUT_REEXCHANGE (40 * 60)
+#define TRANSPORT_TIMEOUT_REEXCHANGE (5 * 60)
 
+/* FIXME: Make configurable. Different timeouts can be used by client
+   and server, and artificially small timeouts are useful for
+   testing. */
 /* Time to wait for write buffer to drain after disconnect */
-#define TRANSPORT_TIMEOUT_CLOSE (5 * 60)
-
-static struct lsh_string *
-format_newkeys(void)
-{
-  return ssh_format("%c", SSH_MSG_NEWKEYS);
-}
+#define TRANSPORT_TIMEOUT_CLOSE (40 * 60)
 
 void
 init_transport_connection(struct transport_connection *self,
@@ -743,8 +740,6 @@ transport_keyexchange_finish(struct transport_connection *connection,
 			     struct lsh_string *K)
 {
   int first = !connection->session_id;
-
-  transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH, format_newkeys());
 
   if (first)
     connection->session_id = exchange_hash;
