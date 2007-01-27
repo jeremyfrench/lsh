@@ -57,7 +57,8 @@ ssh_write_enqueue(struct ssh_write_state *self,
    immediately is buffered. If to_write is non-zero, it gives the
    desired block size. On success, returns the amount of data actually
    written (and not just added to the buffer). On failure, returns 0
-   and sets errno.
+   and sets errno. If nothing could be written at the moment, returns
+   zero and sets errno == EWOULDBLOCK.
 
    EOVERFLOW is used to indicate that the buffer is full, and if this
    happens, data may or may not have been written, so the state of the

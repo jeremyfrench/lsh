@@ -635,7 +635,8 @@ keyexchange_finish(struct transport_connection *connection,
 
   KILL(secret);
   
-  /* Make an attempt to actually send the NEWKEYS message. */
+  /* Make an attempt to actually send the NEWKEYS message. FIXME: Is
+     this really necessary? */
   transport_send_packet(connection, 0, NULL);
   
   return 1;
