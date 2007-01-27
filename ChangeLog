@@ -1,3 +1,16 @@
+2007-01-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport.c: (format_newkeys): Moved to keyexchange.c.
+	(transport_keyexchange_finish): Don't send the NEWKEYS message
+	here, let keyexchange_finish handle that.
+
+	* src/keyexchange.c (format_newkeys): Moved from transport.c. 
+	(keyexchange_finish): Generate the newkeys packet here, after
+	checking for weak keys. Skip the TRANSPORT_WRITE_FLAG_PUSH when
+	sending this packet; otherwise any added IGNORE packet will be
+	encrypted with the wrong keys. Instead, try pushing the packet out
+	after the new keys have been installed.
+
 2007-01-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client_tcpforward.c (do_channel_open_forwarded_tcpip): Fixed
