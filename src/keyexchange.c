@@ -53,6 +53,12 @@
 # define STRESS_KEYEXCHANGE 0
 #endif
 
+static struct lsh_string *
+format_newkeys(void)
+{
+  return ssh_format("%c", SSH_MSG_NEWKEYS);
+}
+
 void
 init_kexinit_state(struct kexinit_state *self)
 {
@@ -612,6 +618,11 @@ keyexchange_finish(struct transport_connection *connection,
     = kex_make_inflate(algorithms,
 		       KEX_COMPRESSION_SERVER_TO_CLIENT ^ is_server);
 
+  /* Can't use TRANSPORT_WRITE_FLAG_PUSH, since then any added
+     IGNORE-packet will be encrypted using the old keys, not the new
+     ones. */
+  transport_send_packet(connection, 0, format_newkeys());
+  
   /* Keys for sending */
   transport_write_new_keys(
     connection->writer,
@@ -623,5 +634,9 @@ keyexchange_finish(struct transport_connection *connection,
 		     KEX_COMPRESSION_CLIENT_TO_SERVER ^ is_server));
 
   KILL(secret);
+  
+  /* Make an attempt to actually send the NEWKEYS message. */
+  transport_send_packet(connection, 0, NULL);
+  
   return 1;
 }
