@@ -123,9 +123,9 @@ struct pty_object
 
   /* Non-zero if we have an utmp entry to clean up. */
   char active;
-  
-  /* The client's uid. */
-  uid_t uid;
+
+  /* NOTE: If we want to support a root helper program helpign several
+     users, we'd need to store the uid here. */
 
   /* Name of slave tty */
   const char *tty;
@@ -173,6 +173,7 @@ init_pty_state(struct pty_state *state, uid_t uid,
     /* On AIX, tty:s have group "system", not "tty" */
     grp = getgrnam(GROUP_SYSTEM);
 
+  /* FIXME: What to do if we can't lookup any tty group? */
   state->tty_gid = grp ? grp->gr_gid : (gid_t) -1;
 
   state->uid = uid;
@@ -451,7 +452,8 @@ process_request(struct pty_state *state,
   response->has_creds = 0;
   response->fd = -1;
 
-  /* Require credentials for all requests */
+#if HAVE_SOCKET_CREDENTIALS_PASSING
+  /* Require clients to use it */
   if (!request->has_creds)
     {
       werror("Missing credentials.\n");
@@ -465,6 +467,7 @@ process_request(struct pty_state *state,
       response->header.type = EPERM;
       return;
     }
+#endif
 
   if (request->header.ref == -1)
     pty = NULL;
@@ -503,8 +506,6 @@ process_request(struct pty_state *state,
 	    }
 	  else
 	    {
-	      pty->uid = request->creds.uid;
-
 	      if (request->fd != -1)
 		{
 		  /* Client can supply the master fd, so we can get
@@ -579,9 +580,7 @@ process_request(struct pty_state *state,
 	      goto fail_and_close;
 	    }
 
-	  pty->uid = request->creds.uid;
-      
-	  if (pty->uid == getuid())
+	  if (state->uid == getuid())
 	    {
 	      /* Use standard grantpt call */
 	      if (grantpt(response->fd) < 0)
@@ -592,12 +591,14 @@ process_request(struct pty_state *state,
 	    }
 	  else
 	    {
-	      gid_t gid = state->tty_gid;
-	      if (gid == (gid_t) -1)
-		gid = request->creds.gid;
-	  
+	      if (state->tty_gid == (gid_t) -1)
+		{
+		  response->header.type = EINVAL;
+		  goto fail_and_close;
+		}
+
 	      response->header.type
-		= pty_set_permissions(pty->tty, pty->uid, gid);
+		= pty_set_permissions(pty->tty, state->uid, state->tty_gid);
 
 	      if (response->header.type)
 		goto fail_and_close;
@@ -618,18 +619,12 @@ process_request(struct pty_state *state,
 
     case PTY_REQUEST_LOGIN:
       werror("PTY_REQUEST_LOGIN\n");
-      if (!pty)
-	{
-	  response->header.type = EINVAL;
-	}
-      else if (request->creds.uid != pty->uid)
-	{
-	  response->header.type = EPERM;
-	}
+      if (!request->has_creds)
+	response->header.type = EPERM;
+      else if (!pty)
+	response->header.type = EINVAL;
       else if (pty->active)
-	{
-	  response->header.type = EEXIST;
-	}
+	response->header.type = EEXIST;
       else
 	{
 	  response->header.ref = request->header.ref;
@@ -637,8 +632,8 @@ process_request(struct pty_state *state,
 	  record_login(state, pty, request->creds.pid);
 
 	  pty->active = 1;
-	  break;
 	}
+      break;
 
     case PTY_REQUEST_LOGOUT:
       werror("PTY_REQUEST_LOGOUT\n");
