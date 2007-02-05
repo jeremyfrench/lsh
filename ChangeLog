@@ -1,3 +1,10 @@
+2007-02-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/lsh-10-test: Skip test if /dev/ptmx doesn't exist.
+
+	* configure.ac (HAVE_SOCKET_CREDENTIALS_PASSING): Check for
+	working credentials passing.
+
 2007-01-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport.c: (format_newkeys): Moved to keyexchange.c.
