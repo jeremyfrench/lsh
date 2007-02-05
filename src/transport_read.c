@@ -48,7 +48,7 @@
 #include "transport_read.c.x"
 
 #ifndef DEBUG_PACKET_HEADER
-#define DEBUG_PACKET_HEADER 1
+#define DEBUG_PACKET_HEADER 0
 #endif
 
 /* How much data to read ahead */
