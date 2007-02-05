@@ -812,6 +812,234 @@ if test x$lsh_cv_sys_ioctl_fionread_int = xyes; then
   AC_DEFINE([HAVE_IOCTL_FIONREAD])
 fi
 
+# Check that credentials passing work
+AC_CACHE_CHECK(
+  [for credentials passing],
+  lsh_cv_sys_ucred_passing,
+[AC_TRY_RUN([
+/* For CMSG_SPACE and friends on Solaris */
+#define _XPG4_2
+
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
+/* Linux: For struct ucred */
+#include <sys/types.h>
+#include <sys/socket.h>
+
+/* Solaris ucred support */
+#if HAVE_UCRED_H
+#include <ucred.h>
+#endif
+
+int main (int argc, char **argv)
+{
+  int pipe[2];
+  int type;
+  struct msghdr hdr;
+  struct cmsghdr *cmsg;
+  struct iovec io;
+  void *creds_buf;
+  size_t creds_size;
+  size_t creds_space;
+  int controllen;
+  char buf[3];
+  int res;
+  int yes = 1;
+
+#ifdef SO_RECVUCRED
+  /* Solaris' ucred passing works with SOCK_DGRAM sockets only */
+  type = SOCK_DGRAM;
+#else
+  type = SOCK_STREAM;
+#endif
+  if (socketpair(AF_UNIX, type, 0, pipe) < 0)
+    {
+      printf("socketpair failed: errno = %d.\n", errno);
+      return 1;
+    }
+
+#if defined (SO_PASSCRED)
+  /* For Linux */
+  if (setsockopt(pipe[1], SOL_SOCKET, SO_PASSCRED,
+  		   &yes, sizeof(yes)) < 0)
+    {
+      printf("setsockopt SO_PASSCRED failed: %d.\n", errno);
+      return 1;
+    }
+#elif defined (SO_RECVUCRED)
+  /* Solaris */
+  if (setsockopt(pipe[1], SOL_SOCKET, SO_RECVUCRED,
+  		   &yes, sizeof(yes)) < 0)
+    {
+      printf("setsockopt SO_RECVUCRED failed: %d.\n", errno);
+      return 1;
+    }
+#endif
+
+#ifdef SCM_CREDENTIALS
+  creds_size = sizeof(struct ucred);
+#else
+  creds_size = 0;
+#endif
+
+  creds_space = CMSG_SPACE(creds_size);
+  creds_buf = malloc(creds_space);
+  if (creds_space && !creds_buf)
+    {
+      printf("malloc failed\n");
+      return 1;
+    }
+
+  io.iov_base = (void *) "foo";
+  io.iov_len = 3;
+  
+  hdr.msg_name = NULL;
+  hdr.msg_namelen = 0;
+  hdr.msg_iov = &io;
+  hdr.msg_iovlen = 1;
+  hdr.msg_controllen = creds_space;
+  hdr.msg_control = creds_buf;
+
+#ifdef SCM_CREDENTIALS
+  /* Linux style credentials */
+  cmsg = CMSG_FIRSTHDR(&hdr);
+  
+  {
+    struct ucred *creds;
+
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_CREDENTIALS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(*creds));
+
+    creds = (struct ucred *) CMSG_DATA(cmsg);
+    creds->pid = getpid();
+    creds->uid = getuid();
+    creds->gid = getgid();
+
+    hdr.msg_controllen = CMSG_SPACE(sizeof(*creds));
+  }
+#else
+  hdr.msg_controllen = 0;
+#endif 
+
+  do
+    res = sendmsg(pipe[0], &hdr, 0);
+  while (res < 0 && errno == EINTR);
+
+  if (res < 0)
+    {
+      printf("sendmsg failed: errno = %d.\n", errno);
+      return 1;
+    }
+  
+  memset(buf, 0, sizeof(buf));
+  if (creds_space)
+    memset(creds_buf, 0, creds_space);
+
+  io.iov_base = (void *) buf;
+  io.iov_len = sizeof(buf);
+
+  hdr.msg_name = NULL;
+  hdr.msg_namelen = 0;
+  hdr.msg_iov = &io;
+  hdr.msg_iovlen = 1;
+  hdr.msg_controllen = creds_space;
+  hdr.msg_control = creds_buf;
+  
+  do
+    res = recvmsg(pipe[1], &hdr, 0);
+  while (res < 0 && errno == EINTR);
+
+  if (res < 0)
+    {
+      printf("recvmsg failed: errno = %d.\n", errno);
+      return 1;
+    }
+
+  if (res != 3)
+    {
+      printf("recvmsg returned unexpected count\n");
+      return 1;
+    }
+
+  if (memcmp (buf, "foo", 3) != 0)
+    {
+      printf("recvmsg returned unexpected data\n");
+      return 1;
+    }
+
+  /* Process ancillary data */
+  for (cmsg = CMSG_FIRSTHDR(&hdr); cmsg; cmsg = CMSG_NXTHDR(&hdr, cmsg))
+    {
+      pid_t pid;
+      uid_t uid;
+      gid_t gid;
+
+      if (cmsg->cmsg_level != SOL_SOCKET)
+	continue;
+      switch (cmsg->cmsg_type)
+	{
+#if defined (SCM_CREDENTIALS)
+	case SCM_CREDENTIALS:
+	  {
+	    struct ucred *creds;
+	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
+	      continue;
+
+	    creds = (struct ucred *) CMSG_DATA(cmsg);
+	    pid = creds->pid;
+	    uid = creds->uid;
+	    gid = creds->gid;
+
+	  got_creds:
+	    if (pid != getpid())
+	      {
+	        printf("Received unexpected pid %d\n", (int) pid);
+		return 1;
+	      }
+	    if (uid != getuid())
+	      {
+	        printf("Received unexpected uid %d\n", (int) uid);
+		return 1;
+	      }
+	    if (gid != getgid())
+	      {
+	        printf("Received unexpected gid %d\n", (int) gid);
+		return 1;
+	      }
+	    /* Success! */
+	    return 0;
+	  }
+#elif defined (SCM_UCRED)
+	case SCM_UCRED:
+	  {
+	    ucred_t *creds;
+
+	    creds = (ucred_t *) CMSG_DATA(cmsg);
+	    pid = ucred_getpid(creds);
+	    uid = ucred_geteuid(creds);
+	    gid = ucred_getegid(creds);
+
+	    goto got_creds;
+	  }	    
+#endif
+	}
+    }
+  printf("No creds received.\n");
+  return 1;
+} 
+], lsh_cv_sys_ucred_passing=yes,
+   lsh_cv_sys_ucred_passing=no,
+   lsh_cv_sys_ucred_passing=no)])
+
+AH_TEMPLATE([HAVE_SOCKET_CREDENTIALS_PASSING],
+	    [Define if credentials passing over unix sockets work])
+if test x$lsh_cv_sys_ucred_passing = xyes; then
+  AC_DEFINE([HAVE_SOCKET_CREDENTIALS_PASSING])
+fi
+
 LSH_GCC_ATTRIBUTES
 
 AC_MSG_CHECKING(for BSD pty names)
