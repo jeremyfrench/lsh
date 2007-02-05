@@ -1,5 +1,15 @@
 2007-02-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/transport_read.c (DEBUG_PACKET_HEADER): Disabled this debug
+	output.
+
+	* src/lshd-pty-helper.c (process_request): Require creds on all
+	messages, only if configure indicates that credentials passing
+	work. They are strictly needed only for utmp handling, to get an
+	authentic pid.
+	(process_request): For PTY_REQUEST_LOGIN, fixed missing break.
+	Require creds.
+
 	* src/testsuite/lsh-10-test: Skip test if /dev/ptmx doesn't exist.
 
 	* configure.ac (HAVE_SOCKET_CREDENTIALS_PASSING): Check for
