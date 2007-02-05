@@ -8,6 +8,9 @@ fi
 
 . $srcdir/functions.sh
 
+# Traditional BSD pty:s are currentlynot supported.
+[ -c /dev/ptmx ] || test_skip
+
 LSH_FLAGS="$LSH_FLAGS -t"
 
 spawn_lshd && run_lsh "tty" && test_success
