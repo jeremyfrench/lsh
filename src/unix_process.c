@@ -220,8 +220,9 @@ format_env_pair(const char *name, const char *value)
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
 }
 
-
-/* Helper functions for the process spawning. */
+/* Helper functions for the process spawning. NOTE: Most of the setup
+   of the environment is done by lshd-userauth; but we need to modify
+   it here, in order to set up TERM and DISPLAY. */
 static int
 exec_shell(struct spawn_info *info)
 {
@@ -249,7 +250,7 @@ exec_shell(struct spawn_info *info)
 
   envp[i++] = format_env_pair(ENV_SHELL, shell);
   
-  for (j = 1; j < INHERIT_ENV; j++)
+  for (j = 0; j < INHERIT_ENV; j++)
     {
       const char *name = inherited[j];
       const char *value = getenv(name);
