@@ -18,7 +18,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	write-key-1-test write-key-2-test seed-test \
 	lsh-1-test lsh-2-test lsh-3-test lsh-4-test \
 	lsh-5-test lsh-6-test lsh-7-test lsh-8-test \
-	lsh-9-test lsh-10-test \
+	lsh-9-test lsh-10-test lsh-11-test \
 	lsh-encrypted-key-test lsh-decrypt-key-test \
 	lsh-cat-test lshg-1-test lshg-cat-test lshg-cat-2-test \
 	daemon-fd-test \
