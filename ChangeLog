@@ -1,3 +1,14 @@
+2007-02-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (TS_SH): Added lsh-11-test.
+
+	* src/testsuite/lsh-11-test: New test, checking environment setup.
+
+	* src/unix_process.c (exec_shell): Fixed off-by-one error, which
+	broke inheritance of $HOME.
+
+	* src/lcp: Quote argument to basename.
+
 2007-02-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (DEBUG_PACKET_HEADER): Disabled this debug
