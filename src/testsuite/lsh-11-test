@@ -1,0 +1,40 @@
+#! /bin/sh
+
+echo lsh, test 111
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+rm -f test.out1
+
+BOGUS_ENV_VARIABLE=junk
+export BOGUS_ENV_VARIABLE
+
+spawn_lshd && run_lsh env > test.out1 || test_fail
+
+home_seen=no
+
+while IFS='=' read name value ; do
+    echo N: $name V: $value
+    case $name in
+	HOME)
+	  [ "$value" = "$TEST_HOME" ] || test_fail
+	  home_seen=yes
+	;;
+	BOGUS_ENV_VARIABLE)
+	  test_fail
+	;;*)
+	  :
+    esac
+done <<EOF
+`cat test.out1`
+EOF
+
+echo home_seen: $home_seen
+
+[ $home_seen = yes ] && test_success
+
+test_done
