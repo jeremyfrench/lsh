@@ -198,7 +198,7 @@ else
   SHELL_PROGRAM=bash
 fi
 
-file=`basename $src_file`
+file=`basename "$src_file"`
 
 if [ "x$dry_run" = xyes ] ; then
   read_src "$src_user" "$src_host" "$src_file" 
