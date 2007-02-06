@@ -1,6 +1,11 @@
 #! /bin/sh
 
-echo lsh, test 111
+# Solaris' /bin/sh is too fscking broken. Use ksh instead
+uname | grep >/dev/null SunOS && \
+  [ -z "$SUNOS_SH_WORKAROUND" ] && \
+    exec env SUNOS_SH_WORKAROUND=true /bin/ksh "$0" "$@"
+
+echo lsh, test 11
 
 if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
@@ -18,7 +23,6 @@ spawn_lshd && run_lsh env > test.out1 || test_fail
 home_seen=no
 
 while IFS='=' read name value ; do
-    echo N: $name V: $value
     case $name in
 	HOME)
 	  [ "$value" = "$TEST_HOME" ] || test_fail
@@ -32,8 +36,6 @@ while IFS='=' read name value ; do
 done <<EOF
 `cat test.out1`
 EOF
-
-echo home_seen: $home_seen
 
 [ $home_seen = yes ] && test_success
 
