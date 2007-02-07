@@ -1,5 +1,7 @@
 2007-02-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/config/lshd-connection.conf: Don't enable quiet mode.
+
 	* src/testsuite/prgrp-timeout.c: Include signal.h and string.h.
 	Made the internal functions static.
 	(main): Cast exit_pid to int before printing it.
