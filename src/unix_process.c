@@ -144,7 +144,7 @@ send_helper_request(int helper_fd, int ref,
   if (err != 0)
     {
       if (err < 0)
-	werror("End of file from pty helper failed.\n");
+	werror("Unexpected end of file from pty helper.\n");
       else
 	werror("Receiving message from pty helper failed: %e.\n", err);
       return -1;
