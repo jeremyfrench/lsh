@@ -14,4 +14,4 @@ CLEANFILES = test.out
 
 .PHONY: check 
 check: $(TS_ALL) $(srcdir)/run-tests
-	srcdir="$(srcdir)" $(srcdir)/run-tests $(TS_ALL)
+	srcdir="$(srcdir)" EXEEXT="$(EXEEXT)" $(srcdir)/run-tests $(TS_ALL)

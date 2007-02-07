@@ -1,3 +1,9 @@
+2007-02-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* testsuite/Makefile.am (check): Propagate EXEEXT.
+	* testsuite/ex1-test: Use $EXEEXT.
+	* testsuite/permute-test: Likewise.
+
 2005-11-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use LSH_FUNC_ALLOCA.
