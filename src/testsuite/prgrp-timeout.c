@@ -1,16 +1,19 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+/* On Solaris, needed for the memset in the expansion of FD_ZERO */
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 
 volatile sig_atomic_t got_sigchld;
 int sig_pipe[2];
 
-void
+static void
 handle_sigchld (int signo)
 {
   const char x = 'x';
@@ -23,7 +26,7 @@ handle_sigchld (int signo)
   while (res < 0 && errno == EINTR);
 }
 
-int
+static int
 install_signal_handler (void)
 {
   got_sigchld = 0;
@@ -82,7 +85,7 @@ install_signal_handler (void)
 }
 
 /* Returns -1 on error, 0 on timeout, 1 on success */ 
-int
+static int
 wait_for_signal (int timeout)
 {
   struct timeval tv;
@@ -232,7 +235,7 @@ main (int argc, char **argv)
 
   if (exit_pid != pid)
     {
-      fprintf (stderr, "unexpected child %d exited\n", exit_pid);
+      fprintf (stderr, "unexpected child %d exited\n", (int) exit_pid);
       return EXIT_FAILURE;
     }
 
