@@ -89,16 +89,25 @@ pty_open_master(struct pty_info *pty)
       return 0;
     }
 
-  io_set_close_on_exec(pty->master);
-  
-  if ((grantpt(pty->master) == 0)
-      && (unlockpt(pty->master) == 0))
+  if (grantpt(pty->master) < 0)
     {
-      pty->tty_name = make_string(ptsname(pty->master));
-      return 1;
+      werror ("grantpt failed: %e\n", errno);
+      
+    error:
+      close (pty->master); pty->master = -1;
+      return 0;
+    }
+  if (unlockpt(pty->master) < 0)
+    {
+      werror ("unlockpt failed: %e\n", errno);
+      goto error;
     }
 
-  close (pty->master); pty->master = -1;
+  io_set_close_on_exec(pty->master);
+  
+  pty->tty_name = make_string(ptsname(pty->master));
+  return 1;
+
 #endif
 
   /* FIXME: Traditional BSD-style pty:s not implemented. */
