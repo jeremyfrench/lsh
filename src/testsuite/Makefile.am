@@ -31,11 +31,12 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
-noinst_PROGRAMS = $(TS_PROGS)
+noinst_PROGRAMS = $(TS_PROGS) prgrp-timeout
 
 # Workaround to get automake to keep dependencies for testutils.o
 EXTRA_PROGRAMS = testutils
 
+prgrp_timeout_LDADD = 
 LDADD = testutils.o ../liblsh.a ../spki/libspki.a ../nettle/libnettle.a \
 	$(DOTDOT_LIBARGP)
 
@@ -60,8 +61,12 @@ all:
 
 .PHONY: check-some check-more
 
-# sexp-conv may be dynamically linked
-check: $(TS_ALL)
+# An 8 hour timeout, so that xenofarm clients won't get stuck forever
+CHECK_TIMEOUT = 28800
+
+# Sets LD_LIBRARY_PATH, since sexp-conv may be dynamically linked.
+# prgrp-timeout ensures that there are no leftover processes
+check: $(TS_ALL) prgrp-timeout
 	LD_LIBRARY_PATH="`pwd`/../nettle/.lib" srcdir=$(srcdir) \
-		$(srcdir)/run-tests $(TS_ALL)
+		./prgrp-timeout -t $(CHECK_TIMEOUT) $(srcdir)/run-tests $(TS_ALL)
 
