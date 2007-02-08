@@ -1,3 +1,19 @@
+2007-02-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh (spawn_lshd): Use --no-setsid, so
+	that lshd stays in the same process group.
+
+	* src/lshd.c: New option --no-setsid.
+
+	* src/lshd-pty-helper.c (process_request): Display a message with
+	the request return code, if it is non-zero.
+
+	* src/daemon.c (daemon_init): New argument daemon_flags. Skip the
+	call to setsid if DAEMON_FLAG_NO_SETSID is set.
+
+	* src/testsuite/prgrp-timeout.c: Propagate SIGINT and SIGTERM to
+	child process.
+
 2007-02-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_process.c (send_helper_request): Better error message
