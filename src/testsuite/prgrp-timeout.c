@@ -12,6 +12,7 @@
 
 volatile sig_atomic_t got_sigchld;
 int sig_pipe[2];
+pid_t child_pid;
 
 static void
 handle_sigchld (int signo)
@@ -24,6 +25,12 @@ handle_sigchld (int signo)
   do
     res = write (sig_pipe[1], &x, 1);
   while (res < 0 && errno == EINTR);
+}
+
+static void
+propagate_signal (int signo)
+{
+  kill(child_pid, signo);
 }
 
 static int
@@ -123,7 +130,6 @@ main (int argc, char **argv)
 {
   int timeout = 0;
   int c;
-  pid_t pid;
   pid_t exit_pid;
   int res;
   int status;
@@ -167,14 +173,14 @@ main (int argc, char **argv)
       fprintf (stderr, "pipe failed: errno = %d\n", errno);
       return EXIT_FAILURE;
     }
-  pid = fork ();
-  if (pid < 0)
+  child_pid = fork ();
+  if (child_pid < 0)
     {
       /* strerror is not quite portable */
       fprintf (stderr, "fork failed: errno = %d\n", errno);
       return EXIT_FAILURE;
     }
-  if (!pid)
+  if (!child_pid)
     {
       /* Child */
       close(sync_pipe[0]);
@@ -198,6 +204,12 @@ main (int argc, char **argv)
   if (res < 0)
     fprintf (stderr, "read failed: errno = %d\n", errno);
 
+  close(sync_pipe[0]);
+
+  /* FIXME: Use sigaction instead? */
+  signal (SIGTERM, propagate_signal);
+  signal (SIGINT, propagate_signal);
+
   res = wait_for_signal (timeout);
 
   /* Do all signalling before waiting on the child process. That way,
@@ -207,9 +219,10 @@ main (int argc, char **argv)
     {
       /* Timeout */
       fprintf (stderr, "Process timed out. Killing it...\n");
-      if (kill (pid, SIGTERM) < 0)
+      if (kill (child_pid, SIGTERM) < 0)
 	fprintf (stderr, "kill failed: errno = %d\n", errno);
     }
+  
   if (res >= 0)
     {
       /* Give grand children processes a little time to finish */
@@ -220,11 +233,14 @@ main (int argc, char **argv)
     }
 
   /* Kill any remains of the process group */
-  if (kill (-pid, SIGTERM) < 0 && errno != ESRCH)
+  if (kill (-child_pid, SIGTERM) < 0 && errno != ESRCH)
     fprintf (stderr, "kill of process group failed: errno = %d\n", errno);
 
+  signal (SIGTERM, SIG_DFL);
+  signal (SIGINT, SIG_DFL);
+
   do
-    exit_pid = waitpid (pid, &status, 0);
+    exit_pid = waitpid (child_pid, &status, 0);
   while (exit_pid < 0 && errno == EINTR);
 
   if (exit_pid < 0)
@@ -233,7 +249,7 @@ main (int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  if (exit_pid != pid)
+  if (exit_pid != child_pid)
     {
       fprintf (stderr, "unexpected child %d exited\n", (int) exit_pid);
       return EXIT_FAILURE;
