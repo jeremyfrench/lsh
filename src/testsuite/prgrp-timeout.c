@@ -130,13 +130,16 @@ main (int argc, char **argv)
 {
   int timeout = 0;
   int c;
+  pid_t prgrp;
   pid_t exit_pid;
   int res;
   int status;
   int sync_pipe[2];
   char buf;
+  int tty;
+  int non_interactive = 0;
 
-  while ( (c = getopt (argc, argv, "t:")) != -1)
+  while ( (c = getopt (argc, argv, "nt:")) != -1)
     {
       switch (c)
 	{
@@ -148,9 +151,14 @@ main (int argc, char **argv)
 	      return EXIT_FAILURE;
 	    }
 	  break;
+
+	case 'n':
+	  non_interactive = 1;
+	  break;
+
 	case '?':
 	usage:
-	  fprintf(stderr, "Usage: %s [-t TIMEOUT] COMMAND ARGS...\n"
+	  fprintf(stderr, "Usage: %s [-t TIMEOUT] [-n] COMMAND ARGS...\n"
 		  "Timeout is in seconds.\n", argv[0]);
 	  return EXIT_FAILURE;
 
@@ -164,6 +172,26 @@ main (int argc, char **argv)
   
   if (argc < 1)
     goto usage;
+
+  tty = open ("/dev/tty", O_RDWR | O_NOCTTY);
+
+  if (tty != -1)
+    {
+      if (non_interactive)
+	{
+	  /* Do nothing special, just exec the command. */
+	  execvp (argv[0], argv);
+	  fprintf (stderr, "exec failed: errno = %d\n", errno);
+	  return EXIT_FAILURE;
+	}
+      /* We're running interactively. We'll confuse the shell and the
+	 terminal of we create a new process group, so let's kill our
+	 own process group instead. */
+      prgrp = getpgid (0);
+      close(tty);
+    }
+  else
+    prgrp = -1;
 
   if (!install_signal_handler())
     return EXIT_FAILURE;
@@ -184,12 +212,15 @@ main (int argc, char **argv)
     {
       /* Child */
       close(sync_pipe[0]);
-      if (setpgid (0, 0) < 0)
-	{
-	  fprintf (stderr, "setpgid failed (child): errno = %d\n", errno);
-	  return EXIT_FAILURE;
-	}
-      /* Signals to parent that we changed out process group */
+
+      if (prgrp == -1)
+	if (setpgid (0, 0) < 0)
+	  {
+	    fprintf (stderr, "setpgid failed (child): errno = %d\n", errno);
+	    return EXIT_FAILURE;
+	  }
+
+      /* Signals to parent that we changed our process group */
       close(sync_pipe[1]);
       execvp (argv[0], argv);
       fprintf (stderr, "exec failed (child): errno = %d\n", errno);
@@ -197,6 +228,9 @@ main (int argc, char **argv)
     }
 
   /* Parent */
+  if (prgrp == -1)
+    prgrp = child_pid;
+
   close(sync_pipe[1]);
   do
     res = read (sync_pipe[0], &buf, 1);
@@ -232,8 +266,9 @@ main (int argc, char **argv)
       while (t > 0);
     }
 
-  /* Kill any remains of the process group */
-  if (kill (-child_pid, SIGTERM) < 0 && errno != ESRCH)
+  /* Kill any remains of the process group. Note that we're catching
+     SIGTERM, so we should survive. */
+  if (kill (-prgrp, SIGTERM) < 0 && errno != ESRCH)
     fprintf (stderr, "kill of process group failed: errno = %d\n", errno);
 
   signal (SIGTERM, SIG_DFL);
