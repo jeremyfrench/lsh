@@ -255,7 +255,7 @@ daemon_close_fds(void)
 */
 
 int
-daemon_init(enum daemon_mode mode)
+daemon_init(enum daemon_mode mode, enum daemon_flags flags)
 {
   /* Don't setup a daemon-friendly process context if started by
      init(8) or inetd(8). */
@@ -280,14 +280,16 @@ daemon_init(enum daemon_mode mode)
 	  /* Parent */
 	  _exit(0);
 	}
-      /* Become a process session leader. */
 
-      if (setsid() < 0)
+      if (!(flags & DAEMON_FLAG_NO_SETSID))
 	{
-	  werror("daemon_init: setsid failed.\n");
-	  return 0;
+	  /* Become a process session leader. */
+	  if (setsid() < 0)
+	    {
+	      werror("daemon_init: setsid failed.\n");
+	      return 0;
+	    }
 	}
-
       /* Lose process session leadership to prevent gaining a
 	 controlling terminal in SVR4.
       */

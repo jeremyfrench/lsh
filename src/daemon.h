@@ -36,6 +36,11 @@ enum daemon_mode
   DAEMON_INETD
 };
 
+enum daemon_flags
+{
+  DAEMON_FLAG_NO_SETSID = 1
+};
+
 enum daemon_mode
 daemon_detect(void);
 
@@ -51,7 +56,7 @@ daemon_disable_core(void);
 int
 daemon_pidfile(const char *name);
 int
-daemon_init(enum daemon_mode);
+daemon_init(enum daemon_mode, enum daemon_flags);
 int daemon_close(const char *name);
 
 #endif /* LSH_DAEMON_H_INCLUDED */
