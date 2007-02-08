@@ -61,12 +61,11 @@ all:
 
 .PHONY: check-some check-more
 
-# An 8 hour timeout, so that xenofarm clients won't get stuck forever
-CHECK_TIMEOUT = 28800
+# An 8 hour timeout, so that xenofarm clients won't get stuck forever.
+
+TIMEOUT_PROGRAM = ./prgrp-timeout -n -t 28800
 
 # Sets LD_LIBRARY_PATH, since sexp-conv may be dynamically linked.
-# prgrp-timeout ensures that there are no leftover processes
 check: $(TS_ALL) prgrp-timeout
 	LD_LIBRARY_PATH="`pwd`/../nettle/.lib" srcdir=$(srcdir) \
-		./prgrp-timeout -t $(CHECK_TIMEOUT) $(srcdir)/run-tests $(TS_ALL)
-
+		$(TIMEOUT_PROGRAM) $(srcdir)/run-tests $(TS_ALL)
