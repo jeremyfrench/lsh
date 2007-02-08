@@ -525,6 +525,7 @@ make_sighup_close_callback(struct resource *resource)
        (hostkey string)
 
        (daemonic . int)
+       (daemon_flags . "enum daemon_flags")
        (corefile . int)
        (pid_file string)
        ; -1 means use pid file iff we're in daemonic mode
@@ -556,6 +557,7 @@ make_lshd_config(struct lshd_context *ctx)
 
   self->hostkey = NULL;
   self->daemonic = 0;
+  self->daemon_flags = 0;
 
   self->pid_file = NULL;
   self->use_pid_file = -1;
@@ -574,8 +576,10 @@ enum {
   OPT_DAEMONIC,
   OPT_PIDFILE,
   OPT_CORE,
+  OPT_SETSID,
   OPT_NO = 0x400,
   OPT_NO_PIDFILE = (OPT_PIDFILE | OPT_NO),
+  OPT_NO_SETSID = (OPT_SETSID | OPT_NO),
 };
 
 static const struct argp_option
@@ -593,7 +597,7 @@ main_options[] =
     "the default is /var/run/lshd.pid.", 0 },
   { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
   { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
-  
+  { "no-setsid", OPT_NO_SETSID, NULL, 0, "Don't start a new session.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -655,7 +659,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_CORE:
       self->corefile = 1;
-      break;      
+      break;
+
+    case OPT_NO_SETSID:
+      self->daemon_flags |= DAEMON_FLAG_NO_SETSID;
+      break;
     }
   return 0;
 }
@@ -876,7 +884,7 @@ main(int argc, char **argv)
   
   if (config->daemonic)
     {
-      if (!daemon_init(mode))
+      if (!daemon_init(mode, config->daemon_flags))
 	{
 	  werror("Setting up daemonic environment failed.\n");
 	  return EXIT_FAILURE;
