@@ -103,7 +103,7 @@ spawn_lshd () {
 
     HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
 	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
-	--pid-file $PIDFILE --daemonic "$@" || return 1
+	--pid-file $PIDFILE --daemonic --no-setsid "$@" || return 1
     
     # lshd should release its port after receiving HUP, but we may get
     # timing problems when the next lshd process tries to bind the
