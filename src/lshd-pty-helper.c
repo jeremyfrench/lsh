@@ -669,6 +669,8 @@ process_request(struct pty_state *state,
       response->header.type = EINVAL;
       break;
     }
+  if (response->header.type)
+    werror ("Request failed: %s\n", STRERROR (response->header.type));
 }
 
 int
