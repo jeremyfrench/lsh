@@ -32,7 +32,7 @@
 
 enum ssh_read_status
 {
-  /* Read error, errno value stored in *error. */
+  /* Read error. */
   SSH_READ_IO_ERROR = -1,
   /* Protocol error, SSH_DISCONNECT reson code stored in *error and
      error message in *msg. */
