@@ -136,7 +136,13 @@ ssh_write_data(struct ssh_write_state *self,
       while (res < 0 && errno == EINTR);
 
       if (res < 0)
-	return 0;
+	{
+	io_error:
+	  if (length > 0 && !ssh_write_enqueue(self, length, data))
+	    errno = EOVERFLOW;
+	  
+	  return 0;
+	}
       
       self->length -= res;
       self->start += res;
@@ -151,8 +157,8 @@ ssh_write_data(struct ssh_write_state *self,
       while (res < 0 && errno == EINTR);
 
       if (res < 0)
-	return 0;
-      
+	goto io_error;
+
       length -= res;
       data += res;
 
@@ -172,7 +178,7 @@ ssh_write_data(struct ssh_write_state *self,
       while (res < 0 && errno == EINTR);
 
       if (res < 0)
-	return 0;
+	goto io_error;
 
       done = res;
       if (done < self->length)
@@ -191,7 +197,7 @@ ssh_write_data(struct ssh_write_state *self,
     }
   assert(done > 0);
   
-  if (length && !ssh_write_enqueue(self, length, data))
+  if (length > 0 && !ssh_write_enqueue(self, length, data))
     {
       errno = EOVERFLOW;
       return 0;
