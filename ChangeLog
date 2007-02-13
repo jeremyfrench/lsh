@@ -1,5 +1,8 @@
 2007-02-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/werror.c (werror_vformat): For %e, use the passed in number,
+	not errno.
+
 	* src/testsuite/prgrp-timeout.c (main): Close tty before exec.
 	Display a message before the 10s sleep.
 
