@@ -622,7 +622,7 @@ werror_vformat(const char *f, va_list args)
 		werror_cstring("(errno = ");
 		werror_decimal(e);
 		werror_cstring("): ");
-		werror_cstring(STRERROR(errno));
+		werror_cstring(STRERROR(e));
 
 		break;
 	      }
