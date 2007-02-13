@@ -1,4 +1,23 @@
+2007-02-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/prgrp-timeout.c (main): Close tty before exec.
+	Display a message before the 10s sleep.
+
+	* src/ssh_write.c (ssh_write_data): Enqueue the given data also in
+	the i/o error case. This is necessary for proper handling of
+	EWOULDBLOCK.
+
+	* src/lshd-pty-helper.c (process_request): Record errno before
+	calling other functions.
+
 2007-02-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (TIMEOUT_PROGRAM): Pass -n to
+	prgrp-timeout.
+
+	* src/testsuite/prgrp-timeout.c (main): Don't create a new process
+	group when running interactively, as it will confuse the shell.
+	New option -n.
 
 	* src/testsuite/functions.sh (spawn_lshd): Use --no-setsid, so
 	that lshd stays in the same process group.
