@@ -177,6 +177,8 @@ main (int argc, char **argv)
 
   if (tty != -1)
     {
+      close(tty);
+
       if (non_interactive)
 	{
 	  /* Do nothing special, just exec the command. */
@@ -188,7 +190,6 @@ main (int argc, char **argv)
 	 terminal of we create a new process group, so let's kill our
 	 own process group instead. */
       prgrp = getpgid (0);
-      close(tty);
     }
   else
     prgrp = -1;
@@ -260,6 +261,7 @@ main (int argc, char **argv)
   if (res >= 0)
     {
       /* Give grand children processes a little time to finish */
+      fprintf (stderr, "Waiting 10 seconds, for grandchild processes to clean up.\n");
       int t = 10;
       do
 	t = sleep (t);
