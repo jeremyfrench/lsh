@@ -555,8 +555,8 @@ process_request(struct pty_state *state,
 	  response->fd = open("/dev/ptmx", O_RDWR | O_NOCTTY);
 	  if (response->fd < 0)
 	    {
-	      pty_object_free(state, index);
 	      response->header.type = errno;
+	      pty_object_free(state, index);
 	      return;
 	    }
       
