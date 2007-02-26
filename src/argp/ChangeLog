@@ -1,3 +1,10 @@
+2007-02-26  Niels Möller  <niels@s3.kth.se>
+
+	* argp.h (__option_is_short): Use isprint only for keys below
+	UCHAR_MAX. Already fixed in glibc.
+
+	* argp-help.c (hol_cluster_cmp): Fixed handling of depth.
+
 2007-02-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* testsuite/Makefile.am (check): Propagate EXEEXT.
