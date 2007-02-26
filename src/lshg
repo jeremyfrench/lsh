@@ -1,0 +1,5 @@
+#! /bin/sh
+
+# Like lsh, but always use a local gateway
+
+exec ${LSH:-lsh} --use-gateway --program-name=lshg "$@"
