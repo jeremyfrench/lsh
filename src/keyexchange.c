@@ -181,9 +181,8 @@ select_algorithm(struct int_list *client_list,
       if (!a)
 	/* Unknown algorithm */
 	continue;
-      for(j = 0; j < LIST_LENGTH(server_list); j++)
-	if (a == LIST(server_list)[j])
-	  return a;
+      if (int_list_member (server_list, a))
+	return a;
     }
 
   return 0;

@@ -74,6 +74,9 @@ lsh_list_alloc(struct lsh_class *class,
 struct int_list *make_int_listv(unsigned length, va_list args);
 struct int_list *make_int_list(unsigned length, ...);
 
+int
+int_list_member(const struct int_list *list, int atom);
+
 #define alloc_object_list(n) \
   ((struct object_list *) \
    lsh_list_alloc(&CLASS(object_list), (n), sizeof(struct lsh_object *)))

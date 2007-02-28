@@ -91,6 +91,17 @@ make_int_list(unsigned n, ...)
   return l;
 }
 
+int
+int_list_member(const struct int_list *list, int atom)
+{
+  unsigned i;
+  for (i = 0; i < LIST_LENGTH(list); i++)
+    if (LIST(list)[i] == atom)
+      return 1;
+
+  return 0;
+}
+
 struct object_list *
 make_object_listv(unsigned n, va_list args)
 {
