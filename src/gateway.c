@@ -116,7 +116,7 @@ make_gateway_address(const char *local_user, const char *remote_user,
   if (check_string(local_user)
       && check_string(remote_user)
       && check_string_l(length, target))
-    return make_local_info(ssh_format("%lz/x-lsh-%lz", tmp, local_user),
+    return make_local_info(ssh_format("%lz/x-lsh3-%lz", tmp, local_user),
 			   ssh_format("%lz:%lz", target, remote_user));
   else
     return NULL;
@@ -152,13 +152,38 @@ kill_gateway_connection(struct resource *s)
     }
 }
 
+int
+gateway_write_data(struct gateway_connection *connection,
+		   uint32_t length, const uint8_t *data)
+{
+  uint32_t done;
+  done = ssh_write_data(connection->writer,
+			connection->fd, 0, 
+			length, data);
+
+  if (!done && errno != EWOULDBLOCK)
+    return errno;
+  
+  /* FIXME: Check if we're filling up the buffer; if so we must stop
+     channels from sending more data. */
+
+  if (connection->writer->length)
+    {
+      /* FIXME: Install a write callback. If our write buffer is
+	 getting full, generate CHANNEL_EVENT_STOP events on all
+	 channels, and stop reading on all gateways. */
+      werror("gateway_write_packet: ssh_write_data couldn't write all data.\n");
+    }
+  return 0;
+}
+
 static void
 gateway_write_packet(struct gateway_connection *connection,
 		     struct lsh_string *packet)
 {
-  uint32_t done;
   int msg;
-  
+  int error;
+
   assert(lsh_string_length(packet) > 0);
   msg = lsh_string_data(packet)[0];
   trace("gateway_write_packet: Writing packet of type %T (%i)\n", msg, msg);
@@ -166,25 +191,11 @@ gateway_write_packet(struct gateway_connection *connection,
 
   /* Sequence number not supported */
   packet = ssh_format("%i%fS", 0, packet);
-  
-  done = ssh_write_data(connection->writer,
-			connection->fd, 0, 
-			STRING_LD(packet));
+
+  error = gateway_write_data(connection, STRING_LD(packet));
   lsh_string_free(packet);
 
-  /* FIXME: Check if we're filling up the buffer; if so we must stop
-     channels from sending more data. */
-  if (done > 0 || errno == EWOULDBLOCK)
-    {
-      if (connection->writer->length)
-	{
-	  /* FIXME: Install a write callback. If our write buffer is
-	     getting full, generate CHANNEL_EVENT_STOP events on all
-	     channels, and stop reading on all gateways. */
-	  werror("gateway_write_packet: ssh_write_data couldn't write all data.\n");
-	}
-    }
-  else
+  if (error)
     {
       werror("gateway_write_packet: Write failed: %e\n", errno);
       KILL_RESOURCE(&connection->super.super);

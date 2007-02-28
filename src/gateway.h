@@ -51,6 +51,12 @@ make_gateway_address(const char *local_user, const char *remote_user,
        (writer object ssh_write_state)))
 */
 
+/* Sends raw data (used for hello message). Returns errno value or
+   zero on success. */
+int
+gateway_write_data(struct gateway_connection *connection,
+		   uint32_t length, const uint8_t *data);
+
 struct gateway_connection *
 make_gateway_connection(struct ssh_connection *shared, int fd);
 
