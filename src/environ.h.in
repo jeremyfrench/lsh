@@ -20,10 +20,10 @@
 #define FILE_KERBEROS_HELPER	SBINDIR "/lsh-krb-checkpw"
 
 #define FILE_LSHD_CONFIG_DIR	SYSCONFDIR "/lshd"
-#define FILE_LSHD_CONNECTION	LIBEXECDIR "/lshd-connection"
-#define FILE_LSHD_PTY_HELPER	LIBEXECDIR "/lshd-pty-helper"
-#define FILE_LSHD_USERAUTH	LIBEXECDIR "/lshd-userauth"
-#define FILE_LSH_TRANSPORT	LIBEXECDIR "/lsh-transport"
+#define FILE_LSHD_CONNECTION	SBINDIR "/lshd-connection"
+#define FILE_LSHD_PTY_HELPER	SBINDIR "/lshd-pty-helper"
+#define FILE_LSHD_USERAUTH	SBINDIR "/lshd-userauth"
+#define FILE_LSH_TRANSPORT	BINDIR "/lsh-transport"
 
 #define FILE_LSHD_CONF		"lshd.conf"
 #define FILE_LSHD_USERAUTH_CONF	"lshd-userauth.conf"
