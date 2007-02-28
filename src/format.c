@@ -239,7 +239,7 @@ end_options:
 		if (decimal)
 		  fatal("ssh_format: Decimal lengths not supported for %%A\n");
 		
-		for(n = i =0; i < LIST_LENGTH(l); i++)
+		for(n = i = 0; i < LIST_LENGTH(l); i++)
 		  {
 		    if (LIST(l)[i])
 		      {
