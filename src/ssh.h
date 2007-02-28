@@ -100,6 +100,10 @@
 /* 192-255 Local extensions */
 #define SSH_FIRST_LOCAL 192
 
+/* Sent to gateway to force it to shut down
+ *
+ *   byte  SSH_LSH_GATEWAY_STOP */
+
 #define SSH_LSH_GATEWAY_STOP 192
 
 /* Disconnecting */
@@ -218,5 +222,10 @@
 
 /* Largest MAC digest size we support  (NOTE: This is not a protocol limit) */
 #define SSH_MAX_MAC_SIZE 20
+
+/* The length of the hello line sent by the gateway or lsh-transport on startup. The format is
+ * "LSH" SPC version SPC "OK" or "LSH" SPC version SPC "ERROR" SPC message */
+#define LSH_HELLO_LINE_LENGTH 100
+#define LSH_HELLO_VERSION 1
 
 #endif /* LSH_SSH_H_INCLUDED */
