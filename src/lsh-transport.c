@@ -39,6 +39,7 @@
 #include <netdb.h>
 
 #include "algorithms.h"
+#include "charset.h"
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
@@ -74,6 +75,16 @@ enum lsh_transport_state
 static int
 lsh_transport_packet_handler(struct transport_connection *connection,
 			     uint32_t seqno, uint32_t length, const uint8_t *packet);
+
+static int
+try_password_auth(struct lsh_transport_connection *self);
+
+static int
+try_keyboard_interactive_auth(struct lsh_transport_connection *self);
+
+static void
+send_userauth_info_response(struct lsh_transport_connection *self,
+			    struct simple_buffer *buffer);
 
 static void
 start_userauth(struct lsh_transport_connection *self);
@@ -111,9 +122,8 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
        (target . "const char *")
 
        (userauth . int)
-       (local_user . "char *")
-       (user . "char *")
-       (identity . "char *")
+       (user . "const char *")
+       (identity . "const char *")
        (keypair object keypair)
        
        ; The service we ask for in the SERVICE_REQUEST
@@ -155,8 +165,12 @@ make_lsh_transport_config(void)
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
 	    &make_client_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
 				     &self->host_db->super)->super);
+  ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+	    &make_client_dh_exchange(make_dh_group1(&crypto_sha1_algorithm),
+				     &self->host_db->super)->super);
   self->kex_algorithms =
-    make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1);
+    make_int_list(2, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
+		  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1);
   
   self->super.kexinit = NULL;
 
@@ -170,7 +184,6 @@ make_lsh_transport_config(void)
 
   self->userauth = 1;
   USER_NAME_FROM_ENV(self->user);
-  self->local_user = self->user;
   self->identity = NULL;
   self->keypair = NULL;
 
@@ -184,7 +197,12 @@ make_lsh_transport_config(void)
      (name lsh_transport_connection)
      (super transport_forward)
      (vars
-       (state . "enum lsh_transport_state")))
+       (state . "enum lsh_transport_state")
+       ;; For password authentication
+       (config object lsh_transport_config)
+       (tried_empty_password . unsigned)
+       ;; For keyboard-interactive authentication
+       (expect_info_request . int)))
 */
 
 static void
@@ -232,7 +250,9 @@ make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
 			 lsh_transport_event_handler);
 
   self->state = STATE_HANDSHAKE;
-
+  self->config = config;
+  self->tried_empty_password = 0;
+  self->expect_info_request = 0;
   return self;
 }
 
@@ -269,7 +289,8 @@ lsh_transport_packet_handler(struct transport_connection *connection,
   CAST(lsh_transport_config, config, connection->ctx);
   
   uint8_t msg;
-  
+  int expect_info_request;
+
   debug("Received packet: %xs\n", length, packet);
   assert(length > 0);
 
@@ -326,6 +347,8 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 	  else
 	    transport_protocol_error(connection,
 				     "Invalid USERAUTH_SUCCESS message");
+	  break;
+
 	case SSH_MSG_USERAUTH_BANNER:
 	  /* FIXME: Ignored */
 	  break;
@@ -340,16 +363,42 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 		 && parse_boolean(&buffer, &partial)
 		 && parse_eod(&buffer))
 	      {
-		werror("Userauth failure%z.\n",
-		       partial ? " (partial)" : "");
-		transport_disconnect(connection,
-				     SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
-				     "No more auth methods available");
+		int pending = 0;
+
+		self->expect_info_request = 0;
+
+		if (partial)
+		  /* Doesn't help us */
+		  werror("Received SSH_MSH_USERAUTH_FAILURE "
+			 "indicating partial success.\n");
+
+		if (int_list_member (methods, ATOM_PASSWORD))
+		  pending = try_password_auth(self);
+		else if (int_list_member (methods, ATOM_KEYBOARD_INTERACTIVE))
+		  pending = try_keyboard_interactive_auth(self);
+
+		if (!pending)
+		  transport_disconnect(connection,
+				       SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+				       "No more auth methods available");
 	      }
 	    else
 	      transport_protocol_error(connection,
 				       "Invalid USERAUTH_FAILURE message");
+	    break;
 	  }
+	case SSH_MSG_USERAUTH_INFO_REQUEST:
+	  if (self->expect_info_request)
+	    {
+	      struct simple_buffer buffer;
+	      simple_buffer_init(&buffer, length-1, packet + 1);
+	      send_userauth_info_response(self, &buffer);
+	    }
+	  else
+	    transport_protocol_error(connection,
+				     "Unexpected USERAUTH_INFO_REQUEST");
+	  break;
+
 	default:
 	  transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH,
 				format_unimplemented(seqno));	  
@@ -371,7 +420,7 @@ start_userauth(struct lsh_transport_connection *self)
     {
       struct keypair *key = config->keypair;
       
-      /* Generate signature straight away. */
+      /* Generates signature straight away. */
 
       /* The part of the request we sign */
       struct lsh_string *request
@@ -394,6 +443,8 @@ start_userauth(struct lsh_transport_connection *self)
 
       lsh_string_free(signed_data);
 
+      verbose("Requesting authentication using the `publickey' method.\n");
+
       transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			    request);
     }
@@ -409,13 +460,224 @@ start_userauth(struct lsh_transport_connection *self)
     }
 }
 
+#define MAX_PASSWORD 100
+
+static int
+try_password_auth(struct lsh_transport_connection *self)
+{
+  struct lsh_string *password
+    = INTERACT_READ_PASSWORD(self->config->tty, MAX_PASSWORD,
+			     ssh_format("Password for %lz: ",
+					self->config->user));
+  if (!password)
+    return 0;
+
+  /* Password empty? */
+  if (!lsh_string_length(password))
+    {
+      /* NOTE: At least on some systems, the getpass function
+       * sets the tty to raw mode, disabling ^C, ^D and the like.
+       *
+       * To be a little friendlier, we stop asking if the user
+       * gives us the empty password twice.
+       */
+      if (self->tried_empty_password++)
+	{
+	  lsh_string_free (password);
+	  return 0;
+	}
+    }
+
+  verbose("Requesting authentication using the `password' method.\n");
+
+  transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
+			ssh_format("%c%z%z%a%c%fS",
+				   SSH_MSG_USERAUTH_REQUEST,
+				   self->config->user,
+				   self->config->service,
+				   ATOM_PASSWORD, 0, password));
+  return 1;
+}
+
+#define KBDINTERACT_MAX_PROMPTS 17
+#define KBDINTERACT_MAX_LENGTH 200
+
+static int
+try_keyboard_interactive_auth(struct lsh_transport_connection *self)
+{
+  verbose("Requesting authentication using the `keyboard-interactive' method.\n");
+  transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
+			ssh_format("%c%z%z%a%i%i",
+				   SSH_MSG_USERAUTH_REQUEST,
+				   self->config->user,
+				   self->config->service,
+				   /* Empty language tag and submethods */
+				   ATOM_KEYBOARD_INTERACTIVE, 0, 0));
+
+  self->expect_info_request = 1;
+  return 1;
+  
+}
+
+static struct lsh_string *
+format_userauth_info_response(struct interact_dialog *dialog)
+{
+  uint32_t length;
+  unsigned i;
+  struct lsh_string *msg;
+  uint32_t p;
+
+  /* We need to format a message containing a variable number of
+     strings. */
+
+  /* First convert to utf8 */
+  for (i = 0; i < dialog->nprompt; i++)
+    dialog->response[i] = local_to_utf8(dialog->response[i], 1);
+  
+  for (i = length = 0; i < dialog->nprompt; i++)
+    length += lsh_string_length(dialog->response[i]);
+
+  msg = ssh_format("%c%i%lr", SSH_MSG_USERAUTH_INFO_RESPONSE, dialog->nprompt,
+		   length + 4 * dialog->nprompt, &p);
+
+  for (i = 0; i < dialog->nprompt; i++)
+    {
+      struct lsh_string *r = dialog->response[i];
+      uint32_t rlength = lsh_string_length(r);
+      lsh_string_write_uint32(msg, p, rlength);
+      p += 4;
+      lsh_string_write(msg, p, rlength, lsh_string_data(r));
+      p += rlength;
+    }
+  assert (p == lsh_string_length(msg));
+  
+  return msg;
+}
+
+static void
+send_userauth_info_response(struct lsh_transport_connection *self,
+			    struct simple_buffer *buffer)
+{
+  const uint8_t *name;
+  uint32_t name_length;
+
+  const uint8_t *instruction;
+  uint32_t instruction_length;
+  /* Deprecated and ignored */
+  const uint8_t *language;
+  uint32_t language_length;
+
+  /* Typed as "int" in the spec. Hope that means uint32_t? */  
+  uint32_t nprompt; 
+  
+  if (parse_string(buffer, &name_length, &name)
+      && parse_string(buffer, &instruction_length, &instruction)
+      && parse_string(buffer, &language_length, &language)
+      && parse_uint32(buffer, &nprompt))
+    {
+      struct interact_dialog *dialog;
+      unsigned i;
+      
+      if (nprompt > KBDINTERACT_MAX_PROMPTS
+	  || name_length > KBDINTERACT_MAX_LENGTH
+	  || instruction_length > 10*KBDINTERACT_MAX_LENGTH)
+	{
+	too_large:
+	  transport_disconnect(&self->super.super,
+			       SSH_DISCONNECT_BY_APPLICATION,
+			       "Dialog too large.");
+
+	  return;
+	}
+
+      dialog = make_interact_dialog(nprompt);
+
+      for (i = 0; i < nprompt; i++)
+	{
+	  const uint8_t *prompt;
+	  uint32_t prompt_length;
+	  struct lsh_string *s;
+
+	  if (! (parse_string(buffer, &prompt_length, &prompt)
+		 && parse_boolean(buffer, &dialog->echo[i])))
+	    {
+	      KILL(dialog);
+	      goto error;
+	    }
+
+	  if (prompt_length > KBDINTERACT_MAX_LENGTH)
+	    {
+	      KILL(dialog);
+	      goto too_large;
+	    }
+	  s = low_utf8_to_local(prompt_length, prompt,
+				utf8_replace | utf8_paranoid);
+	  if (!s)
+	    goto error;
+	  
+	  dialog->prompt[i] = s;
+	}
+      
+      dialog->instruction
+	= low_utf8_to_local(instruction_length, instruction,
+			    utf8_replace | utf8_paranoid);
+      
+      if (!dialog->instruction)
+	goto error;
+
+      if (name_length > 0)
+	{
+	  /* Prepend to instruction */
+	  struct lsh_string *s;
+      
+	  s = low_utf8_to_local(name_length, name,
+				utf8_replace | utf8_paranoid);
+	  if (!s)
+	    goto error;
+
+	  dialog->instruction = ssh_format("%lfS\n\n%lfS\n",
+					   s, dialog->instruction);
+	}
+      else
+	dialog->instruction = ssh_format("%lfS\n", dialog->instruction);
+
+      if (!INTERACT_DIALOG(self->config->tty, dialog))
+	{
+	  transport_disconnect(&self->super.super,
+			       SSH_DISCONNECT_AUTH_CANCELLED_BY_USER,
+			       "Cancelled");
+
+	  return;
+	}
+      
+      transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
+			    format_userauth_info_response(dialog));
+    }
+  else
+    {
+    error:
+      transport_protocol_error(&self->super.super,
+			       "Invalid USERAUTH_INFO_REQUEST");
+    }
+}
+
 static void
 start_service(struct lsh_transport_connection *self UNUSED)
 {
+  static const char hello[LSH_HELLO_LINE_LENGTH]
+    = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK lsh-transport";
+
   /* Setting stdio fd:s to non-blocking mode is unfriendly in a
      general purpose program, that may share stdin and stdout with
      other processes. But we expect to get our own exclusive pipe when
      we are started by lsh. */
+
+  /* Write hello message */
+  if (!write_raw (STDOUT_FILENO, sizeof(hello), hello))
+    {
+      werror ("Writing local hello message failed: %e\n", errno);
+      exit (EXIT_FAILURE);
+    }
 
   /* FIXME: We can probably get by with only stdout non-blocking. */
   io_set_nonblocking(STDIN_FILENO);
