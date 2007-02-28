@@ -1,3 +1,43 @@
+2007-02-28  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c: Implemented password authentication, both
+	"password" and "keyboard-interactive".
+	(lsh_transport_packet_handler): Try password authentication if supported.
+	(try_password_auth): New function.
+	(try_keyboard_interactive_auth): New function.
+	(format_userauth_info_response): New function.
+	(send_userauth_info_response): New function.
+	(make_lsh_transport_config): Added support for
+	diffie_hellman_group1_sha1.
+	(start_service): Send hello message.
+
+	* src/lsh.c (gateway_accept): Send hello message.
+	(process_hello_message): New function.
+	(main): Use process_hello_message. Implies that lsh -B will stay
+	in the forground until after user authentication. Better error
+	handling if connection fails.
+
+	* src/ssh.h (LSH_HELLO_LINE_LENGTH, LSH_HELLO_VERSION): New
+	constants. Use a fix length line as hello message between local
+	components. 
+
+	* src/werror.c (werror_argp_parser): Don't handle ARGP_KEY_INIT.
+	At the time it is called, state->name is not yet valid.
+
+	* src/list.c (int_list_member): New function.
+	* src/keyexchange.c (select_algorithm): Use int_list_member.
+
+	* src/gateway.c (gateway_write_data): New function.
+	(gateway_write_packet): Use it.
+
+	* src/environ.h.in: Helper programs are in SBINDIR and BINDIR, not
+	LIBEXECDIR. 
+
+2007-02-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshg: New shell script.
+	* src/Makefile.am (bin_SCRIPTS): Added lshg.
+
 2007-02-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/werror.c (werror_vformat): For %e, use the passed in number,
