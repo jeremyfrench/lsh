@@ -279,9 +279,20 @@ DEFINE_COMMAND2(gateway_accept)
   CAST(lsh_connection, connection, a1);
   CAST(listen_value, lv, a2);
 
+  static const char hello[LSH_HELLO_LINE_LENGTH]
+    = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK lsh-transport";
+  
   struct gateway_connection *gateway
     = make_gateway_connection(&connection->super, lv->fd);
-  
+
+  int error = gateway_write_data (gateway, sizeof(hello), hello);
+  if (error)
+    {
+      werror ("Sending gateway hello message failed: %e\n", error);
+      KILL_RESOURCE (&gateway->super.super);
+      return;
+    }
+
   /* Kill gateway connection if the main connection goes down. */
   remember_resource(connection->gateway_connections, &gateway->super.super);
 
@@ -791,6 +802,41 @@ fork_lsh_transport(struct lsh_options *options)
     }
 }
 
+static int
+process_hello_message(int fd)
+{
+  struct lsh_string *buf = lsh_string_alloc(LSH_HELLO_LINE_LENGTH);
+  static const char expected[] = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK";
+
+  int res = lsh_string_read (buf, 0, fd, LSH_HELLO_LINE_LENGTH);
+  if (res < 0)
+    {
+      werror ("Reading local hello message failed: %e\n", errno);
+    fail:
+      lsh_string_free (buf);
+      return 0;
+    }
+  if (!res)
+    {
+      werror ("Lost local connection.\n");
+      goto fail;
+    }
+  if (res != LSH_HELLO_LINE_LENGTH)
+    {
+      werror ("Truncated hello message.\n");
+      goto fail;
+    }
+
+  if (memcmp (lsh_string_data (buf), expected, sizeof(expected) - 1) != 0)
+    {
+      /* FIXME: Check more carefully for version mismatch. */
+      werror ("Invalid hello message.\n");
+      goto fail;
+    }
+  lsh_string_free (buf);
+  return 1;  
+}
+
 int
 main(int argc, char **argv, const char** envp)
 {
@@ -867,11 +913,14 @@ main(int argc, char **argv, const char** envp)
     }
 
   if (fd < 0 && options->use_gateway != 1)
-    {
-      fd = fork_lsh_transport(options);
-      if (fd < 0)
-	return EXIT_FAILURE;
-    }
+    fd = fork_lsh_transport(options);
+
+  if (fd < 0)
+    return EXIT_FAILURE;
+
+  if (!process_hello_message (fd))
+    return EXIT_FAILURE;
+
   connection = make_lsh_connection(fd);
   gc_global(&connection->super.super);
 
