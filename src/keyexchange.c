@@ -173,7 +173,7 @@ select_algorithm(struct int_list *client_list,
   /* FIXME: This quadratic complexity algorithm should do as long as
    * the lists are short. To avoid DOS-attacks, there should probably
    * be some limit on the list lengths. */
-  unsigned i, j;
+  unsigned i;
 
   for(i = 0; i < LIST_LENGTH(client_list); i++)
     {
