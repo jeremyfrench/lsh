@@ -289,7 +289,6 @@ lsh_transport_packet_handler(struct transport_connection *connection,
   CAST(lsh_transport_config, config, connection->ctx);
   
   uint8_t msg;
-  int expect_info_request;
 
   debug("Received packet: %xs\n", length, packet);
   assert(length > 0);
