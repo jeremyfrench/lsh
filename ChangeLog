@@ -1,3 +1,7 @@
+2007-03-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (EXTRA_DIST): Added lshg.
+
 2007-02-28  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c: Implemented password authentication, both
