@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lsh], [2x1], [bug-lsh@gnu.org]) 
+AC_INIT([lsh], [2.9-exp], [bug-lsh@gnu.org]) 
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/lsh.c])
 # Needed to stop autoconf from looking for files in parent directories.

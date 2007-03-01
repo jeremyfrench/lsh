@@ -1,5 +1,7 @@
 2007-03-01  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Changed version "number" to 2.9-exp.
+
 	* src/Makefile.am (EXTRA_DIST): Added lshg.
 
 2007-02-28  Niels Möller  <nisse@lysator.liu.se>
