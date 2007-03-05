@@ -154,8 +154,8 @@ AC_ARG_WITH(scheme,
   [with_scheme=])
 
 AC_ARG_WITH(system-argp,
-  AC_HELP_STRING([--without-system-argp], [Don't use the system's argp]),,
-  [with_system_argp=yes])
+  AC_HELP_STRING([--with-system-argp], [Use the argp parser in libc]),,
+  [with_system_argp=no])
 
 # IPv6 support
 AC_ARG_ENABLE(ipv6,
@@ -579,6 +579,7 @@ if test x$lsh_cv_sys_ai_numerichost = xyes ; then
 fi
 
 # Test if the libc includes a good enough argp.
+# FIXME: Doesn't check for the argp-help bug.
 if test x$with_system_argp = xyes ; then
   LSH_LIB_ARGP(,with_system_argp=no)
 fi
