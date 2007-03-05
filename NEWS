@@ -1,3 +1,47 @@
+News for the 2.9-exp release
+
+	This is not a regular release, it's the current state of the
+	development version. "exp" for "experimental". New things:
+
+	  * Server split into three main programs; lshd, lshd-userauth
+            and lshd-connection, to reduce the amount of code that is
+            running with root privileges.
+
+	  * The server programs use configuration files, in addition
+            to the command line options.
+
+	  * Client split into two programs, lsh and lsh-transport. By
+	    default, lsh tries to use a gateway, and lshg is just a
+	    shell script that invokes lsh with options to make it
+	    unconditionally use a gateway, or fail if none is present.
+
+	Missing features and known problems:
+
+	  * The server in the current version will not listen on
+            anything but localhost. I don't recommend using the server
+            in this version for anything but testing.
+
+	  * Server supports publickey authentication only.
+
+	  * Internal flow-control is not fully implemented. Programs
+            may exit (in a controlled fashion) if some channel or
+            socket is overwhelmed with data.
+
+	  * Client does not support any escape key.
+
+	  * I suspect there's some bug in the channel book-keeping of
+	    lsh gatewaying (I've seen some errors, but haven't
+	    investigated them yet).
+
+	  * PTY support, using the lshd-pty-helper program, has some
+            portability problems.
+
+	  * The manual is not up-to-date.
+
+	Interfaces, including the syntax of the configuration files
+	and the protocols used for communication betwen the various
+	processes, may change in the next version of lsh.
+
 News for the 2.0.3 release
 
 	At startup, lshd now tries to close any spurious open file
