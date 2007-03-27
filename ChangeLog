@@ -1,3 +1,37 @@
+2007-03-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/gateway_channel.c (do_gateway_channel_event): For
+	CHANNEL_EVENT_DENY, use the right channel number when propagating
+	the error to the chained connection.
+
+	* src/client_session.c (oop_read_stdin): Reset tty modes if we get
+	EOF or I/O error on stdin.
+
+	* src/channel.c (ssh_connection_register_channel): Reintroduced
+	initialization of channel->local_channel_number. Unclear when this
+	change from 2005-09-15 was lost.
+
+	* src/unix_process.c (spawn_error): Deleted sync argument, let the
+	caller be responsible for that.
+	(spawn_parent): Only the reading end of the sync pipe passed as
+	argument.
+	(spawn_child): Only writing end of sync pipe passed as argument.
+	(spawn_shell): Close the sync fd:s that aren't needed by the
+	helper functions.
+
+	* src/testsuite/lsh-10-test: Added extra delay before sending EOF,
+	to avoid trigging a race condition when signalling EOF on a pty.
+
+	* src/testsuite/Makefile.am (TS_SH): Added lsh-12-test.
+	(EXTRA_DIST): Added socks4-config and socks5-config.
+
+	* src/testsuite/lsh-12-test: New test, which executes two commands
+	in parallel.
+
+2007-03-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: By default, don't use the system's argp.
+
 2007-03-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Changed version "number" to 2.9-exp.
