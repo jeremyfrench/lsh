@@ -1,0 +1,21 @@
+#! /bin/sh
+
+echo lsh, test 12
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+rm -f test.out1 test.out2
+
+# Starting multiple channels.
+spawn_lshd && run_lsh -N --stdout=test.out1 -E "sleep 10; echo foo" \
+    --stdout=test.out2 -E "sleep 10; echo foo" || test_fail
+
+echo lsh exit status: $?
+
+[ -s test.out1 ] && [ -s test.out2 ] && compare_output
+
+test_done
