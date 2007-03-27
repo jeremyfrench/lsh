@@ -62,6 +62,7 @@
      (name gateway_channel)
      (super ssh_channel)
      (vars
+       ;; Put local_channel_number here?
        (chain object ssh_channel)))
 */
 
@@ -158,7 +159,7 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 	  /* FIXME: We should propagate the error code and message
 	     over the gateway. */
 	  SSH_CONNECTION_WRITE(self->chain->connection,
-			       format_open_failure(self->super.remote_channel_number,
+			       format_open_failure(self->chain->remote_channel_number,
 						   SSH_OPEN_RESOURCE_SHORTAGE,
 						   "Refused by server", ""));
 	  ssh_connection_dealloc_channel(self->super.connection,
