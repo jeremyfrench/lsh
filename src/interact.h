@@ -39,6 +39,9 @@ struct terminal_dimensions;
 /* Abstract class defining methods needed to communicate with the
  * user's terminal. */
 
+/* FIXME: This abstraction is unnecessary. Some methods in the
+   interactive class for switching the terminal to raw mode and back
+   should be sufficient. */
 /* GABA:
    (class
      (name terminal_attributes)

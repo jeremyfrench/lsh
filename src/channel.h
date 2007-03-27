@@ -108,9 +108,12 @@ enum channel_flag {
    (class
      (name ssh_channel)
      (super resource)
-     (vars
-       ; Remote channel number 
+     (vars     
+       ;; FIXME: Is this needed? It's currently used only by
+       ;; gateway_channel.c:do_gateway_channel_event.
        (local_channel_number . uint32_t)
+
+       ; Remote channel number       
        (remote_channel_number . uint32_t)
        
        ; NOTE: The channel's maximum packet sizes refer to the packet
