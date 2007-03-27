@@ -310,13 +310,11 @@ exec_shell(struct spawn_info *info)
 }
 
 static void
-spawn_error(struct spawn_info *info, const int *sync,
+spawn_error(struct spawn_info *info,
 	    int helper_fd, int helper_ref)
 {
   trace("unix_process: spawn_error\n");
 
-  safe_close(sync[0]); safe_close(sync[1]);
-  
   safe_close(info->in[0]);  safe_close(info->in[1]);
   safe_close(info->out[0]); safe_close(info->out[1]);
   safe_close(info->err[0]);
@@ -333,7 +331,7 @@ spawn_error(struct spawn_info *info, const int *sync,
 static struct lsh_process *
 spawn_parent(struct spawn_info *info,
 	     struct exit_callback *c,
-	     pid_t child, const int *sync,
+	     pid_t child, int sync,
 	     int helper_fd, int helper_ref)
 {
   /* Parent */
@@ -350,8 +348,6 @@ spawn_parent(struct spawn_info *info,
   if (info->err[1] != info->out[1])
     safe_close(info->err[1]);
 
-  safe_close(sync[1]);
-
   /* On Solaris, reading the master side of the pty before the
    * child has opened the slave side of it results in EINVAL. We
    * can't have that, so we'll wait until the child has opened the
@@ -362,10 +358,10 @@ spawn_parent(struct spawn_info *info,
    * requests to the pty helper process. */
       
   do
-    res = read(sync[0], &dummy, 1);
+    res = read(sync, &dummy, 1);
   while (res < 0 && errno == EINTR);
 
-  safe_close(sync[0]);
+  safe_close(sync);
 
   trace("spawn_parent: after sync\n");
 
@@ -379,7 +375,7 @@ spawn_parent(struct spawn_info *info,
 }
 
 static void
-spawn_child(struct spawn_info *info, const int *sync,
+spawn_child(struct spawn_info *info, int sync,
 	    int helper_fd, int helper_ref)
 {
   int tty = -1;
@@ -413,10 +409,14 @@ spawn_child(struct spawn_info *info, const int *sync,
   if (helper_fd != -1)
     send_helper_request(helper_fd, helper_ref, PTY_REQUEST_LOGIN, -1);
 
-  /* Now any tty processing is done, so notify our parent by
-   * closing the syncronization pipe. */
-      
-  safe_close(sync[0]); safe_close(sync[1]);
+  /* Now any tty processing is done, so notify our parent by closing
+   * the syncronization pipe. FIXME: There's some race condition in
+   * signalling EOF on the pty (^D written to the master side mangled
+   * into NUL on the reading side. Observed on linux-2.6.16. Not
+   * solved; delaying the close a little using io_set_close_on_exec
+   * made no difference. */
+
+  safe_close (sync);
 
 #define DUP_FD_OR_TTY(src, dst) dup2((src) >= 0 ? (src) : tty, dst)
 
@@ -494,7 +494,9 @@ spawn_shell(struct spawn_info *info, int helper_fd,
   if (child < 0)
     {
       werror("spawn_shell: fork failed %e\n", errno);
-      spawn_error(info, sync, helper_fd, helper_ref);
+      safe_close(sync[0]); safe_close(sync[1]);
+
+      spawn_error(info, helper_fd, helper_ref);
 
       return NULL;
     }
@@ -503,12 +505,15 @@ spawn_shell(struct spawn_info *info, int helper_fd,
       /* Parent */
       trace("spawn_shell: parent process\n");
 
-      return spawn_parent(info, c, child, sync, helper_fd, helper_ref);
+      safe_close(sync[1]);
+      return spawn_parent(info, c, child, sync[0], helper_fd, helper_ref);
     }
   else
-    { /* Child */
-      spawn_child(info, sync, helper_fd, helper_ref);
-      
+    {
+      /* Child */
+      safe_close(sync[0]);
+      spawn_child(info, sync[1], helper_fd, helper_ref);
+
       exec_shell(info);
       _exit(EXIT_FAILURE);
     }
