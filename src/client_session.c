@@ -142,8 +142,12 @@ oop_read_stdin(oop_source *source UNUSED,
   assert(event == OOP_READ);
 
   if (channel_io_read(&session->super, &session->in, &done) != CHANNEL_IO_OK)
-    channel_read_state_close(&session->in);
-
+    {
+      /* This resource list is used only for tty-related things.
+	 Killing it will restore the tty modes. */
+      KILL_RESOURCE_LIST (session->resources);
+      channel_read_state_close(&session->in);
+    }
   else if (done > 0)
     {
       /* FIXME: Look for escape char */
@@ -219,6 +223,8 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
 
       if (!session->err.state->length)
 	channel_write_state_close(&session->super, &session->err);
+
+      /* FIXME: Arrange for close when all data is written. */
       break;
 
     case CHANNEL_EVENT_CLOSE:
