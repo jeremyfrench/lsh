@@ -11,8 +11,13 @@ fi
 # Traditional BSD pty:s are currentlynot supported.
 [ -c /dev/ptmx ] || test_skip
 
-LSH_FLAGS="$LSH_FLAGS -t"
+# There a race condition when signalling EOF on a pty pair.
+# Work around it by sleeping a few seconds before sending CHANNEL_EOF.
+# Also use lshg rather than lsh, to get more predictable timing.
 
-spawn_lshd && run_lsh "tty" && test_success
+LSHG_FLAGS="$LSHG_FLAGS -t"
+
+spawn_lshd && spawn_lsh --start-gateway \
+  && sleep 10 | exec_lshg "tty" && test_success
 
 test_done
