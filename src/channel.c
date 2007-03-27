@@ -263,14 +263,17 @@ ssh_connection_register_channel(struct ssh_connection *connection,
 				struct ssh_channel *channel)
 {
   assert(local_channel_number < connection->used_channels);
-  assert(!connection->channels[local_channel_number]);
   assert(connection->alloc_state[local_channel_number] != CHANNEL_FREE);
+  assert(!connection->channels[local_channel_number]);
 
   trace("ssh_connection_register_channel: local_channel_number: %i.\n",
 	local_channel_number);
 
   connection->channels[local_channel_number] = channel;
   channel->connection = connection;
+  /* FIXME: If we keep the local_channel_number attribute,
+     we can probably use it in more places. */
+  channel->local_channel_number = local_channel_number;
   remember_resource(connection->resources, &channel->super);  
 }
 
