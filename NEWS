@@ -29,10 +29,6 @@ News for the 2.9-exp release
 
 	  * Client does not support any escape key.
 
-	  * I suspect there's some bug in the channel book-keeping of
-	    lsh gatewaying (I've seen some errors, but haven't
-	    investigated them yet).
-
 	  * PTY support, using the lshd-pty-helper program, has some
             portability problems.
 
