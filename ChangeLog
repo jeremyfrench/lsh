@@ -1,3 +1,9 @@
+2007-04-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Bumped version number to 2.9.1-exp.
+
+	* Released lsh-2.9-exp
+
 2007-03-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_gateway_channel_event): For
