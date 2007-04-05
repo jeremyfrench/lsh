@@ -1,0 +1,176 @@
+# Argp Makefile
+
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+LIBOBJS = @LIBOBJS@
+
+SUBDIRS = testsuite
+
+PRE_CPPFLAGS = -I. -I$(srcdir)
+
+include config.make
+
+# argp-test needs random(), which is not available on windows.
+TARGETS = libargp.a argp-test
+
+# No installation
+install uninstall:
+	true
+
+all check:
+	$(MAKE) $@-here
+	set -e; for d in $(SUBDIRS); do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+
+clean distclean mostlyclean maintainer-clean tags:
+	set -e; for d in $(SUBDIRS); do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+	$(MAKE) $@-here
+
+check-here:
+	true
+
+all-here: $(TARGETS)
+
+argp_SOURCES = argp-ba.c argp-eexst.c argp-fmtstream.c \
+	       argp-help.c argp-parse.c argp-pv.c \
+	       argp-pvh.c
+
+SOURCES = $(argp_SOURCES) argp-test.c
+
+.c.$(OBJEXT):
+	$(COMPILE) -c $< \
+	&& $(DEP_PROCESS)
+
+# Rules for libargp.a
+
+argp_OBJS = $(argp_SOURCES:.c=.$(OBJEXT)) $(LIBOBJS)
+
+libargp.a: $(argp_OBJS)
+	-rm -f $@
+	$(AR) $(ARFLAGS) $@ $(argp_OBJS)
+	$(RANLIB) $@
+
+# Rules for argp-test
+argp-test$(EXEEXT): argp-test.$(OBJEXT) libargp.a
+	$(LINK) argp-test.$(OBJEXT) libargp.a -o $@
+
+# Configure-related rules, mostly copied from the autoconf manual. No
+# $(srcdir) prefixes on the targets, though.
+
+configure: configure.ac aclocal.m4
+	cd $(srcdir) && $(AUTOCONF)
+
+# autoheader might not change config.h.in, so touch a stamp file.
+config.h.in: stamp-h.in
+stamp-h.in: configure.ac aclocal.m4
+	cd $(srcdir) && autoheader
+	echo timestamp > $(srcdir)/stamp-h.in
+
+config.status: configure
+	./config.status --recheck
+
+config.h: stamp-h
+stamp-h: config.h.in config.status
+	./config.status config.h
+	echo timestamp > stamp-h
+
+Makefile: Makefile.in config.status
+	./config.status $@
+
+config.make: config.make.in config.status
+	./config.status $@
+
+config.m4: config.m4.in config.status
+	./config.status $@
+
+# Distribution
+distdir = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
+top_distdir = $(distdir)
+
+DISTFILES = $(SOURCES) .bootstrap aclocal.m4 configure.ac \
+	configure stamp-h.in \
+	install-sh config.h.in config.make.in Makefile.in \
+	COPYING.LIB TODO ChangeLog Versions \
+	mempcpy.c strcasecmp.c strchrnul.c strndup.c vsnprintf.c
+
+# NOTE: Depending on the automake version in the parent dir,
+# we must handle both absolute and relative $destdir.
+
+distdir: $(DISTFILES)
+	rm -rf "$(distdir)"
+	mkdir "$(distdir)"
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done
+	set -e; for d in $(SUBDIRS); do \
+	  sd="$(distdir)/$$d" ; \
+	  mkdir "$$sd" && $(MAKE) -C $$d distdir="`cd $$sd && pwd`" $@ ; \
+	done
+
+dist: distdir
+	tar cf - $(distdir) | gzip -c >$(distdir).tar.gz	
+	rm -rf $(distdir)
+
+rm_distcheck = test ! -d distcheck-tmp \
+	    || { find distcheck-tmp -type d ! -perm -200 -exec chmod u+w {} ';' \
+                 && rm -fr distcheck-tmp; }; 
+
+distcheck: dist
+	$(rm_distcheck)
+	mkdir distcheck-tmp
+	gzip -d < $(distdir).tar.gz \
+	  | { cd distcheck-tmp && tar xf - && chmod -R a-w $(distdir) ; }
+	mkdir distcheck-tmp/build
+	mkdir distcheck-tmp/install
+	cd distcheck-tmp/build && ../$(distdir)/configure --prefix="`cd ../install && pwd`"
+	cd distcheck-tmp/build && $(MAKE)
+	cd distcheck-tmp/build && $(MAKE) check
+	cd distcheck-tmp/build && $(MAKE) install
+	cd distcheck-tmp/build && $(MAKE) uninstall
+	cd distcheck-tmp && find install -type f -print > leftover-install-files
+	@test `cat distcheck-tmp/leftover-install-files | wc -l` -le 1  \
+	  || { echo "ERROR: files left after uninstall:" ; \
+	       cat distcheck-tmp/leftover-install-files ; \
+	       exit 1; }
+	chmod -R a-w distcheck-tmp/install
+	mkdir distcheck-tmp/destdir
+	destdir="`cd distcheck-tmp/destdir && pwd`" \
+	  && cd distcheck-tmp/build \
+	  && $(MAKE) install DESTDIR="$$destdir" \
+	  && $(MAKE) uninstall DESTDIR="$$destdir"
+	cd distcheck-tmp && find destdir -type f -print > leftover-destdir-files
+	@test `cat distcheck-tmp/leftover-destdir-files | wc -l` -le 1  \
+	  || { echo "ERROR: destdir files left after uninstall:" ; \
+	       cat distcheck-tmp/leftover-destdir-files ; \
+	       exit 1; }	
+	cd distcheck-tmp/build && $(MAKE) dist
+	cd distcheck-tmp/build && rm *.gz
+	cd distcheck-tmp/build && $(MAKE) distclean
+	cd distcheck-tmp && find build -type f -print > leftover-build-files
+	@test `cat distcheck-tmp/leftover-build-files | wc -l` -eq 0  \
+	  || { echo "ERROR: files left in build directory after distclean:" ; \
+	       cat distcheck-tmp/leftover-build-files ; \
+	       exit 1; }
+	$(rm_distcheck)
+
+clean-here:
+	-rm -f $(TARGETS) *.$(OBJEXT)
+
+distclean-here: clean-here
+	-rm -f config.h stamp-h config.log config.status \
+	config.make Makefile *.d
+
+maintainer-clean-here: distclean-here
+	true
+
+tags-here:	
+	etags $(srcdir)/*.c $(srcdir)/*.h
+
+DEP_FILES = $(SOURCES:.c=.$(OBJEXT).d)
+@DEP_INCLUDE@ $(DEP_FILES)

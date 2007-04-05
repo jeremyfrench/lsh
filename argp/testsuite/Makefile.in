@@ -1,0 +1,54 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+include ../config.make
+
+TARGETS = ex1$(EXEEXT) ex3$(EXEEXT) ex4$(EXEEXT)
+TS_SH = ex1-test permute-test
+
+SOURCES = ex1.c ex3.c ex4.c
+
+all: $(TARGETS)
+
+.c.$(OBJEXT):
+	$(COMPILE) -c $< \
+	&& $(DEP_PROCESS)
+
+ex1(EXEEXT): ex1.$(OBJEXT) ../libargp.a
+	$(LINK) ex1.$(OBJEXT) libargp.a -o $@
+
+ex3(EXEEXT): ex3.$(OBJEXT) ../libargp.a
+	$(LINK) ex3.$(OBJEXT) libargp.a -o $@
+
+ex4(EXEEXT): ex4.$(OBJEXT) ../libargp.a
+	$(LINK) ex4.$(OBJEXT) libargp.a -o $@
+
+check: $(TARGETS) $(TS_SH) $(srcdir)/run-tests
+	srcdir="$(srcdir)" EXEEXT="$(EXEEXT)" $(srcdir)/run-tests $(TS_SH)
+
+Makefile: $(srcdir)/Makefile.in ../config.status
+	cd .. && $(SHELL) ./config.status testsuite/$@
+
+install uninstall:
+	true
+
+DISTFILES = $(SOURCES) $(TS_SH) Makefile.in run-tests
+distdir: $(DISTFILES)
+	cp $(DISTFILES) $(distdir)
+
+clean:
+	-rm -f $(TARGETS) $(EXTRA_TARGETS) *.o test.in test1.out test2.out
+
+distclean: clean
+	-rm -f Makefile *.d
+
+maintainer-clean-here: distclean-here
+	true
+
+tags-here:	
+	etags $(srcdir)/*.c $(srcdir)/*.h
+
+DEP_FILES = $(SOURCES:.c=.$(OBJEXT).d)
+@DEP_INCLUDE@ $(DEP_FILES)

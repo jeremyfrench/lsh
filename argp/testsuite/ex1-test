@@ -1,0 +1,20 @@
+#! /bin/sh
+
+: ${EXEEXT:=""}
+
+# Success with no args
+./ex1$EXEEXT || exit 1
+
+# Fail with args
+if ./ex1$EXEEXT foo 2>/dev/null ; then exit 1 ; fi
+
+# Respond to --help
+./ex1$EXEEXT --help >/dev/null || exit 1
+
+# Not using ARGP_LONG_ONLY
+if ./ex1$EXEEXT -help 2>/dev/null ; then exit 1 ; fi
+
+(./ex1$EXEEXT --help | grep Usage: >/dev/null ) || exit 1
+
+exit 0
+
