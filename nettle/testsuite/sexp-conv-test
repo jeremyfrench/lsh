@@ -1,0 +1,136 @@
+#! /bin/sh
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+# echo -n is not portable
+
+if [ "`echo -n ''`" = "" ]; then
+    n='-n'; c=''
+elif [ "`echo '\c'`" = "" ]; then
+    n=''; c='\c'
+else
+    echo >&2 'Neither echo -n nor echo \c seems to work.'
+    exit 1
+fi
+
+# Doesn't work if $1 contains 
+print_raw () {
+    echo $n "$1$c" > "$2"
+}
+
+# Using a here-document seems more robust. However, I don't know how
+# to get rid of the final newline, so we can't use it exclusively.
+print_nl () {
+    cat >"$2" <<EOF
+$1
+EOF
+}
+
+test_advanced () {
+    print_raw "$1" test.in
+    if ../tools/sexp-conv -s advanced <test.in >test1.out ; then
+	true
+    else
+	exit 1
+    fi
+    print_nl "$2" test2.out
+
+    if cmp test1.out test2.out ; then
+	true
+    else
+	exit 1;
+    fi
+}
+
+test_advanced_hex () {
+    print_raw "$1" test.in
+    if ../tools/sexp-conv -s hex <test.in >test1.out ; then
+	true
+    else
+	exit 1
+    fi
+    print_nl "$2" test2.out
+
+    if cmp test1.out test2.out ; then
+	true
+    else
+	exit 1;
+    fi
+}
+
+test_transport () {
+    print_raw "$1" test.in
+    if ../tools/sexp-conv -s transport <test.in >test1.out ; then
+	true
+    else
+	exit 1
+    fi
+    print_nl "$2" test2.out
+
+    if cmp test1.out test2.out ; then
+	true
+    else
+	exit 1;
+    fi
+}
+
+test_canonical () {
+    print_raw "$1" test.in
+    if ../tools/sexp-conv -s canonical <test.in >test1.out ; then
+	true
+    else
+	exit 1
+    fi
+    print_raw "$2" test2.out
+
+    if cmp test1.out test2.out ; then
+	true
+    else
+	exit 1;
+    fi
+}
+
+test_advanced '0:' '""'
+test_advanced '3:foo' 'foo'
+test_advanced '12:fooooooooooo' 'fooooooooooo'
+test_advanced '10:fooooooooo' 'fooooooooo'
+test_advanced '4:3des' '"3des"' 
+test_advanced '"foo"' 'foo' 
+test_advanced '4:foo
+' '"foo\n"'
+# Having the string end with a \ breaks with sysv echo. \x seems harmless.
+test_advanced '3:"\x' '"\"\\x"' 
+test_advanced '()' '()' 
+test_advanced '(foo bar baz)' '(foo bar
+     baz)' 
+test_advanced '; comment
+()' '()' 
+
+test_advanced '(foo[bar]foo)' '(foo [bar]foo)'
+
+test_advanced '(#aabb#)' '(|qrs=|)'
+test_advanced '(|qrs=|)' '(|qrs=|)'
+test_advanced_hex '(|qrs=|)' '(#aabb#)'
+test_advanced_hex '(#aabb#)' '(#aabb#)'
+test_advanced_hex '{MToR}' '#11#'
+test_advanced_hex '|EQ==|' '#11#'
+
+test_transport '0:' '{MDo=}'
+test_transport '()' '{KCk=}'
+test_transport '1:A' '{MTpB}'
+test_transport 'foo' '{Mzpmb28=}'
+test_transport '(foo bar baz)' '{KDM6Zm9vMzpiYXIzOmJheik=}'
+
+test_canonical '""' '0:'
+test_canonical '{MDo=}' '0:'
+test_canonical '{KCk=}' '()'
+test_canonical '{MTpB}' '1:A'
+test_canonical 'foo' '3:foo'
+test_canonical 'fooooooooooo' '12:fooooooooooo'
+test_canonical 'fooooooooo' '10:fooooooooo'
+test_canonical '(foo bar baz)' '(3:foo3:bar3:baz)' 
+test_canonical '{KDM6Zm9vMzpiYXIzOmJheik=}' '(3:foo3:bar3:baz)' 
+
+exit 0
