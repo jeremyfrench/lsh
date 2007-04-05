@@ -36,10 +36,14 @@ install uninstall:
 
 DISTFILES = $(SOURCES) $(TS_SH) Makefile.in run-tests
 distdir: $(DISTFILES)
-	cp $(DISTFILES) $(distdir)
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done
 
 clean:
-	-rm -f $(TARGETS) $(EXTRA_TARGETS) *.o test.in test1.out test2.out
+	-rm -f $(TARGETS) *.$(OBJEXT) test.out
 
 distclean: clean
 	-rm -f Makefile *.d

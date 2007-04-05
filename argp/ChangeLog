@@ -1,5 +1,11 @@
 2007-04-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* Makefile.in, testsuite/Makefile.in: Fixed dist and distcheck
+	targets. 
+
+	* configure.ac: Don't quote $CC when used, since it may include
+	some options.
+
 	* Moved in the CVS tree, and converted from automake to plain
 	autoconf.
 

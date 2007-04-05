@@ -41,6 +41,8 @@ argp_SOURCES = argp-ba.c argp-eexst.c argp-fmtstream.c \
 
 SOURCES = $(argp_SOURCES) argp-test.c
 
+HEADERS = argp.h argp-fmtstream.h argp-namefrob.h
+
 .c.$(OBJEXT):
 	$(COMPILE) -c $< \
 	&& $(DEP_PROCESS)
@@ -91,7 +93,7 @@ config.m4: config.m4.in config.status
 distdir = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
 top_distdir = $(distdir)
 
-DISTFILES = $(SOURCES) .bootstrap aclocal.m4 configure.ac \
+DISTFILES = $(SOURCES) $(HEADERS) .bootstrap aclocal.m4 configure.ac \
 	configure stamp-h.in \
 	install-sh config.h.in config.make.in Makefile.in \
 	COPYING.LIB TODO ChangeLog Versions \
