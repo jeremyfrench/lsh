@@ -1,0 +1,81 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+top_srcdir = @top_srcdir@
+
+include ../config.make
+
+PRE_CPPFLAGS = -I.. -I$(top_srcdir)
+PRE_LDFLAGS = -L..
+
+TS_SOURCES = principal-test.c date-test.c tag-test.c read-acl-test.c \
+	     lookup-acl-test.c read-cert-test.c cdsa-reduce-test.c
+
+TS_PROGS = $(TS_SOURCES:.c=$(EXEEXT))
+
+TS_SH = check-signature-test make-signature-test \
+	delegate-test reduce-test
+
+TS_ALL = $(TS_PROGS) $(TS_SH)
+
+SOURCES = $(TS_SOURCES) testutils.c
+DISTFILES = $(SOURCES) testutils.h $(TS_SH) \
+	run-tests setup-env key-1 key-1.pub key-2 key-2.pub
+
+CLEANFILES = test.in test.out test.acl test.canonical
+
+all: $(TS_PROGS)
+
+.c.$(OBJEXT):
+	$(COMPILE) -c $< && $(DEP_PROCESS)
+
+# BSD (and Solaris) make doesn't allow extra dependencies together one
+# single-suffix rules, which makes it impossible or almost impossible
+# to use suffix rules to build the test executables. So we use an
+# explicit rule for each and every executable.
+
+TEST_OBJS = testutils.$(OBJEXT) ../libspki.a -lnettle $(LIBS)
+TEST_DEPS = testutils.$(OBJEXT) ../libspki.a
+
+.PHONY: test-rules
+test-rules:
+	(for f in $(TS_PROGS) ; do \
+	  echo $$f'$$(EXEEXT): '$$f'.$$(OBJEXT) $$(TEST_DEPS)' ; \
+	  echo '	$$(LINK) '$$f'.$$(OBJEXT) $$(TEST_OBJS) -o '$$f'$$(EXEEXT)' ; \
+	  echo ; \
+	done) > $(srcdir)/.test-rules.make
+
+include $(srcdir)/.test-rules.make
+
+check: $(TS_ALL)
+	LD_LIBRARY_PATH=../nettle_builddir/.lib srcdir=$(srcdir) \
+		$(srcdir)/run-tests $(TS_ALL)
+
+Makefile: $(srcdir)/Makefile.in ../config.status
+	cd .. && $(SHELL) ./config.status testsuite/$@
+
+install uninstall:
+	true
+
+distdir: $(DISTFILES)
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done
+	mkdir "$(distdir)/cdsa-cases"
+	cp "$(srcdir)/cdsa-cases/"*.in "$(srcdir)/cdsa-cases/"*.out "$(distdir)/cdsa-cases"
+
+clean:
+	-rm -f $(TARGETS) *.(OBJEXT)
+
+distclean: clean
+	rm -rf testhome
+	-rm -f Makefile *.d
+
+tags:
+	etags --include $(top_srcdir) $(srcdir)/*.c $(srcdir)/*.h
+
+@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d)

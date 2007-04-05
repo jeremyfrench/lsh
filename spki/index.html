@@ -1,0 +1,104 @@
+<html>
+<head>
+  <link rel="stylesheet" title="Default"
+   type="text/css" href="index.css" media="all">
+   <title>libspki</title>
+</head>
+
+<h1>A library implementing the Simple Public Key Infrastructure</h1>
+
+libspki a library for operations on SPKI certificates, ACL:s, and
+access and authorization decisions. The library is work in progress,
+it's not terribly useful yet. Some of the design:
+
+<ul>
+<li> Keep things simple. Do one thing, well.
+
+<li> Start with the most crucial parts, certificates with only
+     "principal" subjects. Names and thresholds are secondary.
+
+<li> Make it a nice friendly C library, without global state, with
+     configurable memory allocation, etc.
+
+<li> Provide friendly command line tools, both for interactive use and
+     for scripting.
+</ul>
+
+
+<h1>About SPKI</h1>
+
+SPKI is a way to think about certificates that makes a lot more sense
+then the popular X.500 and X.509 standards. The emphasis is on
+authorization, delegation and capabilities, rather than on names. See
+<a href="ftp://ftp.isi.edu/in-notes/rfc2693.txt">RFC 2693</a> and <a
+href="http://world.std.com/~cme/html/spki.html#1-SPKI/SDSI">Carl
+Ellison's SPKI page</a> for more informaton.
+
+
+<h1>Current status</h1>
+
+As of 2003-03-10, the code is reasonably solid, and the most important
+things are implemented. Parsing of keys, certificates and ACL:s.
+Verification and creation of signatures. The "5-tuple reduction"
+machinery is in place. There are some basic tools for creating
+certificates. There are no special key generation tools, but you can
+use lsh's. It's fairly small, about 7000 lines of C.
+
+<p>
+
+The interfaces, both for the library and the command line tools, are
+functional but subject to change and improvements. There's
+unfortunately not much documentation, the <a
+href="http://cvs.lysator.liu.se/viewcvs/viewcvs.cgi/lsh/src/spki/README?rev=HEAD&cvsroot=lsh&content-type=text/vnd.viewcvs-markup">README</a>
+file provides an introduction, after that you have to read the source.
+
+
+<h1>Related projects</h1>
+
+There are two other SPKI implementations I'm aware of: Intel's <a
+href="http://www.intel.com/ial/security/">CDSA</a>, which is a pretty
+big and does a lot more than just SPKI, and <a
+href="http://jsdsi.sourceforge.net/">JSDSI</a>, a Java
+library by Sameer Ajmani.
+
+<p>
+
+The first application that will use libspki is <a
+href="http://www.lysator.liu.se/~nisse/lsh">LSH</a>, my ssh-2
+implementation. I've planned adding real spki support for years, as a
+good way both for delegating restricted access, and for certifying
+hostkeys (which is usually the weakest link in all use of ssh).
+
+<p>
+
+libspki uses <a href="http://www.lysator.liu.se/~nisse/nettle">the
+Nettle cryptographic library</a> for the few cryptographic operations
+that are needed. Nettle, in turn, uses <a
+href="http://www.swox.se/gmp">GMP</a>, the GNU bignum library, for
+calculations.
+
+<h1>Source code</h1>
+
+The CVS repository is located at <a
+href="http://cvs.lysator.liu.se/viewcvs/viewcvs.cgi/lsh/src/spki/?cvsroot=lsh">cvs.lysator.liu.se</a>.
+Beware that the build system is not perfect, in particular it expects
+to find Nettle as "../nettle" from both source and build trees, the
+same way things are arranged if you check out all the complete lsh
+source code. The easiest way to try it out is to use
+
+<blockquote><tt>
+cvs -d :pserver:anonymous@cvs.lysator.liu.se:/cvsroot/lsh co lsh <br>
+cd lsh <br>
+./.bootstrap <br>
+./configure <br>
+make bootstrap <br>
+make <br>
+</tt></blockquote>
+
+The important parts here are the <tt>src/nettle</tt> and
+<tt>src/spki</tt> subdirectories.
+
+</body>
+</html>
+
+

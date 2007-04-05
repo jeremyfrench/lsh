@@ -1,0 +1,14 @@
+/*.d
+/Makefile
+/cdsa-reduce-test
+/date-test
+/lookup-acl-test
+/principal-test
+/read-acl-test
+/read-cert-test
+/tag-test
+/test.acl
+/test.canonical
+/test.in
+/test.out
+/testhome

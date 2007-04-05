@@ -1,0 +1,6 @@
+*.d
+Makefile
+spki-check-signature
+spki-delegate
+spki-make-signature
+spki-reduce

@@ -1,0 +1,64 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+top_srcdir = @top_srcdir@
+
+include ../config.make
+
+PRE_CPPFLAGS = -I.. -I$(top_srcdir)
+PRE_LDFLAGS = -L..
+
+PROGRAM_LIBS = -lspki -lnettle $(LIBS)
+
+TARGETS = spki-check-signature spki-make-signature \
+	spki-delegate spki-reduce
+
+SOURCES = spki-check-signature.c spki-delegate.c \
+	  spki-make-signature.c spki-reduce.c \
+	  misc.c sign.c 
+
+DISTFILES = $(SOURCES) misc.h sign.h Makefile.in
+
+all: $(TARGETS)
+
+.c.$(OBJEXT):
+	$(COMPILE) -c $< && $(DEP_PROCESS)
+
+spki-make-signature$(EXEEXT): spki-make-signature.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT)
+	$(LINK) spki-make-signature.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+
+spki-delegate$(EXEEXT): spki-delegate.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT)
+	$(LINK) spki-delegate.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+
+spki-check-signature$(EXEEXT): spki-check-signature.$(OBJEXT) misc.$(OBJEXT)
+	$(LINK) spki-check-signature.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+
+# FIXME: Should not depend on GMP
+spki-reduce$(EXEEXT): spki-reduce.$(OBJEXT) misc.$(OBJEXT)
+	$(LINK) spki-reduce.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+
+Makefile: $(srcdir)/Makefile.in ../config.status
+	cd .. && $(SHELL) ./config.status tools/$@
+
+install uninstall:
+	true
+
+distdir: $(DISTFILES)
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done
+
+clean:
+	-rm -f $(TARGETS) *.(OBJEXT)
+
+distclean: clean
+	-rm -f Makefile *.d
+
+tags:
+	etags --include $(top_srcdir) $(srcdir)/*.c $(srcdir)/*.h
+
+@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d)
