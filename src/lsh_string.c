@@ -489,7 +489,7 @@ lsh_string_write_random(struct lsh_string *s, uint32_t start,
   assert(!s->data[s->length]);
 }
 
-#if WITH_IPV6
+#if HAVE_INET_NTOP
 struct lsh_string *
 lsh_string_ntop(int family, uint32_t length, const void *addr)
 {
