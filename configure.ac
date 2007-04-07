@@ -543,7 +543,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strtol alarm)
 AC_CHECK_FUNCS(getrusage gettimeofday)
 AC_CHECK_FUNCS(getspnam)
-AC_CHECK_FUNCS(vsnprintf inet_aton)
+AC_CHECK_FUNCS(vsnprintf inet_aton inet_ntop)
 AC_CHECK_FUNCS(openpty)
 AC_CHECK_FUNCS(cfmakeraw)
 AC_CHECK_FUNCS(logwtmp login logout pututline pututxline updwtmp updwtmpx)
