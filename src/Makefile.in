@@ -31,7 +31,8 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 # lsh-decode-key lsh-export-key lsh-make-seed \
 # lshd lshd-userauth lshd-connection @KRB_PROGRAM@ @PAM_PROGRAM@
 
-TARGETS = lsh lsh-transport 
+TARGETS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
+	  lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 	packet_types.h
@@ -71,8 +72,21 @@ COMMON_SOURCES = atoms.c \
 
 INTERACT_SOURCES = interact.c \
 		   suspend.c \
-		   tty.c \
 		   unix_interact.c
+
+TTY_SOURCES = tty.c
+
+# FIXME pkcs5.c doesn't quite belong here, it's used only on the client side.
+CRYPTO_SOURCES = algorithms.c \
+		 crypto.c \
+		 dsa.c \
+		 lock_file.c \
+		 pkcs5.c \
+		 randomness.c \
+		 rsa.c \
+		 sexp.c \
+		 spki.c \
+		 unix_random.c \
 
 TRANSPORT_SOURCES = dh_exchange.c \
 		    encrypt.c \
@@ -82,62 +96,82 @@ TRANSPORT_SOURCES = dh_exchange.c \
 		    transport_read.c \
 		    transport_write.c
 
+CONNECTION_SOURCES = channel.c \
+		     channel_forward.c \
+		     channel_io.c \
+		     connection.c \
+		     combinators.c \
+		     command.c \
+		     exception.c \
+		     io_commands.c \
+		     queue.c \
+		     reaper.c \
+		     tcpforward.c
+
+SERVER_SOURCES = server.c \
+		 server_config.c \
+		 tokenize_config.c
+
 lsh_SOURCES = arglist.c \
-	      channel.c \
-	      channel_forward.c \
-	      channel_io.c \
 	      client.c \
 	      client_escape.c \
 	      client_pty.c \
 	      client_session.c \
 	      client_tcpforward.c \
-	      combinators.c \
-	      command.c \
-	      connection.c \
-	      exception.c \
 	      gateway.c \
 	      gateway_channel.c \
-	      io_commands.c \
 	      lsh.c \
-	      queue.c \
-	      reaper.c \
-	      socks.c \
-	      tcpforward.c
+	      socks.c
 
 # FIXME: tty.c, suspend.c should not be needed. Maybe split unix_interact.c and tty.c
 # differently.
-lsh_transport_SOURCES = algorithms.c \
-			client_keyexchange.c \
-			crypto.c \
-			dsa.c \
-			format.c \
-			lock_file.c \
-			lsh-transport.c \
-			lsh_string.c \
-			parse.c \
-			pkcs5.c \
-			randomness.c \
-			rsa.c \
-			sexp.c \
-			spki.c \
-			unix_random.c \
-			werror.c
+lsh_transport_SOURCES = client_keyexchange.c \
+			lsh-transport.c
 
-MINIMAL_OBJS = format.m$(OBJEXT) \
-	       lsh_string.m$(OBJEXT) \
-	       parse.m$(OBJEXT) \
-	       werror.m$(OBJEXT)
+lshd_SOURCES = daemon.c \
+	       lshd.c \
+	       server_keyexchange.c
+
+lshd_userauth_SOURCES = lshd-userauth.c
+
+lshd_connection_SOURCES = lshd-connection.c \
+			  pty-helper.c \
+			  server_pty.c \
+			  server_session.c \
+			  server_tcpforward.c \
+			  translate_signal.c \
+			  unix_process.c
+
+SPECIAL_SOURCES = format.c lsh_string.c parse.c werror.c
+SPECIAL_OBJS = $(SPECIAL_SOURCES:.c=.$(OBJEXT))
+MINIMAL_OBJS = $(SPECIAL_SOURCES:.c=.m$(OBJEXT))
 
 COMMON_OBJS = $(COMMON_SOURCES:.c=.$(OBJEXT))
 INTERACT_OBJS = $(INTERACT_SOURCES:.c=.$(OBJEXT))
+TTY_OBJS = $(TTY_SOURCES:.c=.$(OBJEXT))
+CRYPTO_OBJS = $(CRYPTO_SOURCES:.c=.$(OBJEXT))
 TRANSPORT_OBJS = $(TRANSPORT_SOURCES:.c=.$(OBJEXT))
-lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
-	   $(MINIMAL_OBJS) $(COMMON_OBJS) $(INTERACT_OBJS)
-lsh_transport_OBJS = $(lsh_transport_SOURCES:.c=.$(OBJEXT)) \
-		     $(COMMON_OBJS) $(INTERACT_OBJS) $(TRANSPORT_OBJS)
+CONNECTION_OBJS = $(CONNECTION_SOURCES:.c=.$(OBJEXT))
+SERVER_OBJS = $(SERVER_SOURCES:.c=.$(OBJEXT))
 
-SOURCES = $(COMMON_SOURCES) $(TRANSPORT_SOURCES) \
-	  $(lsh_SOURCES) $(lsh_transport_SOURCES)
+lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
+	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
+lsh_transport_OBJS = $(lsh_transport_SOURCES:.c=.$(OBJEXT)) \
+		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
+		     $(CRYPTO_OBJS) $(TRANSPORT_OBJS)
+lshd_OBJS = $(lshd_SOURCES:.c=.$(OBJEXT)) \
+	    $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) $(CRYPTO_OBJS) $(TRANSPORT_OBJS)
+
+lshd_userauth_OBJS = $(lshd_userauth_SOURCES:.c=.$(OBJEXT)) \
+		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) $(CRYPTO_OBJS)
+
+lshd_connection_OBJS = $(lshd_connection_SOURCES:.c=.$(OBJEXT)) \
+		       $(COMMON_OBJS) $(MINIMAL_OBJS) $(SERVER_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
+
+SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
+	  $(INTERACT_SOURCES) \
+	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
+	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES)
 
 .c.$(OBJEXT):
 	$(COMPILE) -c $< \
@@ -193,6 +227,15 @@ lsh$(EXEEXT): $(lsh_OBJS)
 lsh-transport$(EXEEXT): $(lsh_transport_OBJS)
 	$(LINK) $(lsh_transport_OBJS) -lspki -lnettle $(LIBS) -o $@
 
+lshd$(EXEEXT): $(lshd_OBJS)
+	$(LINK) $(lshd_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS)
+	$(LINK) $(lshd_userauth_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+lshd-connection$(EXEEXT): $(lshd_connection_OBJS)
+	$(LINK) $(lshd_connection_OBJS) -lspki -lnettle $(LIBS) -o $@
+
 # Standard targets
 Makefile: $(srcdir)/Makefile.in ../config.status
 	cd .. && $(SHELL) ./config.status src/Makefile
@@ -203,4 +246,4 @@ config.make: $(srcdir)/config.make.in ../config.status
 config.h: $(srcdir)/config.h.in ../config.status
 	cd .. && $(SHELL) ./config.status src/config.h
 
-@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d) $(MINIMAL_OBJS:.m$(OBJEXT)=.m$(OBJEXT).d )
+@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d) $(SPECIAL_SOURCES:.c=.m$(OBJEXT).d)
