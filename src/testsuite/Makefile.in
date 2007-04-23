@@ -1,0 +1,102 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+top_srcdir = @top_srcdir@
+
+include ../config.make
+
+PRE_CPPFLAGS = -I.. -I$(srcdir)/.. -I../argp_builddir -I../nettle_builddir -I../spki_builddir
+PRE_LDFLAGS = -L../argp_builddir -L../nettle_builddir -L../spki_builddir
+
+# Missing: parse-config-test.c
+TS_SOURCES = arcfour-test.c aes-test.c blowfish-test.c cast128-test.c \
+	     des-test.c \
+	     serpent-test.c twofish-test.c \
+             md5-test.c sha1-test.c rsa-test.c dsa-test.c \
+	     server-config-test.c spki-tag-test.c \
+             string-test.c sockaddr2info-test.c \
+	     utf8-test.c
+
+TS_SH = conv-1-test conv-2-test conv-3-test \
+	export-1-test keygen-1-test keygen-2-test \
+	write-key-1-test write-key-2-test seed-test \
+	lsh-1-test lsh-2-test lsh-3-test lsh-4-test \
+	lsh-5-test lsh-6-test lsh-7-test lsh-8-test \
+	lsh-9-test lsh-10-test lsh-11-test lsh-12-test \
+	lsh-encrypted-key-test lsh-decrypt-key-test \
+	lsh-cat-test lshg-1-test lshg-cat-test lshg-cat-2-test \
+	daemon-fd-test \
+	tcpip-local-test tcpip-local-in-use-test tcpip-remote-test \
+	socks5-test socks4-test \
+	lshg-tcpip-local-test \
+	lcp-test \
+	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test \
+	lshd-random-input-test
+
+TS_C = $(TS_SOURCES:.c=$(EXEEXT))
+TS_ALL = $(TS_C) $(TS_SH)
+
+TARGETS = $(TS_C) prgrp-timeout$(EXEEXT)
+
+TEST_OBJS = testutils.$(OBJEXT) \
+	    ../algorithms.$(OBJEXT) \
+	    ../alist.$(OBJEXT) \
+	    ../atoms.$(OBJEXT) \
+	    ../charset.$(OBJEXT) \
+	    ../crypto.$(OBJEXT) \
+	    ../dsa.$(OBJEXT) \
+	    ../list.$(OBJEXT) \
+	    ../format.$(OBJEXT) \
+	    ../gc.$(OBJEXT) \
+	    ../io.$(OBJEXT) \
+	    ../lock_file.$(OBJEXT) \
+	    ../lsh_string.$(OBJEXT) \
+	    ../parse.$(OBJEXT) \
+	    ../pkcs5.$(OBJEXT) \
+	    ../randomness.$(OBJEXT) \
+	    ../resource.$(OBJEXT) \
+	    ../rsa.$(OBJEXT) \
+	    ../server_config.$(OBJEXT) \
+	    ../sexp.$(OBJEXT) \
+	    ../spki.$(OBJEXT) \
+	    ../tokenize_config.$(OBJEXT) \
+	    ../unix_random.$(OBJEXT) \
+	    ../werror.$(OBJEXT) \
+	    ../xalloc.$(OBJEXT)
+
+TEST_LIBS = -lspki -lnettle -lgmp -loop
+
+# An 8 hour timeout, so that xenofarm clients won't get stuck forever.
+TIMEOUT_PROGRAM = ./prgrp-timeout$(EXEEXT) -n -t 28800
+
+all:
+	@echo make check to build testprograms.
+
+check: $(TARGETS)
+	LD_LIBRARY_PATH="`pwd`/../nettle_builddir/.lib" srcdir=`cd $(srcdir) && pwd` \
+		$(TIMEOUT_PROGRAM) $(srcdir)/run-tests $(TS_ALL)
+
+$(TS_C): testutils.$(OBJEXT)
+
+.c.$(OBJEXT):
+	$(COMPILE) -c $< \
+	&& $(DEP_PROCESS)
+
+.PHONY: test-rules
+test-rules:
+	(for f in $(TS_C) ; do \
+	  echo $$f'$$(EXEEXT): '$$f'.$$(OBJEXT) $$(TEST_OBJS)' ; \
+	  echo '	$$(LINK) '$$f'.$$(OBJEXT) $$(TEST_OBJS) $(TEST_LIBS) -o '$$f'$$(EXEEXT)' ; \
+	  echo ; \
+	done) > $(srcdir)/.test-rules.make
+
+include $(srcdir)/.test-rules.make
+
+
+# Standard targets
+Makefile: $(srcdir)/Makefile.in ../../config.status
+	cd ../.. && $(SHELL) ./config.status src/testsuite/Makefile
+
+@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d) $(SPECIAL_SOURCES:.c=.m$(OBJEXT).d)
