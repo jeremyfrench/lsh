@@ -27,11 +27,12 @@ PRE_CPPFLAGS = -I.
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-# Missing: lsh-keygen lsh-writekey lsh-decrypt-key \
+# Missing: 
 # lsh-decode-key lsh-export-key lsh-make-seed \
-# lshd lshd-userauth lshd-connection @KRB_PROGRAM@ @PAM_PROGRAM@
+# @KRB_PROGRAM@ @PAM_PROGRAM@
 
 TARGETS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
+	  lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
 	  lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
@@ -128,6 +129,12 @@ lsh_SOURCES = arglist.c \
 lsh_transport_SOURCES = client_keyexchange.c \
 			lsh-transport.c
 
+lsh_keygen_SOURCES = lsh-keygen.c
+
+lsh_writekey_SOURCES = lsh-writekey.c
+
+lsh_decrypt_key_SOURCES = lsh-decrypt-key.c
+
 lshd_SOURCES = daemon.c \
 	       lshd.c \
 	       server_keyexchange.c
@@ -156,9 +163,22 @@ SERVER_OBJS = $(SERVER_SOURCES:.c=.$(OBJEXT))
 
 lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
 	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
+
 lsh_transport_OBJS = $(lsh_transport_SOURCES:.c=.$(OBJEXT)) \
 		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
 		     $(CRYPTO_OBJS) $(TRANSPORT_OBJS)
+
+lsh_keygen_OBJS = $(lsh_keygen_SOURCES:.c=.$(OBJEXT)) \
+		  $(COMMON_OBJS) $(SPECIAL_OBJS) $(CRYPTO_OBJS)
+
+lsh_writekey_OBJS = $(lsh_writekey_SOURCES:.c=.$(OBJEXT)) \
+		    $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
+		    $(CRYPTO_OBJS)
+
+lsh_decrypt_key_OBJS = $(lsh_decrypt_key_SOURCES:.c=.$(OBJEXT)) \
+		       $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
+		       $(CRYPTO_OBJS)
+
 lshd_OBJS = $(lshd_SOURCES:.c=.$(OBJEXT)) \
 	    $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) $(CRYPTO_OBJS) $(TRANSPORT_OBJS)
 
@@ -226,6 +246,15 @@ lsh$(EXEEXT): $(lsh_OBJS)
 
 lsh-transport$(EXEEXT): $(lsh_transport_OBJS)
 	$(LINK) $(lsh_transport_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+lsh-keygen$(EXEEXT): $(lsh_keygen_OBJS)
+	$(LINK) $(lsh_keygen_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+lsh-writekey$(EXEEXT): $(lsh_writekey_OBJS)
+	$(LINK) $(lsh_writekey_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+lsh-decrypt-key$(EXEEXT): $(lsh_decrypt_key_OBJS)
+	$(LINK) $(lsh_decrypt_key_OBJS) -lspki -lnettle $(LIBS) -o $@
 
 lshd$(EXEEXT): $(lshd_OBJS)
 	$(LINK) $(lshd_OBJS) -lspki -lnettle $(LIBS) -o $@
