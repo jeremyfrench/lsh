@@ -27,12 +27,11 @@ PRE_CPPFLAGS = -I.
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-# Missing: 
-# lsh-decode-key lsh-export-key lsh-make-seed \
-# @KRB_PROGRAM@ @PAM_PROGRAM@
+# Missing: @KRB_PROGRAM@ @PAM_PROGRAM@
 
 TARGETS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
 	  lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
+	  lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT) \
 	  lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
@@ -135,6 +134,12 @@ lsh_writekey_SOURCES = lsh-writekey.c
 
 lsh_decrypt_key_SOURCES = lsh-decrypt-key.c
 
+lsh_decode_key_SOURCES = lsh-decode-key.c
+
+lsh_export_key_SOURCES = lsh-export-key.c
+
+lsh_make_seed_SOURCES = lsh-make-seed.c
+
 lshd_SOURCES = daemon.c \
 	       lshd.c \
 	       server_keyexchange.c
@@ -177,6 +182,18 @@ lsh_writekey_OBJS = $(lsh_writekey_SOURCES:.c=.$(OBJEXT)) \
 
 lsh_decrypt_key_OBJS = $(lsh_decrypt_key_SOURCES:.c=.$(OBJEXT)) \
 		       $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
+		       $(CRYPTO_OBJS)
+
+lsh_decode_key_OBJS = $(lsh_decode_key_SOURCES:.c=.$(OBJEXT)) \
+		      $(COMMON_OBJS) $(SPECIAL_OBJS) $(CRYPTO_OBJS)
+
+
+lsh_export_key_OBJS = $(lsh_export_key_SOURCES:.c=.$(OBJEXT)) \
+		      $(COMMON_OBJS) $(SPECIAL_OBJS) \
+		      $(CRYPTO_OBJS)
+
+lsh_make_seed_OBJS = $(lsh_make_seed_SOURCES:.c=.$(OBJEXT)) \
+		       $(COMMON_OBJS) $(SPECIAL_OBJS) \
 		       $(CRYPTO_OBJS)
 
 lshd_OBJS = $(lshd_SOURCES:.c=.$(OBJEXT)) \
@@ -255,6 +272,17 @@ lsh-writekey$(EXEEXT): $(lsh_writekey_OBJS)
 
 lsh-decrypt-key$(EXEEXT): $(lsh_decrypt_key_OBJS)
 	$(LINK) $(lsh_decrypt_key_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+# FIXME: Library dependencies
+lsh-decode-key$(EXEEXT): $(lsh_decode_key_OBJS)
+	$(LINK) $(lsh_decode_key_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+# FIXME: Library dependencies
+lsh-export-key$(EXEEXT): $(lsh_export_key_OBJS)
+	$(LINK) $(lsh_export_key_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+lsh-make-seed$(EXEEXT): $(lsh_make_seed_OBJS)
+	$(LINK) $(lsh_make_seed_OBJS) -lspki -lnettle $(LIBS) -o $@
 
 lshd$(EXEEXT): $(lshd_OBJS)
 	$(LINK) $(lshd_OBJS) -lspki -lnettle $(LIBS) -o $@
