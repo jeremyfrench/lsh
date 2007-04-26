@@ -257,6 +257,7 @@ end_options:
 		break;
 	      }
 	    case 'n':
+#ifndef LSH_MINIMAL
 	      {
 		MP_INT *n = va_arg(args, MP_INT*);
 		unsigned l;
@@ -284,6 +285,7 @@ end_options:
 
 		break;
 	      }
+#endif /* undef LSH_MINIMAL */
 	    default:
 	      fatal("ssh_vformat_length: bad format string");
 	      break;
@@ -528,6 +530,7 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 		  }
 		break;
 	      }
+#ifndef LSH_MINIMAL
 	    case 'n':
 	      {
 		MP_INT *n = va_arg(args, MP_INT *);
@@ -556,6 +559,7 @@ ssh_vformat_write(const char *f, struct lsh_string *buffer, uint32_t pos, va_lis
 
 		break;
 	      }
+#endif /* undef LSH_MINIMAL */
 	    default:
 	      fatal("ssh_vformat_write: bad format string");
 	      break;

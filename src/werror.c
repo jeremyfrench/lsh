@@ -301,6 +301,7 @@ werror_write(uint32_t length, const uint8_t *msg)
 static void
 werror_cstring(char *s) { werror_write(strlen(s), s); }
 
+#ifndef LSH_MINIMAL
 static void
 werror_bignum(mpz_t n, int base)
 {
@@ -309,6 +310,7 @@ werror_bignum(mpz_t n, int base)
 
   werror_cstring(s);
 }
+#endif /* undef LSH_MINIMAL */
 
 static void
 werror_decimal(uint32_t n)
@@ -480,9 +482,11 @@ werror_vformat(const char *f, va_list args)
 	    case 'c':
 	      (do_paranoia ? werror_paranoia_putc : werror_putc)(va_arg(args, int));
 	      break;
+#ifndef LSH_MINIMAL
 	    case 'n':
 	      werror_bignum(va_arg(args, MP_INT *), do_hex ? 16 : 10);
 	      break;
+#endif
 	    case 'a':
 	      {
 		int atom = va_arg(args, int);

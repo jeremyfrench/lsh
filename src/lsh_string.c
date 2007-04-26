@@ -85,6 +85,7 @@ lsh_string_write_string(struct lsh_string *s, uint32_t pos,
   lsh_string_write(s, pos, STRING_LD(data));
 }
 
+#ifndef LSH_MINIMAL
 struct lsh_string *
 lsh_string_random(struct randomness *r, uint32_t length)
 {
@@ -93,6 +94,7 @@ lsh_string_random(struct randomness *r, uint32_t length)
 
   return s;
 }
+#endif
 
 /* FIXME: Inefficient allocate-copy-free implementation */
 struct lsh_string *
@@ -355,29 +357,6 @@ lsh_string_write_uint32(struct lsh_string *s, uint32_t start, uint32_t n)
   assert(!s->data[s->length]);
 }
 
-void
-lsh_string_write_xor(struct lsh_string *s, uint32_t start, uint32_t length,
-		     const uint8_t *data)
-{
-  assert(length);
-  ASSERT_ROOM(s, start, length);
-
-  memxor(s->data + start, data, length);
-
-  assert(!s->data[s->length]);
-}
-
-void
-lsh_string_write_bignum(struct lsh_string *s, uint32_t start,
-			uint32_t length, const mpz_t n)
-{
-  ASSERT_ROOM(s, start, length);
-  nettle_mpz_get_str_256(length, s->data + start, n);
-
-  assert(!s->data[s->length]);  
-}
-     
-
 /* NOTE: Destructive, returns the string only for convenience. */
 struct lsh_string *
 lsh_string_trunc(struct lsh_string *s, uint32_t length)
@@ -388,6 +367,29 @@ lsh_string_trunc(struct lsh_string *s, uint32_t length)
   s->data[length] = 0;
 
   return s;
+}
+
+#ifndef LSH_MINIMAL
+void
+lsh_string_write_bignum(struct lsh_string *s, uint32_t start,
+			uint32_t length, const mpz_t n)
+{
+  ASSERT_ROOM(s, start, length);
+  nettle_mpz_get_str_256(length, s->data + start, n);
+
+  assert(!s->data[s->length]);  
+}
+     
+void
+lsh_string_write_xor(struct lsh_string *s, uint32_t start, uint32_t length,
+		     const uint8_t *data)
+{
+  assert(length);
+  ASSERT_ROOM(s, start, length);
+
+  memxor(s->data + start, data, length);
+
+  assert(!s->data[s->length]);
 }
 
 void
@@ -468,7 +470,6 @@ lsh_string_write_hash(struct lsh_string *s, uint32_t start,
   assert(!s->data[s->length]);
 }
 
-/* FIXME: Requires linking with nettle */
 void
 lsh_string_write_hmac(struct lsh_string *s, uint32_t start,
 		      const struct nettle_hash *type, uint32_t length,
@@ -487,43 +488,6 @@ lsh_string_write_random(struct lsh_string *s, uint32_t start,
   ASSERT_ROOM(s, start, length);
   RANDOM(r, length, s->data + start);
   assert(!s->data[s->length]);
-}
-
-#if HAVE_INET_NTOP
-struct lsh_string *
-lsh_string_ntop(int family, uint32_t length, const void *addr)
-{
-  struct lsh_string *s = lsh_string_alloc(length + 1);
-
-  /* Does inet_ntop always use lower case letters? If not, we
-   * should perhaps lowercase the result explicitly. */
-
-  if (!inet_ntop(family, addr,
-		 s->data, s->length))
-    fatal("inet_ntop failed for IPv6 address.\n");
-
-  lsh_string_trunc(s, strlen(s->data));
-
-  return s;
-}
-#endif
-
-/* FIXME: Always try to read as much as fits in the string? */
-int
-lsh_string_read(struct lsh_string *s, uint32_t start,
-		int fd, uint32_t length)
-{
-  int res;
-  assert(length);
-  ASSERT_ROOM(s, start, length);
-
-  do
-    res = read(fd, s->data + start, length);
-  while (res < 0 && errno == EINTR);
-  
-  assert(!s->data[s->length]);
-
-  return res;
 }
 
 /* Formatting s-expressions */
@@ -554,26 +518,6 @@ lsh_string_format_sexp(int transport, const char *format, ...)
   return s;
 }
 
-
-#if WITH_ZLIB
-int
-lsh_string_zlib(struct lsh_string *s, uint32_t start,
-		int (*f)(z_stream *z, int flush),
-		z_stream *z, int flush, uint32_t length)
-{
-  int res;
-  
-  ASSERT_ROOM(s, start, length);
-
-  z->next_out = s->data + start;
-  z->avail_out = length;
-  
-  res = f(z, flush);
-  
-  assert(!s->data[s->length]);
-  return res;    
-}
-#endif
 
 /* Base64 decodes a string in place */
 int
@@ -626,6 +570,63 @@ lsh_string_transport_iterator_first(struct lsh_string *s,
 				       s->length, s->data);
 }
 
+#if WITH_ZLIB
+int
+lsh_string_zlib(struct lsh_string *s, uint32_t start,
+		int (*f)(z_stream *z, int flush),
+		z_stream *z, int flush, uint32_t length)
+{
+  int res;
+  
+  ASSERT_ROOM(s, start, length);
+
+  z->next_out = s->data + start;
+  z->avail_out = length;
+  
+  res = f(z, flush);
+  
+  assert(!s->data[s->length]);
+  return res;    
+}
+#endif
+#endif /* undef LSH_MINIMAL */
+
+#if HAVE_INET_NTOP
+struct lsh_string *
+lsh_string_ntop(int family, uint32_t length, const void *addr)
+{
+  struct lsh_string *s = lsh_string_alloc(length + 1);
+
+  /* Does inet_ntop always use lower case letters? If not, we
+   * should perhaps lowercase the result explicitly. */
+
+  if (!inet_ntop(family, addr,
+		 s->data, s->length))
+    fatal("inet_ntop failed for IPv6 address.\n");
+
+  lsh_string_trunc(s, strlen(s->data));
+
+  return s;
+}
+#endif
+
+/* FIXME: Always try to read as much as fits in the string? */
+int
+lsh_string_read(struct lsh_string *s, uint32_t start,
+		int fd, uint32_t length)
+{
+  int res;
+  assert(length);
+  ASSERT_ROOM(s, start, length);
+
+  do
+    res = read(fd, s->data + start, length);
+  while (res < 0 && errno == EINTR);
+  
+  assert(!s->data[s->length]);
+
+  return res;
+}
 
 /* Allocation */
 #if DEBUG_ALLOC
