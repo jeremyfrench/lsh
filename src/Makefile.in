@@ -16,14 +16,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = $(INSTALL_PROGRAM) -s
 MKDIR_P = @MKDIR_P@
 
-SUBDIRS = # testsuite
+SUBDIRS = testsuite
 
 include config.make
 
 include .dist_classes
 include .dist_headers
 
-PRE_CPPFLAGS = -I.
+# The *_builddir directories, if they exist at all, are symlinks
+# created by the configure script.
+PRE_CPPFLAGS = -I. -Iargp_builddir -Inettle_builddir -Ispki_builddir
+PRE_LDFLAGS = -Largp_builddir -Lnettle_builddir -Lspki_builddir
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
