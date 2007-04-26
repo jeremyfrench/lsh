@@ -1,11 +1,11 @@
 *.bb
 *.bbg
+*.d
 *.da
 *.gcov
 *.pid
 .deps
 Makefile
-Makefile.in
 aes-test
 arcfour-test
 blowfish-test

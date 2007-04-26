@@ -4,10 +4,10 @@
 /*.d
 /*.da
 /*.gcov
+/*.mo
 /*.x
 /.deps
 /Makefile
-/Makefile.in
 /atoms_defines.h
 /atoms_gperf.c
 /atoms_table.c
