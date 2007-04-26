@@ -1,0 +1,138 @@
+# Top-level lsh Makefile
+
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+
+AUTOCONF = autoconf
+
+# The directories most targets should recurse into
+BUILD_SUBDIRS = @BUILD_SUBDIRS@ src
+
+SUBDIRS = argp nettle spki src
+
+all check:
+	set -e; for d in $(SUBDIRS); do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+
+install uninstall:
+	# Should recurse only into the lsh dir
+	true
+
+clean distclean mostlyclean maintainer-clean tags:
+	set -e; for d in $(SUBDIRS); do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+	$(MAKE) $@-here
+
+all-here check-here tags-here clean-here:
+	true
+
+distclean-here: clean
+	-rm -f config.log config.status Makefile
+
+maintainer-clean-here:
+	distclean-here
+
+bootstrap:
+	set -e; for d in spki src; do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+
+# Configure-related rules, mostly copied from the autoconf manual. No
+# $(srcdir) prefixes on the targets, though.
+
+configure: configure.ac aclocal.m4
+	cd $(srcdir) && $(AUTOCONF)
+
+# autoheader might not change config.h.in, so touch a stamp file.
+config.h.in: stamp-h.in
+stamp-h.in: configure.ac aclocal.m4
+	cd $(srcdir) && autoheader
+	echo timestamp > $(srcdir)/stamp-h.in
+
+config.status: configure
+	./config.status --recheck
+
+config.h: stamp-h
+stamp-h: config.h.in config.status
+	./config.status config.h
+	echo timestamp > stamp-h
+
+Makefile: Makefile.in config.status
+	./config.status $@
+
+# Distribution
+DISTFILES = .bootstrap aclocal.m4 configure.ac \
+	    configure stamp-h.in \
+	    config.guess config.sub install-sh texinfo.tex \
+	    Makefile.in \
+	    ANNOUNCE AUTHORS FAQ README COPYING \
+	    ChangeLog ChangeLog.1 ChangeLog.2 \
+	    NEWS FAQ distribution-key.gpg
+
+distdir = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+top_distdir = $(distdir)
+
+# We should handle both absolute and relative $destdir.
+
+distdir: $(DISTFILES)
+	rm -rf "$(distdir)"
+	mkdir "$(distdir)"
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done
+	set -e; for d in $(SUBDIRS); do \
+	  sd="$(distdir)/$$d" ; \
+	  mkdir "$$sd" && $(MAKE) -C $$d distdir="`cd $$sd && pwd`" $@ ; \
+	done
+
+dist: distdir
+	tar cf - $(distdir) | gzip -c >$(distdir).tar.gz	
+	rm -rf $(distdir)
+
+rm_distcheck = test ! -d distcheck-tmp \
+	    || { find distcheck-tmp -type d ! -perm -200 -exec chmod u+w {} ';' \
+                 && rm -fr distcheck-tmp; }; 
+
+distcheck: dist
+	$(rm_distcheck)
+	mkdir distcheck-tmp
+	gzip -d < $(distdir).tar.gz \
+	  | { cd distcheck-tmp && tar xf - && chmod -R a-w $(distdir) ; }
+	mkdir distcheck-tmp/build
+	mkdir distcheck-tmp/install
+	cd distcheck-tmp/build && ../$(distdir)/configure --prefix="`cd ../install && pwd`"
+	cd distcheck-tmp/build && $(MAKE)
+	cd distcheck-tmp/build && $(MAKE) check
+	cd distcheck-tmp/build && $(MAKE) install
+	cd distcheck-tmp/build && $(MAKE) uninstall
+	cd distcheck-tmp && find install -type f -print > leftover-install-files
+	@test `cat distcheck-tmp/leftover-install-files | wc -l` -le 1  \
+	  || { echo "ERROR: files left after uninstall:" ; \
+	       cat distcheck-tmp/leftover-install-files ; \
+	       exit 1; }
+	chmod -R a-w distcheck-tmp/install
+	mkdir distcheck-tmp/destdir
+	destdir="`cd distcheck-tmp/destdir && pwd`" \
+	  && cd distcheck-tmp/build \
+	  && $(MAKE) install DESTDIR="$$destdir" \
+	  && $(MAKE) uninstall DESTDIR="$$destdir"
+	cd distcheck-tmp && find destdir -type f -print > leftover-destdir-files
+	@test `cat distcheck-tmp/leftover-destdir-files | wc -l` -le 1  \
+	  || { echo "ERROR: destdir files left after uninstall:" ; \
+	       cat distcheck-tmp/leftover-destdir-files ; \
+	       exit 1; }	
+	cd distcheck-tmp/build && $(MAKE) dist
+	cd distcheck-tmp/build && rm *.gz
+	cd distcheck-tmp/build && $(MAKE) distclean
+	cd distcheck-tmp && find build -type f -print > leftover-build-files
+	@test `cat distcheck-tmp/leftover-build-files | wc -l` -eq 0  \
+	  || { echo "ERROR: files left in build directory after distclean:" ; \
+	       cat distcheck-tmp/leftover-build-files ; \
+	       exit 1; }
+	$(rm_distcheck)
