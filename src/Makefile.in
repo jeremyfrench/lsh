@@ -158,6 +158,14 @@ lshd_connection_SOURCES = lshd-connection.c \
 			  unix_process.c
 
 SPECIAL_SOURCES = format.c lsh_string.c parse.c werror.c
+
+SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
+	  $(INTERACT_SOURCES) \
+	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
+	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES)
+
+DISTFILES= $(SOURCES) $(HEADERS) $(dist_classes) $(dist_headers)
+
 SPECIAL_OBJS = $(SPECIAL_SOURCES:.c=.$(OBJEXT))
 MINIMAL_OBJS = $(SPECIAL_SOURCES:.c=.m$(OBJEXT))
 
@@ -207,11 +215,6 @@ lshd_userauth_OBJS = $(lshd_userauth_SOURCES:.c=.$(OBJEXT)) \
 
 lshd_connection_OBJS = $(lshd_connection_SOURCES:.c=.$(OBJEXT)) \
 		       $(COMMON_OBJS) $(MINIMAL_OBJS) $(SERVER_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
-
-SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
-	  $(INTERACT_SOURCES) \
-	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
-	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES)
 
 .c.$(OBJEXT):
 	$(COMPILE) -c $< \
@@ -295,6 +298,17 @@ lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS)
 
 lshd-connection$(EXEEXT): $(lshd_connection_OBJS)
 	$(LINK) $(lshd_connection_OBJS) -lspki -lnettle $(LIBS) -o $@
+
+distdir: $(DISTFILES)
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done ; \
+	set -e; for d in $(SUBDIRS); do \
+	  sd="$(distdir)/$$d" ; \
+	  mkdir "$$sd" && $(MAKE) -C $$d distdir="`cd $$sd && pwd`" $@ ; \
+	done
 
 # Standard targets
 Makefile: $(srcdir)/Makefile.in ../config.status
