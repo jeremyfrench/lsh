@@ -68,7 +68,7 @@
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-make-seed-" VERSION;
+= "lsh-make-seed (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

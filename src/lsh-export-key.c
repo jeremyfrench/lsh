@@ -236,7 +236,7 @@ sexp_to_ssh2_key(struct lsh_string *expr,
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-export-key-" VERSION;
+= "lsh-export-key (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

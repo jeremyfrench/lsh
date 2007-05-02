@@ -1114,7 +1114,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-transport (lsh-" VERSION "), secsh protocol version " CLIENT_PROTOCOL_VERSION;
+= "lsh-transport (" PACKAGE_STRING "), secsh protocol version " CLIENT_PROTOCOL_VERSION;
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

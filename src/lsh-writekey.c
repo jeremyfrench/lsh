@@ -58,7 +58,7 @@
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-writekey-" VERSION;
+= "lsh-writekey (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

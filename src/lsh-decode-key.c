@@ -29,7 +29,7 @@
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-decode-key-" VERSION;
+= "lsh-decode-key (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

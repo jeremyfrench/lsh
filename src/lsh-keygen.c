@@ -63,7 +63,7 @@
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-keygen-" VERSION;
+= "lsh-keygen (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
