@@ -56,7 +56,7 @@ function usage () {
 
 # FIXME: This isn't failsafe at all. We could do somthing simple, like
 # inserting a backslash before each character, or do something more
-# sophisticated whichat doesn't quote filenames that don't need it.
+# sophisticated which doesn't quote filenames that don't need it.
 
 function quote () {
   echo '"'"$1"'"'
@@ -126,14 +126,6 @@ function write_dst () {
   fi
 }
 
-function foo ()
-{
-  split_spec "$1"
-  echo user: `quote "$user"`
-  echo host: `quote "$host"`
-  echo file: `quote "$file"`
-}
-
 while [ $# -ge 1 ]; do
   case "$1" in
     --usage|--help)
@@ -198,7 +190,7 @@ else
   SHELL_PROGRAM=bash
 fi
 
-file=`basename "$src_file"`
+file="`basename "$src_file"`"
 
 if [ "x$dry_run" = xyes ] ; then
   read_src "$src_user" "$src_host" "$src_file" 
