@@ -1,3 +1,29 @@
+2007-05-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lcp: Support filenames containing white space. Fix from
+	Ludovic Courtès.	
+
+2007-04-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (distdir): New target.
+
+	* src/Makefile.in (distdir): New target.
+
+	* src/lsh_string.c: Use #ifndef LSH_MINIMAL around functions that
+	need crypto or bignums.
+	* src/format.c: Likewise, for "%n" formatting.
+	* src/werror.c: Likewise, for "%n" formatting.
+
+	* Makefile.in: New manually written Makefile.in.
+
+	* src/Makefile.in (PRE_CPPFLAGS, PRE_LDFLAGS): List argp_builddir,
+	nettle_builddir and spki_builddir.
+	(SUBDIRS): List testsuite.
+
+2007-04-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in: New manually written Makefile.in.
+
 2007-04-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh_string.c (lsh_string_ntop): Use HAVE_INET_NTOP, not
