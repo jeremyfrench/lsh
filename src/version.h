@@ -27,9 +27,6 @@
 #define CLIENT_PROTOCOL_VERSION "2.0"
 #define SERVER_PROTOCOL_VERSION "2.0"
 
-#define SOFTWARE_CLIENT_VERSION ("lsh-" VERSION)
-#define SOFTWARE_SERVER_VERSION ("lshd-" VERSION)
-
 #define SOFTWARE_SLOGAN "lsh - a GNU ssh"
 
 #define BUG_ADDRESS "<bug-lsh@gnu.org>"
