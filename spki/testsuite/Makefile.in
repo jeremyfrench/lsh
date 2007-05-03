@@ -7,8 +7,8 @@ top_srcdir = @top_srcdir@
 
 include ../config.make
 
-PRE_CPPFLAGS = -I.. -I$(top_srcdir)
-PRE_LDFLAGS = -L..
+PRE_CPPFLAGS = -I.. -I$(top_srcdir) -I../nettle_builddir
+PRE_LDFLAGS = -L.. -L../nettle_builddir
 
 TS_SOURCES = principal-test.c date-test.c tag-test.c read-acl-test.c \
 	     lookup-acl-test.c read-cert-test.c cdsa-reduce-test.c
@@ -22,7 +22,7 @@ TS_ALL = $(TS_PROGS) $(TS_SH)
 
 SOURCES = $(TS_SOURCES) testutils.c
 DISTFILES = $(SOURCES) testutils.h $(TS_SH) \
-	run-tests setup-env key-1 key-1.pub key-2 key-2.pub
+	    Makefile.in .test-rules.make run-tests setup-env key-1 key-1.pub key-2 key-2.pub
 
 CLEANFILES = test.in test.out test.acl test.canonical
 
