@@ -5,23 +5,7 @@ AC_CONFIG_SRCDIR([src/lsh.c])
 # Needed to stop autoconf from looking for files in parent directories.
 AC_CONFIG_AUX_DIR([.])
 	
-AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER(config.h)
-
-# We want an absolute path to the source-dir.
-case "$srcdir" in
-    /*)
-    ;;
-    *)
-	oldsrcdir="$srcdir"
-	srcdir="`cd \"$srcdir\";pwd`"
-	AC_MSG_WARN([ Converted $oldsrcdir to $srcdir,
-If this does not work, please use an absolute path to the configure script. ])
-    ;;
-esac
-
-# src/rsync relies on lsh's definitions of WRITE_UINT32 etc.
-# CPPFLAGS="$CPPFLAGS -I$srcdir/src -DLSH"
+AC_CONFIG_HEADER(src/config.h)
 
 # GNU libc defaults to supplying the ISO C library functions only. 
 # initgroups() and strsignal() are extensions; the _GNU_SOURCE define
@@ -58,10 +42,10 @@ AC_ARG_ENABLE(profiling,
   AC_HELP_STRING([--enable-profiling], [Instrument for gprof profiling]),,
   [enable_profiling=no])
 
-
+# FIXME: Not supported at the moment.
 AC_ARG_WITH(zlib,
   AC_HELP_STRING([--without-zlib], [Don't use zlib compression]),,
-  [with_zlib=yes])
+  [with_zlib=no])
 
 AC_ARG_WITH(tcpwrappers,
   AC_HELP_STRING([--with-tcpwrappers], 
@@ -157,6 +141,14 @@ AC_ARG_WITH(system-argp,
   AC_HELP_STRING([--with-system-argp], [Use the argp parser in libc]),,
   [with_system_argp=no])
 
+AC_ARG_WITH(system-nettle,
+  AC_HELP_STRING([--with-system-nettle], [Use the installed nettle library]),,
+  [with_system_nettle=no])
+
+AC_ARG_WITH(system-libspki,
+  AC_HELP_STRING([--with-system-libspki], [Use the installed spki library]),,
+  [with_system_libspki=no])
+
 # IPv6 support
 AC_ARG_ENABLE(ipv6,
   AC_HELP_STRING([--disable-ipv6], [Disable IPv6 support]),,
@@ -194,10 +186,23 @@ dnl echo RPATH_CANDIDATE_DIRS = $RPATH_CANDIDATE_DIRS
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-AM_PROG_CC_STDC
 
 if test "x$am_cv_prog_cc_stdc" = xno ; then
   AC_MSG_ERROR([the C compiler doesn't handle ANSI-C])
+fi
+
+LSH_DEPENDENCY_TRACKING
+
+if test x$enable_dependency_tracking = xyes ; then
+  # Since the makefiles use include to get the dependency files, we must
+  # make sure that the files exist.
+
+  AC_CONFIG_COMMANDS([dummy-dep-files],
+  [(cd "$srcdir/src" && find . -name '*.c' -print) \
+ | sed 's/\.c$//' \
+ | (cd src && while read f; do echo > "$f.o.d"; done \
+           && for f in format lsh_string parse werror; do echo > "$f.mo.d"; done)
+])
 fi
 
 # Use a particular scheme implementation?
@@ -584,19 +589,34 @@ if test x$with_system_argp = xyes ; then
   LSH_LIB_ARGP(,with_system_argp=no)
 fi
 
-# We don't use LIBOBJS for this, as the LIBOBJS are added to
-# liblsh.a, and we can't add an archive to an archive.
-LIBARGP=""
-DOTDOT_LIBARGP=""
+BUILD_SUBDIRS=''
+
 if test x$with_system_argp = xno ; then
-  # FIXME: Perhaps it's better to use an absolute path?
-  LIBARGP="argp/libargp.a"
-  # Needed for linking in src/testsuite.
-  DOTDOT_LIBARGP="../argp/libargp.a"
+  AC_CONFIG_COMMANDS([argp-symlinks],
+  [argp_srcdir="`cd "$srcdir/argp" && pwd`"
+  (cd src && rm -f argp argp_builddir && ln -s ../argp argp_builddir && ln -s $argp_srcdir argp)
+  ])
+  BUILD_SUBDIRS="$BUILD_SUBDIRS argp"
+fi
+   
+if test x$with_system_nettle = xno ; then
+  AC_CONFIG_COMMANDS([nettle-symlinks],
+  [nettle_srcdir="`cd "$srcdir/nettle" && pwd`"
+  for d in spki src ; do
+    (mkdir $d 2>/dev/null; cd $d && rm -f nettle nettle_builddir && ln -s ../nettle nettle_builddir && ln -s $nettle_srcdir nettle)
+  done])
+  BUILD_SUBDIRS="$BUILD_SUBDIRS nettle"
 fi
 
-AC_SUBST(LIBARGP)
-AC_SUBST(DOTDOT_LIBARGP)
+if test x$with_system_libspki = xno ; then
+  AC_CONFIG_COMMANDS([libspki-symlinks],
+  [spki_srcdir="`cd "$srcdir/spki" && pwd`"
+  (cd src && rm -f spki spki_builddir && ln -s ../spki spki_builddir && ln -s $spki_srcdir spki)
+  ])
+  BUILD_SUBDIRS="$BUILD_SUBDIRS spki"
+fi
+
+AC_SUBST(BUILD_SUBDIRS)
 
 # Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
@@ -1079,10 +1099,9 @@ if test x$enable_ipv6 = xyes ; then
   AC_DEFINE(WITH_IPV6)
 fi
 
-AC_CONFIG_SUBDIRS(src/argp)
-AC_CONFIG_SUBDIRS(src/nettle)
-AC_CONFIG_SUBDIRS(src/spki)
-AC_CONFIG_SUBDIRS(src/sftp)
+# Unconditionally configure nettle; otherwise make dist won't work
+AC_CONFIG_SUBDIRS(argp nettle spki)
+# AC_CONFIG_SUBDIRS(src/sftp)
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
@@ -1113,8 +1132,9 @@ AC_SUBST(BUILD_ARCH, `uname -p`)
 AC_SUBST(BUILD_OSSYS,`uname -s`)
 AC_SUBST(BUILD_OSREV,`uname -r`)
 
-AC_CONFIG_FILES([Makefile doc/Makefile misc/Makefile
-	  src/Makefile src/scm/Makefile
-	  src/testsuite/Makefile src/rsync/Makefile
-	  contrib/Makefile contrib/lsh.spec contrib/solpkg.sh])
+# Should also generate rsync/Makefile doc/Makefile misc/Makefile
+# src/scm/Makefile 
+# contrib/Makefile contrib/lsh.spec contrib/solpkg.sh
+
+AC_CONFIG_FILES([Makefile src/config.make src/Makefile src/testsuite/Makefile])
 AC_OUTPUT
