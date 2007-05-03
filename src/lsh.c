@@ -348,10 +348,14 @@ make_options(struct exception_handler *handler,
 {
   NEW(lsh_options, self);
   const char *home = getenv(ENV_HOME);
+#if 0
   struct randomness *r = make_user_random(home);
+#endif
   const char *transport_program;
-  
-  init_client_options(&self->super, r, handler, exit_code);
+
+  /* Randomness generator used only for fake X11 cookies, and X11
+     support is currently disabled */
+  init_client_options(&self->super, NULL, handler, exit_code);
 
   self->home = home;
 
@@ -372,7 +376,7 @@ make_options(struct exception_handler *handler,
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-" VERSION ", secsh protocol version " CLIENT_PROTOCOL_VERSION;
+= "lsh (" PACKAGE_STRING "), secsh protocol version " CLIENT_PROTOCOL_VERSION;
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
