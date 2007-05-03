@@ -20,8 +20,8 @@ SUBDIRS = testsuite
 
 include config.make
 
-include .dist_classes
-include .dist_headers
+include $(srcdir)/.dist_classes
+include $(srcdir)/.dist_headers
 
 # The *_builddir directories, if they exist at all, are symlinks
 # created by the configure script.
@@ -36,6 +36,8 @@ TARGETS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
 	  lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
 	  lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT) \
 	  lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
+
+SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp lshg
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 	packet_types.h
@@ -159,12 +161,18 @@ lshd_connection_SOURCES = lshd-connection.c \
 
 SPECIAL_SOURCES = format.c lsh_string.c parse.c werror.c
 
-SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
-	  $(INTERACT_SOURCES) \
+SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) \
+	  $(CRYPTO_SOURCES) $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
+	  $(SERVER_SOURCES) $(INTERACT_SOURCES) $(TTY_SOURCES) \
 	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
+	  $(lsh_keygen_SOURCES) $(lsh_writekey_SOURCES) $(lsh_decrypt_key_SOURCES) \
+	  $(lsh_decode_key_SOURCES) $(lsh_export_key_SOURCES) $(lsh_make_seed_SOURCES) \
 	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES)
 
-DISTFILES= $(SOURCES) $(HEADERS) $(dist_classes) $(dist_headers)
+DISTFILES = $(SOURCES) $(HEADERS) $(SCRIPTS) \
+	    .dist_headers $(dist_headers) .dist_classes $(dist_classes) \
+	    atoms.in environ.h.in process_atoms invert-defs $(generated_sources) \
+	    config.h.in Makefile.in config.make.in 
 
 SPECIAL_OBJS = $(SPECIAL_SOURCES:.c=.$(OBJEXT))
 MINIMAL_OBJS = $(SPECIAL_SOURCES:.c=.m$(OBJEXT))
@@ -244,23 +252,23 @@ environ.h: environ.h.in Makefile
 	test -s environ.hT && mv -f environ.hT environ.h
 
 atoms_defines.h: atoms.in process_atoms
-	$(srcdir)/process_atoms header <$< >$@T
-	test -s $@T && mv -f $@T $@
+	$(srcdir)/process_atoms header <$< >$(srcdir)/atoms_defines.hT
+	test -s $(srcdir)/atoms_defines.hT && mv -f $(srcdir)/atoms_defines.hT $(srcdir)/atoms_defines.h
 
 # With the next version of gperf, add -F ", 0"
 GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,6,10,21,$$ -N gperf_atom 
 atoms_gperf.c: atoms.in process_atoms
 	$(srcdir)/process_atoms gperf <$< \
-             | gperf $(GPERF_FLAGS) | sed 's/{""}/{"", 0}/g' >$@T 
-	test -s $@T && mv -f $@T $@
+             | gperf $(GPERF_FLAGS) | sed 's/{""}/{"", 0}/g' >$(srcdir)/atoms_gperf.cT 
+	test -s $(srcdir)/atoms_gperf.cT && mv -f $(srcdir)/atoms_gperf.cT $(srcdir)/atoms_gperf.c
 
 atoms_table.c: atoms.in process_atoms
-	$(srcdir)/process_atoms table <$< >$@T
-	test -s $@T && mv -f $@T $@
+	$(srcdir)/process_atoms table <$< >$(srcdir)/atoms_table.cT
+	test -s $(srcdir)/atoms_table.cT && mv -f $(srcdir)/atoms_table.cT $(srcdir)/atoms_table.c
 
 packet_types.h: ssh.h invert-defs
-	$(srcdir)/invert-defs <$< >$@T
-	test -s $@T && mv -f $@T $@
+	$(srcdir)/invert-defs <$< >$(srcdir)/packet_types.hT
+	test -s $(srcdir)/packet_types.hT && mv -f $(srcdir)/packet_types.hT $(srcdir)/packet_types.h
 
 
 # FIXME: Trim library lists
@@ -300,7 +308,10 @@ lshd-connection$(EXEEXT): $(lshd_connection_OBJS)
 	$(LINK) $(lshd_connection_OBJS) -lspki -lnettle $(LIBS) -o $@
 
 distdir: $(DISTFILES)
-	set -e; for f in $(DISTFILES) ; do \
+	set -e; \
+	mkdir "$(distdir)/scm" ; \
+	cp $(srcdir)/scm/*.scm "$(distdir)/scm" ; \
+	for f in $(DISTFILES) ; do \
 	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
 	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
 	  fi ; \
