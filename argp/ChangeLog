@@ -1,3 +1,10 @@
+2007-05-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Removed AC_PROG_CC_STDC. Reordered header and
+	library checks.
+
+	* config.make.in: Removed unused variables M4 and MAKEINFO.
+
 2007-04-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* Makefile.in, testsuite/Makefile.in: Fixed dist and distcheck
