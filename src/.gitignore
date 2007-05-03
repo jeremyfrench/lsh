@@ -8,6 +8,8 @@
 /*.x
 /.deps
 /Makefile
+/argp
+/argp_builddir
 /atoms_defines.h
 /atoms_gperf.c
 /atoms_table.c
@@ -39,6 +41,8 @@
 /lshd-connection
 /lshd-pty-helper
 /lshd-userauth
+/nettle
+/nettle_builddir
 /packet_types.h
 /pkcs5-test
 /prime_table
@@ -46,6 +50,8 @@
 /sexp-conv
 /sexp_table.h
 /sexp_test
+/spki
+/spki_builddir
 /srp-gen
 /stamp-h
 /stamp-h.in
