@@ -19,8 +19,8 @@ all check:
 	set -e; for d in $(SUBDIRS); do \
 	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
 
+# Should recurse only into the src dir
 install uninstall:
-	# Should recurse only into the lsh dir
 	true
 
 clean distclean mostlyclean maintainer-clean tags:
@@ -47,31 +47,20 @@ bootstrap:
 configure: configure.ac aclocal.m4
 	cd $(srcdir) && $(AUTOCONF)
 
-# autoheader might not change config.h.in, so touch a stamp file.
-config.h.in: stamp-h.in
-stamp-h.in: configure.ac aclocal.m4
-	cd $(srcdir) && autoheader
-	echo timestamp > $(srcdir)/stamp-h.in
-
 config.status: configure
 	./config.status --recheck
-
-config.h: stamp-h
-stamp-h: config.h.in config.status
-	./config.status config.h
-	echo timestamp > stamp-h
 
 Makefile: Makefile.in config.status
 	./config.status $@
 
 # Distribution
 DISTFILES = .bootstrap aclocal.m4 configure.ac \
-	    configure stamp-h.in \
+	    configure \
 	    config.guess config.sub install-sh texinfo.tex \
 	    Makefile.in \
 	    ANNOUNCE AUTHORS FAQ README COPYING \
 	    ChangeLog ChangeLog.1 ChangeLog.2 \
-	    NEWS FAQ distribution-key.gpg
+	    NEWS distribution-key.gpg
 
 distdir = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 top_distdir = $(distdir)
