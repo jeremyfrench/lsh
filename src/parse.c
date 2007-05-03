@@ -257,6 +257,7 @@ parse_boolean(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
+#ifndef LSH_MINIMAL
 int
 parse_bignum(struct simple_buffer *buffer, mpz_t result, uint32_t limit)
 {
@@ -276,6 +277,7 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result, uint32_t limit)
 
   return 1;
 }
+#endif /* undef LSH_MINIMAL */
 
 int
 parse_atom(struct simple_buffer *buffer, enum lsh_atom *result)
