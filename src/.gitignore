@@ -18,6 +18,7 @@
 /config.h
 /config.h.in
 /config.log
+/config.make
 /config.status
 /configure
 /configure.scan

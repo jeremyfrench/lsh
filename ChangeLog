@@ -1,4 +1,59 @@
+2007-05-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/argp, src/nettle, src/rsync, src/spki: Removed directories
+	and all files. They have moved one level up.
+
+	* src/symmetric: Deleted obsolete directory and files.
+
+	* src/testsuite/lshd-random-input-test: Use $LFIB_STREAM.
+
+	* src/testsuite/functions.sh (SEXP_CONV, LFIB_STREAM): Locate
+	programs by looking in nettle_builddir and in $PATH.
+
+	* src/testsuite/Makefile.am: Deleted file.
+
+	* src/testsuite/Makefile.in: Fixed distribution target, and
+	dependencies.
+
+	* src/testsuite/.test-rules.make: New file.
+
+	* src/version.h (SOFTWARE_CLIENT_VERSION)
+	(SOFTWARE_SERVER_VERSION): Deleted. 
+
+	* src/parse.c (parse_bignum): Compile only when LSH_MINIMAL is
+	undefined. 
+
+	* src/lshd.c: Use PACKAGE_STRING.
+	(add_key, read_host_key): Moved here...
+	* src/server.c: ... from here.	
+
+	* src/lsh.c (make_options): Disable use of randomness generator.
+	Breaks X11 forwarding (generation of fake X11 cookies).
+
+	* src/config.make.in: New file.
+
+	* src/Makefile.in: Fixes to distribution target.
+
+	* src/Makefile.am: Deleted file.
+
+	* configure.ac: Removed automake-related macros. New options
+	--with-system-nettle and --with-system-libspki.
+
+	* Makefile.in: Deleted config.h rules. Fixed DISTFILES.
+
+	* .bootstrap: Updated for directory reorganization.
+
 2007-05-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-decode-key.c (argp_program_version): Use PACKAGE_STRING.
+	* src/lsh-decrypt-key.c: Likewise.
+	* src/lsh-export-key.c: Likewise.
+	* src/lsh-keygen.c: Likewise.
+	* src/lsh-make-seed.c: Likewise.
+	* src/lsh-transport.c: Likewise.
+	* src/lsh-writekey.c: Likewise.
+	* src/lshd-connection.c: Likewise.
+	* src/lshd-userauth.c: Likewise.
 
 	* src/lcp: Support filenames containing white space. Fix from
 	Ludovic Courtès.	
