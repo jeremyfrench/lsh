@@ -68,11 +68,16 @@ TEST_OBJS = testutils.$(OBJEXT) \
 
 TEST_LIBS = -lspki -lnettle -lgmp -loop
 
+OTHER_SOURCES = testutils.c prgrp-timeout.c
+
+SOURCES = $(TS_SOURCES) $(OTHER_SOURCES)
+
 # An 8 hour timeout, so that xenofarm clients won't get stuck forever.
 TIMEOUT_PROGRAM = ./prgrp-timeout$(EXEEXT) -n -t 28800
 
-DISTFILES = $(TS_SOURCES) $(TS_SH) .test-rules.make \
-	    testutils.h functions.sh run-tests setup-env key-1.private key-2.private \
+DISTFILES = $(SOURCES) $(TS_SH) Makefile.in .test-rules.make \
+	    testutils.h \
+	    functions.sh run-tests setup-env key-1.private key-2.private \
 	    UTF-8-test.txt \
 	    socks4-config socks5-config
 
@@ -117,4 +122,4 @@ distdir: $(DISTFILES)
 Makefile: $(srcdir)/Makefile.in ../../config.status
 	cd ../.. && $(SHELL) ./config.status src/testsuite/Makefile
 
-@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d) $(SPECIAL_SOURCES:.c=.m$(OBJEXT).d)
+@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d)
