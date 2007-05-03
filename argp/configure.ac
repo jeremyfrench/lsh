@@ -19,17 +19,10 @@ AC_GNU_SOURCE
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-AC_PROG_CC_STDC
 
 if test "x$am_cv_prog_cc_stdc" = xno ; then
   AC_ERROR([the C compiler doesn't handle ANSI-C])
 fi
-
-# Checks for libraries.
-
-# Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS(limits.h malloc.h unistd.h sysexits.h stdarg.h)
 
 LSH_DEPENDENCY_TRACKING
 
@@ -43,6 +36,12 @@ if test x$enable_dependency_tracking = xyes ; then
  | sed 's/\.c$//' | (while read f; do echo > "$f.o.d"; done)
 ])
 fi
+
+# Checks for libraries.
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS(limits.h malloc.h unistd.h sysexits.h stdarg.h)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
