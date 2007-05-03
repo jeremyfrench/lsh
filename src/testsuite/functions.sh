@@ -6,7 +6,9 @@
 : ${LSH_YARROW_SEED_FILE:="$TEST_HOME/.lsh/yarrow-seed-file"}
 
 # For lsh-authorize
-: ${SEXP_CONV:="`pwd`/../nettle/tools/sexp-conv"}
+: ${LFIB_STREAM:="`PATH="../nettle_builddir/tools:$PATH" type -p nettle-lfib-stream`"}
+: ${SEXP_CONV:="`PATH="../nettle_builddir/tools:$PATH" type -p sexp-conv`"}
+
 : ${LSH_TRANSPORT:="`pwd`/../lsh-transport"}
 : ${LSHD_CONNECTION:="`pwd`/../lshd-connection"}
 : ${LSHD_PTY_HELPER:="`pwd`/../lshd-pty-helper"}
