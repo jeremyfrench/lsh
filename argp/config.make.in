@@ -24,8 +24,6 @@ AR = ar
 ARFLAGS = cru
 AUTOCONF = autoconf
 AUTOHEADER = autoheader
-M4 = @M4@
-MAKEINFO = makeinfo
 RANLIB = @RANLIB@
 
 prefix	=	@prefix@
