@@ -14,7 +14,8 @@ MKDIR_P = @MKDIR_P@
 
 SUBDIRS = tools testsuite
 
-PRE_CPPFLAGS = -I. -I$(srcdir)
+PRE_CPPFLAGS = -I. -I$(srcdir) -Inettle_builddir
+PRE_LDFLAGS = -Lnettle_builddir
 
 include config.make
 
@@ -28,7 +29,7 @@ HEADERS = certificate.h parse.h tag.h
 INSTALL_HEADERS = $(HEADERS) spki-types.h
 DISTFILES = $(HEADERS) $(SOURCES) .bootstrap aclocal.m4 configure.ac \
 	configure stamp-h.in \
-	config.guess install-sh \
+	config.guess config.sub install-sh \
 	config.h.in config.make.in Makefile.in \
 	README AUTHORS COPYING.LIB INSTALL NEWS TODO ChangeLog \
 	process-types spki-types.in spki-types.h spki-gperf.h spki-type-names.h
