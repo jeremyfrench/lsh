@@ -103,6 +103,8 @@ suspend_install_handler(void)
     werror("Failed to install SIGTSTP handler %e\n", errno);
 }
 
+/* FIXME: make tty_fd global, so that unix_interact.c need not depend
+   on this file. */
 void
 suspend_handle_tty(int fd)
 {
