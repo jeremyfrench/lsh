@@ -34,6 +34,7 @@
 #include <signal.h>
 
 #include <unistd.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 
 #if HAVE_SYS_RESOURCE_H
@@ -57,6 +58,7 @@
 #include "randomness.h"
 #include "server.h"
 #include "service.h"
+#include "spki.h"
 #include "ssh.h"
 #include "transport_forward.h"
 #include "version.h"
@@ -566,8 +568,79 @@ make_lshd_config(struct lshd_context *ctx)
   return self;
 }
 
+/* Read server's private key */
+
+static void
+add_key(struct alist *keys,
+        struct keypair *key)
+{
+  if (ALIST_GET(keys, key->type))
+    werror("Multiple host keys for algorithm %a\n", key->type);
+  ALIST_SET(keys, key->type, &key->super);
+}
+
+static int
+read_host_key(const char *file,
+              struct alist *signature_algorithms,
+              struct alist *keys)
+{
+  int fd = open(file, O_RDONLY);
+  struct lsh_string *contents;
+  struct signer *s;
+  struct verifier *v;
+  
+  int algorithm_name;
+
+  if (fd < 0)
+    {
+      werror("Failed to open `%z' for reading %e\n", file, errno);
+      return 0;
+    }
+  
+  contents = io_read_file_raw(fd, 5000);
+  if (!contents)
+    {
+      werror("Failed to read host key file `%z': %e\n", file, errno);
+      close(fd);
+      return 0;
+    }
+  close(fd);
+
+  s = spki_make_signer(signature_algorithms,
+		       contents,
+		       &algorithm_name);
+  lsh_string_free(contents);
+  
+  if (!s)
+    {
+      werror("Invalid host key\n");
+      return 0;
+    }
+
+  v = SIGNER_GET_VERIFIER(s);
+  assert(v);
+
+  switch (algorithm_name)
+    {
+    case ATOM_DSA:
+      add_key(keys,
+              make_keypair(ATOM_SSH_DSS, PUBLIC_KEY(v), s));
+      break;
+
+    case ATOM_RSA_PKCS1:
+    case ATOM_RSA_PKCS1_SHA1:
+      add_key(keys,
+              make_keypair(ATOM_SSH_RSA, PUBLIC_KEY(v), s));
+      break;
+
+    default:
+      werror("read_host_key: Unexpected algorithm %a.\n", algorithm_name);
+    }
+  return 1;
+}
+
 const char *argp_program_version
-= "lshd (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+= "lshd (" PACKAGE_STRING "), secsh protocol version " SERVER_PROTOCOL_VERSION;
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

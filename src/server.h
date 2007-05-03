@@ -24,18 +24,12 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
-#include "alist.h"
 #include "server_config.h"
 #include "werror.h"
 
 #define GABA_DECLARE
 #include "server.h.x"
 #undef GABA_DECLARE
-
-int
-read_host_key(const char *file,
-              struct alist *signature_algorithms,
-              struct alist *keys);
 
 const char *
 server_lookup_module(const char **modules,
