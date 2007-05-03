@@ -26,41 +26,39 @@ relative_symlink() {
     )
 }
 
+# Missing: sftp
 relative_symlink misc/run-tests \
-    src/testsuite src/argp/testsuite  \
-    src/nettle/testsuite src/nettle/examples \
-    src/sftp/testsuite src/spki/testsuite
+    argp/testsuite nettle/testsuite nettle/examples \
+    spki/testsuite src/testsuite
 
-relative_symlink acinclude.m4 \
-    src/argp src/spki src/sftp
+relative_symlink aclocal.m4 \
+    argp nettle spki
 
 relative_symlink misc/vsnprintf.c \
-    src/argp src/sftp
-
+    argp
+    
 relative_symlink misc/getopt.c \
-    src/nettle/examples src/nettle/tools src/spki/tools
+    nettle/examples nettle/tools spki/tools
 relative_symlink misc/getopt1.c \
-    src/nettle/examples src/nettle/tools src/spki/tools
+    nettle/examples nettle/tools spki/tools
 relative_symlink misc/getopt.h \
-    src/nettle/examples src/nettle/tools src/spki/tools
-    
-(cd src/nettle && ln -s ../../acinclude.m4 aclocal.m4 || true)
-    
-relative_symlink config.guess src/nettle src/spki
-relative_symlink config.sub src/nettle src/spki
+    nettle/examples nettle/tools spki/tools
 
-# relative_symlink install-sh src/nettle
-# relative_symlink texinfo.tex src/nettle
-# relative_symlink INSTALL src/nettle
-# relative_symlink COPYING src/nettle
+relative_symlink config.guess nettle spki
+relative_symlink config.sub nettle spki
+
+relative_symlink install-sh argp nettle spki
+relative_symlink texinfo.tex nettle
+
+relative_symlink INSTALL nettle spki
 
 if [ "$1" = "links" ] ; then
-    # Skip the time consuming autoconf and automake stuff
+    # Skip the time consuming autoconf stuff
     exit 0;
 fi
 
-for subdir in src/argp src/nettle src/sftp src/spki ; do
+for subdir in argp nettle spki ; do
     (cd $subdir && ./.bootstrap)
 done
 
-aclocal && autoconf && autoheader && automake -a
+autoconf && autoheader
