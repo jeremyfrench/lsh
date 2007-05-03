@@ -1,8 +1,6 @@
 *.tar.gz
 *.tar.gz.asc
 Makefile
-aclocal.m4
-autom4te.cache
 config.cache
 config.h
 config.h.in
@@ -12,4 +10,3 @@ configure
 old
 stamp-h
 stamp-h.in
-stamp-h1
