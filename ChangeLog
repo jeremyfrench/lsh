@@ -1,3 +1,7 @@
+2007-05-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* INSTALL, install-sh, texinfo.tex: New files, copied from automake-1.10.
+
 2007-05-03  Niels Möller  <nisse@lysator.liu.se>
 
 	* aclocal.m4: Renamed, used to be acinclude.m4.
