@@ -43,9 +43,10 @@ AC_ARG_ENABLE(profiling,
   [enable_profiling=no])
 
 # FIXME: Not supported at the moment.
-AC_ARG_WITH(zlib,
-  AC_HELP_STRING([--without-zlib], [Don't use zlib compression]),,
-  [with_zlib=no])
+with_zlib=no
+# AC_ARG_WITH(zlib,
+#   AC_HELP_STRING([--without-zlib], [Don't use zlib compression]),,
+#   [with_zlib=yes])
 
 AC_ARG_WITH(tcpwrappers,
   AC_HELP_STRING([--with-tcpwrappers], 
