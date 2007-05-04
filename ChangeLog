@@ -1,3 +1,10 @@
+2007-05-04  Niels Möller  <niels@s3.kth.se>
+
+	* configure.ac: Commented out --without-zlib handling. For now,
+	it's always disabled.
+
+	* Makefile.am: Deleted obsolete file.
+
 2007-05-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* INSTALL, install-sh, texinfo.tex: New files, copied from automake-1.10.
