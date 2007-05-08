@@ -208,7 +208,7 @@ clean-here:
 
 distclean-here: clean-here
 	-rm -f config.h stamp-h config.log config.status \
-	config.make Makefile
+	config.make Makefile *.d
 
 maintainer-clean-here:
 	-rm -f spki-types.h spki-gperf.h spki-type-names.h
