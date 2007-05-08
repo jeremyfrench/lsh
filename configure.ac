@@ -192,6 +192,12 @@ if test "x$am_cv_prog_cc_stdc" = xno ; then
   AC_MSG_ERROR([the C compiler doesn't handle ANSI-C])
 fi
 
+AC_PROG_INSTALL
+
+# According to the autoconf manual, needs install-sh from
+# autoconf-2.60 or automake-1.10 to avoid races.
+AC_PROG_MKDIR_P
+
 LSH_DEPENDENCY_TRACKING
 
 if test x$enable_dependency_tracking = xyes ; then
@@ -598,8 +604,9 @@ if test x$with_system_argp = xno ; then
   (cd src && rm -f argp argp_builddir && ln -s ../argp argp_builddir && ln -s $argp_srcdir argp)
   ])
   BUILD_SUBDIRS="$BUILD_SUBDIRS argp"
+  LIBS="$LIBS -largp"
 fi
-   
+
 if test x$with_system_nettle = xno ; then
   AC_CONFIG_COMMANDS([nettle-symlinks],
   [nettle_srcdir="`cd "$srcdir/nettle" && pwd`"
