@@ -32,10 +32,12 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 # Missing: @KRB_PROGRAM@ @PAM_PROGRAM@
 
-TARGETS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
-	  lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
-	  lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT) \
-	  lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
+BIN_PROGRAMS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
+	       lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
+	       lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT)
+SBIN_PROGRAMS = lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
+
+TARGETS = $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
 
 SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp lshg
 
@@ -307,6 +309,24 @@ lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS)
 lshd-connection$(EXEEXT): $(lshd_connection_OBJS)
 	$(LINK) $(lshd_connection_OBJS) -lspki -lnettle $(LIBS) -o $@
 
+# Currently, all scripts are in the source directory.
+install: $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
+	$(MKDIR_P) $(DESTDIR)$(bindir)
+	$(MKDIR_P) $(DESTDIR)$(sbindir)
+	for f in $(BIN_PROGRAMS) ; do \
+	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(bindir) ; \
+	done
+	for f in $(SCRIPTS) ; do \
+	  $(INSTALL_PROGRAM) $(srcdir)/$$f $(DESTDIR)$(bindir) ; \
+	done
+	for f in $(SBIN_PROGRAMS) ; do \
+	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(sbindir) ; \
+	done
+
+uninstall:
+	cd $(DESTDIR)$(bindir) && rm -f $(BIN_PROGRAMS) $(SCRIPTS)
+	cd $(DESTDIR)$(sbindir) && rm -f $(SBIN_PROGRAMS)
+
 distdir: $(DISTFILES)
 	set -e; \
 	mkdir "$(distdir)/scm" ; \
@@ -320,6 +340,18 @@ distdir: $(DISTFILES)
 	  sd="$(distdir)/$$d" ; \
 	  mkdir "$$sd" && $(MAKE) -C $$d distdir="`cd $$sd && pwd`" $@ ; \
 	done
+
+clean-here:
+	-rm -f $(TARGETS) *.$(OBJEXT) *.m$(OBJEXT)
+
+distclean-here: clean-here
+	-rm -f config.h stamp-h	config.make environ.h Makefile *.d
+
+maintainer-clean-here:
+	-rm -f $(generated_sources)
+
+tags-here:	
+	etags $(srcdir)/*.c $(srcdir)/*.h
 
 # Standard targets
 Makefile: $(srcdir)/Makefile.in ../config.status
