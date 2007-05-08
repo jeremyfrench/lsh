@@ -16,12 +16,12 @@ BUILD_SUBDIRS = @BUILD_SUBDIRS@ src
 SUBDIRS = argp nettle spki src
 
 all check:
-	set -e; for d in $(SUBDIRS); do \
+	set -e; for d in $(BUILD_SUBDIRS); do \
 	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
 
-# Should recurse only into the src dir
+# Don't install any of the bundled libraries.
 install uninstall:
-	true
+	cd src && $(MAKE) $@
 
 clean distclean mostlyclean maintainer-clean tags:
 	set -e; for d in $(SUBDIRS); do \
@@ -31,11 +31,10 @@ clean distclean mostlyclean maintainer-clean tags:
 all-here check-here tags-here clean-here:
 	true
 
-distclean-here: clean
+distclean-here: clean-here
 	-rm -f config.log config.status Makefile
 
-maintainer-clean-here:
-	distclean-here
+maintainer-clean-here: distclean-here
 
 bootstrap:
 	set -e; for d in spki src; do \
