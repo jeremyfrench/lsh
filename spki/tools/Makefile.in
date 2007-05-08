@@ -54,7 +54,7 @@ distdir: $(DISTFILES)
 	done
 
 clean:
-	-rm -f $(TARGETS) *.(OBJEXT)
+	-rm -f $(TARGETS) *.$(OBJEXT)
 
 distclean: clean
 	-rm -f Makefile *.d
