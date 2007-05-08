@@ -1,5 +1,11 @@
 2007-05-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* tools/Makefile.in (clean): Fixed deletion of object files.
+
+	* testsuite/Makefile.in (clean): Fixed deletion of object files.
+	Delete test files.
+	(TARGETS): Define properly.
+
 	* Makefile.in (distclean-here): Remove dependency files *.d.
 
 2007-05-03  Niels Möller  <nisse@lysator.liu.se>

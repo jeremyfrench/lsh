@@ -1,3 +1,20 @@
+2007-05-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (clean, distclean): New targets.
+
+	* src/Makefile.in: New install, uninstall and clean targets.
+
+	* src/config.make.in (sbindir): New variable.
+
+	* Makefile.in (all check): Recurse only into the directories
+	listed in BUILD_SUBDIRS.
+	(install uninstall): Recurse into src.
+	(distclean-here, maintainer-clean-here): Bugfix, depend on the
+	corresponding clean-here targets.
+
+	* configure.ac: Add -largp to LIBS, if we're using the bundled
+	argp library. Use AC_PROG_INSTALL and AC_PROG_MKDIR_P.	
+
 2007-05-04  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Commented out --without-zlib handling. For now,
