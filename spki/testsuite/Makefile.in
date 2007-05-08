@@ -20,6 +20,8 @@ TS_SH = check-signature-test make-signature-test \
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
+TARGETS = $(TS_PROGS)
+
 SOURCES = $(TS_SOURCES) testutils.c
 DISTFILES = $(SOURCES) testutils.h $(TS_SH) \
 	    Makefile.in .test-rules.make run-tests setup-env key-1 key-1.pub key-2 key-2.pub
@@ -69,7 +71,8 @@ distdir: $(DISTFILES)
 	cp "$(srcdir)/cdsa-cases/"*.in "$(srcdir)/cdsa-cases/"*.out "$(distdir)/cdsa-cases"
 
 clean:
-	-rm -f $(TARGETS) *.(OBJEXT)
+	-rm -f $(TARGETS) *.$(OBJEXT) \
+	test.in test.out test.acl test.canonical
 
 distclean: clean
 	rm -rf testhome
