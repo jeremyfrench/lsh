@@ -118,6 +118,15 @@ distdir: $(DISTFILES)
 	   $(srcdir)/rapid7-ssh-pdu/R7-0009.txt \
 	   $(srcdir)/rapid7-ssh-pdu/README "$(distdir)/rapid7-ssh-pdu"
 
+# FIXME: Move the test files into some tmp directory.
+clean:
+	-rm -f $(TARGETS) *.$(OBJEXT) $(CLEANFILES) \
+	foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 lcp-file-*.txt
+
+distclean: clean
+	-rm -f Makefile *.d
+	rm -rf temphome home *.pid yarrow-seed-file
+
 # Standard targets
 Makefile: $(srcdir)/Makefile.in ../../config.status
 	cd ../.. && $(SHELL) ./config.status src/testsuite/Makefile
