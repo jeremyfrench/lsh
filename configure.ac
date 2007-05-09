@@ -205,8 +205,8 @@ if test x$enable_dependency_tracking = xyes ; then
   # make sure that the files exist.
 
   AC_CONFIG_COMMANDS([dummy-dep-files],
-  [(cd "$srcdir/src" && find . -name '*.c' -print) \
- | sed 's/\.c$//' \
+  [(cd "$srcdir/src" && echo *.c testsuite/*.c) \
+ | tr ' ' '\n' |sed 's/\.c$//' \
  | (cd src && while read f; do echo > "$f.o.d"; done \
            && for f in format lsh_string parse werror; do echo > "$f.mo.d"; done)
 ])
@@ -597,14 +597,14 @@ if test x$with_system_argp = xyes ; then
 fi
 
 BUILD_SUBDIRS=''
-
+LIB_ARGP=''
 if test x$with_system_argp = xno ; then
   AC_CONFIG_COMMANDS([argp-symlinks],
   [argp_srcdir="`cd "$srcdir/argp" && pwd`"
   (cd src && rm -f argp argp_builddir && ln -s ../argp argp_builddir && ln -s $argp_srcdir argp)
   ])
   BUILD_SUBDIRS="$BUILD_SUBDIRS argp"
-  LIBS="$LIBS -largp"
+  LIB_ARGP="-largp"
 fi
 
 if test x$with_system_nettle = xno ; then
@@ -625,6 +625,7 @@ if test x$with_system_libspki = xno ; then
 fi
 
 AC_SUBST(BUILD_SUBDIRS)
+AC_SUBST(LIB_ARGP)
 
 # Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
@@ -1140,9 +1141,10 @@ AC_SUBST(BUILD_ARCH, `uname -p`)
 AC_SUBST(BUILD_OSSYS,`uname -s`)
 AC_SUBST(BUILD_OSREV,`uname -r`)
 
-# Should also generate rsync/Makefile doc/Makefile misc/Makefile
-# src/scm/Makefile 
-# contrib/Makefile contrib/lsh.spec contrib/solpkg.sh
+# Should also generate rsync/Makefile and sftp
 
-AC_CONFIG_FILES([Makefile src/config.make src/Makefile src/testsuite/Makefile])
+AC_CONFIG_FILES([Makefile src/config.make src/Makefile src/testsuite/Makefile
+		 doc/Makefile misc/Makefile
+		 contrib/Makefile contrib/lsh.spec contrib/solpkg.sh])
+
 AC_OUTPUT
