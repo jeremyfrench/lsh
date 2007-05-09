@@ -10,10 +10,10 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 
 AUTOCONF = autoconf
 
-# The directories most targets should recurse into
-BUILD_SUBDIRS = @BUILD_SUBDIRS@ src
+# The directories that make all should recurse into
+BUILD_SUBDIRS = @BUILD_SUBDIRS@ src doc
 
-SUBDIRS = argp nettle spki src
+SUBDIRS = argp nettle spki src doc contrib 
 
 all check:
 	set -e; for d in $(BUILD_SUBDIRS); do \
@@ -21,7 +21,8 @@ all check:
 
 # Don't install any of the bundled libraries.
 install uninstall:
-	cd src && $(MAKE) $@
+	set -e; for d in src doc; do
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
 
 clean distclean mostlyclean maintainer-clean tags:
 	set -e; for d in $(SUBDIRS); do \
