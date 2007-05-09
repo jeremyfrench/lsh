@@ -1,3 +1,15 @@
+2007-05-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.in (SUBDIRS): Added doc and contrib directories.
+	(BUILD_SUBDIRS): Added doc directory.
+	(install uninstall): Recurse also into doc directory.
+
+	* doc/Makefile.in: New file.
+	* doc/Makefile.am: Deleted.
+
+	* contrib/Makefile.in: New file.
+	* contrib/Makefile.am: Deleted.
+
 2007-05-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (clean, distclean): New targets.
