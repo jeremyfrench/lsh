@@ -21,15 +21,15 @@ MANPAGES = DSA.5 SHA.5 SPKI.5 secsh.5 \
 	   lsh-upgrade-key.1 lsh-writekey.1 ssh-conv.1 \
 	   lshd.8
 
-DISTFILES = $(MANPAGES) HACKING NOTES PORTS TASKLIST \
+DISTFILES = $(MANPAGES) $(TARGETS) \
+	HACKING NOTES PORTS TASKLIST \
 	configuration.txt gateway-mode.txt \
-	lsh.html
-	srp-spec.nroff srp-spec.txt fixff.sh fixff.pl
+	srp-spec.nroff fixff.sh fixff.pl
 
 .PHONY: all info clean distclean
 
 .SUFFIXES:
-.SUFFIXES: .texinfo .info .html .pdf .txt .1 .nroff
+.SUFFIXES: .texinfo .info .html .dvi .ps .pdf .txt .1 .nroff
 
 TARGETS = lsh.info lsh.html lsh.pdf srp-spec.txt 
 
@@ -57,7 +57,7 @@ PS2PDFFLAGS=-dCompatibilityLevel=1.3 -dMAxSubsetPct=100 -dSubsetFonts=true -dEmb
 	$(MAKE) `basename "$<" .texinfo`.ps
 	cd $(srcdir) && ps2pdf $(PS2PDFFLAGS) `basename "$<" .texinfo`.ps
 
-.nroff.txt
+.nroff.txt:
 	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
 	test -s $@T && mv -f $@T $@
 
