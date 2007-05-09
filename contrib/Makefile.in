@@ -1,0 +1,20 @@
+DISTFILES = Makefile.in README \
+	    lsh.spec.in lsh.spec lshd.rhlinux.init lshd.debian.init solpkg.sh.in
+
+default:
+	true
+
+clean distclean mostlyclean maintainer-clean tags:
+	true
+
+Makefile: Makefile.in ../config.status
+	(cd .. && ./config.status contrib/Makefile)
+
+distdir: $(DISTFILES)
+	rm -rf "$(distdir)"
+	mkdir "$(distdir)"
+	set -e; for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done
