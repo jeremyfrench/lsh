@@ -23,7 +23,8 @@ A table of contents:
 				Contributed by Thayne Harbaugh
 				<thayne@northsky.com> 
 
-	Makefile		Build and autoconf stuff.
+	lshd.debian.init	Debian style init script
+	
+	Makefile		Build and autoconf stuff
 	Makefile.in
-	Makefile.am
 
