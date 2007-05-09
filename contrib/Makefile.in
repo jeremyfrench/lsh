@@ -1,7 +1,7 @@
 DISTFILES = Makefile.in README \
 	    lsh.spec.in lsh.spec lshd.rhlinux.init lshd.debian.init solpkg.sh.in
 
-default:
+all:
 	true
 
 clean distclean mostlyclean maintainer-clean tags:
