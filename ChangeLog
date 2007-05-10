@@ -1,4 +1,26 @@
+2007-05-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.in (install uninstall): Typo fix.
+	(SUBDIRS): Added misc directory.
+
+	* doc/Makefile.in: Set VPATH. Fixed distclean rule. Fixed install
+	and distclean targets.
+
+	* contrib/Makefile.in: Set VPATH. Fixed distclean rule.
+	* misc/Makefile.in (tags): Likewise.
+
 2007-05-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/config.make.in (LIBS): Add @LIB_ARGP.
+
+	* misc/Makefile.in (DISTFILES): New file.
+
+	* configure.ac: Generate doc/Makefile misc/Makefile
+	contrib/Makefile contrib/lsh.spec and contrib/solpkg.sh.
+	(dummy-dep-files): Use only files in src and src/testsuite.
+	(LIB_ARGP): New variable. We can't put -largp i LIBS, since that
+	will cause the configure tests to fail.
+
 
 	* Makefile.in (SUBDIRS): Added doc and contrib directories.
 	(BUILD_SUBDIRS): Added doc directory.
