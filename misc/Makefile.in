@@ -1,11 +1,23 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
 DISTFILES = Makefile.in libgcc2.c-patch tsocks-forcelocal.patch \
 	    run-tests
 
 all:
 	true
 
-clean distclean mostlyclean maintainer-clean tags:
-	true
+clean:
+
+distclean:
+	-rm -f Makefile
+
+mostlyclean maintainer-clean: clean
+
+tags:
+
 
 Makefile: Makefile.in ../config.status
 	(cd .. && ./config.status contrib/Makefile)
