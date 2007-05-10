@@ -1,11 +1,22 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
 DISTFILES = Makefile.in README \
 	    lsh.spec.in lsh.spec lshd.rhlinux.init lshd.debian.init solpkg.sh.in
 
 all:
 	true
 
-clean distclean mostlyclean maintainer-clean tags:
-	true
+clean:
+
+distclean:
+	-rm -f Makefile lsh.spec solpkg.sh
+
+mostlyclean maintainer-clean: clean
+
+tags:
 
 Makefile: Makefile.in ../config.status
 	(cd .. && ./config.status contrib/Makefile)
