@@ -1,3 +1,8 @@
+2007-05-14  Niels Möller  <niels@s3.kth.se>
+
+	* testsuite/Makefile.in (TEST_OBJS): Link with -lhogweed.
+	* tools/Makefile.in (PROGRAM_LIBS): Likewise.
+
 2007-05-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* tools/Makefile.in (clean): Fixed deletion of object files.
