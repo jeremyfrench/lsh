@@ -45,6 +45,7 @@ TEST_OBJS = testutils.$(OBJEXT) \
 	    ../alist.$(OBJEXT) \
 	    ../atoms.$(OBJEXT) \
 	    ../charset.$(OBJEXT) \
+	    ../compress.$(OBJEXT) \
 	    ../crypto.$(OBJEXT) \
 	    ../dsa.$(OBJEXT) \
 	    ../list.$(OBJEXT) \
@@ -66,7 +67,7 @@ TEST_OBJS = testutils.$(OBJEXT) \
 	    ../werror.$(OBJEXT) \
 	    ../xalloc.$(OBJEXT)
 
-TEST_LIBS = -lspki -lnettle -lgmp -loop
+TEST_LIBS = -lspki -lhogweed -lnettle -lgmp -loop
 
 OTHER_SOURCES = testutils.c prgrp-timeout.c
 
