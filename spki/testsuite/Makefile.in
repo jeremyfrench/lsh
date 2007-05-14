@@ -38,7 +38,7 @@ all: $(TS_PROGS)
 # to use suffix rules to build the test executables. So we use an
 # explicit rule for each and every executable.
 
-TEST_OBJS = testutils.$(OBJEXT) ../libspki.a -lnettle $(LIBS)
+TEST_OBJS = testutils.$(OBJEXT) ../libspki.a -lhogweed -lnettle $(LIBS)
 TEST_DEPS = testutils.$(OBJEXT) ../libspki.a
 
 .PHONY: test-rules
