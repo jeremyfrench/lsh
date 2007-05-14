@@ -84,7 +84,9 @@ INTERACT_SOURCES = interact.c \
 TTY_SOURCES = tty.c
 
 # FIXME pkcs5.c doesn't quite belong here, it's used only on the client side.
+# And compress.c shold be needed only when we have zlib support.
 CRYPTO_SOURCES = algorithms.c \
+		 compress.c \
 		 crypto.c \
 		 dsa.c \
 		 lock_file.c \
@@ -273,41 +275,39 @@ packet_types.h: ssh.h invert-defs
 	test -s $(srcdir)/packet_types.hT && mv -f $(srcdir)/packet_types.hT $(srcdir)/packet_types.h
 
 
-# FIXME: Trim library lists
+# FIXME: Trim library dependencies, not all should depend on hogweed and gmp
 lsh$(EXEEXT): $(lsh_OBJS)
 	$(LINK) $(lsh_OBJS) $(LIBS) -o $@
 
 lsh-transport$(EXEEXT): $(lsh_transport_OBJS)
-	$(LINK) $(lsh_transport_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_transport_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lsh-keygen$(EXEEXT): $(lsh_keygen_OBJS)
-	$(LINK) $(lsh_keygen_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_keygen_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lsh-writekey$(EXEEXT): $(lsh_writekey_OBJS)
-	$(LINK) $(lsh_writekey_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_writekey_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lsh-decrypt-key$(EXEEXT): $(lsh_decrypt_key_OBJS)
-	$(LINK) $(lsh_decrypt_key_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_decrypt_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-# FIXME: Library dependencies
 lsh-decode-key$(EXEEXT): $(lsh_decode_key_OBJS)
-	$(LINK) $(lsh_decode_key_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_decode_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-# FIXME: Library dependencies
 lsh-export-key$(EXEEXT): $(lsh_export_key_OBJS)
-	$(LINK) $(lsh_export_key_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_export_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lsh-make-seed$(EXEEXT): $(lsh_make_seed_OBJS)
-	$(LINK) $(lsh_make_seed_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lsh_make_seed_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lshd$(EXEEXT): $(lshd_OBJS)
-	$(LINK) $(lshd_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lshd_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS)
-	$(LINK) $(lshd_userauth_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lshd_userauth_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lshd-connection$(EXEEXT): $(lshd_connection_OBJS)
-	$(LINK) $(lshd_connection_OBJS) -lspki -lnettle $(LIBS) -o $@
+	$(LINK) $(lshd_connection_OBJS) $(LIBS) -o $@
 
 # Currently, all scripts are in the source directory.
 install: $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
