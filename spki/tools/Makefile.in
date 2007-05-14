@@ -10,7 +10,7 @@ include ../config.make
 PRE_CPPFLAGS = -I.. -I$(top_srcdir) -I../nettle_builddir
 PRE_LDFLAGS = -L.. -L../nettle_builddir
 
-PROGRAM_LIBS = -lspki -lnettle $(LIBS)
+PROGRAM_LIBS = -lspki -lhogweed -lnettle $(LIBS)
 
 TARGETS = spki-check-signature spki-make-signature \
 	spki-delegate spki-reduce
