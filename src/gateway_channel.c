@@ -154,6 +154,8 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 	}
       break;
     case CHANNEL_EVENT_DENY:
+      /* This method is invoked on the target channel. We need to tear
+	 down the originating channel. */
       if (self->chain->connection->super.alive)
 	{
 	  /* FIXME: We should propagate the error code and message
@@ -162,8 +164,9 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 			       format_open_failure(self->chain->remote_channel_number,
 						   SSH_OPEN_RESOURCE_SHORTAGE,
 						   "Refused by server", ""));
-	  ssh_connection_dealloc_channel(self->super.connection,
-					 self->super.local_channel_number);
+
+	  ssh_connection_dealloc_channel(self->chain->connection,
+					 self->chain->local_channel_number);
 	}
       break;
     case CHANNEL_EVENT_EOF:
