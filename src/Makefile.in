@@ -35,7 +35,8 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 BIN_PROGRAMS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
 	       lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
 	       lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT)
-SBIN_PROGRAMS = lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT)
+SBIN_PROGRAMS = lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT) \
+		lshd-pty-helper$(EXEEXT)
 
 TARGETS = $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
 
@@ -121,6 +122,8 @@ SERVER_SOURCES = server.c \
 		 server_config.c \
 		 tokenize_config.c
 
+pty_helper_SOURCES = pty-helper.c
+
 lsh_SOURCES = arglist.c \
 	      client.c \
 	      client_escape.c \
@@ -156,12 +159,13 @@ lshd_SOURCES = daemon.c \
 lshd_userauth_SOURCES = lshd-userauth.c
 
 lshd_connection_SOURCES = lshd-connection.c \
-			  pty-helper.c \
 			  server_pty.c \
 			  server_session.c \
 			  server_tcpforward.c \
 			  translate_signal.c \
 			  unix_process.c
+
+lshd_pty_helper_SOURCES = lshd-pty-helper.c
 
 SPECIAL_SOURCES = format.c lsh_string.c parse.c werror.c
 
@@ -171,7 +175,8 @@ SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) \
 	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
 	  $(lsh_keygen_SOURCES) $(lsh_writekey_SOURCES) $(lsh_decrypt_key_SOURCES) \
 	  $(lsh_decode_key_SOURCES) $(lsh_export_key_SOURCES) $(lsh_make_seed_SOURCES) \
-	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES)
+	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES) \
+	  $(pty_helper_SOURCES) $(lshd_pty_helper_SOURCES)
 
 DISTFILES = $(SOURCES) $(HEADERS) $(SCRIPTS) \
 	    .dist_headers $(dist_headers) .dist_classes $(dist_classes) \
@@ -188,6 +193,7 @@ CRYPTO_OBJS = $(CRYPTO_SOURCES:.c=.$(OBJEXT))
 TRANSPORT_OBJS = $(TRANSPORT_SOURCES:.c=.$(OBJEXT))
 CONNECTION_OBJS = $(CONNECTION_SOURCES:.c=.$(OBJEXT))
 SERVER_OBJS = $(SERVER_SOURCES:.c=.$(OBJEXT))
+pty_helper_OBJS = $(pty_helper_SOURCES:.c=.$(OBJEXT))
 
 lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
 	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
@@ -226,7 +232,10 @@ lshd_userauth_OBJS = $(lshd_userauth_SOURCES:.c=.$(OBJEXT)) \
 		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) $(CRYPTO_OBJS)
 
 lshd_connection_OBJS = $(lshd_connection_SOURCES:.c=.$(OBJEXT)) \
-		       $(COMMON_OBJS) $(MINIMAL_OBJS) $(SERVER_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
+		       $(COMMON_OBJS) $(MINIMAL_OBJS) $(SERVER_OBJS) $(TTY_OBJS) \
+		       $(pty_helper_OBJS) $(CONNECTION_OBJS)
+
+lshd_pty_helper_OBJS = $(lshd_pty_helper_SOURCES:.c=.$(OBJEXT)) $(pty_helper_OBJS)
 
 .c.$(OBJEXT):
 	$(COMPILE) -c $< \
@@ -308,6 +317,9 @@ lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS)
 
 lshd-connection$(EXEEXT): $(lshd_connection_OBJS)
 	$(LINK) $(lshd_connection_OBJS) $(LIBS) -o $@
+
+lshd-pty-helper$(EXEEXT): $(lshd_pty_helper_OBJS)
+	$(LINK) $(lshd_pty_helper_OBJS) $(LIBS) -o $@
 
 # Currently, all scripts are in the source directory.
 install: $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
