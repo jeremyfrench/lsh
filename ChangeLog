@@ -1,3 +1,11 @@
+2007-05-29  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/gateway_channel.c (do_gateway_channel_event): When opening
+	the target channel fails, we should deallocate the originating
+	channel, not the target one.
+
+	* src/Makefile.in (lshd-pty-helper): Added rules for this program.
+
 2007-05-14  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/Makefile.in (TEST_OBJS): Added compress.o.
