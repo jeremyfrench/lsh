@@ -1,3 +1,9 @@
+2007-09-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_x11.c (do_client_channel_x11_receive): Fixed parser
+	bookkeeping. Was broken before the 1.5.4 release. Problem reported
+	by Kaloian Doganov.
+
 2006-05-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version number to 2.0.4.
