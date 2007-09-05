@@ -211,6 +211,7 @@ do_client_channel_x11_receive(struct ssh_channel *s,
         /* The small initial window size should ensure that all the
 	   data fits. */
 	lsh_string_write_string(self->buffer, self->i, data);
+	self->i += lsh_string_length(data);
         lsh_string_free(data);
 
 	buffer = lsh_string_data(self->buffer);
