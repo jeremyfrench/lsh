@@ -1,3 +1,7 @@
+News for the 2.0.4 release
+
+	Fixed x11 forwarding bug in the lsh client.
+
 News for the 2.0.3 release
 
 	At startup, lshd now tries to close any spurious open file
