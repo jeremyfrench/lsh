@@ -207,3 +207,20 @@ DEFINE_COMMAND2(connection_remember)
 
   COMMAND_RETURN(c, resource);
 }
+
+/* Iterates over the active channels. */
+void
+ssh_connection_foreach(struct ssh_connection *connection,
+		       void (*f)(struct ssh_channel *))
+{
+  unsigned i;
+  for (i = 0; i < connection->used_channels; i++)
+    {
+      if (connection->alloc_state[i] == CHANNEL_ALLOC_ACTIVE)
+	{
+	  struct ssh_channel *channel = connection->channels[i];
+	  assert(channel);
+	  f(channel);
+	}
+    }
+}

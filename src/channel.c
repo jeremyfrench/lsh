@@ -226,6 +226,8 @@ format_channel_eof(uint32_t number)
 		    SSH_MSG_CHANNEL_EOF, number);
 }
 
+/* Channel objects */
+
 static void
 channel_finished(struct ssh_channel *channel)
 {
@@ -250,31 +252,6 @@ channel_finished(struct ssh_channel *channel)
       if (connection->pending_close && !connection->channel_count)
 	KILL_RESOURCE(&connection->super);
     }
-}
-
-
-/* Channel objects */
-
-/* In principle, this belongs to connection.h, but it needs the
-   definition of ssh_channel. */
-void
-ssh_connection_register_channel(struct ssh_connection *connection,
-				uint32_t local_channel_number,
-				struct ssh_channel *channel)
-{
-  assert(local_channel_number < connection->used_channels);
-  assert(connection->alloc_state[local_channel_number] != CHANNEL_FREE);
-  assert(!connection->channels[local_channel_number]);
-
-  trace("ssh_connection_register_channel: local_channel_number: %i.\n",
-	local_channel_number);
-
-  connection->channels[local_channel_number] = channel;
-  channel->connection = connection;
-  /* FIXME: If we keep the local_channel_number attribute,
-     we can probably use it in more places. */
-  channel->local_channel_number = local_channel_number;
-  remember_resource(connection->resources, &channel->super);  
 }
 
 static void
@@ -1658,4 +1635,52 @@ channel_send_global_request(struct ssh_connection *connection, int type,
       object_queue_add_tail(&connection->pending_global_requests,
 			    &ctx->super);
     }      
+}
+
+/* In principle, these belong to connection.c, but it needs the
+   definition of ssh_channel. */
+void
+ssh_connection_register_channel(struct ssh_connection *connection,
+				uint32_t local_channel_number,
+				struct ssh_channel *channel)
+{
+  assert(local_channel_number < connection->used_channels);
+  assert(connection->alloc_state[local_channel_number] != CHANNEL_FREE);
+  assert(!connection->channels[local_channel_number]);
+
+  trace("ssh_connection_register_channel: local_channel_number: %i.\n",
+	local_channel_number);
+
+  connection->channels[local_channel_number] = channel;
+  channel->connection = connection;
+  /* FIXME: If we keep the local_channel_number attribute,
+     we can probably use it in more places. */
+  channel->local_channel_number = local_channel_number;
+  remember_resource(connection->resources, &channel->super);  
+}
+
+/* FIXME: Does not affect channels that are in the opening
+   handshake. */
+static void
+send_stop(struct ssh_channel *channel)
+{
+  CHANNEL_EVENT(channel, CHANNEL_EVENT_STOP);
+}
+
+void
+ssh_connection_stop_channels(struct ssh_connection *connection)
+{
+  ssh_connection_foreach(connection, send_stop);
+}
+
+static void
+send_start(struct ssh_channel *channel)
+{
+  CHANNEL_EVENT(channel, CHANNEL_EVENT_START);
+}
+
+void
+ssh_connection_start_channels(struct ssh_connection *connection)
+{
+  ssh_connection_foreach(connection, send_start);
 }

@@ -149,6 +149,18 @@ ssh_connection_lookup_channel(struct ssh_connection *connection,
 			      uint32_t local_channel_number,
 			      enum channel_alloc_state flag);
 
+void
+ssh_connection_foreach(struct ssh_connection *connection,
+		       void (*f)(struct ssh_channel *));
+
+void
+ssh_connection_stop_channels(struct ssh_connection *connection);
+
+void
+ssh_connection_start_channels(struct ssh_connection *connection);
+
+
+
 /* SSH_MSG_GLOBAL_REQUEST */
 
 /* GABA:
