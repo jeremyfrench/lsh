@@ -1153,6 +1153,7 @@ main_options[] =
     "The default is ~/.lsh/captured_keys.", 0 },
   
   /* User authentication */
+  { "user", 'l', "NAME", 0, "Login as this user.", 0 },
   { "userauth", OPT_USERAUTH, NULL, 0,
     "Enable user authentication (default).", 0},
   { "no-userauth", OPT_USERAUTH | ARG_NOT, NULL, 0,
@@ -1249,6 +1250,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_CAPTURE:
       self->capture_file = arg;
+      break;
+
+    case 'l':
+      self->user = arg;
       break;
 
     case OPT_USERAUTH:
