@@ -1,3 +1,40 @@
+2007-09-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/atoms.c (get_atom_length, get_atom_name): Changed argument
+	type to enum lsh_atom.
+
+	* src/werror.c (get_error_stream): New function.
+
+	* src/lsh.c (class lsh_connection): New attributes write_active
+	and write_blocked.
+	(CONNECTION_WRITE_BUFFER_STOP_THRESHOLD)
+	(CONNECTION_WRITE_BUFFER_START_THRESHOLD): New constants.
+	(stop_gateway, start_gateway): New functions.
+	(oop_write_service): New function.
+	(service_start_write, service_stop_write): New functions.
+	(write_packet): Use service_start_write and service_stop_write.
+	(oop_read_service): Added assert.
+	(make_lsh_connection): Initialize write_active and write_blocked.
+	(DEFINE_COMMAND2): Call gateway_start_read.
+	(fork_lsh_transport): If messages are logged to file, dup that fd
+	to stderr for the child process.
+
+	* src/lsh-transport.c (main_argp_parser): Added -l/--user option.
+
+	* src/gateway.c (gateway_start_read): Made non-static. Check
+	read_active.
+	(gateway_stop_read): New function.
+	(make_gateway_connection): Initialize read_active. Don't call
+	gateway_start_read. 
+
+	* src/gateway.h (class gateway_connection): New attribute
+	read_active. 
+
+	* src/channel.c (send_stop, ssh_connection_stop_channels)
+	(send_start, ssh_connection_start_channels): New functions.
+	* src/connection.c (ssh_connection_foreach): New function.
+	* src/connection.h: Prototypes for the above.
+
 2007-05-29  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_gateway_channel_event): When opening
@@ -3049,7 +3086,7 @@
 
 	* configure.ac: Bumped version number to 2.0.4.
 
-	* Released lsh-2.0.2.
+	* Released lsh-2.0.3.
 	
 2006-05-08  Niels Möller  <nisse@lysator.liu.se>
 
