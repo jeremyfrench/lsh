@@ -48,6 +48,7 @@ make_gateway_address(const char *local_user, const char *remote_user,
        (shared object ssh_connection)
        (fd . int)
        (reader object service_read_state)
+       (read_active . int)
        (writer object ssh_write_state)))
 */
 
@@ -57,12 +58,17 @@ int
 gateway_write_data(struct gateway_connection *connection,
 		   uint32_t length, const uint8_t *data);
 
+void
+gateway_start_read(struct gateway_connection *self);
+
+void
+gateway_stop_read(struct gateway_connection *self);
+
 struct gateway_connection *
 make_gateway_connection(struct ssh_connection *shared, int fd);
 
 int
 gateway_packet_handler(struct gateway_connection *connection,
 		       uint32_t length, const uint8_t *packet);
-
 
 #endif /* LSH_GATEWAY_H_INCLUDED */

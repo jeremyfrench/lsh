@@ -57,7 +57,7 @@
  * Most packets are passed through, with only the channel numbers
  * translated. CHANNEL_CLOSE messages are an exception, since the
  * close handshake is associated with deallocation of channel
- * numbersw, which are independent for the gateway connection and with
+ * numbers, which are independent for the gateway connection and with
  * the shared connection to the remote ssh server.
  *
  * Currently, all gatewayed channels must be opened by the gateway
@@ -216,9 +216,6 @@ gateway_disconnect(struct gateway_connection *connection,
   KILL_RESOURCE(&connection->super.super);
 }
 
-static void
-gateway_start_read(struct gateway_connection *self);
-
 static void *
 oop_read_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state)
 {
@@ -278,13 +275,29 @@ oop_read_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state
     }
 }
 
-static void
+void
 gateway_start_read(struct gateway_connection *self)
 {
-  global_oop_source->on_fd(global_oop_source,
-			   self->fd, OOP_READ,
-			   oop_read_gateway, self);  
+  if (!self->read_active)
+    {
+      self->read_active = 1;
+      global_oop_source->on_fd(global_oop_source,
+			       self->fd, OOP_READ,
+			       oop_read_gateway, self);
+    }
 }
+
+void
+gateway_stop_read(struct gateway_connection *self)
+{
+  if (self->read_active)
+    {
+      self->read_active = 0;
+      global_oop_source->cancel_fd(global_oop_source,
+				   self->fd, OOP_READ);
+    }
+}
+
 
 static void
 do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
@@ -314,7 +327,7 @@ make_gateway_connection(struct ssh_connection *shared, int fd)
 
   self->fd = fd;
   self->reader = make_service_read_state();
-  gateway_start_read(self);
+  self->read_active = 0;
 
   self->writer = make_ssh_write_state(GATEWAY_WRITE_BUFFER_SIZE);
   
