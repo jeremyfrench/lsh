@@ -76,6 +76,24 @@ struct command_2 gateway_accept;
 #include "lsh.c.x"
 
 #define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
+#define CONNECTION_WRITE_BUFFER_STOP_THRESHOLD \
+  (CONNECTION_WRITE_BUFFER_SIZE - 10*SSH_MAX_PACKET)
+#define CONNECTION_WRITE_BUFFER_START_THRESHOLD \
+  (10 * SSH_MAX_PACKET)
+
+/* Flow control status: If the buffer for writing to the transport
+   layer gets full, we stop reading on all channels, and we stop
+   reading from all gateways. FIXME: Missing pieces:
+
+   1. If a channel is somewhere in the opening handshake when we
+      detect the transport buffer getting full, it is not signalled to
+      stop, and might start generating data when the handshake is
+      finished.
+   
+   2. If a buffer for writing to one of our gateway clients gets full,
+      we need to stop reading from our transport (or disconnect that
+      gateway client).
+*/
 
 /* GABA:
    (class
@@ -85,6 +103,11 @@ struct command_2 gateway_accept;
        (transport . int)
        (reader object service_read_state)
        (writer object ssh_write_state)
+       ; Means we have an active write call back.
+       (write_active . int)
+       ; Means the write buffer has been filled up, and
+       ; channels are stopped.
+       (write_blocked . int)
 
        ; Keeps track of all gatewayed connections
        (gateway_connections object resource_list)))
@@ -107,6 +130,88 @@ kill_lsh_connection(struct resource *s)
       
       io_close_fd(self->transport);
       self->transport = -1;
+    }
+}
+
+static void
+service_start_write(struct lsh_connection *self);
+
+static void
+service_stop_write(struct lsh_connection *self);
+
+static void
+stop_gateway(struct resource *r)
+{
+  CAST(gateway_connection, gateway, r);
+  gateway_stop_read(gateway);  
+}
+
+static void
+start_gateway(struct resource *r)
+{
+  CAST(gateway_connection, gateway, r);
+  gateway_start_read(gateway);  
+}
+
+static void *
+oop_write_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
+{
+  CAST(lsh_connection, self, (struct lsh_object *) state);
+  uint32_t done;
+
+  assert(event == OOP_WRITE);
+  assert(fd == self->transport);
+    
+  done = ssh_write_flush(self->writer, self->transport, 0);
+  if (done > 0)
+    {
+      if (!self->writer->length)
+	service_stop_write(self);
+
+      if (self->write_blocked &&
+	  self->writer->length <= CONNECTION_WRITE_BUFFER_START_THRESHOLD)
+	{
+	  trace("oop_write_service: restarting channels.\n");
+	  ssh_connection_start_channels(&self->super);
+	  resource_list_foreach(self->gateway_connections, start_gateway);
+	}
+    }
+  else if (errno != EWOULDBLOCK)
+    {
+      werror("oop_write_service: Write failed: %e\n", errno);
+      exit(EXIT_FAILURE);
+    }
+  return OOP_CONTINUE;
+}
+
+static void
+service_start_write(struct lsh_connection *self)
+{
+  if (!self->write_active)
+    {
+      trace("service_start_write: register callback.\n");
+      self->write_active = 1;
+      global_oop_source->on_fd(global_oop_source, self->transport, OOP_WRITE,
+			       oop_write_service, self);
+    }
+  if (!self->write_blocked
+      && self->writer->length >= CONNECTION_WRITE_BUFFER_STOP_THRESHOLD)
+    {
+      trace("service_start_write: stopping channels.\n");
+      self->write_blocked = 1;
+      ssh_connection_stop_channels(&self->super);
+      resource_list_foreach(self->gateway_connections, stop_gateway);
+    }
+}
+
+static void
+service_stop_write(struct lsh_connection *self)
+{
+  if (self->write_active)
+    {
+      trace("service_stop_write: cancel callback.\n");
+      self->write_active = 0;
+      global_oop_source->cancel_fd(global_oop_source, self->transport, OOP_WRITE);
     }
 }
 
@@ -139,8 +244,11 @@ write_packet(struct lsh_connection *connection,
 	  /* FIXME: Install a write callback. If our write buffer is
 	     getting full, generate CHANNEL_EVENT_STOP events on all
 	     channels, and stop reading on all gateways. */
-	  werror("write_packet: ssh_write_data couldn't write all data.\n");
+	  
+	  service_start_write(connection);
 	}
+      else
+	service_stop_write(connection);
     }
   else
     {
@@ -172,6 +280,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
   CAST(lsh_connection, self, (struct lsh_object *) state);
 
   assert(event == OOP_READ);
+  assert(fd == self->transport);
 
   for (;;)
     {
@@ -261,6 +370,8 @@ make_lsh_connection(int fd)
   service_start_read(self);
 
   self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE);
+  self->write_active = self->write_blocked = 0;
+
   self->gateway_connections = make_resource_list();
   remember_resource(self->super.resources,
 		    &self->gateway_connections->super);
@@ -292,6 +403,9 @@ DEFINE_COMMAND2(gateway_accept)
       KILL_RESOURCE (&gateway->super.super);
       return;
     }
+
+  if (!connection->write_blocked)
+    gateway_start_read(gateway);
 
   /* Kill gateway connection if the main connection goes down. */
   remember_resource(connection->gateway_connections, &gateway->super.super);
@@ -775,11 +889,18 @@ fork_lsh_transport(struct lsh_options *options)
     {
       /* Child process */
       char **argv;
-      
+      int error_fd = get_error_stream();
+
       close(pipe[0]);
       dup2(pipe[1], STDIN_FILENO);
       dup2(pipe[1], STDOUT_FILENO);
       close(pipe[1]);
+
+      if (error_fd >= 0 && error_fd != STDERR_FILENO)
+	dup2(error_fd, STDERR_FILENO);
+
+      arglist_push(&options->transport_args, "-l");
+      arglist_push(&options->transport_args, options->super.user);
 
       if (options->super.super.verbose > 0)
 	arglist_push(&options->transport_args, "-v");
