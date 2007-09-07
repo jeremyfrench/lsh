@@ -31,9 +31,8 @@
 /* Atoms are represented as plain (small) ints. Zero is used for all
  * atoms we don't know about. */
 
-/* FIXME: Take an enum lsh_atom as input? */
-uint32_t get_atom_length(int atom);
-const uint8_t *get_atom_name(int atom);
+uint32_t get_atom_length(enum lsh_atom atom);
+const uint8_t *get_atom_name(enum lsh_atom atom);
 enum lsh_atom lookup_atom(uint32_t length, const uint8_t *name);
 
 /* FIXME: Often used with constants, then we could replace the

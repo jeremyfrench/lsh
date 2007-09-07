@@ -45,11 +45,17 @@ struct atom_rassoc atom_table[] =
 #include "atoms_table.c"
 ;
 
-uint32_t get_atom_length(int atom)
-{ return atom_table[atom].length; }
+uint32_t
+get_atom_length(enum lsh_atom atom)
+{
+  return atom_table[atom].length;
+}
 
-const uint8_t *get_atom_name(int atom)
-{ return atom_table[atom].name; }
+const uint8_t *
+get_atom_name(enum lsh_atom atom)
+{
+  return atom_table[atom].name;
+}
   
 enum lsh_atom
 lookup_atom(uint32_t length, const uint8_t *name)
