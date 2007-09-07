@@ -192,6 +192,13 @@ set_error_stream(int fd)
   error_write = write_raw;
 }
 
+/* Returns -1 if messages are not written to any file. */
+int
+get_error_stream(void)
+{
+  return error_fd;
+}
+
 void
 set_error_raw(int raw)
 {

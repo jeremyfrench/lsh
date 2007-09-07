@@ -67,6 +67,7 @@ int werror_quiet_p(void);
 int werror_init(struct werror_config *config);
 
 void set_error_stream(int fd);
+int get_error_stream(void);
 void set_error_ignore(void);
 void set_error_raw(int raw);
 
