@@ -340,7 +340,7 @@ open_file(const struct lsh_string *file)
   return fd;
 }
 
-static struct lsh_string *
+static const struct lsh_string *
 process_private(const struct lsh_string *key,
                 struct lsh_writekey_options *options)
 {
@@ -393,7 +393,7 @@ process_private(const struct lsh_string *key,
 				key);
     }
   else
-    return lsh_string_dup(key);
+    return key;
 }
 
 static struct lsh_string *
@@ -420,60 +420,57 @@ main(int argc, char **argv)
   struct lsh_writekey_options *options = make_lsh_writekey_options();
   int private_fd;
   int public_fd;
-  struct lsh_string *input;
-  struct lsh_string *output;
-
+  const struct lsh_string *private;
+  const struct lsh_string *public;
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   if (! (check_file(options->private_file)
 	 && check_file(options->public_file)))
     return EXIT_FAILURE;
   
-  input = io_read_file_raw(STDIN_FILENO, 2000);
+  private = io_read_file_raw(STDIN_FILENO, 2000);
 
-  if (!input)
+  if (!private)
     {
       werror("Failed to read key from stdin %e\n", errno);
       return EXIT_FAILURE;
     }
   
-  if (!lsh_string_length(input))
+  if (!lsh_string_length(private))
     {
       werror("Empty key on input, giving up.\n");
       return EXIT_FAILURE;
     }
-  
-  output = process_private(input, options);
-  if (!output)
+
+  public = process_public(private, options);
+  if (!public)
     return EXIT_FAILURE;
-
-  private_fd = open_file(options->private_file);
-  if (private_fd < 0)
-    return EXIT_FAILURE;
-
-  if (!write_raw(private_fd, STRING_LD(output)))
-    {
-      werror("Writing private key failed: %e\n", errno);
-      return EXIT_FAILURE;
-    }
-  lsh_string_free(output);
-
-  output = process_public(input, options);
-  lsh_string_free(input);
   
-  if (!output)
+  private = process_private(private, options);
+  if (!private)
     return EXIT_FAILURE;
 
   public_fd = open_file(options->public_file);
   if (public_fd < 0)
     return EXIT_FAILURE;
   
-  if (!write_raw(public_fd, STRING_LD(output)))
+  if (!write_raw(public_fd, STRING_LD(public)))
     {
       werror("Writing public key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
-  lsh_string_free(output);
+  lsh_string_free(public);
+  
+  private_fd = open_file(options->private_file);
+  if (private_fd < 0)
+    return EXIT_FAILURE;
+
+  if (!write_raw(private_fd, STRING_LD(private)))
+    {
+      werror("Writing private key failed: %e\n", errno);
+      return EXIT_FAILURE;
+    }
+  lsh_string_free(private);
   
   gc_final();
   
