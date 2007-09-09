@@ -346,6 +346,7 @@ make_spki_context(struct alist *algorithms)
  *
  */
 
+/* Frees input string. */
 struct lsh_string *
 spki_pkcs5_encrypt(struct randomness *r,
                    struct lsh_string *label,
@@ -382,7 +383,7 @@ spki_pkcs5_encrypt(struct randomness *r,
   encrypted = crypt_string_pad(MAKE_ENCRYPT(crypto,
 					    lsh_string_data(key),
 					    iv ? lsh_string_data(iv) : NULL),
-			       data, 0);
+			       data);
   
   /* FIXME: Handle iv == NULL. */
   value = lsh_string_format_sexp(0, "(password-encrypted%s(Xpkcs5v2%0s"
@@ -554,8 +555,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	  = crypt_string_unpad(MAKE_DECRYPT(crypto,
 					    lsh_string_data(key),
 					    iv ? lsh_string_data(iv) : NULL),
-			       data, 0);
-	lsh_string_free(data);
+			       data);
 	lsh_string_free(expr);
 	lsh_string_free(iv);
 	lsh_string_free(password);
