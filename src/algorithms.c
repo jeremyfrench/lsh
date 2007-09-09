@@ -291,8 +291,6 @@ lookup_hostkey_algorithm(const char *name)
     return 0;
 }
 
-/* FIXME: Perhaps this function belongs in list.c or alist.c? */
-
 /* Return an int list containing the elements of CANDIDATES
  * that have associated values in ALGORITHMS.
  * Returns a non-empty list or NULL. */

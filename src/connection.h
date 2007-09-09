@@ -34,7 +34,6 @@ struct channel_open_info;
 
 enum channel_alloc_state {
   /* Values used in the alloc_flags array. */
-  /* FIXME: Move the SENT_CLOSED and RECEIVED_CLOSED flags here? */
   CHANNEL_FREE = 0,
   CHANNEL_ALLOC_SENT_OPEN,
   CHANNEL_ALLOC_RECEIVED_OPEN,
