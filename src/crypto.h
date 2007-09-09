@@ -350,18 +350,15 @@ mac_string(struct mac_algorithm *a,
 
 struct lsh_string *
 crypt_string(struct crypto_instance *c,
-	     const struct lsh_string *in,
-	     int free);
+	     const struct lsh_string *in);
 
 struct lsh_string *
 crypt_string_pad(struct crypto_instance *c,
-		 const struct lsh_string *in,
-		 int free);
+		 const struct lsh_string *in);
 
 struct lsh_string *
 crypt_string_unpad(struct crypto_instance *c,
-		   const struct lsh_string *in,
-		   int free);
+		   const struct lsh_string *in);
 
 struct compress_instance;
 

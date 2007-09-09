@@ -722,10 +722,10 @@ mac_string(struct mac_algorithm *a,
   return out;
 }
 
+/* Consumes input string. */
 struct lsh_string *
 crypt_string(struct crypto_instance *c,
-	     const struct lsh_string *in,
-	     int free)
+	     const struct lsh_string *in)
 {
   struct lsh_string *out;
   uint32_t length = lsh_string_length(in);
@@ -733,16 +733,10 @@ crypt_string(struct crypto_instance *c,
   if (c->block_size && (length % c->block_size))
     return NULL;
 
-  if (free)
-    {
-      /* Do the encryption in place. The type cast is permissible
-       * because we're conceptually freeing the string and reusing the
-       * storage. */
-      out = (struct lsh_string *) in;
-    }
-  else
-    /* Allocate fresh storage. */
-    out = lsh_string_alloc(length);
+  /* Do the encryption in place. The type cast is permissible
+   * because we're conceptually freeing the string and reusing the
+   * storage. */
+  out = (struct lsh_string *) in;
   
   CRYPT(c, length, out, 0, in, 0);
   
@@ -750,11 +744,11 @@ crypt_string(struct crypto_instance *c,
 }
 
 /* FIXME: Missing testcases. This is only used for encrypted private
- * keys */
+ * keys. */
+/* Consumes input string. */
 struct lsh_string *
 crypt_string_pad(struct crypto_instance *c,
-		 const struct lsh_string *in,
-		 int free)
+		 const struct lsh_string *in)
 {
   struct lsh_string *s;
   uint32_t length = lsh_string_length(in);
@@ -763,25 +757,25 @@ crypt_string_pad(struct crypto_instance *c,
   
   assert(pad);
   
-  s = ssh_format(free ? "%lfS%lr" : "%lS%lr", in, pad, &pos);
+  s = ssh_format("%lfS%lr", in, pad, &pos);
   /* Use RFC 1423 and "generalized RFC 1423" as described in
    * PKCS#5 version 2. */
   lsh_string_set(s, pos, pad, pad);
 
-  return crypt_string(c, s, 1);
+  return crypt_string(c, s);
 }
 
+/* Consumes input string. */
 struct lsh_string *
 crypt_string_unpad(struct crypto_instance *c,
-		   const struct lsh_string *in,
-		   int free)
+		   const struct lsh_string *in)
 {
   struct lsh_string *out;
   uint32_t pad;
   uint32_t length = lsh_string_length(in);
   assert(length);
   
-  out = crypt_string(c, in, free);
+  out = crypt_string(c, in);
   if (!out)
     return NULL;
 
