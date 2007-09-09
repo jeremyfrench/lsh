@@ -1,3 +1,17 @@
+2007-09-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/spki.c (spki_pkcs5_encrypt): Updated use of
+	crypt_string_pad.
+	(spki_pkcs5_decrypt): Updated use of crypt_string_unpad.
+
+	* src/lsh-writekey.c (process_private): Consume input string.
+	(main): Adapt to process_private destroying the input. Do all
+	conversions before writing the output files.
+
+	* src/crypto.c (crypt_string, crypt_string_pad)
+	(crypt_string_unpad): Deleted argument free. Now always consumes
+	input string.
+
 2007-09-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/atoms.c (get_atom_length, get_atom_name): Changed argument
