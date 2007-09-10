@@ -556,6 +556,8 @@ client_maybe_pty(struct client_options *options,
 	    werror("Can't use tty (probably getattr or atexit failed).\n");
 	}
       else
+	/* FIXME: Try allocating a remote pty even if we don't have a
+	   pty locally? I think lsh.x and 2.x did that. */
 	werror("No tty available.\n");
     }
 #endif
