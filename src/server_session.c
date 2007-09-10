@@ -843,6 +843,8 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
       if (session->pty || session->process
 	  || !pty_open_master(pty))
 	{
+	  werror("pty_request_handler: pty %s NULL, process %s NULL\n",
+		 session->pty ? "!=" : "=", session->process ? "!=" : "=");
 	  verbose("Pty allocation failed.\n");
 	  EXCEPTION_RAISE(e, &pty_request_failed);
 	}
