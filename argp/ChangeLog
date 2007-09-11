@@ -1,6 +1,7 @@
 2007-09-11  Niels Möller  <nisse@lysator.liu.se>
 
 	* testsuite/Makefile.in (PRE_CPPFLAGS): Use -I$(srcdir).
+	Fixed typo when linking with ../libargp.a. 
 
 	* testsuite/Makefile.in: Typo fix when using $(EXEEXT).
 
