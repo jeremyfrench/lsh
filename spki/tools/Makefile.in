@@ -17,28 +17,29 @@ TARGETS = spki-check-signature spki-make-signature \
 
 SOURCES = spki-check-signature.c spki-delegate.c \
 	  spki-make-signature.c spki-reduce.c \
-	  misc.c sign.c 
+	  misc.c sign.c getopt.c getopt1.c
 
-DISTFILES = $(SOURCES) misc.h sign.h Makefile.in
+MISC_OBJS = misc.$(OBJEXT) getopt.$(OBJEXT) getopt1.$(OBJEXT)
+
+DISTFILES = $(SOURCES) misc.h sign.h getopt.h Makefile.in
 
 all: $(TARGETS)
 
 .c.$(OBJEXT):
 	$(COMPILE) -c $< && $(DEP_PROCESS)
 
-# FIXME: Needs to link with getopt.
-spki-make-signature$(EXEEXT): spki-make-signature.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT)
-	$(LINK) spki-make-signature.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+spki-make-signature$(EXEEXT): spki-make-signature.$(OBJEXT) sign.$(OBJEXT) $(MISC_OBJS)
+	$(LINK) spki-make-signature.$(OBJEXT) sign.$(OBJEXT) $(MISC_OBJS) $(PROGRAM_LIBS) -o $@
 
-spki-delegate$(EXEEXT): spki-delegate.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT)
-	$(LINK) spki-delegate.$(OBJEXT) sign.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+spki-delegate$(EXEEXT): spki-delegate.$(OBJEXT) sign.$(OBJEXT) $(MISC_OBJS)
+	$(LINK) spki-delegate.$(OBJEXT) sign.$(OBJEXT) $(MISC_OBJS) $(PROGRAM_LIBS) -o $@
 
-spki-check-signature$(EXEEXT): spki-check-signature.$(OBJEXT) misc.$(OBJEXT)
-	$(LINK) spki-check-signature.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+spki-check-signature$(EXEEXT): spki-check-signature.$(OBJEXT) $(MISC_OBJS)
+	$(LINK) spki-check-signature.$(OBJEXT) $(MISC_OBJS) $(PROGRAM_LIBS) -o $@
 
 # FIXME: Should not depend on GMP
-spki-reduce$(EXEEXT): spki-reduce.$(OBJEXT) misc.$(OBJEXT)
-	$(LINK) spki-reduce.$(OBJEXT) misc.$(OBJEXT) $(PROGRAM_LIBS) -o $@
+spki-reduce$(EXEEXT): spki-reduce.$(OBJEXT) $(MISC_OBJS)
+	$(LINK) spki-reduce.$(OBJEXT) $(MISC_OBJS) $(PROGRAM_LIBS) -o $@
 
 Makefile: $(srcdir)/Makefile.in ../config.status
 	cd .. && $(SHELL) ./config.status tools/$@
