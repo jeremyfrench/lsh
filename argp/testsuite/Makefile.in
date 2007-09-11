@@ -5,6 +5,8 @@ VPATH = @srcdir@
 
 include ../config.make
 
+PRE_CPPFLAGS = -I$(srcdir)/..
+
 TARGETS = ex1$(EXEEXT) ex3$(EXEEXT) ex4$(EXEEXT)
 TS_SH = ex1-test permute-test
 
