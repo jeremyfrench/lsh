@@ -16,13 +16,13 @@ all: $(TARGETS)
 	$(COMPILE) -c $< \
 	&& $(DEP_PROCESS)
 
-ex1(EXEEXT): ex1.$(OBJEXT) ../libargp.a
+ex1$(EXEEXT): ex1.$(OBJEXT) ../libargp.a
 	$(LINK) ex1.$(OBJEXT) libargp.a -o $@
 
-ex3(EXEEXT): ex3.$(OBJEXT) ../libargp.a
+ex3$(EXEEXT): ex3.$(OBJEXT) ../libargp.a
 	$(LINK) ex3.$(OBJEXT) libargp.a -o $@
 
-ex4(EXEEXT): ex4.$(OBJEXT) ../libargp.a
+ex4$(EXEEXT): ex4.$(OBJEXT) ../libargp.a
 	$(LINK) ex4.$(OBJEXT) libargp.a -o $@
 
 check: $(TARGETS) $(TS_SH) $(srcdir)/run-tests
