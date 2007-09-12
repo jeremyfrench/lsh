@@ -13,7 +13,7 @@ fi
 
 # The current asks for a remote tty only if it has a tty locally.
 
-tty > /dev/null || skip_test
+tty > /dev/null || test_skip
 
 # There a race condition when signalling EOF on a pty pair.
 # Work around it by sleeping a few seconds before sending CHANNEL_EOF.
