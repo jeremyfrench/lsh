@@ -1,5 +1,7 @@
 2007-09-12  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/Makefile.in (TEST_LIBS): Added $(LIBS).
+
 	* src/testsuite/testutils.c (test_cipher): Adapted to new
 	crypt_string interface.
 
