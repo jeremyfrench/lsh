@@ -125,7 +125,7 @@ test_cipher(const char *name, struct crypto_algorithm *algorithm,
   c = MAKE_ENCRYPT(algorithm, lsh_string_data(key),
 		   iv ? lsh_string_data(iv) : NULL);
 
-  x = crypt_string(c, plain, 0);
+  x = crypt_string(c, lsh_string_dup(plain));
   if (!lsh_string_eq(x, cipher))
     FAIL();
   
@@ -134,7 +134,7 @@ test_cipher(const char *name, struct crypto_algorithm *algorithm,
   c = MAKE_DECRYPT(algorithm, lsh_string_data(key),
 		   iv ? lsh_string_data(iv) : NULL);
 
-  x = crypt_string(c, x, 1);
+  x = crypt_string(c, x);
   if (!lsh_string_eq(x, plain))
     FAIL();
 
