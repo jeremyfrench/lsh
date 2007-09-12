@@ -67,7 +67,7 @@ TEST_OBJS = testutils.$(OBJEXT) \
 	    ../werror.$(OBJEXT) \
 	    ../xalloc.$(OBJEXT)
 
-TEST_LIBS = -lspki -lhogweed -lnettle -lgmp -loop
+TEST_LIBS = -lspki -lhogweed -lnettle $(LIBS)
 
 OTHER_SOURCES = testutils.c prgrp-timeout.c
 
