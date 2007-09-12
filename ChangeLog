@@ -1,5 +1,7 @@
 2007-09-12  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/lsh-10-test: Fixed typo in check for local tty.
+
 	* src/testsuite/Makefile.in (TEST_LIBS): Added $(LIBS).
 
 	* src/testsuite/testutils.c (test_cipher): Adapted to new
