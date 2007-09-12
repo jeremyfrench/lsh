@@ -1,5 +1,8 @@
 2007-09-12  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/testutils.c (test_cipher): Adapted to new
+	crypt_string interface.
+
 	* doc/Makefile.in (DISTFILES): Added srp-spec.txt.
 
 2007-09-10  Niels Möller  <nisse@lysator.liu.se>
