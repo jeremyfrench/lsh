@@ -2,17 +2,27 @@
 
 # echo srcdir = $srcdir
 
+type_p () {
+  ( IFS=':'
+    for d in $PATH ; do
+      if [ -x "$d/$1" ] ; then
+        echo "$d/$1"
+	exit 0
+      fi
+    done
+    exit 1
+  ) }
+
 : ${TEST_HOME:=`pwd`/home}
 : ${LSH_YARROW_SEED_FILE:="$TEST_HOME/.lsh/yarrow-seed-file"}
 
-# For lsh-authorize
-: ${LFIB_STREAM:="`PATH="../nettle_builddir/tools:$PATH" type -p nettle-lfib-stream`"}
-: ${SEXP_CONV:="`PATH="../nettle_builddir/tools:$PATH" type -p sexp-conv`"}
+: ${LFIB_STREAM:="`PATH="../nettle_builddir/tools:$PATH" type_p nettle-lfib-stream`"}
+: ${SEXP_CONV:="`PATH="../nettle_builddir/tools:$PATH" type_p sexp-conv`"}
 
-: ${LSH_TRANSPORT:="`pwd`/../lsh-transport"}
-: ${LSHD_CONNECTION:="`pwd`/../lshd-connection"}
-: ${LSHD_PTY_HELPER:="`pwd`/../lshd-pty-helper"}
-: ${LSHD_USERAUTH:="`pwd`/../lshd-userauth"}
+: ${LSH_TRANSPORT:="`cd .. && pwd`/lsh-transport"}
+: ${LSHD_CONNECTION:="`cd .. && pwd`/lshd-connection"}
+: ${LSHD_PTY_HELPER:="`cd .. && pwd`/lshd-pty-helper"}
+: ${LSHD_USERAUTH:="`cd .. && pwd`/lshd-userauth"}
 
 : ${LSHD_UTMP:="`pwd`/home/utmpx"}
 : ${LSHD_WTMP:="`pwd`/home/wtmpx"}
