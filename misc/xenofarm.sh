@@ -237,13 +237,13 @@ else
     nettlestatus=skip
 fi
 
-dotask 1 "argpcfg" "cfgwarn" "cd $BASE/src/argp && ./configure $cfgargs" argpstatus
-dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && $MAKE $makeargs" argpstatus
-dotask 1 "ckargp" "" "cd $BASE/src/argp && $MAKE check" argpstatus
+dotask 1 "argpcfg" "cfgwarn" "cd $BASE/argp && ./configure $cfgargs" argpstatus
+dotask 1 "argpmake" "makewarn" "cd $BASE/argp && $MAKE $makeargs" argpstatus
+dotask 1 "ckargp" "" "cd $BASE/argp && $MAKE check" argpstatus
 
-dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/src/nettle && ./configure $cfgargs $cfgdepargs" nettlestatus
-dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && $MAKE $makeargs" nettlestatus
-dotask 1 "cknettle" "" "cd $BASE/src/nettle && $MAKE check" nettlestatus
+dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/nettle && ./configure $cfgargs $cfgdepargs" nettlestatus
+dotask 1 "nettlemake" "makewarn" "cd $BASE/nettle && $MAKE $makeargs" nettlestatus
+dotask 1 "cknettle" "" "cd $BASE/nettle && $MAKE check" nettlestatus
 
 find pfx -type f -print | sort > r/installedfiles.txt
 if test `wc -l < r/installedfiles.txt` -eq 0
@@ -257,14 +257,14 @@ timeecho Collecting results
 
 cp $BASE/config.cache r/configcache.txt
 cp $BASE/config.log r/configlog.txt
-cp $BASE/src/argp/config.log r/argpconfiglog.txt
-cp $BASE/src/argp/config.h r/argpconfig-h.txt
-cp $BASE/src/nettle/config.log r/nettleconfiglog.txt
-cp $BASE/src/nettle/config.h r/nettleconfig-h.txt
+cp $BASE/argp/config.log r/argpconfiglog.txt
+cp $BASE/argp/config.h r/argpconfig-h.txt
+cp $BASE/nettle/config.log r/nettleconfiglog.txt
+cp $BASE/nettle/config.h r/nettleconfig-h.txt
 cp $BASE/src/sftp/config.log r/sftpconfiglog.txt
 cp $BASE/src/sftp/config.h r/sftpconfig-h.txt
-cp $BASE/src/spki/config.log r/spkiconfiglog.txt
-cp $BASE/src/spki/config.h r/spkiconfig-h.txt
+cp $BASE/spki/config.log r/spkiconfiglog.txt
+cp $BASE/spki/config.h r/spkiconfig-h.txt
 cp $BASE/config.h r/config-h.txt
 
 cp $LIBOOPBASE/config.cache r/oopconfigcache.txt
