@@ -1,3 +1,8 @@
+2007-09-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh: Avoid using type -p, since it's not
+	portable. 
+
 2007-09-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-10-test: Fixed typo in check for local tty.
