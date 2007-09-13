@@ -1,5 +1,8 @@
 2007-09-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* misc/xenofarm.sh: Updated for moved argp, nettle and spki
+	directories.
+
 	* src/testsuite/functions.sh: Avoid using type -p, since it's not
 	portable. 
 
