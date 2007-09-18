@@ -41,6 +41,8 @@ spki-check-signature$(EXEEXT): spki-check-signature.$(OBJEXT) $(MISC_OBJS)
 spki-reduce$(EXEEXT): spki-reduce.$(OBJEXT) $(MISC_OBJS)
 	$(LINK) spki-reduce.$(OBJEXT) $(MISC_OBJS) $(PROGRAM_LIBS) -o $@
 
+check:
+
 Makefile: $(srcdir)/Makefile.in ../config.status
 	cd .. && $(SHELL) ./config.status tools/$@
 
