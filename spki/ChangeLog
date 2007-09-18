@@ -1,3 +1,7 @@
+2007-09-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* tools/Makefile.in: Added dummy check target.
+
 2007-09-11  Niels Möller  <nisse@lysator.liu.se>
 
 	* tools/Makefile.in: Fixed linking with getopt.
