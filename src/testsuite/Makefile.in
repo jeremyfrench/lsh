@@ -105,6 +105,9 @@ test-rules:
 
 include $(srcdir)/.test-rules.make
 
+prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT)
+	$(LINK) prgrp-timeout.$(OBJEXT) -o prgrp-timeout 
+
 distdir: $(DISTFILES)
 	set -e; for f in $(DISTFILES) ; do \
 	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
