@@ -1,3 +1,8 @@
+2007-09-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (prgrp-timeout): Added rule
+	for building prgrp-timeout executable.
+
 2007-09-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Updated for moved argp, nettle and spki
