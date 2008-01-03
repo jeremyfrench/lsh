@@ -42,12 +42,11 @@ struct list_header *
 lsh_list_alloc(struct lsh_class *class,
 	       unsigned length, size_t element_size)
 {
-  /* FIXME: When gaba.scm is fixed to use offsetof instead of sizeof,
-   * the size calculation below must be updated as well. */
   struct list_header *list;
 
   assert(element_size < 1024);
 
+  /* NOTE: class->size includes an array with a single element. */
   list = (struct list_header *) lsh_var_alloc(class,
 					      class->size
 					      + element_size * length
