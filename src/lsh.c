@@ -235,18 +235,10 @@ write_packet(struct lsh_connection *connection,
 			STRING_LD(packet));
   lsh_string_free(packet);
 
-  /* FIXME: Check if we're filling up the buffer; if so we must stop
-     channels from sending more data. */
   if (done > 0 || errno == EWOULDBLOCK)
     {
       if (connection->writer->length)
-	{
-	  /* FIXME: Install a write callback. If our write buffer is
-	     getting full, generate CHANNEL_EVENT_STOP events on all
-	     channels, and stop reading on all gateways. */
-	  
-	  service_start_write(connection);
-	}
+	service_start_write(connection);
       else
 	service_stop_write(connection);
     }
