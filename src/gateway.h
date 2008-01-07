@@ -49,7 +49,9 @@ make_gateway_address(const char *local_user, const char *remote_user,
        (fd . int)
        (reader object service_read_state)
        (read_active . int)
-       (writer object ssh_write_state)))
+       (writer object ssh_write_state)
+       ; Means we have an active write callback.
+       (write_active . int)))
 */
 
 /* Sends raw data (used for hello message). Returns errno value or
