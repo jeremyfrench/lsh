@@ -179,7 +179,7 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 
     case CHANNEL_EVENT_STOP:
     case CHANNEL_EVENT_START:
-      /* FIXME: Ignore; the entire gateway has to be stopped and
+      /* FIXME: Ignore? The entire gateway has to be stopped and
 	 started anyway. */
       break;
     }      
