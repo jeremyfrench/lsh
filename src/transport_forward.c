@@ -342,7 +342,7 @@ forward_packet_handler(struct transport_connection *connection,
   else
     {
       if (errno == EOVERFLOW)
-	werror("Buffer full from ssh_write_flush! Should not happen.\n");
+	werror("Buffer full from ssh_write_data! Should not happen.\n");
 
       transport_disconnect(&self->super,
 			   SSH_DISCONNECT_BY_APPLICATION,
