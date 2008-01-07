@@ -137,7 +137,19 @@ kill_gateway_connection(struct resource *s)
        * instead, we use channel_close on all active channels when the
        * gateway is killed. That way, the channels are kept alive
        * until the CHANNEL_CLOSE handshake is finished. */
-      
+
+      /* FIXME: Does this really do the right thing? The local end of
+	 the channels can be terminated immediately (e.g., the gateway
+	 may be killed due to the local client using the gateway
+	 disappearing or not responding, and then attempting a
+	 CHANNEL_CLOSE hand shake is pointless. But on the other hand,
+	 we should do a proper CHANNEL_CLOSE handshake on the remote
+	 channel.
+
+	 Probably the right thing is to have the kill method of
+	 gatewayed channels initiate close of the chained channel.
+	 Needs care in order to handle channels in the middle of the
+	 channel open handshake properly. */
       for (i = 0; i < self->super.used_channels; i++)
 	if (self->super.alloc_state[i] == CHANNEL_ALLOC_ACTIVE)
 	  {
