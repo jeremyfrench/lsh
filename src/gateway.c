@@ -152,6 +152,58 @@ kill_gateway_connection(struct resource *s)
     }
 }
 
+static void
+gateway_start_write(struct gateway_connection *self);
+
+static void
+gateway_stop_write(struct gateway_connection *self);
+
+static void *
+oop_write_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state)
+{
+  CAST(gateway_connection, self, (struct lsh_object *) state);
+  uint32_t done;
+
+  assert(event == OOP_WRITE);
+  assert(fd == self->fd);
+    
+  done = ssh_write_flush(self->writer, self->fd, 0);
+  if (done > 0)
+    {
+      if (!self->writer->length)
+	gateway_stop_write(self);
+    }
+  else if (errno != EWOULDBLOCK)
+    {
+      werror("oop_write_gateway: Write failed: %e\n", errno);
+      KILL_RESOURCE(&self->super.super);
+    }
+  return OOP_CONTINUE;
+}
+
+static void
+gateway_start_write(struct gateway_connection *self)
+{
+  if (!self->write_active)
+    {
+      trace("gateway_start_write: register callback.\n");
+      self->write_active = 1;
+      global_oop_source->on_fd(global_oop_source, self->fd, OOP_WRITE,
+			       oop_write_gateway, self);
+    }
+}
+
+static void
+gateway_stop_write(struct gateway_connection *self)
+{
+  if (self->write_active)
+    {
+      trace("gateway_stop_write: cancel callback.\n");
+      self->write_active = 0;
+      global_oop_source->cancel_fd(global_oop_source, self->fd, OOP_WRITE);
+    }
+}
+
 int
 gateway_write_data(struct gateway_connection *connection,
 		   uint32_t length, const uint8_t *data)
@@ -164,16 +216,11 @@ gateway_write_data(struct gateway_connection *connection,
   if (!done && errno != EWOULDBLOCK)
     return errno;
   
-  /* FIXME: Check if we're filling up the buffer; if so we must stop
-     channels from sending more data. */
-
   if (connection->writer->length)
-    {
-      /* FIXME: Install a write callback. If our write buffer is
-	 getting full, generate CHANNEL_EVENT_STOP events on all
-	 channels, and stop reading on all gateways. */
-      werror("gateway_write_packet: ssh_write_data couldn't write all data.\n");
-    }
+    gateway_start_write(connection);
+  else
+    gateway_stop_write(connection);
+
   return 0;
 }
 
@@ -211,8 +258,8 @@ gateway_disconnect(struct gateway_connection *connection,
   gateway_write_packet(connection,
 		       format_disconnect(reason, msg, ""));
 
-  /* FIXME: If the write buffer is full, the disconnect message will
-     likely be lost. */
+  /* FIXME: If the disconnect message could not be written
+     immediately, it will be lost. */
   KILL_RESOURCE(&connection->super.super);
 }
 
@@ -330,6 +377,7 @@ make_gateway_connection(struct ssh_connection *shared, int fd)
   self->read_active = 0;
 
   self->writer = make_ssh_write_state(GATEWAY_WRITE_BUFFER_SIZE);
+  self->write_active = 0;
   
   return self;
 }
