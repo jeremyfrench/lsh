@@ -1,3 +1,29 @@
+2008-01-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (lsh_transport_packet_handler): Handle
+	SSH_MSG_USERAUTH_BANNER.
+	(lsh_transport_lookup_verifier): Use spki_lookup_key.
+
+	* src/spki.c (spki_lookup_key): New function.
+
+2008-01-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/gateway.c (oop_write_gateway): New function.
+	(gateway_start_write, gateway_stop_write): New functions.
+	(gateway_write_data): Use gateway_start_write and
+	gateway_stop_write.
+	(make_gateway_connection): Initialize write_active.
+
+	* src/gateway.h (class gateway_connection): New attribute
+	write_active.
+
+	* src/transport_forward.c (forward_packet_handler): Fixed error
+	message.
+
+	* src/lsh.c (write_packet): Deleted FIXME. Stopping channels and
+	gateways when the transport write buffer is getting full, is
+	implemented in service_start_write.
+
 2007-09-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (prgrp-timeout): Added rule
