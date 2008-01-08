@@ -349,9 +349,26 @@ lsh_transport_packet_handler(struct transport_connection *connection,
 	  break;
 
 	case SSH_MSG_USERAUTH_BANNER:
-	  /* FIXME: Ignored */
-	  break;
-
+	  {
+	    struct simple_buffer buffer;
+	    uint32_t msg_length;
+	    const uint8_t *msg;
+	    uint32_t language_length;
+	    const uint8_t *language;
+	    
+	    simple_buffer_init(&buffer, length-1, packet + 1);
+	    if (parse_string(&buffer, &msg_length, &msg)
+		&& parse_string(&buffer, &language_length, &language)
+		&& parse_eod(&buffer))
+	      {
+		/* Ignores the language tag */
+		werror("%ups", msg_length, msg);
+	      }
+	    else
+	      transport_protocol_error(connection,
+				       "Invalid USERAUTH_BANNER message");
+	    break;
+	  }
 	case SSH_MSG_USERAUTH_FAILURE:
 	  {
 	    struct simple_buffer buffer;
@@ -889,10 +906,9 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 	    return NULL;
 	  }
 
-	/* FIXME: It seems like a waste to pick apart the sexp again */
 	spki_key = PUBLIC_SPKI_KEY(v, 0);
 
-	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
+	subject = spki_lookup_key(self->db, STRING_LD(spki_key), v);
 	assert(subject);
 	assert(subject->verifier);
 
@@ -910,9 +926,8 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 	    return NULL;
 	  }
 
-	/* FIXME: It seems like a waste to pick apart the sexp again */
 	spki_key = PUBLIC_SPKI_KEY(v, 0);
-	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
+	subject = spki_lookup_key(self->db, STRING_LD(spki_key), v);
 	assert(subject);
 	assert(subject->verifier);
 
