@@ -89,10 +89,7 @@ struct command_2 gateway_accept;
       detect the transport buffer getting full, it is not signalled to
       stop, and might start generating data when the handshake is
       finished.
-   
-   2. If a buffer for writing to one of our gateway clients gets full,
-      we need to stop reading from our transport (or disconnect that
-      gateway client).
+
 */
 
 /* GABA:
@@ -258,8 +255,8 @@ disconnect(struct lsh_connection *connection,
   write_packet(connection,
 	       format_disconnect(reason, msg, ""));
 
-  /* FIXME: If the write buffer is full, the disconnect message will
-     likely be lost. */
+  /* FIXME: If the disconnect message could not be written
+     immediately, it will be lost. */
   KILL_RESOURCE(&connection->super.super);
 }
 
@@ -547,13 +544,10 @@ main_options[] =
     "Select host authentication algorithm.", 0 }, 
   
   /* Actions */
+  /* FIXME: Remote forwarding and X11 forwarding doesn't work over a gateway. */
   { "forward-remote-port", 'R', "REMOTE-PORT:TARGET-HOST:TARGET-PORT", 0,
     "Forward TCP/IP connections at a remote port", CLIENT_ARGP_ACTION_GROUP },
 #if WITH_X11_FORWARD
-  /* FIXME: Perhaps this should be moved from lsh.c to client.c? It
-   * doesn't work with lshg. Or perhaps that can be fixed?
-   * About the same problem applies to -R. */
-  
   { "x11-forward", 'x', NULL, 0, "Enable X11 forwarding.", CLIENT_ARGP_MODIFIER_GROUP },
   { "no-x11-forward", 'x' | ARG_NOT, NULL, 0,
     "Disable X11 forwarding (default).", 0 },
@@ -946,7 +940,6 @@ process_hello_message(int fd)
 
   if (memcmp (lsh_string_data (buf), expected, sizeof(expected) - 1) != 0)
     {
-      /* FIXME: Check more carefully for version mismatch. */
       werror ("Invalid hello message.\n");
       goto fail;
     }
@@ -1049,9 +1042,6 @@ main(int argc, char **argv, const char** envp)
   remember_resource(connection->super.resources,
 		    &options->super.resources->super);
 
-  /* FIXME: When remote forwarding via the gateway is supported, we
-     should enable ATOM_FORWARDED_TCPIP even if no remote forwardings
-     were given on the command line. */
   if (options->super.remote_forward)
     ALIST_SET(connection->super.channel_types, ATOM_FORWARDED_TCPIP,
 	      &channel_open_forwarded_tcpip.super);
