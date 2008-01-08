@@ -211,7 +211,7 @@ spki_hash_data(const struct hash_algorithm *algorithm,
   lsh_string_free(digest);
 
   return out;
-}  
+}
 
 static void
 do_spki_acl_db_mark(struct spki_acl_db *db,
@@ -250,6 +250,28 @@ spki_add_acls(struct spki_context *ctx,
 	}
     }
   return 1;
+}
+
+/* The key must be a valid public-key expression, not, e.g., a hash
+   expression. Verifier is required. */
+struct spki_principal *
+spki_lookup_key(struct spki_context *self,
+		unsigned length,
+		const uint8_t *key,
+		struct verifier *v)
+{
+  struct spki_principal *principal;
+
+  assert(length > 14);
+  assert(memcmp(key, "(10:public-key", 14) == 0);
+  assert(v);
+
+  principal = spki_principal_by_key(&self->db, length, key);
+
+  if (!principal->verifier)
+    principal->verifier = v;
+  
+  return principal;
 }
 
 struct spki_principal *

@@ -89,6 +89,12 @@ spki_hash_data(const struct hash_algorithm *algorithm,
 */
 
 struct spki_principal *
+spki_lookup_key(struct spki_context *self,
+		unsigned length,
+		const uint8_t *key,
+		struct verifier *v);
+
+struct spki_principal *
 spki_lookup(struct spki_context *self,
 	    unsigned length,
 	    const uint8_t *key,
