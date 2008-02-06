@@ -1090,7 +1090,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
 	  struct stat sbuf;
 	  struct lsh_string *known_hosts;
 
-	  werror("Failed to open `%S' for reading: %e\n", tmp, errno);
+	  verbose("Failed to open `%S' for reading: %e\n", tmp, errno);
 	  known_hosts = ssh_format("%lz/.lsh/known_hosts", self->config->home);
 
 	  if (stat(lsh_get_cstring(known_hosts), &sbuf) == 0)
@@ -1098,7 +1098,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
 	      werror("You have an old known-hosts file `%S'.\n"
 		     "To work with lsh-2.0, run the lsh-upgrade script,\n"
 		     "which will convert that to a new host-acls file.\n",
-		     tmp);
+		     known_hosts);
 	    }
 	  lsh_string_free(known_hosts);
 	  lsh_string_free(tmp);
