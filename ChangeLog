@@ -1,3 +1,12 @@
+2008-02-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (read_host_acls): Message when host-acls
+	cannot be opened is displayed only in verbose mode. Fixed message
+	about old known_hosts file.
+
+	* src/werror.c (werror_vformat): For %e, don't display the numeric
+	errno value.
+
 2008-01-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_packet_handler): Handle
