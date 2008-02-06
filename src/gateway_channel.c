@@ -62,7 +62,6 @@
      (name gateway_channel)
      (super ssh_channel)
      (vars
-       ;; Put local_channel_number here?
        (chain object ssh_channel)))
 */
 
@@ -79,7 +78,6 @@ do_kill_gateway_channel(struct resource *s)
 	 may not yet be active). Instead, we leave to the connection's
 	 kill method handler to initiate close of all active
 	 channels. */
-
     }
 }
 

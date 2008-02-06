@@ -105,8 +105,9 @@ enum channel_flag {
      (name ssh_channel)
      (super resource)
      (vars     
-       ;; FIXME: Is this needed? It's currently used only by
-       ;; gateway_channel.c:do_gateway_channel_event.
+       ; Backward links, primarily needed by channel_close, for
+       ; deallocating the channel number.
+       (connection object ssh_connection)
        (local_channel_number . uint32_t)
 
        ; Remote channel number       
@@ -121,10 +122,6 @@ enum channel_flag {
 
        (send_window_size . uint32_t)
        (send_max_packet . uint32_t)
-
-       ; FIXME: Really need this backward link? It seems to be
-       ; essential for gateway_channel, but not for anything else.
-       (connection object ssh_connection)
 
        ; At most one of these can be non-NULL. The first is used
        ; for gatewayed channels.
