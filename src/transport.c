@@ -273,7 +273,6 @@ transport_process_packet(struct transport_connection *connection,
   if (msg == SSH_MSG_IGNORE)
     {
       /* Do nothing */
-      /* FIXME: Better to pass it the application? */
     }
   else if (msg == SSH_MSG_DISCONNECT)
     {
@@ -623,7 +622,7 @@ transport_stop_write(struct transport_connection *connection)
 /* FIXME: Naming is unfortunate, with transport_write_packet vs
    transport_send_packet.
 
-   FIXME: Use a length / const uint8_t * interface.
+   FIXME: Use a length / const uint8_t * interface?
 
    FIXME: Return a result code saying if more data can be sent right
    away, or if the buffer is full.
