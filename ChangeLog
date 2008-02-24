@@ -1,3 +1,8 @@
+2008-02-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/Makefile.in (DISTFILES): Removed srp-spec.txt; already
+	included in $(TARGETS).
+
 2008-02-06  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (read_host_acls): Message when host-acls
