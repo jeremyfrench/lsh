@@ -1,5 +1,8 @@
 2008-03-03  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/client.c (env_parse): Can't free the allocated copy of the
+	environment value, as the argument parser stores pointers into it.
+
 	* src/lsh.c (main): Adapted to changed env_parse. Use ENV_LSHFLAGS.
 
 	* src/client.c (env_parse): Take environment value as argument.
