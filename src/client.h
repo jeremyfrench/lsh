@@ -215,10 +215,9 @@ extern const struct argp client_argp;
 
 
 void
-envp_parse(const struct argp *argp,
-           const char** envp,
-           const char* name,
-           unsigned flags,
-           void *input);
+env_parse(const struct argp *argp,
+	  const char *value,
+	  unsigned flags,
+	  void *input);
 
 #endif /* LSH_CLIENT_H_INCLUDED */

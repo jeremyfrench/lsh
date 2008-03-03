@@ -919,55 +919,48 @@ make_client_session(struct client_options *options)
 /* FIXME: Can we obsolete this hack once we have reasonable
    configuration files? */
 void
-envp_parse(const struct argp *argp,
-	   const char** envp,
-	   const char* name,
-	   unsigned flags, 
-	   void *input)
+env_parse(const struct argp *argp,
+	  const char *value,
+	  unsigned flags, 
+	  void *input)
 {
   CAST_SUBTYPE(client_options, options, input);
-  int nlen = strlen(name);
 
-  while (*envp)
+  if (value)
     {
-      if (!strncmp(*envp, name, nlen)) 	  /* Matching environment entry */
+      char **sim_argv;
+      char *entry;
+
+      /* Make a copy we can modify */
+      entry = strdup(value);
+
+      if (entry)
 	{
-	  char** sim_argv;
-	  char* entry;
+	  /* Extra space doesn't hurt */
+	  sim_argv = malloc(sizeof(char*) * (strlen(entry)+2));
 
-	  /* Make a copy we can modify */
-	  
-	  entry = strdup(*envp+nlen); 	  /* Skip variable name */
-
-	  if (entry)
+	  if (sim_argv)
 	    {
-	      /* Extra space doesn't hurt */
-	      sim_argv = malloc(sizeof(char*) * (strlen(entry)+2));
-
-	      if (sim_argv)
-		{
-		  int sim_argc = 1;
-		  char *token = strtok(entry, " \n\t");
+	      int sim_argc = 1;
+	      char *token = strtok(entry, " \n\t");
 		  
-		  sim_argv[0] = "";
+	      sim_argv[0] = "";
 
-		  while (token) /* For all tokens in variable */
-		    {
-		      sim_argv[sim_argc++] = token;
-		      token = strtok( NULL, " \n\t");
-		    }
-
-		  sim_argv[sim_argc] = NULL;
-	
-		  options->inhibit_actions = 1; /* Disable nnormal actions performed at end */
-		  argp_parse(argp, sim_argc, sim_argv, flags | ARGP_NO_ERRS | ARGP_NO_EXIT, NULL, input);
-		  options->inhibit_actions = 0; /* Reenable */
+	      while (token) /* For all tokens in variable */
+		{
+		  sim_argv[sim_argc++] = token;
+		  token = strtok( NULL, " \n\t");
 		}
-	    }
-	}
 
-      envp++; 
-   }
+	      sim_argv[sim_argc] = NULL;
+	
+	      options->inhibit_actions = 1; /* Disable nnormal actions performed at end */
+	      argp_parse(argp, sim_argc, sim_argv, flags | ARGP_NO_ERRS | ARGP_NO_EXIT, NULL, input);
+	      options->inhibit_actions = 0; /* Reenable */
+	    }
+	  free(entry);
+	}
+    }
 }
 
 static int
