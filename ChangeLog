@@ -1,3 +1,13 @@
+2008-03-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (main): Adapted to changed env_parse. Use ENV_LSHFLAGS.
+
+	* src/client.c (env_parse): Take environment value as argument.
+	Don't iterate over envp, instead, caller is expected to use
+	the ordinary getenv. Renamed, used to be envp_parse.
+
+	* src/environ.h.in (ENV_LSHFLAGS): New constant.
+
 2008-02-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Removed srp-spec.txt; already
