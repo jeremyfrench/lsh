@@ -954,11 +954,10 @@ env_parse(const struct argp *argp,
 
 	      sim_argv[sim_argc] = NULL;
 	
-	      options->inhibit_actions = 1; /* Disable nnormal actions performed at end */
+	      options->inhibit_actions = 1; /* Disable normal actions performed at end */
 	      argp_parse(argp, sim_argc, sim_argv, flags | ARGP_NO_ERRS | ARGP_NO_EXIT, NULL, input);
 	      options->inhibit_actions = 0; /* Reenable */
 	    }
-	  free(entry);
 	}
     }
 }
