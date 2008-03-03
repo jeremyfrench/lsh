@@ -948,7 +948,7 @@ process_hello_message(int fd)
 }
 
 int
-main(int argc, char **argv, const char** envp)
+main(int argc, char **argv)
 {
   struct lsh_connection *connection;
   struct lsh_options *options;
@@ -975,7 +975,7 @@ main(int argc, char **argv, const char** envp)
   if (!options)
     return EXIT_FAILURE;
 
-  envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
+  env_parse(&main_argp, getenv(ENV_LSHFLAGS), ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
   if (options->stop_gateway)
