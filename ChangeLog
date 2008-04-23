@@ -1,3 +1,22 @@
+2008-04-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (make_lsh_transport_connection): Updated for
+	init_transport_forward change.
+
+	* src/transport_forward.c (init_transport_forward): New argument
+	packet_handler.
+	(transport_forward_packet): Default implementation fo the
+	packet_handler method.
+	(make_transport_forward): Updated for init_transport_forward
+	change.
+	(oop_read_service): Use packet_handler method.
+
+	* src/transport_forward.h (class transport_forward): New method
+	packet_handler.
+
+	* src/ssh.h (SSH_LSH_RANDOM_REQUEST, SSH_LSH_RANDOM_REPLY): New
+	local message types.
+
 2008-03-03  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c (env_parse): Can't free the allocated copy of the
