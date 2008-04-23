@@ -45,7 +45,11 @@
 
        (service_out . int)
        (service_writer object ssh_write_state)
-       (service_write_active . int)))
+       (service_write_active . int)
+       
+       ; Packets read from the service layer. Will usually just invoke
+       ; transport_send_packet. 
+       (packet_handler method void "uint32_t length" "const uint8_t *data")))
 */
 
 void
@@ -54,7 +58,9 @@ init_transport_forward(struct transport_forward *self,
 		       struct transport_context *ctx,
 		       int ssh_input, int ssh_output,
 		       void (*event)(struct transport_connection *,
-				     enum transport_event event));
+				     enum transport_event event),
+		       void (*packet_handler)(struct transport_forward *self,
+					     uint32_t length, const uint8_t *data));
 
 struct transport_forward *
 make_transport_forward(void (*kill)(struct resource *s),
@@ -71,5 +77,11 @@ transport_forward_kill(struct transport_forward *self);
 void
 transport_forward_setup(struct transport_forward *self,
 			int service_in, int service_out);
+
+/* Default method for packet_handler. Transmits packet over the
+   transport layer. */
+void
+transport_forward_packet(struct transport_forward *self,
+			 uint32_t length, const uint8_t *data);
 
 #endif /* LSH_TRANSPORT_FORWARD_H_INCLUDED */
