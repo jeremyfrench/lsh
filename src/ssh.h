@@ -106,6 +106,19 @@
 
 #define SSH_LSH_GATEWAY_STOP 192
 
+/* Sent from lsh-connection to lsh-transport (or gateway) to generate
+ * random data.
+ *
+ *   byte   SSH_LSH_RANDOM_REQUEST
+ *   uint32 length
+ *
+ *   byte   SSH_LSH_RANDOM_REPLY
+ *   string data
+ */
+
+#define SSH_LSH_RANDOM_REQUEST 193
+#define SSH_LSH_RANDOM_REPLY 194
+ 
 /* Disconnecting */
 
 #define SSH_DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT      1
