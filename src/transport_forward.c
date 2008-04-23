@@ -65,7 +65,9 @@ init_transport_forward(struct transport_forward *self,
 		       struct transport_context *ctx,
 		       int ssh_input, int ssh_output,
 		       void (*event)(struct transport_connection *,
-				     enum transport_event event))
+				     enum transport_event event),
+		       void (*packet_handler)(struct transport_forward *self,
+					     uint32_t length, const uint8_t *packet))
 {
   init_transport_connection(&self->super, kill, ctx, ssh_input, ssh_output, event);
 
@@ -73,7 +75,21 @@ init_transport_forward(struct transport_forward *self,
 
   self->service_reader = NULL;
   self->service_writer = NULL;
+
+  self->packet_handler = packet_handler;
 }
+
+void
+transport_forward_packet(struct transport_forward *self,
+			 uint32_t length, const uint8_t *packet)
+{
+  /* FIXME: This is unnecessary allocation and copying. */
+  transport_send_packet(&self->super, 0,
+			ssh_format("%ls", length, packet));
+  if (packet[0] == SSH_MSG_DISCONNECT)
+    transport_close(&self->super, 1);
+}
+
 
 struct transport_forward *
 make_transport_forward(void (*kill)(struct resource *s),
@@ -83,7 +99,7 @@ make_transport_forward(void (*kill)(struct resource *s),
 				     enum transport_event event))
 {
   NEW(transport_forward, self);
-  init_transport_forward(self, kill, ctx, ssh_input, ssh_output, event);
+  init_transport_forward(self, kill, ctx, ssh_input, ssh_output, event, transport_forward_packet);
   return self;
 }
 
@@ -161,13 +177,7 @@ oop_read_service(oop_source *source UNUSED,
 	    transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
 				 "Received empty packet from service layer.");
 	  else
-	    {
-	      /* FIXME: This is unnecessary allocation and copying. */
-	      transport_send_packet(&self->super, 0,
-				    ssh_format("%ls", length, packet));
-	      if (packet[0] == SSH_MSG_DISCONNECT)
-		transport_close(&self->super, 1);
-	    }
+	    self->packet_handler(self, length, packet);
 	}
     }
   return OOP_CONTINUE;
