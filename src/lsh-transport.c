@@ -245,9 +245,11 @@ static struct lsh_transport_connection *
 make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
 {
   NEW(lsh_transport_connection, self);
+  /* FIXME: Packet handler that implements SSH_LSH_RANDOM_REQUEST,
+     needed for X forwarding. */
   init_transport_forward(&self->super, kill_lsh_transport_connection,
 			 &config->super, fd, fd,
-			 lsh_transport_event_handler);
+			 lsh_transport_event_handler, transport_forward_packet);
 
   self->state = STATE_HANDSHAKE;
   self->config = config;
