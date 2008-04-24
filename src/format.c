@@ -205,11 +205,11 @@ end_options:
 	      {
 		uint32_t l = va_arg(args, uint32_t); 
 		length += l;
-		(void) va_arg(args, uint8_t **);    /* pointer */
+		(void) va_arg(args, uint32_t *);
 
-		if (decimal)
-		  length += format_size_in_decimal(l) + 1;
-		else if (!literal)
+		assert(!decimal);
+
+		if (!literal)
 		  length += 4;
 
 		break;
