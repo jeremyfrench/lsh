@@ -84,4 +84,10 @@ void
 transport_forward_packet(struct transport_forward *self,
 			 uint32_t length, const uint8_t *data);
 
+/* Transmits packet over the service socket. */
+int
+transport_forward_service_packet(struct transport_forward *self,
+				 uint32_t seqno,
+				 uint32_t length, const uint8_t *packet);
+
 #endif /* LSH_TRANSPORT_FORWARD_H_INCLUDED */

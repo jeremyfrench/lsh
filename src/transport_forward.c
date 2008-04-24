@@ -314,12 +314,12 @@ forward_event_handler(struct transport_connection *connection,
     }
 }
 
-/* Handles decrypted packets above the ssh transport layer. */
-static int
-forward_packet_handler(struct transport_connection *connection,
-		       uint32_t seqno, uint32_t length, const uint8_t *packet)
+/* Transmits packet over the service socket. */
+int
+transport_forward_service_packet(struct transport_forward *self,
+				 uint32_t seqno,
+				 uint32_t length, const uint8_t *packet)
 {
-  CAST_SUBTYPE(transport_forward, self, connection);
   uint8_t header[8];
   uint32_t done;
   
@@ -331,9 +331,7 @@ forward_packet_handler(struct transport_connection *connection,
   WRITE_UINT32(header, seqno);
   WRITE_UINT32(header + 4, length);
 
-  /* FIXME: Avoid pushing out the header. XXX Easy, by using a large
-     value for to_write. But we should probably avoid pushing the data
-     too, unless we get a push indication from the reader. */
+  /* FIXME: Avoid pushing out the header. */
   done = ssh_write_data(self->service_writer,
 			self->service_out, 0,
 			sizeof(header), header);
@@ -359,6 +357,15 @@ forward_packet_handler(struct transport_connection *connection,
 			   "Connection to service layer failed.");
     }
   return 1;
+}
+
+/* Handles decrypted packets above the ssh transport layer. */
+static int
+forward_packet_handler(struct transport_connection *connection,
+		       uint32_t seqno, uint32_t length, const uint8_t *packet)
+{
+  CAST_SUBTYPE(transport_forward, self, connection);
+  return transport_forward_service_packet(self, seqno, length, packet);
 }
 
 void
