@@ -116,9 +116,12 @@
  *   string data
  */
 
+/* Arbitrary limit imposed by implementation */
+#define RANDOM_REQUEST_MAX 200
+
 #define SSH_LSH_RANDOM_REQUEST 193
 #define SSH_LSH_RANDOM_REPLY 194
- 
+
 /* Disconnecting */
 
 #define SSH_DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT      1
