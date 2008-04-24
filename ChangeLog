@@ -1,3 +1,17 @@
+2008-04-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (lsh_transport_service_packet_handler): New
+	function, implementing SSH_LSH_RANDOM_REQUEST.
+	(make_lsh_transport_connection): Use
+	lsh_transport_service_packet_handler.
+
+	* src/transport_forward.c (transport_forward_service_packet): New
+	function, extracted from forward_packet_handler.
+
+	* src/ssh.h (RANDOM_REQUEST_MAX): New constant.
+
+	* src/format.c (ssh_vformat_length): Cleaned up handling of %r.
+
 2008-04-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (make_lsh_transport_connection): Updated for
