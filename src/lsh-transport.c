@@ -241,6 +241,41 @@ lsh_transport_event_handler(struct transport_connection *connection,
     }
  }
 
+static void
+lsh_transport_service_packet_handler(struct transport_forward *self,
+				     uint32_t length, const uint8_t *data)
+{
+  assert(length > 0);
+  if (data[0] == SSH_LSH_RANDOM_REQUEST)
+    {
+      struct simple_buffer buffer;
+      uint32_t random_length;
+      simple_buffer_init(&buffer, length-1, data+1);
+
+      if (parse_uint32(&buffer, &random_length)
+	  && parse_eod(&buffer))
+	{
+	  struct lsh_string *response;
+	  uint32_t pos;
+
+	  if (length > RANDOM_REQUEST_MAX)
+	    length = RANDOM_REQUEST_MAX;
+
+	  response = ssh_format("%c%r", SSH_LSH_RANDOM_REPLY, length, &pos);
+	  lsh_string_write_random(response, pos, self->super.ctx->random, length);
+
+	  /* Note: Bogus sequence number. */
+	  transport_forward_service_packet(self, 0, STRING_LD(response));
+	  lsh_string_free(response);
+	}
+      else
+	transport_disconnect(&self->super, SSH_DISCONNECT_BY_APPLICATION,
+			     "Received invalid packet from service layer.");
+    }
+  else
+    transport_forward_packet(self, length, data);  
+}
+
 static struct lsh_transport_connection *
 make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
 {
@@ -249,7 +284,8 @@ make_lsh_transport_connection(struct lsh_transport_config *config, int fd)
      needed for X forwarding. */
   init_transport_forward(&self->super, kill_lsh_transport_connection,
 			 &config->super, fd, fd,
-			 lsh_transport_event_handler, transport_forward_packet);
+			 lsh_transport_event_handler,
+			 lsh_transport_service_packet_handler);
 
   self->state = STATE_HANDSHAKE;
   self->config = config;
