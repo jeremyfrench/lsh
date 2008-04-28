@@ -81,4 +81,7 @@ void
 resource_list_foreach(struct resource_list *self,
 		      void (*f)(struct resource *r));
 
+struct resource *
+resource_list_top(struct resource_list *self);
+
 #endif /* LSH_RESOURCE_H_INCLUDED */

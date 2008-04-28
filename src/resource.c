@@ -136,6 +136,18 @@ resource_list_foreach(struct resource_list *self,
   resource_iterate(&self->q, f);
 }
 
+/* Returns the first live resource on the list. Also unlinks any dead
+   resources found. */
+struct resource *
+resource_list_top(struct resource_list *self)
+{
+  struct resource_node *n;
+  while (self->q && !self->q->resource->alive)
+    self->q = self->q->next;
+
+  return self->q;
+}
+
 void
 remember_resource(struct resource_list *self,
 		  struct resource *resource)
