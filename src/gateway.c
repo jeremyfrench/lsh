@@ -275,6 +275,29 @@ gateway_disconnect(struct gateway_connection *connection,
   KILL_RESOURCE(&connection->super.super);
 }
 
+static int
+gateway_packet_handler(struct gateway_connection *connection,
+		       uint32_t length, const uint8_t *packet)
+{
+  assert(length > 0);
+
+  switch (packet[0])
+    {
+    case SSH_LSH_GATEWAY_STOP:
+      /* The correct behaviour is to kill the port object. */
+      fatal("Not implemented.\n");
+      
+    case SSH_MSG_CHANNEL_OPEN:
+      gateway_handle_channel_open(&connection->super,
+				  connection->shared, length - 1, packet + 1);
+      break;
+
+    default:
+      return channel_packet_handler(&connection->super, length, packet);
+    }
+  return 1;
+}
+
 static void *
 oop_read_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state)
 {

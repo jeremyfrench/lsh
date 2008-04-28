@@ -229,16 +229,17 @@ gateway_request_methods =
   do_gateway_channel_success,
   do_gateway_channel_failure
 };
-  
+
 static int
-make_gateway_pair(struct gateway_connection *connection,
+make_gateway_pair(struct ssh_connection *origin_connection,
+		  struct ssh_connection *target_connection,
 		  struct channel_open_info *info,
 		  uint32_t arg_length, const uint8_t *arg)
 {
   int origin_local_number;
 
   origin_local_number
-    = ssh_connection_alloc_channel(&connection->super,
+    = ssh_connection_alloc_channel(origin_connection,
 				   CHANNEL_ALLOC_RECEIVED_OPEN);
 
   if (origin_local_number < 0)
@@ -262,7 +263,7 @@ make_gateway_pair(struct gateway_connection *connection,
       origin->super.send_max_packet = info->send_max_packet;
       origin->super.send_window_size = info->send_window_size;
       origin->super.remote_channel_number = info->remote_channel_number;
-      
+
       target->super.rec_max_packet = origin->super.send_max_packet;
       target->super.rec_window_size = origin->super.send_window_size;
 
@@ -270,26 +271,30 @@ make_gateway_pair(struct gateway_connection *connection,
 	 closing the channel. */
       origin->super.sinks++;
       target->super.sinks++;
-      
-      if (!channel_open_new_type(connection->shared,
+
+      if (!channel_open_new_type(target_connection,
 				 &target->super,
 				 info->type_length, info->type_data,
 				 "%ls", arg_length, arg))
 	{
-	  ssh_connection_dealloc_channel(&connection->super,
+	  ssh_connection_dealloc_channel(origin_connection,
 					 origin_local_number);
 	  return 0;
 	}
-      ssh_connection_register_channel(&connection->super,
-				      origin_local_number,
-				      &origin->super);
+      else
+	{
+	  ssh_connection_register_channel(origin_connection,
+					  origin_local_number,
+					  &origin->super);
 
-      return 1;
+	  return 1;
+	}
     }
 }
 
-static void
-gateway_handle_channel_open(struct gateway_connection *connection,
+void
+gateway_handle_channel_open(struct ssh_connection *origin_connection,
+			    struct ssh_connection *target_connection,
 			    uint32_t length, const uint8_t *packet)
 {
   struct simple_buffer buffer;
@@ -320,20 +325,20 @@ gateway_handle_channel_open(struct gateway_connection *connection,
 	  info.send_max_packet = SSH_MAX_PACKET;
 	}
       
-      if (connection->shared->pending_close)
+      if (target_connection->pending_close)
 	{
 	  /* We are waiting for channels to close. Don't open any new ones. */
 
-	  SSH_CONNECTION_WRITE(&connection->super,
+	  SSH_CONNECTION_WRITE(origin_connection,
 			       format_open_failure(
 				 info.remote_channel_number,
 				 SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
 				 "Waiting for channels to close.", ""));
 	}
-      else if (!make_gateway_pair(connection, &info,
-				  arg_length, arg))
+      else if (!make_gateway_pair(origin_connection, target_connection,
+				  &info, arg_length, arg))
 	{
-	  SSH_CONNECTION_WRITE(&connection->super,
+	  SSH_CONNECTION_WRITE(origin_connection,
 			       format_open_failure(
 				 info.remote_channel_number,
 				 SSH_OPEN_RESOURCE_SHORTAGE,
@@ -341,30 +346,6 @@ gateway_handle_channel_open(struct gateway_connection *connection,
 	}
     }
   else
-    SSH_CONNECTION_ERROR(&connection->super,
+    SSH_CONNECTION_ERROR(origin_connection,
 			 "Invalid SSH_MSG_CHANNEL_OPEN message.");
-}
-
-int
-gateway_packet_handler(struct gateway_connection *connection,
-		       uint32_t length, const uint8_t *packet)
-{
-  assert(length > 0);
-
-  switch (packet[0])
-    {
-      /* FIXME: When using local numbers like this, we must make sure
-	 to reject requests arriving over the network. */
-    case SSH_LSH_GATEWAY_STOP:
-      /* The correct behaviour is to kill the port object. */
-      fatal("Not implemented.\n");
-      
-    case SSH_MSG_CHANNEL_OPEN:
-      gateway_handle_channel_open(connection, length - 1, packet + 1);
-      break;
-
-    default:
-      return channel_packet_handler(&connection->super, length, packet);
-    }
-  return 1;
 }
