@@ -96,12 +96,6 @@ enum channel_alloc_state {
        ; forwarded-tcpip requests on.       
        (forwarded_ports struct object_queue)
 
-       ; Used if we're currently forwarding X11. To support several
-       ; screens at the same time, this should be replaced with a
-       ; list, analogous to the remote_ports list above. Perhaps it
-       ; could be moved to the lcient side subclass?       
-       (x11_display object client_x11_display)
-       
        ; Global requests that we have received, and should reply to
        ; in the right order
        (active_global_requests struct object_queue)
