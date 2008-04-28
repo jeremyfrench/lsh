@@ -62,9 +62,10 @@
      (vars
        (helper_fd . int)))
 */
+
 /* GABA:
    (class
-     (name connection)
+     (name lshd_connection)
      (super ssh_connection)
      (vars
        (config object lshd_connection_config)
@@ -72,12 +73,12 @@
 */
 
 static void
-kill_connection(struct resource *s)
+kill_lshd_connection(struct resource *s)
 {
-  CAST(connection, self, s);
+  CAST(lshd_connection, self, s);
   if (self->super.super.alive)
     {
-      trace("kill_connection\n");
+      trace("kill_lshd_connection\n");
 
       self->super.super.alive = 0;      
   
@@ -123,7 +124,7 @@ blocking_writev(int fd, struct iovec *iv, size_t n)
    FIXME: But that may not be enough if we're forwarding channels with
    reversed client/server responsibilities. */
 static void
-write_packet(struct connection *self, struct lsh_string *packet)
+write_packet(struct lshd_connection *self, struct lsh_string *packet)
 {
   uint32_t length;
   const uint8_t *data;
@@ -155,7 +156,7 @@ write_packet(struct connection *self, struct lsh_string *packet)
 }
 		  
 static void
-disconnect(struct connection *self, uint32_t reason, const char *msg)
+disconnect(struct lshd_connection *self, uint32_t reason, const char *msg)
 {
   werror("disconnecting: %z.\n", msg);
 
@@ -164,13 +165,13 @@ disconnect(struct connection *self, uint32_t reason, const char *msg)
 }
 
 static void
-service_start_read(struct connection *self);
+service_start_read(struct lshd_connection *self);
 
 /* NOTE: fd is in blocking mode, so we want precisely one call to read. */
 static void *
 oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
 {
-  CAST(connection, self, (struct lsh_object *) state);
+  CAST(lshd_connection, self, (struct lsh_object *) state);
 
   assert(event == OOP_READ);
 
@@ -230,7 +231,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 }
 
 static void
-service_start_read(struct connection *self)
+service_start_read(struct lshd_connection *self)
 {
   global_oop_source->on_fd(global_oop_source,
 			   STDIN_FILENO, OOP_READ,
@@ -241,22 +242,22 @@ service_start_read(struct connection *self)
 static void
 do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
 {
-  CAST(connection, self, s);
+  CAST(lshd_connection, self, s);
   write_packet(self, packet);
 }
 
 static void
 do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
 {
-  CAST(connection, self, s);
+  CAST(lshd_connection, self, s);
   disconnect(self, reason, msg);  
 }
 
-static struct connection *
-make_connection(struct lshd_connection_config *config)
+static struct lshd_connection *
+make_lshd_connection(struct lshd_connection_config *config)
 {
-  NEW(connection, self);
-  init_ssh_connection(&self->super, kill_connection, do_write_packet, do_disconnect);
+  NEW(lshd_connection, self);
+  init_ssh_connection(&self->super, kill_lshd_connection, do_write_packet, do_disconnect);
   
   io_register_fd(STDIN_FILENO, "transport read fd");
 
@@ -378,7 +379,7 @@ main_argp =
 int
 main(int argc, char **argv)
 {
-  struct connection *connection;
+  struct lshd_connection *connection;
   struct lshd_connection_config *config
     = make_lshd_connection_config();
 
@@ -391,7 +392,7 @@ main(int argc, char **argv)
   if (config->helper_fd != -1)
     verbose("helper fd: %i.\n", config->helper_fd);
 
-  connection = make_connection(config);
+  connection = make_lshd_connection(config);
   gc_global(&connection->super.super);
 
   io_run();
