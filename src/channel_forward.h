@@ -58,6 +58,10 @@ void
 channel_forward_start_read(struct channel_forward *channel);
 
 void
+channel_forward_write(struct channel_forward *self,
+		      uint32_t length, const uint8_t *data);
+
+void
 channel_forward_shutdown(struct channel_forward *self);
 
 #endif /* LSH_CHANNEL_FORWARD_H_INCLUDED */

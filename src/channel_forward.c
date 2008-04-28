@@ -83,6 +83,15 @@ oop_write_socket(oop_source *source UNUSED,
   return OOP_CONTINUE;
 }
 
+void
+channel_forward_write(struct channel_forward *self,
+		      uint32_t length, const uint8_t *data)
+{
+  if (channel_io_write(&self->super, &self->write, oop_write_socket,
+		       length, data) == CHANNEL_IO_EOF)
+    channel_forward_shutdown(self);
+}
+
 static void
 do_channel_forward_receive(struct ssh_channel *s, int type,
 			   uint32_t length, const uint8_t *data)
@@ -92,11 +101,7 @@ do_channel_forward_receive(struct ssh_channel *s, int type,
   if (type != CHANNEL_DATA)
     werror("Ignoring unexpected extended data on forwarded channel.\n");
   else
-    {
-      if (channel_io_write(&self->super, &self->write, oop_write_socket,
-			   length, data) == CHANNEL_IO_EOF)
-	channel_forward_shutdown(self);
-    }
+    channel_forward_write(self, length, data);
 }
 
 static void *
@@ -186,6 +191,9 @@ init_channel_forward(struct channel_forward *self,
 		     int socket, uint32_t initial_window,
 		     void (*event)(struct ssh_channel *, enum channel_event))
 {
+  if (!event)
+    event = do_channel_forward_event;
+
   init_channel(&self->super,
 	       do_kill_channel_forward, event);
 
@@ -206,8 +214,7 @@ struct channel_forward *
 make_channel_forward(int socket, uint32_t initial_window)
 {
   NEW(channel_forward, self);
-  init_channel_forward(self, socket, initial_window,
-		       do_channel_forward_event);
+  init_channel_forward(self, socket, initial_window, NULL);
   
   return self;
 }
