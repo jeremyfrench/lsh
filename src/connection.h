@@ -175,6 +175,7 @@ ssh_connection_start_channels(struct ssh_connection *connection);
 
 /* SSH_MSG_CHANNEL_OPEN */
 
+/* FIXME: Still needed, with the reorganized gateway? */
 struct channel_open_info
 {
   uint32_t type_length;
@@ -208,17 +209,17 @@ make_channel_open_exception(uint32_t error_code, const char *msg);
 #define CHANNEL_OPEN(o, c, i, d, r, e) \
 ((o)->handler((o), (c), (i), (d), (r), (e)))
 
-#define DEFINE_CHANNEL_OPEN(name)			\
-static void do_##name(struct channel_open *s,		\
-		      struct ssh_connection *c,	\
-		      struct channel_open_info *info,	\
-		      struct simple_buffer *args,	\
-		      struct command_continuation *c,	\
-		      struct exception_handler *e);	\
-							\
-struct channel_open name =				\
-{ STATIC_HEADER, do_##name };				\
-							\
+#define DEFINE_CHANNEL_OPEN(name)				\
+static void do_##name(struct channel_open *s,			\
+		      struct ssh_connection *connection,	\
+		      struct channel_open_info *info,		\
+		      struct simple_buffer *args,		\
+		      struct command_continuation *c,		\
+		      struct exception_handler *e);		\
+								\
+struct channel_open name =					\
+{ STATIC_HEADER, do_##name };					\
+								\
 static void do_##name
 
 extern struct command_2 connection_remember;
