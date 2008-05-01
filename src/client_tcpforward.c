@@ -122,13 +122,13 @@ make_remote_port(struct address_info *listen,
   return self;
 }
 
-static void
-do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
-				struct ssh_connection *connection,
-				struct channel_open_info *info UNUSED,
-				struct simple_buffer *args,
-				struct command_continuation *c,
-				struct exception_handler *e)
+DEFINE_CHANNEL_OPEN(channel_open_forwarded_tcpip)
+	(struct channel_open *s UNUSED,
+	 struct ssh_connection *connection,
+	 struct channel_open_info *info UNUSED,
+	 struct simple_buffer *args,
+	 struct command_continuation *c,
+	 struct exception_handler *e)
 {
   uint32_t listen_ip_length;
   const uint8_t *listen_ip;
@@ -177,9 +177,6 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
     }
 }
 
-struct channel_open
-channel_open_forwarded_tcpip =
-{ STATIC_HEADER, do_channel_open_forwarded_tcpip };
 
 /* GABA:
    (class
