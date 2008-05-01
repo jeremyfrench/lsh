@@ -151,7 +151,7 @@ channel_forward_start_io(struct channel_forward *self)
   self->super.send_adjust = do_channel_forward_send_adjust;
 
   self->super.sources++;
-  self->super.sinks ++;
+  self->super.sinks++;
 
   channel_forward_start_read(self);
 }
