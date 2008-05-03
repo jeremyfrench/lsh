@@ -64,13 +64,13 @@
    1. Receive CHANNEL_OPEN. Allocate a channel number, and invoke the
       CHANNEL_OPEN method corresponding to the channel type.
 
-   2. This command returns a new channel object, or raises an
-      exception.
+   2. The CHANNEL_OPEN method should arrange that channel_open_confirm
+      or channel_open_deny are called some time later.
 
-   3. Install the channel object, and reply with
-      CHANNEL_OPEN_CONFIRMATION. Generate a CHANNEL_EVENT_CONFIRM on
-      the channel. On error, deallocate channel number, and reply with
-      CHANNEL_OPEN_FAILURE.
+   3. For channel_open_confirm, the given channel is installed, and a
+      CHANNEL_OPEN_CONFIRMATION message is sent. For
+      channel_open_deny, the channel number is deallocated, and a
+      CHANNEL_OPEN_FAILURE message is sent.
 */
 
 struct exception *
@@ -693,142 +693,89 @@ handle_channel_request(struct ssh_connection *connection,
 }
 
 
-/* GABA:
-   (class
-     (name channel_open_continuation)
-     (super command_continuation)
-     (vars
-       (connection object ssh_connection)
-       (local_channel_number . uint32_t)
-       (remote_channel_number . uint32_t)
-       (send_window_size . uint32_t)
-       (send_max_packet . uint32_t)))
-*/
-
-static void
-do_channel_open_continue(struct command_continuation *c,
-			 struct lsh_object *value)
+void
+channel_open_confirm(const struct channel_open_info *info,
+		     struct ssh_channel *channel)
 {
-  CAST(channel_open_continuation, self, c);
-  CAST_SUBTYPE(ssh_channel, channel, value);
+  /* FIXME: This copying, and the ssh_connection_register_channel
+   * call, could just as well be done by the CHANNEL_OPEN handler? */
+  channel->send_window_size = info->send_window_size;
+  channel->send_max_packet = info->send_max_packet;
+  channel->remote_channel_number = info->remote_channel_number;
 
-  assert(channel);
-
-  /* FIXME: This copying could just as well be done by the
-   * CHANNEL_OPEN handler? Then we can remove the corresponding fields
-   * from the closure as well. */
-  channel->send_window_size = self->send_window_size;
-  channel->send_max_packet = self->send_max_packet;
-  channel->remote_channel_number = self->remote_channel_number;
-  
-  ssh_connection_register_channel(self->connection,
-				  self->local_channel_number,
+  ssh_connection_register_channel(info->connection,
+				  info->local_channel_number,
 				  channel);
-  ssh_connection_activate_channel(self->connection,
-				  self->local_channel_number);
+  ssh_connection_activate_channel(info->connection,
+				  info->local_channel_number);
 
   /* FIXME: Doesn't support sending extra arguments with the
    * confirmation message. */
 
-  SSH_CONNECTION_WRITE(self->connection,
+  SSH_CONNECTION_WRITE(info->connection,
 		       format_open_confirmation(channel, ""));
-
-  CHANNEL_EVENT(channel, CHANNEL_EVENT_CONFIRM);  
 }
 
-static struct command_continuation *
-make_channel_open_continuation(struct ssh_connection *connection,
-			       uint32_t local_channel_number,
-			       uint32_t remote_channel_number,
-			       uint32_t send_window_size,
-			       uint32_t send_max_packet)
+void
+channel_open_deny(const struct channel_open_info *info,
+		  int error, const char *msg)
 {
-  NEW(channel_open_continuation, self);
-
-  self->super.c = do_channel_open_continue;
-  self->connection = connection;
-  self->local_channel_number = local_channel_number;
-  self->remote_channel_number = remote_channel_number;
-  self->send_window_size = send_window_size;
-  self->send_max_packet = send_max_packet;
-
-  return &self->super;
-}
-			       
-/* GABA:
-   (class
-     (name exc_channel_open_handler)
-     (super exception_handler)
-     (vars
-       (connection object ssh_connection)
-       (local_channel_number . uint32_t)
-       (remote_channel_number . uint32_t)))
-*/
-
-static void
-do_exc_channel_open_handler(struct exception_handler *s,
-			    const struct exception *e)
-{
-  CAST(exc_channel_open_handler, self, s);
-  struct ssh_connection *connection = self->connection;
-  uint32_t error_code = (e->type == EXC_CHANNEL_OPEN)
-    ? e->subtype : SSH_OPEN_RESOURCE_SHORTAGE;
-
-  assert(self->local_channel_number < connection->used_channels);  
-  assert(connection->alloc_state[self->local_channel_number]
+  assert(info->local_channel_number < info->connection->used_channels);  
+  assert(info->connection->alloc_state[info->local_channel_number]
 	 == CHANNEL_ALLOC_SENT_OPEN);
-  assert(!connection->channels[self->local_channel_number]);
+  assert(!info->connection->channels[info->local_channel_number]);
 
-  ssh_connection_dealloc_channel(connection, self->local_channel_number);
+  ssh_connection_dealloc_channel(info->connection, info->local_channel_number);
 
-  werror("Denying channel open: %z\n", e->msg);
+  werror("Denying channel open: %z\n", msg);
   
-  SSH_CONNECTION_WRITE(connection,
-		       format_open_failure(self->remote_channel_number,
-					   error_code, e->msg, ""));
+  SSH_CONNECTION_WRITE(info->connection,
+		       format_open_failure(info->remote_channel_number,
+					   error, msg, ""));
 }
 
-static struct exception_handler *
-make_exc_channel_open_handler(struct ssh_connection *connection,
-			      uint32_t local_channel_number,
-			      uint32_t remote_channel_number,
-			      const char *context)
+struct channel_open_info *
+parse_channel_open(struct simple_buffer *buffer)
 {
-  NEW(exc_channel_open_handler, self);
-  self->super.raise = do_exc_channel_open_handler;
-  self->super.context = context;
-  
-  self->connection = connection;
-  self->local_channel_number = local_channel_number;
-  self->remote_channel_number = remote_channel_number;
+  NEW(channel_open_info, info);
 
-  return &self->super;
+  if (parse_string(buffer, &info->type_length, &info->type_data)
+      && parse_uint32(buffer, &info->remote_channel_number)
+      && parse_uint32(buffer, &info->send_window_size)
+      && parse_uint32(buffer, &info->send_max_packet))
+    {
+      info->type = lookup_atom(info->type_length, info->type_data);
+
+      /* We don't support larger packets than the default,
+       * SSH_MAX_PACKET. */
+      if (info->send_max_packet > SSH_MAX_PACKET)
+	{
+	  werror("parse_channel_open: The remote end asked for really large packets.\n");
+	  info->send_max_packet = SSH_MAX_PACKET;
+	}
+
+      info->local_channel_number = 0;
+      return info;
+    }
+  else
+    {
+      KILL(info);
+      return NULL;
+    }
 }
 
 static void
 handle_channel_open(struct ssh_connection *connection,
 		    struct simple_buffer *buffer)
 {
-  struct channel_open_info info;
+  struct channel_open_info *info;
 
   trace("handle_channel_open\n");
-  
-  if (parse_string(buffer, &info.type_length, &info.type_data)
-      && parse_uint32(buffer, &info.remote_channel_number)
-      && parse_uint32(buffer, &info.send_window_size)
-      && parse_uint32(buffer, &info.send_max_packet))
-  {
+
+  info = parse_channel_open(buffer);
+  if (info)
+    {
       struct channel_open *open = NULL;
-
-      info.type = lookup_atom(info.type_length, info.type_data);
-
-      /* We don't support larger packets than the default,
-       * SSH_MAX_PACKET. */
-      if (info.send_max_packet > SSH_MAX_PACKET)
-	{
-	  werror("handle_channel_open: The remote end asked for really large packets.\n");
-	  info.send_max_packet = SSH_MAX_PACKET;
-	}
       
       if (connection->pending_close)
 	{
@@ -836,26 +783,30 @@ handle_channel_open(struct ssh_connection *connection,
 
 	  SSH_CONNECTION_WRITE(connection,
 		       format_open_failure(
-			 info.remote_channel_number,
+			 info->remote_channel_number,
 			 SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
 			 "Waiting for channels to close.", ""));
 	}
       else
 	{
-	  if (info.type)
+	  if (info->type)
 	    {
 	      CAST_SUBTYPE(channel_open, o,
 			   ALIST_GET(connection->channel_types,
-				     info.type));
+				     info->type));
 	      open = o;
 	    }
+
+	  if (!open)
+	    open = connection->open_fallback;
+
 	  if (!open)
 	    {
 	      werror("handle_channel_open: Unknown channel type `%ps'\n",
-		     info.type_length, info.type_data);
+		     info->type_length, info->type_data);
 	      SSH_CONNECTION_WRITE(connection,
 			   format_open_failure(
-			     info.remote_channel_number,
+			     info->remote_channel_number,
 			     SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
 			     "Unknown channel type", ""));
 	    }
@@ -869,25 +820,22 @@ handle_channel_open(struct ssh_connection *connection,
 		{
 		  SSH_CONNECTION_WRITE(connection,
 			       format_open_failure(
-				 info.remote_channel_number,
+				 info->remote_channel_number,
 				 SSH_OPEN_RESOURCE_SHORTAGE,
 				 "Channel limit exceeded.", ""));
 		  return;
 		}
-	      
-	      CHANNEL_OPEN(open, connection,
-			   &info,
-			   buffer,
-			   make_channel_open_continuation(connection,
-							  local_number,
-							  info.remote_channel_number,
-							  info.send_window_size,
-							  info.send_max_packet),
-			   make_exc_channel_open_handler(connection,
-							 local_number,
-							 info.remote_channel_number,
-							 HANDLER_CONTEXT));
+	      info->connection = connection;
+	      info->local_channel_number = local_number;
 
+	      trace("handle_channel_open: Channel %i, window size = %i, max_packet = %i\n",
+		    local_number, info->send_window_size, info->send_max_packet);
+
+	      CHANNEL_OPEN(open, info, buffer);
+
+	      /* Points into the packet data, no longer valid after we
+		 return. */
+	      info->type_data = NULL;
 	    }
 	}
     }
@@ -917,6 +865,9 @@ handle_adjust_window(struct ssh_connection *connection,
 	  if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
 	    {
 	      channel->send_window_size += size;
+
+	      trace("handle_adjust_window: Channel %i, increment = %i, new window size = %i\n",
+		    channel_number, size, channel->send_window_size);
 
 	      if (channel->send_window_size && channel->send_adjust)
 		CHANNEL_SEND_ADJUST(channel, size);
@@ -1174,6 +1125,9 @@ handle_open_confirm(struct ssh_connection *connection,
 	  if (max_packet > SSH_MAX_DATA_SIZE)
 	    max_packet = SSH_MAX_DATA_SIZE;	  
 	  channel->send_max_packet = max_packet;
+
+	  trace("handle_open_confirm: Channel %i, window size = %i, max_packet = %i\n",
+		local_channel_number, window_size, max_packet);
 
 	  ssh_connection_activate_channel(connection, local_channel_number);
 	  CHANNEL_EVENT(channel, CHANNEL_EVENT_CONFIRM);

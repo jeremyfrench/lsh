@@ -34,8 +34,8 @@
 
 enum channel_event
 {
-  /* Channel is ready for use; we receieved or sent a
-     CHANNEL_OPEN_CONFIRMATION. */
+  /* We receieved CHANNEL_OPEN_CONFIRMATION, and the channel is ready
+     for use. */
   CHANNEL_EVENT_CONFIRM = 1,
 
   /* We received a CHANNEL_OPEN_FAILURE. */
@@ -237,6 +237,9 @@ channel_open_new_type(struct ssh_connection *connection,
 		      uint32_t type_length, const uint8_t *type,
 		      const char *format, ...);
 
+struct exception *
+make_channel_open_exception(uint32_t error_code, const char *msg);
+
 void
 channel_send_request(struct ssh_channel *channel, int type,
 		     int want_reply, struct command_context *ctx,
@@ -267,6 +270,14 @@ struct lsh_string *
 format_channel_failure(uint32_t channel);
 
 void
+channel_open_confirm(const struct channel_open_info *info,
+		     struct ssh_channel *channel);
+
+void
+channel_open_deny(const struct channel_open_info *info,
+		  int error, const char *msg);
+
+void
 channel_eof(struct ssh_channel *channel);
 
 void
@@ -278,12 +289,14 @@ channel_maybe_close(struct ssh_channel *channel);
 struct lsh_callback *
 make_channel_read_close_callback(struct ssh_channel *channel);
 
+#if 0
 struct exception_handler *
 make_channel_io_exception_handler(struct ssh_channel *channel,
 				  const char *prefix,
 				  int silent,
 				  struct exception_handler *parent,
 				  const char *context);
+#endif
 
 void
 channel_transmit_data(struct ssh_channel *channel,
@@ -297,5 +310,8 @@ channel_transmit_extended(struct ssh_channel *channel,
 int
 channel_packet_handler(struct ssh_connection *table,
 		       uint32_t length, const uint8_t *packet);
+
+struct channel_open_info *
+parse_channel_open(struct simple_buffer *buffer);
 
 #endif /* LSH_CHANNEL_H_INCLUDED */
