@@ -224,10 +224,10 @@ gateway_request_methods =
   do_gateway_channel_failure
 };
 
-static int
-make_gateway_pair(struct ssh_connection *target_connection,
-		  const struct channel_open_info *info,
-		  uint32_t arg_length, const uint8_t *arg)
+int
+gateway_forward_channel(struct ssh_connection *target_connection,
+			const struct channel_open_info *info,
+			uint32_t arg_length, const uint8_t *arg)
 {
   NEW(gateway_channel, origin);
   NEW(gateway_channel, target);
@@ -257,7 +257,7 @@ make_gateway_pair(struct ssh_connection *target_connection,
   return channel_open_new_type(target_connection,
 			       &target->super,
 			       info->type_length, info->type_data,
-			       "%ls", arg_length, arg));
+			       "%ls", arg_length, arg);
 }
 
 /* Used for all channel open requests sent to the gateway. I.e., the
@@ -277,15 +277,17 @@ DEFINE_CHANNEL_OPEN(gateway_channel_open)
   trace("gateway_channel_open: send_window_size = %i\n",
 	info->send_window_size);
 
-  parse_rest(args, &arg_length, &arg);
-
   if (connection->shared->pending_close)
     /* We are waiting for channels to close. Don't open any new ones. */
     channel_open_deny(info, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
 		      "Waiting for channels to close.");
+  else
+    {
+      parse_rest(args, &arg_length, &arg);
 
-  else if (!make_gateway_pair(connection->shared,
-			      info, arg_length, arg))
-    channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
-		      "Too many channels.");
+      if (!gateway_forward_channel(connection->shared,
+				   info, arg_length, arg))
+	channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
+			  "Too many channels.");
+    }
 }
