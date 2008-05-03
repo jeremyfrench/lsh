@@ -281,21 +281,13 @@ gateway_packet_handler(struct gateway_connection *connection,
 {
   assert(length > 0);
 
-  switch (packet[0])
+  if (packet[0] == SSH_LSH_GATEWAY_STOP)
     {
-    case SSH_LSH_GATEWAY_STOP:
       /* The correct behaviour is to kill the port object. */
       fatal("Not implemented.\n");
-      
-    case SSH_MSG_CHANNEL_OPEN:
-      gateway_handle_channel_open(&connection->super,
-				  connection->shared, length - 1, packet + 1);
-      break;
-
-    default:
-      return channel_packet_handler(&connection->super, length, packet);
     }
-  return 1;
+  else
+    return channel_packet_handler(&connection->super, length, packet);
 }
 
 static void *
@@ -403,6 +395,7 @@ make_gateway_connection(struct ssh_connection *shared, int fd)
   init_ssh_connection(&self->super, kill_gateway_connection,
 		      do_write_packet, do_disconnect);
 
+  self->super.open_fallback = &gateway_channel_open;
   self->shared = shared;
   
   io_register_fd(fd, "lsh gateway connection");
