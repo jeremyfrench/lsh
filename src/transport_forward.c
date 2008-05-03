@@ -365,7 +365,18 @@ forward_packet_handler(struct transport_connection *connection,
 		       uint32_t seqno, uint32_t length, const uint8_t *packet)
 {
   CAST_SUBTYPE(transport_forward, self, connection);
-  return transport_forward_service_packet(self, seqno, length, packet);
+
+  assert(length > 0);
+  if (packet[0] >= SSH_FIRST_LOCAL)
+    {
+      /* These packets, in particular SSH_LSH_RANDOM_REPLY, are for
+	 local use only, and must not be accepted from the network. */
+      transport_send_packet(connection, TRANSPORT_WRITE_FLAG_PUSH,
+			    format_unimplemented(seqno));
+      return 1;
+    }
+  else
+    return transport_forward_service_packet(self, seqno, length, packet);
 }
 
 void
