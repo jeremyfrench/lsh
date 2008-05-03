@@ -357,11 +357,8 @@ struct global_request tcpip_cancel_forward_handler =
      
 DEFINE_CHANNEL_OPEN(channel_open_direct_tcpip)
 	(struct channel_open *s UNUSED,
-	 struct ssh_connection *connection,
-	 struct channel_open_info *info UNUSED,
-	 struct simple_buffer *args,
-	 struct command_continuation *c,
-	 struct exception_handler *e)
+	 const struct channel_open_info *info,
+	 struct simple_buffer *args)
 {
   struct lsh_string *dest_host = NULL;
   uint32_t dest_port;
@@ -380,15 +377,15 @@ DEFINE_CHANNEL_OPEN(channel_open_direct_tcpip)
       verbose("direct-tcpip to %pS:%i.\n", dest_host, dest_port);
 
       r = tcpforward_connect(make_address_info(dest_host, dest_port),
-			     c, e);
+			     info);
       if (r)
-	remember_resource(connection->resources, r);
+	remember_resource(info->connection->resources, r);
     }
   else
     {
       lsh_string_free(dest_host);
       
       werror("do_channel_open_direct_tcpip: Invalid message!\n");
-      SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_OPEN direct-tcpip message.");
+      SSH_CONNECTION_ERROR(info->connection, "Invalid CHANNEL_OPEN direct-tcpip message.");
     }
 }
