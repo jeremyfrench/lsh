@@ -26,6 +26,7 @@
 #endif
 
 #include <assert.h>
+#include <string.h>
 
 #include "tcpforward.h"
 
@@ -82,8 +83,7 @@ tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port)
      (name tcpforward_connect_state)
      (super io_connect_state)
      (vars
-       (c object command_continuation)
-       (e object exception_handler)))
+       (info const object channel_open_info)))
 */
 
 static void
@@ -91,7 +91,11 @@ tcpforward_connect_done(struct io_connect_state *s, int fd)
 {
   CAST(tcpforward_connect_state, self, s);
 
-  COMMAND_RETURN(self->c, make_channel_forward(fd, TCPIP_WINDOW_SIZE));
+  struct channel_forward *channel
+    = make_channel_forward(fd, TCPIP_WINDOW_SIZE);
+  
+  channel_open_confirm(self->info, &channel->super);
+  channel_forward_start_io(channel);  
 }
 
 static void
@@ -100,14 +104,13 @@ tcpforward_connect_error(struct io_connect_state *s, int error)
   CAST(tcpforward_connect_state, self, s);
   
   werror("Connection failed, socket error %i\n", error);
-  EXCEPTION_RAISE(self->e,
-		  make_exception(EXC_CHANNEL_OPEN, error, "Connection failed"));
+  channel_open_deny(self->info,
+		    SSH_OPEN_CONNECT_FAILED, "Connection failed");
 }
 
 struct resource *
 tcpforward_connect(struct address_info *a,
-		   struct command_continuation *c,
-		   struct exception_handler *e)
+		   const struct channel_open_info *info)
 {
   struct sockaddr *addr;
   socklen_t addr_length;
@@ -115,7 +118,7 @@ tcpforward_connect(struct address_info *a,
   addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
   if (!addr)
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
+      channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, "Invalid address");
       return NULL;
     }
 
@@ -126,18 +129,16 @@ tcpforward_connect(struct address_info *a,
 			  tcpforward_connect_error);
     int res;
     
-    self->c = c;
-    self->e = e;
+    self->info = info;
 
     res = io_connect(&self->super, addr_length, addr);
     lsh_space_free(addr);
 
     if (!res)
       {
-	EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "io_connect failed"));
+	channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(res));
 	return NULL;
       }
     return &self->super.super;
   }
 }
-

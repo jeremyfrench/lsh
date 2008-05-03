@@ -60,8 +60,7 @@ tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port);
 
 struct resource *
 tcpforward_connect(struct address_info *a,
-		   struct command_continuation *c,
-		   struct exception_handler *e);
+		   const struct channel_open_info *info);
 
 extern struct channel_open channel_open_direct_tcpip;
 extern struct channel_open channel_open_forwarded_tcpip;
