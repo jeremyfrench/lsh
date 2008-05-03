@@ -225,8 +225,6 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
     case CHANNEL_EVENT_CLOSE:
     case CHANNEL_EVENT_CONFIRM:
     case CHANNEL_EVENT_DENY:
-      /* Do nothing; i/o isn't started until after a child process has
-	 been spawned. */
       break;
 
     case CHANNEL_EVENT_EOF:
@@ -310,11 +308,8 @@ make_server_session(uint32_t initial_window,
 
 static void
 do_open_session(struct channel_open *s,
-		struct ssh_connection *connection,
-		struct channel_open_info *info UNUSED,
-		struct simple_buffer *args,
-		struct command_continuation *c,
-		struct exception_handler *e UNUSED)
+		const struct channel_open_info *info,
+		struct simple_buffer *args)
 {
   CAST(open_session, self, s);
 
@@ -322,14 +317,14 @@ do_open_session(struct channel_open *s,
 
   if (parse_eod(args))
     {
-      COMMAND_RETURN(c,
-		     make_server_session(WINDOW_SIZE,
-					 self->session_requests,
-					 self->helper_fd));
+      channel_open_confirm(info,
+			   make_server_session(WINDOW_SIZE,
+					       self->session_requests,
+					       self->helper_fd));
     }
   else
     {
-      SSH_CONNECTION_ERROR(connection, "trailing garbage in open message");
+      SSH_CONNECTION_ERROR(info->connection, "trailing garbage in open message");
     }
 }
 
