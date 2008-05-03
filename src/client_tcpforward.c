@@ -124,11 +124,8 @@ make_remote_port(struct address_info *listen,
 
 DEFINE_CHANNEL_OPEN(channel_open_forwarded_tcpip)
 	(struct channel_open *s UNUSED,
-	 struct ssh_connection *connection,
-	 struct channel_open_info *info UNUSED,
-	 struct simple_buffer *args,
-	 struct command_continuation *c,
-	 struct exception_handler *e)
+	 const struct channel_open_info *info,
+	 struct simple_buffer *args)
 {
   uint32_t listen_ip_length;
   const uint8_t *listen_ip;
@@ -145,7 +142,7 @@ DEFINE_CHANNEL_OPEN(channel_open_forwarded_tcpip)
       && parse_eod(args))
     {
       CAST(remote_port, port,
-	   tcpforward_lookup(&connection->forwarded_ports,
+	   tcpforward_lookup(&info->connection->forwarded_ports,
 			     listen_ip_length, listen_ip, listen_port));
 	   
       if (port && port->active)
@@ -155,25 +152,25 @@ DEFINE_CHANNEL_OPEN(channel_open_forwarded_tcpip)
 	  verbose("forwarded-tcpip for %ps:%i, from %ps:%i.\n",
 		  listen_ip_length, listen_ip, listen_port, peer_ip_length, peer_ip, peer_port);
 	  
-	  r = tcpforward_connect(port->target, c, e);
+	  r = tcpforward_connect(port->target, info);
 	  if (r)
-	    remember_resource(connection->resources, r);
-
-	  return;
+	    remember_resource(info->connection->resources, r);
 	}
-      werror("Received a forwarded-tcpip request on a port for which we\n"
-	     "haven't requested forwarding. Denying.\n");
+      else
+	{
+	  werror("Received a forwarded-tcpip request on a port for which we\n"
+		 "haven't requested forwarding. Denying.\n");
 
-      EXCEPTION_RAISE(e,
-		      make_channel_open_exception(SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
-						  "Unexpected tcpip-forward request"));
-      return;
+	  channel_open_deny(info,
+			    SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+			    "Unexpected tcpip-forward request");
+	}
     }
   else
     {
       werror("do_channel_open_forwarded_tcpip: Invalid message!\n");
 
-      SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_OPEN forwarded-tcpip message.");
+      SSH_CONNECTION_ERROR(info->connection, "Invalid CHANNEL_OPEN forwarded-tcpip message.");
     }
 }
 
