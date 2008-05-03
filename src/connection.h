@@ -63,6 +63,8 @@ enum channel_alloc_state {
        (global_requests object alist)
        ; Channel types that we can open
        (channel_types object alist)
+       ; If non-NULL, invoked for unknown channel types.
+       (open_fallback object channel_open)
 
        ; Allocation of local channel numbers is managed using the same
        ; method as is traditionally used for allocation of unix file 
@@ -175,47 +177,41 @@ ssh_connection_start_channels(struct ssh_connection *connection);
 
 /* SSH_MSG_CHANNEL_OPEN */
 
-/* FIXME: Still needed, with the reorganized gateway? */
-struct channel_open_info
-{
-  uint32_t type_length;
+/* FIXME: Move definitions to channel.h?. */
+/* GABA:
+   (class
+     (name channel_open_info)
+     (vars
+       (connection object ssh_connection)
+       (local_channel_number . uint32_t)
 
-  /* NOTE: This is a pointer into the packet, so if it is needed later
-   * it must be copied. */
-  const uint8_t *type_data;
-  
-  int type;
+       ;; NOTE: This is a pointer into the packet, and valid only during the call to the
+       ;; channel open method.
+       (type_length . uint32_t)
+       (type_data . "const uint8_t *")
+       (type . int)
 
-  uint32_t remote_channel_number;
-  uint32_t send_window_size;
-  uint32_t send_max_packet;
-};
-
-struct exception *
-make_channel_open_exception(uint32_t error_code, const char *msg);
+       (remote_channel_number . uint32_t)
+       (send_window_size . uint32_t)
+       (send_max_packet . uint32_t)))
+*/
 
 /* GABA:
    (class
      (name channel_open)
      (vars
        (handler method void
-                "struct ssh_connection *connection"
-		"struct channel_open_info *info"
-                "struct simple_buffer *data"
-                "struct command_continuation *c"
-		"struct exception_handler *e")))
+		"const struct channel_open_info *info"
+                "struct simple_buffer *data")))
 */
 
-#define CHANNEL_OPEN(o, c, i, d, r, e) \
-((o)->handler((o), (c), (i), (d), (r), (e)))
+#define CHANNEL_OPEN(o, i, d) \
+((o)->handler((o), (i), (d)))
 
 #define DEFINE_CHANNEL_OPEN(name)				\
 static void do_##name(struct channel_open *s,			\
-		      struct ssh_connection *connection,	\
-		      struct channel_open_info *info,		\
-		      struct simple_buffer *args,		\
-		      struct command_continuation *c,		\
-		      struct exception_handler *e);		\
+		      const struct channel_open_info *info,	\
+		      struct simple_buffer *args);		\
 								\
 struct channel_open name =					\
 { STATIC_HEADER, do_##name };					\

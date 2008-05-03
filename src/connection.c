@@ -71,6 +71,7 @@ init_ssh_connection(struct ssh_connection *connection,
 
   connection->global_requests = make_alist(0, -1);
   connection->channel_types = make_alist(0, -1);
+  connection->open_fallback = NULL;
 
   object_queue_init(&connection->forwarded_ports);
   
