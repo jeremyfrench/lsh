@@ -69,9 +69,6 @@ gateway_stop_read(struct gateway_connection *self);
 struct gateway_connection *
 make_gateway_connection(struct ssh_connection *shared, int fd);
 
-void
-gateway_handle_channel_open(struct ssh_connection *origin_connection,
-			    struct ssh_connection *target_connection,
-			    uint32_t length, const uint8_t *packet);
+extern struct channel_open gateway_channel_open;
 
 #endif /* LSH_GATEWAY_H_INCLUDED */

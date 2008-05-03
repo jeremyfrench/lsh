@@ -62,7 +62,13 @@
      (name gateway_channel)
      (super ssh_channel)
      (vars
-       (chain object ssh_channel)))
+       (chain object ssh_channel)
+
+       ;; Present only in the target channel, but relates to the
+       ;; CHANNEL_OPEN message received for the originating channel.
+       ;; FIXME: Could use a new class, but it's probably not worth
+       ;; the hassle.
+       (info const object channel_open_info)))
 */
 
 static void
@@ -121,51 +127,38 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
   switch(event)
     {
     case CHANNEL_EVENT_CONFIRM:
-      if (!self->chain->connection->super.alive)
-	{
-	  /* The other channel has disappeared, so close. */
-	  channel_close(&self->super);
-	}
+      if (!self->info->connection->super.alive)
+        {
+          /* The other channel has disappeared, so close. */
+          channel_close(&self->super);
+        }
       else
-	{
-	  /* This method is invoked on the target channel. Propagate
-	     the target channel's send variables to the originating
-	     channel's receive variables. */
-	  self->chain->rec_window_size = self->super.send_window_size;
-	  self->chain->rec_max_packet = self->super.send_max_packet;
+        {
+          /* This method is invoked on the target channel. Propagate
+             the target channel's send variables to the originating
+             channel's receive variables. */
+          self->chain->rec_window_size = self->super.send_window_size;
+          self->chain->rec_max_packet = self->super.send_max_packet;
 
-	  self->super.receive = do_receive;
-	  self->super.send_adjust = do_send_adjust;
+          self->super.receive = do_receive;
+          self->super.send_adjust = do_send_adjust;
 
-	  self->chain->receive = do_receive;
-	  self->chain->send_adjust = do_send_adjust;
+          self->chain->receive = do_receive;
+          self->chain->send_adjust = do_send_adjust;
 
-	  ssh_connection_activate_channel(self->chain->connection,
-					  self->chain->local_channel_number);
-	  remember_resource(self->super.connection->resources,
-			    &self->super.super);
-	  
-	  /* We don't pass on any additional arguments. */
-	  SSH_CONNECTION_WRITE(self->chain->connection,
-			       format_open_confirmation(self->chain,
-							""));
-	}
+	  channel_open_confirm(self->info, self->chain);
+        }
       break;
     case CHANNEL_EVENT_DENY:
       /* This method is invoked on the target channel. We need to tear
-	 down the originating channel. */
-      if (self->chain->connection->super.alive)
-	{
-	  /* FIXME: We should propagate the error code and message
-	     over the gateway. */
-	  SSH_CONNECTION_WRITE(self->chain->connection,
-			       format_open_failure(self->chain->remote_channel_number,
-						   SSH_OPEN_RESOURCE_SHORTAGE,
-						   "Refused by server", ""));
-
-	  ssh_connection_dealloc_channel(self->chain->connection,
-					 self->chain->local_channel_number);
-	}
+         down the originating channel. */
+      if (self->info->connection->super.alive)
+        {
+          /* FIXME: We should propagate the error code and message
+             over the gateway. */
+	  channel_open_deny(self->info, SSH_OPEN_RESOURCE_SHORTAGE,
+			    "Refused by server");
+        }
       break;
     case CHANNEL_EVENT_EOF:
       channel_eof(self->chain);
@@ -178,7 +171,8 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
     case CHANNEL_EVENT_STOP:
     case CHANNEL_EVENT_START:
       /* FIXME: Ignore? The entire gateway has to be stopped and
-	 started anyway. */
+         started anyway. Or do we need to buffer one window of
+         data? */
       break;
     }      
 }  
@@ -231,121 +225,67 @@ gateway_request_methods =
 };
 
 static int
-make_gateway_pair(struct ssh_connection *origin_connection,
-		  struct ssh_connection *target_connection,
-		  struct channel_open_info *info,
+make_gateway_pair(struct ssh_connection *target_connection,
+		  const struct channel_open_info *info,
 		  uint32_t arg_length, const uint8_t *arg)
 {
-  int origin_local_number;
+  NEW(gateway_channel, origin);
+  NEW(gateway_channel, target);
 
-  origin_local_number
-    = ssh_connection_alloc_channel(origin_connection,
-				   CHANNEL_ALLOC_RECEIVED_OPEN);
+  init_channel(&origin->super,
+	       do_kill_gateway_channel, do_gateway_channel_event);
+  init_channel(&target->super,
+	       do_kill_gateway_channel, do_gateway_channel_event);
 
-  if (origin_local_number < 0)
-    return 0;
-  else
-    {
-      NEW(gateway_channel, origin);
-      NEW(gateway_channel, target);
+  origin->super.request_methods = &gateway_request_methods;
+  target->super.request_methods = &gateway_request_methods;
 
-      init_channel(&origin->super,
-		   do_kill_gateway_channel, do_gateway_channel_event);
-      init_channel(&target->super,
-		   do_kill_gateway_channel, do_gateway_channel_event);
+  origin->chain = &target->super;
+  target->chain = &origin->super;
 
-      origin->super.request_methods = &gateway_request_methods;
-      target->super.request_methods = &gateway_request_methods;
+  origin->info = NULL;
+  target->info = info;
 
-      origin->chain = &target->super;
-      target->chain = &origin->super;
+  target->super.rec_max_packet = info->send_max_packet;
+  target->super.rec_window_size = info->send_window_size;
 
-      origin->super.send_max_packet = info->send_max_packet;
-      origin->super.send_window_size = info->send_window_size;
-      origin->super.remote_channel_number = info->remote_channel_number;
+  /* Prevents the processing when sending and receiving CHANNEL_EOF from
+     closing the channel. */
+  origin->super.sinks++;
+  target->super.sinks++;
 
-      target->super.rec_max_packet = origin->super.send_max_packet;
-      target->super.rec_window_size = origin->super.send_window_size;
-
-      /* Prevents the processing when sending and receiving CHANNEL_EOF from
-	 closing the channel. */
-      origin->super.sinks++;
-      target->super.sinks++;
-
-      if (!channel_open_new_type(target_connection,
-				 &target->super,
-				 info->type_length, info->type_data,
-				 "%ls", arg_length, arg))
-	{
-	  ssh_connection_dealloc_channel(origin_connection,
-					 origin_local_number);
-	  return 0;
-	}
-      else
-	{
-	  ssh_connection_register_channel(origin_connection,
-					  origin_local_number,
-					  &origin->super);
-
-	  return 1;
-	}
-    }
+  return channel_open_new_type(target_connection,
+			       &target->super,
+			       info->type_length, info->type_data,
+			       "%ls", arg_length, arg));
 }
 
-void
-gateway_handle_channel_open(struct ssh_connection *origin_connection,
-			    struct ssh_connection *target_connection,
-			    uint32_t length, const uint8_t *packet)
+/* Used for all channel open requests sent to the gateway. I.e., the
+   target connection is the shared one. FIXME: Need to split off the
+   parts that can be reused for X11 requests. */
+DEFINE_CHANNEL_OPEN(gateway_channel_open)
+	(struct channel_open *s UNUSED,
+	 const struct channel_open_info *info,
+	 struct simple_buffer *args)
 {
-  struct simple_buffer buffer;
-  struct channel_open_info info;
-    
-  trace("gateway_handle_channel_open\n");
+  CAST(gateway_connection, connection, info->connection);
+  uint32_t arg_length;
+  const uint8_t *arg;
 
-  simple_buffer_init(&buffer, length, packet);
-  
-  if (parse_string(&buffer, &info.type_length, &info.type_data)
-      && parse_uint32(&buffer, &info.remote_channel_number)
-      && parse_uint32(&buffer, &info.send_window_size)
-      && parse_uint32(&buffer, &info.send_max_packet))
-    {
-      uint32_t arg_length;
-      const uint8_t *arg;
+  trace("gateway_channel_open\n");
 
-      trace("gateway_handle_channel_open: send_window_size = %i\n",
-	    info.send_window_size);
+  trace("gateway_channel_open: send_window_size = %i\n",
+	info->send_window_size);
 
-      parse_rest(&buffer, &arg_length, &arg);
-      
-      /* We don't support larger packets than the default,
-       * SSH_MAX_PACKET. */
-      if (info.send_max_packet > SSH_MAX_PACKET)
-	{
-	  werror("handle_gateway_channel_open: The gateway asked for really large packets.\n");
-	  info.send_max_packet = SSH_MAX_PACKET;
-	}
-      
-      if (target_connection->pending_close)
-	{
-	  /* We are waiting for channels to close. Don't open any new ones. */
+  parse_rest(args, &arg_length, &arg);
 
-	  SSH_CONNECTION_WRITE(origin_connection,
-			       format_open_failure(
-				 info.remote_channel_number,
-				 SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
-				 "Waiting for channels to close.", ""));
-	}
-      else if (!make_gateway_pair(origin_connection, target_connection,
-				  &info, arg_length, arg))
-	{
-	  SSH_CONNECTION_WRITE(origin_connection,
-			       format_open_failure(
-				 info.remote_channel_number,
-				 SSH_OPEN_RESOURCE_SHORTAGE,
-				 "Too many channels.", ""));
-	}
-    }
-  else
-    SSH_CONNECTION_ERROR(origin_connection,
-			 "Invalid SSH_MSG_CHANNEL_OPEN message.");
+  if (connection->shared->pending_close)
+    /* We are waiting for channels to close. Don't open any new ones. */
+    channel_open_deny(info, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+		      "Waiting for channels to close.");
+
+  else if (!make_gateway_pair(connection->shared,
+			      info, arg_length, arg))
+    channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
+		      "Too many channels.");
 }
