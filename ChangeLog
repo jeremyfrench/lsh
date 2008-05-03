@@ -1,3 +1,98 @@
+2008-05-03  Niels Möller  <nisse@lysator.liu.se>
+
+	Reorganized handling of SSH_MSG_CHANNEL_OPEN.
+
+	* src/connection.h (class ssh_connection): New attribute
+	open_fallback, used by the gateway code.
+	(class channel_open_info): Upgraded to a first-class object. Added
+	attributes connection and local_channel_number.
+	(class channel_open): Deleted the connection, continuation, and
+	exception_handler arguments from the handler method.
+	(DEFINE_CHANNEL_OPEN): Updated for shorter argument list.
+	* src/connection.c (init_ssh_connection): Initialize open_fallback.
+
+	* src/channel.c (class channel_open_continuation): Deleted class.
+	(class exc_channel_open_handler): Deleted class.
+	(make_channel_open_continuation): Deleted function.
+	(make_exc_channel_open_handler): Deleted function.
+	(channel_open_confirm): New function, replaces
+	channel_open_continuation. Don't generate CHANNEL_EVENT_CONFIRM.
+	(channel_open_deny): New function, replaces exc_channel_open_handler.
+	(parse_channel_open): New function. Creates a channel_open_info
+	object.
+	(handle_channel_open): Use parse_channel_open. Set the connection
+	and local_channel_number attributes of the channel_open_info. Check the
+	open_fallback pointer. Less arguments to CHANNEL_OPEN.
+
+	* src/channel.h (make_channel_io_exception_handler): Deleted
+	prototype of obsolete function.
+	(enum channel_event): CHANNEL_EVENT_CONFIRM is generated only for
+	channels opened by our side.
+
+	* src/tcpforward.c (class tcpforward_connect_state): Replaced
+	continuation and exception handler attributes with a
+	channel_open_info.
+	(tcpforward_connect_done): Replaced COMMAND_CONTINUATION call with
+	calls to channel_open_confirm and channel_forward_start_io.
+	(tcpforward_connect_error): Replaced EXCEPTION_RAISE call with a
+	call to channel_open_deny.
+	(tcpforward_connect): Take a channel_open_info as argument.
+	Adapted to new CHANNEL_OPEN convention.
+
+	* src/server_tcpforward.c (channel_open_direct_tcpip): Adapted to
+	new CHANNEL_OPEN convention.
+
+	* src/client_tcpforward.c (channel_open_forwarded_tcpip): Adapted
+	to new CHANNEL_OPEN convention.
+
+	* src/server_session.c (do_open_session): Adapted to new
+	CHANNEL_OPEN convention.
+
+	* src/gateway_channel.c (class gateway_channel): New attribute
+	channel_open_info.
+	(do_gateway_channel_event): Use channel_open_confirm and
+	channel_open_deny.
+	(make_gateway_pair): Take a chennel_open_info as argument,
+	replacing origin_connection. Leave most of the initialization of
+	the originating channel to channel_open_confirm.
+	(gateway_channel_open): Regular channel open handler, replacing
+	function gateway_handle_channel_open.
+
+	* src/gateway.c (gateway_packet_handler): Deleted special handling
+	of SSH_MSG_CHANNEL_OPEN.
+	(make_gateway_connection): Set open_fallback to gateway_channel_open.
+
+2008-05-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_tcpforward.c (channel_open_direct_tcpip): Use DEFINE_CHANNEL_OPEN.
+
+	* src/connection.h (DEFINE_CHANNEL_OPEN): Fixed colliding argument
+	names in prototype.
+
+	* src/client_tcpforward.c (channel_open_forwarded_tcpip): Use DEFINE_CHANNEL_OPEN.
+
+2008-04-28  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel_forward.c (init_channel_forward): Use
+	do_channel_forward_event if the given event handler is NULL.
+	(channel_forward_write): New function.
+	(do_channel_forward_receive): Use it.
+
+	* src/resource.c (resource_list_top): New function.
+
+	* src/lshd-connection.c (class lshd_connection): Renamed class,
+	was connection. Updated users and renamed related functions for
+	consistency.
+
+	* src/gateway_channel.c (make_gateway_pair): Changed interface to
+	take the two connections as arguments.
+	(gateway_handle_channel_open): Likewise. Also made non-static.
+	(gateway_packet_handler): Moved to gateway.c.
+	* src/gateway.c (gateway_packet_handler): Moved function here.
+
+	* src/connection.h (class ssh_connection): Removed attribute
+	x11_display.	
+
 2008-04-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_service_packet_handler): New
