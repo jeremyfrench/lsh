@@ -83,7 +83,7 @@ void set_error_syslog(void);
 /* Format specifiers:
  *
  * %%  %-character
- * %e  an errno value, formated numerically and with strerror
+ * %e  an errno value, formated with strerror
  * %i  uint32_t
  * %c  int, interpreted as a single character to output
  * %n  mpz_t
