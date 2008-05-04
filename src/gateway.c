@@ -236,7 +236,7 @@ gateway_write_data(struct gateway_connection *connection,
   return 0;
 }
 
-static void
+void
 gateway_write_packet(struct gateway_connection *connection,
 		     struct lsh_string *packet)
 {
@@ -281,13 +281,19 @@ gateway_packet_handler(struct gateway_connection *connection,
 {
   assert(length > 0);
 
-  if (packet[0] == SSH_LSH_GATEWAY_STOP)
+  switch (packet[0])
     {
+    case SSH_LSH_GATEWAY_STOP:
       /* The correct behaviour is to kill the port object. */
       fatal("Not implemented.\n");
+    case SSH_LSH_RANDOM_REQUEST:
+      client_gateway_random_request(connection->shared, length, packet,
+				    connection);
+      return 1;
+      break;
+    default:
+      return channel_packet_handler(&connection->super, length, packet);
     }
-  else
-    return channel_packet_handler(&connection->super, length, packet);
 }
 
 static void *
@@ -389,7 +395,7 @@ do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
 }
 
 struct gateway_connection *
-make_gateway_connection(struct ssh_connection *shared, int fd)
+make_gateway_connection(struct client_connection *shared, int fd)
 {
   NEW(gateway_connection, self);
   init_ssh_connection(&self->super, kill_gateway_connection,
