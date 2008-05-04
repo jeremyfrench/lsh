@@ -277,7 +277,7 @@ DEFINE_CHANNEL_OPEN(gateway_channel_open)
   trace("gateway_channel_open: send_window_size = %i\n",
 	info->send_window_size);
 
-  if (connection->shared->pending_close)
+  if (connection->shared->super.pending_close)
     /* We are waiting for channels to close. Don't open any new ones. */
     channel_open_deny(info, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
 		      "Waiting for channels to close.");
@@ -285,7 +285,7 @@ DEFINE_CHANNEL_OPEN(gateway_channel_open)
     {
       parse_rest(args, &arg_length, &arg);
 
-      if (!gateway_forward_channel(connection->shared,
+      if (!gateway_forward_channel(&connection->shared->super,
 				   info, arg_length, arg))
 	channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
 			  "Too many channels.");
