@@ -191,6 +191,9 @@ make_forward_x11(const char *display_string,
 struct client_x11_display *
 make_client_x11_display(const char *display, struct lsh_string *fake);
 
+/* FIXME: Move options parsing to lsh.c, there's no longer any lshg
+   program to share client-side options with. */
+
 /* GABA:
    (class
      (name client_options)
