@@ -1,4 +1,49 @@
+2008-05-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (handle_random_reply): New function.
+	(client_random_request): New function.
+	(client_gateway_random_request): New function.
+	(oop_read_service): Use handle_random_reply.
+
+	Moved and renamed class lsh_connection.
+	* src/lsh.c (class lsh_connection): Moved definition to client.h.
+	Renamed to client_connection. Renamed all related function.
+	Related i/o code moved to client.c.
+
+	* src/client.h (class client_connection): Moved here from lsh.c.
+	New attribute pending_random.
+	(client_random_handler): New class.
+
+	* src/client.c: Moved client_connection i/o code here.
+	(handle_random_reply): New function.
+	(client_random_request): New function.
+	(client_gateway_random_request): New function.
+	(oop_read_service): Use handle_random_reply.
+
+	* src/gateway.c (gateway_write_packet): Made non-static.
+	(gateway_packet_handler): Handle SSH_LSH_RANDOM_REQUEST.
+	(make_gateway_connection): Changed argument type from
+	ssh_connection to client_connection.
+
+	* src/gateway.h (class gateway_connection): Changed type of shared
+	attribute to client_connection. Needs inclusion of client.h
+
+	* src/gateway_channel.c (gateway_channel_open): Updated for new
+	type of the shared attribute.
+
 2008-05-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport_forward.c (forward_packet_handler): Refuse to
+	forward "local" messages, with message numbers from
+	SSH_FIRST_LOCAL and up.
+
+	* src/resource.c (resource_list_top): Bug fixes.
+
+	* src/gateway.h (gateway_forward_channel): Added prototype.
+
+	* src/gateway_channel.c (gateway_forward_channel): Renamed
+	function, was make_gateway_pair.
+	(gateway_channel_open): Moved check for pending_close earlier.
 
 	Reorganized handling of SSH_MSG_CHANNEL_OPEN.
 
