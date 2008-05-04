@@ -77,8 +77,8 @@ struct command_2 open_session_command;
   (10 * SSH_MAX_PACKET)
 
 static void
-client_handle_random_reply(struct client_connection *self,
-			   uint32_t length, const uint8_t *packet);
+handle_random_reply(struct client_connection *self,
+		    uint32_t length, const uint8_t *packet);
 
 /* FIXME: Duplicates code in lshd-connection and gateway.c, in
    particular oop_read_service. */
@@ -287,7 +287,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
 		       "lsh received a transport or userauth layer packet");
 	  else if (msg == SSH_LSH_RANDOM_REPLY)
-	    client_handle_random_reply(self, length, packet);
+	    handle_random_reply(self, length, packet);
 	  else if (!channel_packet_handler(&self->super, length, packet))
 	    write_packet(self, format_unimplemented(seqno));	    
 	}
@@ -349,12 +349,12 @@ make_client_connection(int fd)
 /* Handling of SSH_LSH_RANDOM_REQUEST and SSH_LSH_RANDOM_REPLY */
 
 static void
-client_handle_random_reply(struct client_connection *self,
+handle_random_reply(struct client_connection *self,
 			   uint32_t length, const uint8_t *packet)
 {
   if (object_queue_is_empty(&self->pending_random))
     {
-      werror("client_handle_random_reply: Unexpected message. Ignoring.\n");
+      werror("handle_random_reply: Unexpected message. Ignoring.\n");
     }
   else
     {
