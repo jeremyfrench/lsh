@@ -60,7 +60,6 @@
 #include "randomness.h"
 #include "reaper.h"
 #include "sexp.h"
-#include "service.h"
 #include "ssh.h"
 #include "ssh_write.h"
 #include "tcpforward.h"
@@ -75,12 +74,6 @@ struct command_2 gateway_accept;
 
 #include "lsh.c.x"
 
-#define CONNECTION_WRITE_BUFFER_SIZE (100*SSH_MAX_PACKET)
-#define CONNECTION_WRITE_BUFFER_STOP_THRESHOLD \
-  (CONNECTION_WRITE_BUFFER_SIZE - 10*SSH_MAX_PACKET)
-#define CONNECTION_WRITE_BUFFER_START_THRESHOLD \
-  (10 * SSH_MAX_PACKET)
-
 /* Flow control status: If the buffer for writing to the transport
    layer gets full, we stop reading on all channels, and we stop
    reading from all gateways. FIXME: Missing pieces:
@@ -92,281 +85,7 @@ struct command_2 gateway_accept;
 
 */
 
-/* GABA:
-   (class
-     (name lsh_connection)
-     (super ssh_connection)
-     (vars
-       (transport . int)
-       (reader object service_read_state)
-       (writer object ssh_write_state)
-       ; Means we have an active write call back.
-       (write_active . int)
-       ; Means the write buffer has been filled up, and
-       ; channels are stopped.
-       (write_blocked . int)
-
-       ; Keeps track of all gatewayed connections
-       (gateway_connections object resource_list)))
-*/
-
-/* FIXME: Duplicates code in lshd-connection and gateway.c, in
-   particular oop_read_service. */
-
-static void
-kill_lsh_connection(struct resource *s)
-{
-  CAST(lsh_connection, self, s);
-  if (self->super.super.alive)
-    {
-      werror("kill_lsh_connection\n");
-
-      self->super.super.alive = 0;      
-
-      KILL_RESOURCE_LIST(self->super.resources);
-      
-      io_close_fd(self->transport);
-      self->transport = -1;
-    }
-}
-
-static void
-service_start_write(struct lsh_connection *self);
-
-static void
-service_stop_write(struct lsh_connection *self);
-
-static void
-stop_gateway(struct resource *r)
-{
-  CAST(gateway_connection, gateway, r);
-  gateway_stop_read(gateway);  
-}
-
-static void
-start_gateway(struct resource *r)
-{
-  CAST(gateway_connection, gateway, r);
-  gateway_start_read(gateway);  
-}
-
-static void *
-oop_write_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
-{
-  CAST(lsh_connection, self, (struct lsh_object *) state);
-  uint32_t done;
-
-  assert(event == OOP_WRITE);
-  assert(fd == self->transport);
-    
-  done = ssh_write_flush(self->writer, self->transport, 0);
-  if (done > 0)
-    {
-      if (!self->writer->length)
-	service_stop_write(self);
-
-      if (self->write_blocked &&
-	  self->writer->length <= CONNECTION_WRITE_BUFFER_START_THRESHOLD)
-	{
-	  trace("oop_write_service: restarting channels.\n");
-	  ssh_connection_start_channels(&self->super);
-	  resource_list_foreach(self->gateway_connections, start_gateway);
-	}
-    }
-  else if (errno != EWOULDBLOCK)
-    {
-      werror("oop_write_service: Write failed: %e\n", errno);
-      exit(EXIT_FAILURE);
-    }
-  return OOP_CONTINUE;
-}
-
-static void
-service_start_write(struct lsh_connection *self)
-{
-  if (!self->write_active)
-    {
-      trace("service_start_write: register callback.\n");
-      self->write_active = 1;
-      global_oop_source->on_fd(global_oop_source, self->transport, OOP_WRITE,
-			       oop_write_service, self);
-    }
-  if (!self->write_blocked
-      && self->writer->length >= CONNECTION_WRITE_BUFFER_STOP_THRESHOLD)
-    {
-      trace("service_start_write: stopping channels.\n");
-      self->write_blocked = 1;
-      ssh_connection_stop_channels(&self->super);
-      resource_list_foreach(self->gateway_connections, stop_gateway);
-    }
-}
-
-static void
-service_stop_write(struct lsh_connection *self)
-{
-  if (self->write_active)
-    {
-      trace("service_stop_write: cancel callback.\n");
-      self->write_active = 0;
-      global_oop_source->cancel_fd(global_oop_source, self->transport, OOP_WRITE);
-    }
-}
-
-static void
-write_packet(struct lsh_connection *connection,
-	     struct lsh_string *packet)
-{
-  uint32_t done;
-  int msg;
-  
-  assert(lsh_string_length(packet) > 0);
-  msg = lsh_string_data(packet)[0];
-  trace("Writing packet of type %T (%i)\n", msg, msg);
-  debug("packet contents: %xS\n", packet);
-
-  /* Sequence number not supported */
-  packet = ssh_format("%i%fS", 0, packet);
-  
-  done = ssh_write_data(connection->writer,
-			connection->transport, 0, 
-			STRING_LD(packet));
-  lsh_string_free(packet);
-
-  if (done > 0 || errno == EWOULDBLOCK)
-    {
-      if (connection->writer->length)
-	service_start_write(connection);
-      else
-	service_stop_write(connection);
-    }
-  else
-    {
-      werror("write_packet: Write failed: %e\n", errno);
-      exit(EXIT_FAILURE);
-    }
-}
-
-static void
-disconnect(struct lsh_connection *connection,
-	   uint32_t reason, const char *msg)
-{
-  werror("disconnecting: %z.\n", msg);
-
-  write_packet(connection,
-	       format_disconnect(reason, msg, ""));
-
-  /* FIXME: If the disconnect message could not be written
-     immediately, it will be lost. */
-  KILL_RESOURCE(&connection->super.super);
-}
-
-static void
-service_start_read(struct lsh_connection *self);
-
-static void *
-oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state)
-{
-  CAST(lsh_connection, self, (struct lsh_object *) state);
-
-  assert(event == OOP_READ);
-  assert(fd == self->transport);
-
-  for (;;)
-    {
-      enum ssh_read_status status;
-
-      uint32_t seqno;
-      uint32_t length;      
-      const uint8_t *packet;
-      const char *error_msg;
-      uint8_t msg;
-      
-      status = service_read_packet(self->reader, fd,
-				   &error_msg,
-				   &seqno, &length, &packet);
-      fd = -1;
-
-      switch (status)
-	{
-	case SSH_READ_IO_ERROR:
-	  werror("Read failed: %e\n", errno);
-	  exit(EXIT_FAILURE);
-	  break;
-	case SSH_READ_PROTOCOL_ERROR:
-	  werror("Invalid data from transport layer: %z\n", error_msg);
-	  exit(EXIT_FAILURE);
-	  break;
-	case SSH_READ_EOF:
-	  werror("Transport layer closed\n", error_msg);
-	  return OOP_HALT;
-	  break;
-	case SSH_READ_PUSH:
-	case SSH_READ_PENDING:
-	  return OOP_CONTINUE;
-
-	case SSH_READ_COMPLETE:
-	  if (!length)
-	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
-		       "lsh received an empty packet from the transport layer");
-
-	  msg = packet[0];
-
-	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
-	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
-		       "lsh received a transport or userauth layer packet");
-
-	  else if (!channel_packet_handler(&self->super, length, packet))
-	    write_packet(self, format_unimplemented(seqno));	    
-	}
-    }
-}
-
-static void
-service_start_read(struct lsh_connection *self)
-{
-  global_oop_source->on_fd(global_oop_source,
-			   self->transport, OOP_READ,
-			   oop_read_service, self);  
-}
-
-static void
-do_write_packet(struct ssh_connection *s, struct lsh_string *packet)
-{
-  CAST(lsh_connection, self, s);
-
-  write_packet(self, packet);
-}
-
-static void
-do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
-{
-  CAST(lsh_connection, self, s);
-  disconnect(self, reason, msg);  
-}
-
-static struct lsh_connection *
-make_lsh_connection(int fd)
-{
-  NEW(lsh_connection, self);
-  init_ssh_connection(&self->super, kill_lsh_connection,
-		      do_write_packet, do_disconnect);
-
-  io_register_fd(fd, "lsh transport connection");
-
-  self->transport = fd;
-  self->reader = make_service_read_state();
-  service_start_read(self);
-
-  self->writer = make_ssh_write_state(CONNECTION_WRITE_BUFFER_SIZE);
-  self->write_active = self->write_blocked = 0;
-
-  self->gateway_connections = make_resource_list();
-  remember_resource(self->super.resources,
-		    &self->gateway_connections->super);
-
-  return self;
-}
+/* FIXME: Move to client.h and client.c? */
 
 
 /* (gateway_accept main-connection gateway-connection) */
@@ -376,14 +95,14 @@ DEFINE_COMMAND2(gateway_accept)
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
 {
-  CAST(lsh_connection, connection, a1);
+  CAST(client_connection, connection, a1);
   CAST(listen_value, lv, a2);
 
   static const char hello[LSH_HELLO_LINE_LENGTH]
     = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK lsh-transport";
   
   struct gateway_connection *gateway
-    = make_gateway_connection(&connection->super, lv->fd);
+    = make_gateway_connection(connection, lv->fd);
 
   int error = gateway_write_data (gateway, sizeof(hello), hello);
   if (error)
@@ -417,6 +136,27 @@ DEFINE_COMMAND2(gateway_accept)
 	       ;; prog1, to delay binding until we are connected.
 	     (prog1 local connection) )))))
 */
+
+#if 0
+FIXME: XXX
+DEFINE_CHANNEL_OPEN(channel_open_x11)
+	(struct channel_open *s UNUSED,
+	 const struct channel_open_info *info,
+	 struct simple_buffer *args)
+{
+  CAST(client_connection, self, info->connection);
+  struct resource *handler = resource_list_top(self->x11_displays);
+
+  if (handler)
+    {
+      client_x11_open(handler, info, args);
+    }
+  else
+    channel_open_deny(info,
+		      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+		      "Unexpected x11 request");
+}
+#endif
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -950,7 +690,7 @@ process_hello_message(int fd)
 int
 main(int argc, char **argv)
 {
-  struct lsh_connection *connection;
+  struct client_connection *connection;
   struct lsh_options *options;
   int fd;
   
@@ -1031,7 +771,7 @@ main(int argc, char **argv)
   if (!process_hello_message (fd))
     return EXIT_FAILURE;
 
-  connection = make_lsh_connection(fd);
+  connection = make_client_connection(fd);
   gc_global(&connection->super.super);
 
   if (options->start_gateway == 1)

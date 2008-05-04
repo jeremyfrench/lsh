@@ -34,6 +34,57 @@
 #include "client.h.x"
 #undef GABA_DECLARE
 
+/* FIXME: Rename to client_connection? */
+
+/* GABA:
+   (class
+     (name client_connection)
+     (super ssh_connection)
+     (vars
+       (transport . int)
+       (reader object service_read_state)
+       (writer object ssh_write_state)
+       ; Means we have an active write call back.
+       (write_active . int)
+       ; Means the write buffer has been filled up, and
+       ; channels are stopped.
+       (write_blocked . int)
+
+       ; Queue of SSH_LSH_RANDOM_REQUEST we expect replies on.
+       (pending_random struct object_queue)
+       
+       ;; When there are multiple X11-forwardings (requested by gateway
+       ;; clients), the protocol lacks identification of which request
+       ;; belongs to which forwarding. We use the one most recently
+       ;; requested.
+       (x11_displays object resource_list)
+              
+       ; Keeps track of all gatewayed connections
+       (gateway_connections object resource_list)))
+*/
+
+struct client_connection *
+make_client_connection(int fd);
+
+/* GABA:
+   (class
+     (name client_random_handler)
+     (vars
+       ; Exactly one must be non-NULL
+       (gateway object gateway_connection)
+       (reply method void "uint32_t length" "const uint8_t *data")))
+*/
+
+void
+client_random_request(struct client_connection *connection,
+		      uint32_t length,
+		      struct client_random_handler *handler);
+
+void
+client_gateway_random_request(struct client_connection *connection,
+			      uint32_t length, const uint8_t *packet,
+			      struct gateway_connection *gateway);
+
 /* The argp option group for actions. */
 #define CLIENT_ARGP_ACTION_GROUP 100
 #define CLIENT_ARGP_MODIFIER_GROUP 200
@@ -125,7 +176,13 @@ make_pty_request(struct interact *tty);
 struct command *
 make_subsystem_request(struct lsh_string *subsystem);
 
+#if 0
+void
+client_x11_open(struct resource *r,
+		const struct channel_open_info *info, struct simple_buffer *args);
+
 extern struct channel_open channel_open_x11;
+#endif
 
 struct command *
 make_forward_x11(const char *display_string,
