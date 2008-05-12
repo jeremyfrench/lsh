@@ -40,17 +40,6 @@
 
 /* GABA:
    (class
-     (name pty_request)
-     (super command)
-     (vars
-       (tty object interact)
-       (term string)
-       (attr object terminal_attributes)
-       (dims . "struct terminal_dimensions")))
-*/
-
-/* GABA:
-   (class
      (name client_tty_resource)
      (super resource)
      (vars
@@ -99,8 +88,7 @@ do_client_winch_handler(struct window_change_callback *s,
   if (!INTERACT_WINDOW_SIZE(tty, &dims))
     return;
 
-  channel_send_request(self->channel, ATOM_WINDOW_CHANGE,
-		       0, NULL,
+  channel_send_request(self->channel, ATOM_WINDOW_CHANGE, 0,
 		       "%i%i%i%i",
 		       dims.char_width, dims.char_height,
 		       dims.pixel_width, dims.pixel_height);
@@ -116,31 +104,55 @@ make_client_winch_handler(struct ssh_channel *channel)
   return &self->super;
 }
 
-       
 /* GABA:
    (class
-     (name pty_request_continuation)
-     (super command_frame)
+     (name client_pty_action)
+     (super client_session_action)
      (vars
-       (req object pty_request)))
+       (tty object interact)
+       (attr object terminal_attributes)))
 */
 
-/* NOTE: Failed requests show up as exceptions. */
 static void
-do_pty_continuation(struct command_continuation *s,
-		    struct lsh_object *x)
+do_action_pty_start(struct client_session_action *s,
+		    struct client_session *session)
 {
-  CAST(pty_request_continuation, self, s);
-  CAST(client_session, session, x);
+  CAST(client_pty_action, self, s);
+
+  struct terminal_dimensions dims;
+  char *term;
+  
+  trace("do_action_pty_start: Sending pty request.\n");
+
+  if (!INTERACT_WINDOW_SIZE(self->tty, &dims))
+    dims.char_width = dims.char_height
+      = dims.pixel_width = dims.pixel_height = 0;
+
+  self->attr = INTERACT_GET_ATTRIBUTES(self->tty);
+  term = getenv(ENV_TERM);
+
+  channel_send_request(&session->super, ATOM_PTY_REQ, 1,
+		       "%z%i%i%i%i%fS",
+		       term ? term : "",
+		       dims.char_width, dims.char_height,
+		       dims.pixel_width, dims.pixel_height,
+		       TERM_ENCODE(self->attr));
+}
+
+static void
+do_action_pty_success(struct client_session_action *s,
+		      struct client_session *session)
+{
+  CAST(client_pty_action, self, s);
+
   struct terminal_attributes *raw;
   
-  assert(x);
   verbose("pty request succeeded\n");
   
-  raw = TERM_MAKE_RAW(self->req->attr);
-  if (!INTERACT_SET_ATTRIBUTES(self->req->tty, raw))
+  raw = TERM_MAKE_RAW(self->attr);
+  if (!INTERACT_SET_ATTRIBUTES(self->tty, raw))
     {
-      werror("do_pty_continuation: "
+      werror("action_pty_success: "
 	     "Setting the attributes of the local terminal failed.\n");
     }
 
@@ -148,74 +160,33 @@ do_pty_continuation(struct command_continuation *s,
   set_error_raw(1);
   
   remember_resource(session->resources,
-		    make_client_tty_resource(self->req->tty,
-					     self->req->attr));
+		    make_client_tty_resource(self->tty, self->attr));
   
   remember_resource(session->resources,
 		    INTERACT_WINDOW_SUBSCRIBE
-		    (self->req->tty,
-		     make_client_winch_handler(&session->super)));
-  
-  COMMAND_RETURN(self->super.up, x);
+		    (self->tty, make_client_winch_handler(&session->super)));
 }
 
-static struct command_continuation *
-make_pty_continuation(struct pty_request *req,
-		      struct command_continuation *c)
+static int
+do_action_pty_failure(struct client_session_action *s UNUSED,
+		      struct client_session *session UNUSED)
 {
-  NEW(pty_request_continuation, self);
-  self->req = req;
-  self->super.up = c;
-  self->super.super.c = do_pty_continuation;
-  
-  return &self->super.super;
+  verbose("pty request failed\n");
+
+  return 1;
 }
 
-static void
-do_pty_request(struct command *s,
-      struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e)
+struct client_session_action *
+make_pty_action(struct interact *tty)
 {
-  CAST(pty_request, self, s);
-  CAST_SUBTYPE(ssh_channel, channel, x);
+  NEW(client_pty_action, self);
+  self->super.serial = 0;
+  self->super.start = do_action_pty_start;
+  self->super.success = do_action_pty_success;
+  self->super.failure = do_action_pty_failure;
 
-  struct command_context *ctx
-    = make_command_context(make_pty_continuation(self, c), e);
+  self->tty = tty;
+  self->attr = NULL;
 
-  trace("do_pty_request: Sending pty request.\n");
-
-  channel_send_request(channel, ATOM_PTY_REQ,
-		       1, ctx,
-		       "%S%i%i%i%i%fS",
-		       self->term,
-		       self->dims.char_width, self->dims.char_height,
-		       self->dims.pixel_width, self->dims.pixel_height,
-		       TERM_ENCODE(self->attr));
-}
-
-struct command *
-make_pty_request(struct interact *tty)
-{
-  NEW(pty_request, req);
-  char *term = getenv(ENV_TERM);
-
-  req->super.call = do_pty_request;
-  
-  req->attr = INTERACT_GET_ATTRIBUTES(tty);
-
-  if (!req->attr)
-    {
-      KILL(req);
-      return NULL;
-    }
-  
-  if (!INTERACT_WINDOW_SIZE(tty, &req->dims))
-    req->dims.char_width = req->dims.char_height
-      = req->dims.pixel_width = req->dims.pixel_height = 0;
-  
-  req->tty = tty;
-  req->term = term ? make_string(term) : ssh_format("");
-
-  return &req->super;
+  return &self->super;
 }
