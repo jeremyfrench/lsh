@@ -43,6 +43,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "client_session.c.x"
 
 static void
 do_kill_client_session(struct resource *s)
@@ -174,6 +175,22 @@ do_send_adjust(struct ssh_channel *s,
 }
 
 static void
+session_next_action(struct client_session *session)
+{
+  while (session->action_next < LIST_LENGTH(session->actions))
+    {
+      CAST_SUBTYPE(client_session_action, action,
+		   LIST(session->actions)[session->action_next]);
+
+      if (action->serial && session->action_next > session->action_done)
+	return;
+
+      session->action_next++;
+      action->start(action, session);
+    }
+}
+
+static void
 do_client_session_event(struct ssh_channel *c, enum channel_event event)
 {
   CAST(client_session, session, c);
@@ -194,25 +211,15 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       if (session->super.send_window_size)
 	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
 
-      ALIST_SET(session->super.request_types, ATOM_EXIT_STATUS,
-		&make_handle_exit_status(session->exit_status)->super);
-      ALIST_SET(session->super.request_types, ATOM_EXIT_SIGNAL,
-		&make_handle_exit_signal(session->exit_status)->super);
-
-      while (!object_queue_is_empty(&session->requests))
-	{
-	  CAST_SUBTYPE(command, request,
-		       object_queue_remove_head(&session->requests));
-	  COMMAND_CALL(request, &session->super.super.super,
-		       &discard_continuation, session->e);
-	}
-
       channel_start_receive(&session->super,
 			    lsh_string_length(session->out.state->buffer));
+
+      session_next_action(session);
 
       break;
 
     case CHANNEL_EVENT_DENY:
+      /* FIXME: Do we really need an exception handler for this? */
       EXCEPTION_RAISE(session->e,
 		      make_exception(EXC_CHANNEL_OPEN, 0,
 				     "Failed to open session channel."));
@@ -231,6 +238,30 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       /* Do nothing */
       break;
 
+    case CHANNEL_EVENT_SUCCESS:
+      assert(session->action_done < LIST_LENGTH(session->actions));
+      {
+	CAST_SUBTYPE(client_session_action, action,
+		     LIST(session->actions)[session->action_done++]);
+
+	if (action->success)
+	  action->success(action, session);
+	session_next_action(session);
+      }
+      break;
+    case CHANNEL_EVENT_FAILURE:
+      assert(session->action_done < LIST_LENGTH(session->actions));
+      {
+	CAST_SUBTYPE(client_session_action, action,
+		     LIST(session->actions)[session->action_done++]);
+
+	if (action->failure && action->failure(action, session))
+	  session_next_action(session);
+	else
+	  channel_close(&session->super);
+      }
+      break;
+
     case CHANNEL_EVENT_STOP:
       channel_io_stop_read(&session->in);
       break;
@@ -241,10 +272,94 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
     }
 }  
 
+DEFINE_CHANNEL_REQUEST(handle_exit_status)
+	(struct channel_request *s UNUSED,
+	 struct ssh_channel *channel,
+	 const struct channel_request_info *info,
+	 struct simple_buffer *args,
+	 struct command_continuation *c,
+	 struct exception_handler *e UNUSED)
+{
+  CAST(client_session, session, channel);
+  uint32_t status;
+
+  if (!info->want_reply
+      && parse_uint32(args, &status)
+      && parse_eod(args))
+    {
+      verbose("client.c: Receiving exit-status %i on channel %i\n",
+	      status, channel->remote_channel_number);
+
+      *session->exit_status = status;
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
+
+      assert(channel->sinks);
+      channel->sinks--;
+      channel_maybe_close(channel);
+
+      COMMAND_RETURN(c, channel);
+    }
+  else
+    /* Invalid request */
+    SSH_CONNECTION_ERROR(channel->connection, "Invalid exit-status message");
+}
+
+DEFINE_CHANNEL_REQUEST(handle_exit_signal)
+	(struct channel_request *s UNUSED,
+	 struct ssh_channel *channel,
+	 const struct channel_request_info *info,
+	 struct simple_buffer *args,
+	 struct command_continuation *c,
+	 struct exception_handler *e UNUSED)
+{
+  CAST(client_session, session, channel);
+
+  enum lsh_atom signal;
+  int core;
+
+  const uint8_t *msg;
+  uint32_t length;
+
+  const uint8_t *language;
+  uint32_t language_length;
+  
+  if (!info->want_reply
+      && parse_atom(args, &signal)
+      && parse_boolean(args, &core)
+      && parse_string(args, &length, &msg)
+      && parse_string(args, &language_length, &language)
+      && parse_eod(args))
+    {
+      /* FIXME: What exit status should be returned when the remote
+       * process dies violently? */
+
+      *session->exit_status = 7;
+
+      werror("Remote process was killed by signal: %ups %z\n",
+	     length, msg,
+	     core ? "(core dumped remotely)\n": "");
+      
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
+
+      assert(channel->sinks);
+      channel->sinks--;
+      channel_maybe_close(channel);
+
+      COMMAND_RETURN(c, channel);
+    }
+  else
+    /* Invalid request */
+    SSH_CONNECTION_ERROR(channel->connection, "Invalid exit-signal message");
+}
+
+
 #define CLIENT_READ_BUFFER_SIZE 0x4000
 
 struct client_session *
 make_client_session_channel(int in, int out, int err,
+			    struct object_list *actions,
 			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
@@ -254,7 +369,7 @@ make_client_session_channel(int in, int out, int err,
 
   trace("make_client_session\n");
   init_channel(&self->super, do_kill_client_session, do_client_session_event);
-  
+
   /* Set to initial_window when channel_start_receive is called, in
      do_client_session_event. */
   self->super.rec_window_size = 0;
@@ -262,7 +377,11 @@ make_client_session_channel(int in, int out, int err,
   /* FIXME: Make maximum packet size configurable */
   self->super.rec_max_packet = SSH_MAX_PACKET;
 
-  self->super.request_types = make_alist(0, -1);
+  self->super.request_types
+    = make_alist(2,
+		 ATOM_EXIT_STATUS, &handle_exit_status,
+		 ATOM_EXIT_SIGNAL, &handle_exit_signal,
+		 -1);
 
   init_channel_read_state(&self->in, in, CLIENT_READ_BUFFER_SIZE);
   init_channel_write_state(&self->out, out, initial_window);
@@ -274,7 +393,10 @@ make_client_session_channel(int in, int out, int err,
 
   self->resources = make_resource_list();
 
-  object_queue_init(&self->requests);
+  self->actions = actions;
+  self->action_next = 0;
+  self->action_done = 0;
+
   self->e = e;
 
   self->escape = escape;
@@ -288,4 +410,59 @@ make_client_session_channel(int in, int out, int err,
   self->exit_status = exit_status;
   
   return self;
+}
+
+static void
+do_action_shell_start(struct client_session_action *s UNUSED,
+		      struct client_session *session)
+{
+  channel_send_request(&session->super, ATOM_SHELL, 1, "");
+}
+
+struct client_session_action client_request_shell =
+  { STATIC_HEADER, 1, do_action_shell_start, NULL, NULL };
+
+/* Used for both exec and subsystem request. */
+/* GABA:
+   (class
+     (name client_action_command)
+     (super client_session_action)
+     (vars
+       (type . int)
+       (arg string)))
+*/
+
+static void
+do_action_command_start(struct client_session_action *s,
+			struct client_session *session)
+{
+  CAST(client_action_command, self, s);
+
+  channel_send_request(&session->super, self->type, 1, "%S", self->arg);  
+}
+
+static struct client_session_action *
+make_action_command(int type, struct lsh_string *arg)
+{
+  NEW(client_action_command, self);
+
+  self->super.start = do_action_command_start;
+  self->super.success = NULL;
+  self->super.failure = NULL;
+  self->type = type;
+  self->arg = arg;
+
+  return &self->super;
+}
+
+struct client_session_action *
+make_exec_action(struct lsh_string *command)
+{
+  return make_action_command(ATOM_EXEC, command);
+}
+
+struct client_session_action *
+make_subsystem_action(struct lsh_string *subsystem)
+{
+  return make_action_command(ATOM_SUBSYSTEM, subsystem);
 }
