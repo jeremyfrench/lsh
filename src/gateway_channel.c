@@ -168,6 +168,13 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
       channel_close(self->chain);
       break;
 
+    case CHANNEL_EVENT_SUCCESS:
+    case CHANNEL_EVENT_FAILURE:
+      /* Currently unused, due to the request_methods hook. FIXME: But
+	 we maybe don't need that hook anymore, we can just pass on
+	 the success or failure message. */
+      break;
+      
     case CHANNEL_EVENT_STOP:
     case CHANNEL_EVENT_START:
       /* FIXME: Ignore? The entire gateway has to be stopped and

@@ -168,12 +168,15 @@ do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
       break;
     case CHANNEL_EVENT_DENY:
     case CHANNEL_EVENT_CLOSE:
+    case CHANNEL_EVENT_SUCCESS:
+    case CHANNEL_EVENT_FAILURE:
       /* Do nothing */
       break;      
     case CHANNEL_EVENT_EOF:
       if (!self->write.state->length)
 	channel_forward_shutdown(self);
       break;
+
     case CHANNEL_EVENT_STOP:
       channel_io_stop_read(&self->read);
       break;

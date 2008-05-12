@@ -594,6 +594,11 @@ do_socks_channel_event(struct ssh_channel *s, enum channel_event event)
       if (!self->super.write.state->length)
 	channel_forward_shutdown(&self->super);
       break;
+
+    case CHANNEL_EVENT_SUCCESS:
+    case CHANNEL_EVENT_FAILURE:
+      break;
+
     case CHANNEL_EVENT_STOP:
       channel_io_stop_read(&self->super.read);
       break;

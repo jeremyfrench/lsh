@@ -225,6 +225,8 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
     case CHANNEL_EVENT_CLOSE:
     case CHANNEL_EVENT_CONFIRM:
     case CHANNEL_EVENT_DENY:
+    case CHANNEL_EVENT_SUCCESS:
+    case CHANNEL_EVENT_FAILURE:
       break;
 
     case CHANNEL_EVENT_EOF:
@@ -367,15 +369,14 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	      channel->remote_channel_number);
 
       if (signaled)
-	channel_send_request(&session->super, ATOM_EXIT_SIGNAL,
-			     0, NULL,
+	channel_send_request(&session->super, ATOM_EXIT_SIGNAL, 0,
 			     "%a%c%z%z",
 			     signal_local_to_network(value),
 			     core,
 			     STRSIGNAL(value), "");
       else
-	channel_send_request(&session->super, ATOM_EXIT_STATUS,
-			     0, NULL, "%i", value);
+	channel_send_request(&session->super, ATOM_EXIT_STATUS, 0,
+			     "%i", value);
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from
