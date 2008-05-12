@@ -91,18 +91,16 @@ make_local_info(struct lsh_string *directory,
 
 
 /* Passed to the listen callback. Note that the fd here isn't
-   registered anywhere, so it must be taken care of immedietely, or
+   registered anywhere, so it must be taken care of immediately, or
    risk being leaked. */
 /* GABA:
    (class
      (name listen_value)
      (vars
+       (port object resource)
        (fd . int)
        (peer object address_info)))
 */
-
-struct listen_value *
-make_listen_value(int fd, struct address_info *peer);
 
 void
 io_init(void);
@@ -126,11 +124,6 @@ make_address_info(struct lsh_string *host,
 
 struct address_info *
 io_lookup_address(const char *ip, const char *service);
-
-
-struct address_info *
-sockaddr2info(size_t addr_len,
-	      struct sockaddr *addr);
 
 struct sockaddr *
 io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port);

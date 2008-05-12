@@ -381,18 +381,6 @@ io_callout(struct lsh_callback *action, unsigned seconds)
   return &self->super;
 }
 
-struct listen_value *
-make_listen_value(int fd,
-		  struct address_info *peer)
-{
-  NEW(listen_value, self);
-
-  self->fd = fd;
-  self->peer = peer;
-
-  return self;
-}
-
 static void
 kill_io_connect_state(struct resource *s)
 {
@@ -597,53 +585,6 @@ make_address_info(struct lsh_string *host, uint32_t port)
   info->port = port;
   info->ip = host;
   return info;
-}
-
-struct address_info *
-sockaddr2info(size_t addr_len,
-	      struct sockaddr *addr)
-{
-  NEW(address_info, info);
-  
-  switch(addr->sa_family)
-    {
-    case AF_INET:
-      assert(addr_len == sizeof(struct sockaddr_in));
-      {
-	struct sockaddr_in *in = (struct sockaddr_in *) addr;
-	uint32_t ip = ntohl(in->sin_addr.s_addr);
-	
-	info->port = ntohs(in->sin_port);
-	info->ip = ssh_format("%di.%di.%di.%di",
-			      (ip >> 24) & 0xff,
-			      (ip >> 16) & 0xff,
-			      (ip >> 8) & 0xff,
-			      ip & 0xff);
-      }
-      return info;
-      
-#if WITH_IPV6
-    case AF_INET6:
-      assert(addr_len == sizeof(struct sockaddr_in6));
-      {
-	struct sockaddr_in6 *in = (struct sockaddr_in6 *) addr;
-
-	info->port = ntohs(in->sin6_port);
-	info->ip = lsh_string_ntop(addr->sa_family, INET6_ADDRSTRLEN,
-				   &in->sin6_addr);
-
-      }
-      return info;
-#endif /* WITH_IPV6 */
-
-    case AF_UNIX:
-      /* Silently return NULL. This happens when a gateway client
-       * connects. */
-      return NULL;
-    default:
-      werror("io.c: sockaddr2info: Unsupported address family.\n");
-      return NULL;
-    }
 }
 
 /* Creates a sockaddr. Only handles ip-addresses, no dns names. This

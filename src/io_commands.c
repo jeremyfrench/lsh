@@ -34,6 +34,7 @@
 #include "io_commands.h"
 
 #include "command.h"
+#include "format.h"
 #include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -80,6 +81,58 @@ make_io_port(int fd, struct command *callback)
   return self;
 }
 
+static struct listen_value *
+make_listen_value(struct resource *port, int fd,
+		  size_t addr_len,
+		  struct sockaddr *addr)
+{
+  NEW(listen_value, self);
+
+  self->port = port;
+  self->fd = fd;
+  switch(addr->sa_family)
+    {
+    case AF_INET:
+      assert(addr_len == sizeof(struct sockaddr_in));
+      {
+	struct sockaddr_in *in = (struct sockaddr_in *) addr;
+	uint32_t ip = ntohl(in->sin_addr.s_addr);
+
+	self->peer = make_address_info(ssh_format("%di.%di.%di.%di",
+						  (ip >> 24) & 0xff,
+						  (ip >> 16) & 0xff,
+						  (ip >> 8) & 0xff,
+						  ip & 0xff),
+				       ntohs(in->sin_port));
+      }
+      break;
+      
+#if WITH_IPV6
+    case AF_INET6:
+      assert(addr_len == sizeof(struct sockaddr_in6));
+      {
+	struct sockaddr_in6 *in = (struct sockaddr_in6 *) addr;
+
+	self->peer = make_address_info(lsh_string_ntop(addr->sa_family, INET6_ADDRSTRLEN,
+						       &in->sin6_addr),
+				       ntohs(in->sin6_port));
+
+      }
+      break;
+#endif /* WITH_IPV6 */
+
+    case AF_UNIX:
+      /* Silently use NULL. This happens when a gateway client
+       * connects. */
+      self->peer = NULL;
+    default:
+      werror("make_listen_value: Unsupported address family.\n");
+      self->peer = NULL;
+    }
+
+  return self;
+}
+
 static void *
 oop_io_port_accept(oop_source *source UNUSED,
 		   int fd, oop_event event, void *state)
@@ -105,8 +158,8 @@ oop_io_port_accept(oop_source *source UNUSED,
     }
   else
     COMMAND_CALL(self->callback,
-		 make_listen_value(s, sockaddr2info(peer_length,
-						    (struct sockaddr *)&peer)),
+		 make_listen_value(&self->super, s,
+				   peer_length, (struct sockaddr *)&peer),
 		 &discard_continuation, &ignore_exception_handler);
 
   return OOP_CONTINUE;  
