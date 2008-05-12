@@ -171,7 +171,7 @@ make_pty_action(struct interact *tty);
        ; For errors when opening the channel, or when sending the
        ; channel requests. It's not clear what's the proper place for
        ; the error handling.
-       ; (e object exception_handler)
+       (e object exception_handler)
 
        ; Escape char handling
        (escape object escape_info)
