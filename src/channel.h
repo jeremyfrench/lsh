@@ -49,6 +49,11 @@ enum channel_event
      CHANNEL_CLOSE handshake is finished. */
   CHANNEL_EVENT_CLOSE,
 
+  /* We received a CHANNEL_SUCCESS or CHANNEL_FAILURE, respectively,
+     in response to a CHANNEL_REQUEST. */
+  CHANNEL_EVENT_SUCCESS,
+  CHANNEL_EVENT_FAILURE,
+
   /* Local buffers are full. Stop sending data. */
   CHANNEL_EVENT_STOP,
   /* Start sending again (subject to the current send window size). */
@@ -152,8 +157,8 @@ enum channel_flag {
 
        (event method void "enum channel_event")
   
-       ; Queue of channel requests that we expect replies on
-       (pending_requests struct object_queue)
+       ; Number of channel requests that we expect replies on.
+       (pending_requests . unsigned)
 
        ; Channel requests that we have received, and should reply to
        ; in the right order
@@ -242,7 +247,7 @@ make_channel_open_exception(uint32_t error_code, const char *msg);
 
 void
 channel_send_request(struct ssh_channel *channel, int type,
-		     int want_reply, struct command_context *ctx,
+		     int want_reply,
 		     const char *format, ...);
 
 void

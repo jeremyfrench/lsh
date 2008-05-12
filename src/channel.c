@@ -1202,21 +1202,13 @@ handle_channel_success(struct ssh_connection *connection,
 	  return;
 	}
       
-      if (object_queue_is_empty(&channel->pending_requests))
-	{
-	  werror("do_channel_success: Unexpected message. Ignoring.\n");
-	}
+      if (!channel->pending_requests)
+	werror("do_channel_success: Unexpected message. Ignoring.\n");
+
       else
 	{
-	  struct lsh_object *o
-	    = object_queue_remove_head(&channel->pending_requests);
-
-	  if (o)
-	    {
-	      CAST_SUBTYPE(command_context, ctx, o);
-	  
-	      COMMAND_RETURN(ctx->c, channel);
-	    }
+	  channel->pending_requests--;
+	  CHANNEL_EVENT(channel, CHANNEL_EVENT_SUCCESS);
 	}
     }
   else
@@ -1242,31 +1234,15 @@ handle_channel_failure(struct ssh_connection *connection,
 	  return;
 	}
 
-      if (object_queue_is_empty(&channel->pending_requests))
-	{
-	  werror("do_channel_failure: Unexpected message. Ignoring.\n");
-	}
+      if (!channel->pending_requests)
+	werror("do_channel_failure: Unexpected message. Ignoring.\n");
+
       else
 	{
-	  struct lsh_object *o
-	    = object_queue_remove_head(&channel->pending_requests);
-
-	  if (o)
-	    {
-	      static const struct exception channel_request_exception =
-		STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0,
-				 "Channel request failed");
-
-	      CAST_SUBTYPE(command_context, ctx, o);
-	  
-	      EXCEPTION_RAISE(ctx->e, &channel_request_exception);
-	    }
-	  else
-	    {
-	      werror("Channel request failed. Closing channel.\n");
-	      channel_close(channel);
-	    }
+	  channel->pending_requests--;
+	  CHANNEL_EVENT(channel, CHANNEL_EVENT_FAILURE);
 	}
+      
     }
   else
     SSH_CONNECTION_ERROR(connection, "Invalid CHANNEL_FAILURE message.");
@@ -1343,7 +1319,7 @@ init_channel(struct ssh_channel *channel,
 
   channel->event = event;
 
-  object_queue_init(&channel->pending_requests);
+  channel->pending_requests = 0;
   object_queue_init(&channel->active_requests);
 }
 
@@ -1511,7 +1487,7 @@ channel_open_new_type(struct ssh_connection *connection,
    request fails. */
 void
 channel_send_request(struct ssh_channel *channel, int type,
-		     int want_reply, struct command_context *ctx,
+		     int want_reply,
 		     const char *format, ...)
 {
   va_list args;
@@ -1542,12 +1518,7 @@ channel_send_request(struct ssh_channel *channel, int type,
   SSH_CONNECTION_WRITE(channel->connection, packet);
 
   if (want_reply)
-    /* NOTE: We allow ctx to be NULL. This means that if the request
-       fails, the channel is closed. */
-    object_queue_add_tail(&channel->pending_requests,
-			  &ctx->super);
-  else
-    assert(!ctx);
+    channel->pending_requests++;
 }
 
 void
