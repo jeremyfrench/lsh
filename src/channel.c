@@ -922,7 +922,7 @@ receive_data_common(struct ssh_channel *channel,
 	      return 1;
 	    }
 	  channel->rec_window_size -= length;
-
+	  /* FIXME: This macro is unnecessary, this is the only use. */
 	  CHANNEL_RECEIVE(channel, type, length, data);
 	}
       return 1;
