@@ -54,7 +54,6 @@
 #include "environ.h"
 #include "format.h"
 #include "interact.h"
-#include "io_commands.h"
 #include "gateway.h"
 #include "lsh_string.h"
 #include "randomness.h"
@@ -69,9 +68,6 @@
 #include "xalloc.h"
 
 #include "lsh_argp.h"
-
-struct command_2 gateway_accept;
-#define GATEWAY_ACCEPT (&gateway_accept.super.super)
 
 #include "lsh.c.x"
 
@@ -89,78 +85,6 @@ struct command_2 gateway_accept;
 
 */
 
-/* FIXME: Move to client.h and client.c? */
-
-
-/* (gateway_accept main-connection gateway-connection) */
-DEFINE_COMMAND2(gateway_accept)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(client_connection, connection, a1);
-  CAST(listen_value, lv, a2);
-
-  static const char hello[LSH_HELLO_LINE_LENGTH]
-    = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK lsh-transport";
-  
-  struct gateway_connection *gateway
-    = make_gateway_connection(connection, lv->fd);
-
-  int error = gateway_write_data (gateway, sizeof(hello), hello);
-  if (error)
-    {
-      werror ("Sending gateway hello message failed: %e\n", error);
-      KILL_RESOURCE (&gateway->super.super);
-      return;
-    }
-
-  if (!connection->write_blocked)
-    gateway_start_read(gateway);
-
-  /* Kill gateway connection if the main connection goes down. */
-  remember_resource(connection->gateway_connections, &gateway->super.super);
-
-  COMMAND_RETURN(c, gateway);
-}
-
-/* GABA:
-   (expr
-     (name make_gateway_setup)
-     (storage static)
-     (params
-       (local object local_info))
-     (expr
-       (lambda (connection)
-         (connection_remember connection
-	   (listen_local
-	     (lambda (peer)
-	       (gateway_accept connection peer))
-	       ;; prog1, to delay binding until we are connected.
-	     (prog1 local connection) )))))
-*/
-
-#if 0
-FIXME: XXX
-DEFINE_CHANNEL_OPEN(channel_open_x11)
-	(struct channel_open *s UNUSED,
-	 const struct channel_open_info *info,
-	 struct simple_buffer *args)
-{
-  CAST(client_connection, self, info->connection);
-  struct resource *handler = resource_list_top(self->x11_displays);
-
-  if (handler)
-    {
-      client_x11_open(handler, info, args);
-    }
-  else
-    channel_open_deny(info,
-		      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
-		      "Unexpected x11 request");
-}
-#endif
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -208,7 +132,6 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
        ; True if the process's stdin or pty (respectively) has been used. 
        (used_stdin . int)
        (used_pty . int)
-       (used_x11 . int)
 
        ; Should -B write the pid to stdout?
        (write_pid . int)
@@ -221,6 +144,7 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 
        (start_shell . int)
        (remote_forward . int)
+       (x11_forward . int)
        (actions struct object_queue)
 
        ; 0 means no, 1 means yes, -1 means use if available.
@@ -275,12 +199,12 @@ make_options(struct exception_handler *handler,
 
   self->used_stdin = 0;
   self->used_pty = 0;
-  self->used_x11 = 0;
 
   self->detach_end = 0;
   self->write_pid = 0;
 
   self->start_shell = 1;
+  self->x11_forward = 0;
   self->remote_forward = 0;
 
   self->inhibit_actions = 0;
@@ -459,17 +383,41 @@ maybe_pty(struct lsh_options *options, int default_pty)
   return NULL;
 }
 
+static struct client_session_action *
+maybe_x11(struct lsh_options *options)
+{  
+  if (options->with_x11)
+    {
+      char *display = getenv(ENV_DISPLAY);
+      struct client_session_action *action = NULL;
+
+      if (display)
+	action = make_x11_action(display);
+
+      if (action)
+	options->x11_forward = 1;
+      else
+	werror("Can't find any local X11 display to forward.\n");
+
+      return action;
+    }
+  return NULL;
+}
+
 /* Create an interactive session */
 static struct command *
 client_shell_session(struct lsh_options *options)
 {  
-  /* FIXME: x11 handling */
   struct client_session_action *pty = maybe_pty(options, 1);
-  struct object_list *session_actions = alloc_object_list(1 + !!pty);
+  struct client_session_action *x11 = maybe_x11(options);
+  struct object_list *session_actions = alloc_object_list(1 + !!pty + !!x11);
   unsigned i = 0;
 
   if (pty)
     LIST(session_actions)[i++] = &pty->super;
+  if (x11)
+    LIST(session_actions)[i++] = &x11->super;
+
   LIST(session_actions)[i++] = &client_request_shell.super;
 
   assert(i == LIST_LENGTH(session_actions));
@@ -496,13 +444,15 @@ static struct command *
 client_command_session(struct lsh_options *options,
 		       struct lsh_string *command)
 {
-  /* FIXME: x11 handling */
   struct client_session_action *pty = maybe_pty(options, 0);
-  struct object_list *session_actions = alloc_object_list(1 + !!pty);
+  struct client_session_action *x11 = maybe_x11(options);
+  struct object_list *session_actions = alloc_object_list(1 + !!pty + !!x11);
   unsigned i = 0;
 
   if (pty)
     LIST(session_actions)[i++] = &pty->super;
+  if (x11)
+    LIST(session_actions)[i++] = &x11->super;
 
   LIST(session_actions)[i++] = &make_exec_action(command)->super;
 
@@ -822,26 +772,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	}
 
-#if 0
-#if WITH_TCP_FORWARD
-      if (options->remote_forward)
-	client_add_action(options,
-			  make_install_fix_channel_open_handler
-			  (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
-#endif /* WITH_TCP_FORWARD */
-#endif
-
       /* Add shell action */
       if (self->start_shell)
 	add_action(self, client_shell_session(self));
 
-#if 0
-      if (options->used_x11)
-	client_add_action(options,
-			  make_install_fix_channel_open_handler
-			  (ATOM_X11,
-			   &channel_open_x11));
-#endif 
       if (object_queue_is_empty(&self->actions) && !self->stop_gateway)
 	{
 	  argp_error(state, "No actions given.");
@@ -1332,10 +1266,17 @@ main(int argc, char **argv)
   remember_resource(connection->super.resources,
 		    &options->resources->super);
 
+#if WITH_TCP_FORWARD
   if (options->remote_forward)
     ALIST_SET(connection->super.channel_types, ATOM_FORWARDED_TCPIP,
 	      &channel_open_forwarded_tcpip.super);
+#endif
 
+#if WITH_X11_FORWARD
+  if (options->x11_forward)
+    ALIST_SET(connection->super.channel_types, ATOM_X11,
+	      &channel_open_x11.super);
+#endif
 
   while (!object_queue_is_empty(&options->actions))
     {
