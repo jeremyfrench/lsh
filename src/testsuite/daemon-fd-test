@@ -16,7 +16,7 @@ exec 9>&2
 # "/proc/<pid>/fd" directory, while on Solaris, it for some reason is
 # a link to "/".
 
-spawn_lshd && exec_lsh ls /proc/self/fd | grep -v '^3$'> test.out1
+spawn_lshd && exec_lsh ls -1 /proc/self/fd | grep -v '^3$'> test.out1
 cat >test.out2 <<EOF
 0
 1
