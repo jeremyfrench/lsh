@@ -672,7 +672,7 @@ handle_channel_request(struct ssh_connection *connection,
 		      e = &ignore_exception_handler;
 		    }
 	      
-		  CHANNEL_REQUEST(req, channel, &info, buffer, c, e);
+		  req->handler(req, channel, &info, buffer, c, e);
 		  return;
 		}
 	    }
@@ -870,7 +870,7 @@ handle_adjust_window(struct ssh_connection *connection,
 		    channel_number, size, channel->send_window_size);
 
 	      if (channel->send_window_size && channel->send_adjust)
-		CHANNEL_SEND_ADJUST(channel, size);
+		channel->send_adjust(channel, size);
 	    }
 	}
       else
@@ -922,8 +922,7 @@ receive_data_common(struct ssh_channel *channel,
 	      return 1;
 	    }
 	  channel->rec_window_size -= length;
-	  /* FIXME: This macro is unnecessary, this is the only use. */
-	  CHANNEL_RECEIVE(channel, type, length, data);
+	  channel->receive(channel, type, length, data);
 	}
       return 1;
     }

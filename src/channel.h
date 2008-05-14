@@ -166,20 +166,8 @@ enum channel_flag {
        
 */
 
-#define CHANNEL_RECEIVE(s, t, l, d) \
-((s)->receive((s), (t), (l), (d)))
-
-#define CHANNEL_SEND_ADJUST(s, i) ((s)->send_adjust((s), (i)))
-
 #define CHANNEL_EVENT(s, t) \
 ((s)->event((s), (t)))
-
-#define CHANNEL_OPEN_CONFIRM(s) \
-((s)->open_confirm((s)))
-
-#define CHANNEL_OPEN_FAILURE(s) \
-((s)->open_failure((s)))
-
 
 
 /* SSH_MSG_CHANNEL_REQUEST */
@@ -195,9 +183,6 @@ enum channel_flag {
 		"struct command_continuation *c"
 		"struct exception_handler *e")))
 */
-
-#define CHANNEL_REQUEST(s, c, i, a, n, e) \
-((s)->handler((s), (c), (i), (a), (n), (e)))
 
 #define DEFINE_CHANNEL_REQUEST(name)				\
 static void do_##name(struct channel_request *s,		\
