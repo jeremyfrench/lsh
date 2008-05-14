@@ -31,8 +31,6 @@
 
 /* Useful macros. */
 #define MIN(a, b) (((a)>(b)) ? (b) : (a))
-#define MAX(a, b) (((a)<(b)) ? (b) : (a))
-#define SQR(x) ((x)*(x))
 
 /* Stringizing */
 #define STRINGIZE1(x) #x
