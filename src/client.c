@@ -277,9 +277,12 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
-	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
-	    disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
-		       "lsh received a transport or userauth layer packet");
+	    {
+	      /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
+	      disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
+			 "lsh received a transport or userauth layer packet");
+	      debug("%xs\n", length, packet);
+	    }
 	  else if (msg == SSH_LSH_RANDOM_REPLY)
 	    handle_random_reply(self, length, packet);
 	  else if (!channel_packet_handler(&self->super, length, packet))
@@ -561,31 +564,6 @@ make_open_session_command(struct ssh_channel *channel)
  * NOTE: Large windows seem to trig a bug in sshd2. */
 #define WINDOW_SIZE 10000
 
-#if 0
-
-static void
-client_maybe_x11(struct client_options *options,
-		 struct object_queue *q)
-{  
-  if (options->with_x11)
-    {
-      char *display = getenv(ENV_DISPLAY);
-      struct command *request = NULL;
-      
-      assert(options->random);
-      if (display)
-	request = make_forward_x11(display, options->random);
-	  
-      if (request)
-	{
-	  object_queue_add_tail(q, &request->super);
-	  options->used_x11 = 1;
-	}
-      else
-	werror("Can't find any local X11 display to forward.\n");
-    }
-}
-#endif
 
 /* NOTE: Some of the original quoting is lost here. */
 struct lsh_string *
