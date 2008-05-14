@@ -701,8 +701,8 @@ io_lookup_address(const char *ip, const char *service)
     err = getaddrinfo(ip, service, &hints, &list);
     if (err)
       {
-      	werror("io_address_lookup: getaddrinfo failed (err = %i): %z\n",
-	      err, gai_strerror(err));
+      	werror("io_address_lookup: getaddrinfo failed: %z\n",
+	      gai_strerror(err));
 	return 0;
       }
 
