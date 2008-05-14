@@ -130,10 +130,12 @@ lsh_SOURCES = arglist.c \
 	      client_pty.c \
 	      client_session.c \
 	      client_tcpforward.c \
+	      client_x11.c \
 	      gateway.c \
 	      gateway_channel.c \
 	      lsh.c \
-	      socks.c
+	      socks.c \
+	      xauth.c
 
 # FIXME: tty.c, suspend.c should not be needed. Maybe split unix_interact.c and tty.c
 # differently.
@@ -250,6 +252,10 @@ lshd_pty_helper_OBJS = $(lshd_pty_helper_SOURCES:.c=.$(OBJEXT)) $(pty_helper_OBJ
 	$(SCHEME) -e main -l $(srcdir)/scm/compiler.scm \
 		  -s $(srcdir)/scm/gaba.scm <$< >$(srcdir)/$(*F).xT
 	test -s $(srcdir)/$(*F).xT && mv -f $(srcdir)/$(*F).xT $(srcdir)/$(*F).x
+
+class-map: $(srcdir)/make-class-map $(dist_classes)
+	(cd $(srcdir) && cat $(dist_classes) | grep '^CLASS:' \
+	| sort | awk -f ./make-class-map > $@)
 
 # FIXME: Won't work if the filename contains `,', `\', `"' or newline.
 # NOTE: This rule is used by non-maintainer builds, so avoid using
