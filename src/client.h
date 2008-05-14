@@ -146,6 +146,16 @@ make_subsystem_action(struct lsh_string *subsystem);
 struct client_session_action *
 make_pty_action(struct interact *tty);
 
+struct client_session_action *
+make_x11_action(const char *display_string);
+
+void
+client_add_x11_handler(struct client_connection *connection,
+		       struct resource *handler);
+
+extern struct channel_open
+channel_open_x11;
+
 /* Initiate and manage a session */
 /* GABA:
    (class
@@ -186,21 +196,6 @@ make_client_session_channel(int in, int out, int err,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status);
-
-#if 0
-void
-client_x11_open(struct resource *r,
-		const struct channel_open_info *info, struct simple_buffer *args);
-
-extern struct channel_open channel_open_x11;
-#endif
-
-struct command *
-make_forward_x11(const char *display_string,
-		 struct randomness *random);
-
-struct client_x11_display *
-make_client_x11_display(const char *display, struct lsh_string *fake);
 
 struct lsh_string *
 client_rebuild_command_line(unsigned argc, char **argv);
