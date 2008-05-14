@@ -44,6 +44,7 @@
 
 #include "channel_forward.h"
 #include "format.h"
+#include "gateway.h"
 #include "lsh_string.h"
 #include "randomness.h"
 #include "ssh.h"
@@ -52,6 +53,8 @@
 #include "xauth.h"
 
 #include "client_x11.c.x"
+
+/* FIXME: There are currently no testcase for this code. */
 
 /* First port number for X, according to RFC 1013 */
 #define X11_BASE_PORT 6000
@@ -77,13 +80,19 @@
        (auth_name string)
        (auth_data string)))
 */
-     
+
 /* GABA:
    (class
-     (name channel_open_x11)
-     (super channel_open)
+     (name client_x11_handler)
+     (super resource)
      (vars
-       (backend object io_backend)))
+       (only_once . int)
+
+       ;; Exactly one should be non-null. NOTE: Could use a single
+       ;; pointer, and examine the object's isa pointer, but that's
+       ;; probably not worth the hassle.       
+       (display object client_x11_display)
+       (gateway object ssh_connection)))
 */
 
 /* GABA:
@@ -136,7 +145,7 @@
 
 /* From Pike's X.pmod:
  *
- *     /( Always uses network byteorder (big endian) 
+ *     // Always uses network byteorder (big endian) 
  *     string msg = sprintf("B\0%2c%2c%2c%2c\0\0%s%s",
  * 			    11, 0,
  * 			    strlen(auth_data->name), strlen(auth_data->data),
@@ -158,8 +167,7 @@
 
 enum { CLIENT_X11_START,
        CLIENT_X11_GOT_LENGTHS,
-       CLIENT_X11_OK,
-       CLIENT_X11_DENIED
+       CLIENT_X11_CANT_HAPPEN,
 };
 
 /* And the other, little-endian, byteorder */
@@ -178,181 +186,170 @@ do {						\
  * failure and do_channel_forward_receive on success. */
 static void
 do_client_channel_x11_receive(struct ssh_channel *s,
-                              int type, struct lsh_string *data)
+                              int type,
+			      uint32_t length, const uint8_t *data)
 {
   CAST(client_x11_channel, self, s);
 
   if (type != CHANNEL_DATA)
-    {
-      werror("Ignoring unexpected stderr data.\n");
-      lsh_string_free(data);
-    }
-  else switch (self->state)
-    {
-    case CLIENT_X11_OK:
-      A_WRITE(&self->super.socket->write_buffer->super, data);
-      break;
-        
-    fail:
-      channel_close(&self->super.super);
-      self->state = CLIENT_X11_DENIED;
-        
-      break;
-        
-    case CLIENT_X11_DENIED:
-      /* Any data on the channel should be stopped before we get
-       * here; the CHANNEL_SENT_CLOSE should be set. */
-      fatal("Internal error!\n");
+    werror("Ignoring unexpected stderr data on X11 channel.\n");
 
-    default:
-      {
-        /* Copy data to buffer */
-	const uint8_t *buffer;
+  else
+    {
+      /* Copy data to buffer */
+      const uint8_t *buffer;
 	
-        /* The small initial window size should ensure that all the
-	   data fits. */
-	lsh_string_write_string(self->buffer, self->i, data);
-        lsh_string_free(data);
+      /* The small initial window size should ensure that all the
+	 data fits. */
+      lsh_string_write(self->buffer, self->i, length, data);
+      self->i += length;
 
-	buffer = lsh_string_data(self->buffer);
+      buffer = lsh_string_data(self->buffer);
 	
-        switch (self->state)
-          {
-          case CLIENT_X11_START:
-            /* We need byte-order, major, minor and name_length,
-             * which is 6 octets */
+      switch (self->state)
+	{
+	default:
+	  fatal("Internal error. do_client_channel_x11_receive");
+	  break;
+	case CLIENT_X11_START:
+	  /* We need byte-order, major, minor and name_length,
+	   * which is 6 octets */
                
-            if (self->i < X11_SETUP_HEADER_LENGTH)
-              break;
+	  if (self->i < X11_SETUP_HEADER_LENGTH)
+	    break;
 
-            self->state = CLIENT_X11_GOT_LENGTHS;
-            switch (buffer[0])
-              {
-              case 'B': /* Big endian */
-	      case 'b':
-                self->little_endian = 0;
-                self->name_length = READ_UINT16(buffer + 6);
-                self->auth_length = READ_UINT16(buffer + 8);
-                break;
-              case 'L': /* Little endian */
-	      case 'l':
-                self->little_endian = 1;
-                self->name_length = LE_READ_UINT16(buffer + 6);
-                self->auth_length = LE_READ_UINT16(buffer + 8);
-                break;
-              default:
-                werror("client_x11.c: Bad endian indicator.\n");
-                goto fail;
-              }
-            if ( (self->name_length > 20)
-                 || (self->auth_length > 16) )
-              {
-                werror("client_x11.c: Too long auth name or cookie\n");
-                goto fail;
-              }
+	  self->state = CLIENT_X11_GOT_LENGTHS;
+	  switch (buffer[0])
+	    {
+	    case 'B': /* Big endian */
+	    case 'b':
+	      self->little_endian = 0;
+	      self->name_length = READ_UINT16(buffer + 6);
+	      self->auth_length = READ_UINT16(buffer + 8);
+	      break;
+	    case 'L': /* Little endian */
+	    case 'l':
+	      self->little_endian = 1;
+	      self->name_length = LE_READ_UINT16(buffer + 6);
+	      self->auth_length = LE_READ_UINT16(buffer + 8);
+	      break;
+	    default:
+	      werror("client_x11.c: Bad endian indicator.\n");
+	      goto fail;
+	    }
+	  if ( (self->name_length > 20)
+	       || (self->auth_length > 16) )
+	    {
+	      werror("client_x11.c: Too long auth name or cookie\n");
+	      goto fail;
+	    }
             
-            /* Fall through */
+	  /* Fall through */
             
-          case CLIENT_X11_GOT_LENGTHS:
-            {
-              const unsigned pad_length[4] = { 0, 3, 2, 1 };
+	case CLIENT_X11_GOT_LENGTHS:
+	  {
+	    const unsigned pad_length[4] = { 0, 3, 2, 1 };
 
 #define PAD(l) (pad_length[ (l) % 4])
               
-              uint32_t auth_offset = X11_SETUP_HEADER_LENGTH
-                + self->name_length + PAD(self->name_length);
+	    uint32_t auth_offset = X11_SETUP_HEADER_LENGTH
+	      + self->name_length + PAD(self->name_length);
 
-              uint32_t length = auth_offset
-		+ self->auth_length + PAD(self->auth_length); 
+	    uint32_t length = auth_offset
+	      + self->auth_length + PAD(self->auth_length); 
                 
-              if (self->i < length)
-                break;
+	    if (self->i < length)
+	      break;
 
-              debug("Received cookie of type `%ps': %xs\n",
-                    self->name_length, buffer + X11_SETUP_HEADER_LENGTH,
-                    self->auth_length, buffer + auth_offset);
+	    debug("Received cookie of type `%ps': %xs\n",
+		  self->name_length, buffer + X11_SETUP_HEADER_LENGTH,
+		  self->auth_length, buffer + auth_offset);
 
-              /* Ok, now we have the connection setup message. Check if it's ok. */
-              if ( (self->name_length == MIT_COOKIE_NAME_LENGTH)
-                   && !memcmp(buffer + X11_SETUP_HEADER_LENGTH,
-                              MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
-                   && lsh_string_eq_l(self->display->fake,
-                                      self->auth_length,
-                                      buffer + auth_offset))
-                {
-                  struct lsh_string *msg;
-                  uint8_t lengths[4];
-                  static const uint8_t pad[3] = { 0, 0, 0 };
-                  uint32_t nlength = lsh_string_length(self->display->auth_name);
-                  uint32_t alength = lsh_string_length(self->display->auth_data);
+	    /* Ok, now we have the connection setup message. Check if it's ok. */
+	    if ( (self->name_length == MIT_COOKIE_NAME_LENGTH)
+		 && !memcmp(buffer + X11_SETUP_HEADER_LENGTH,
+			    MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
+		 && lsh_string_eq_l(self->display->fake,
+				    self->auth_length,
+				    buffer + auth_offset))
+	      {
+		struct lsh_string *msg;
+		uint8_t lengths[4];
+		static const uint8_t pad[3] = { 0, 0, 0 };
+		uint32_t nlength = lsh_string_length(self->display->auth_name);
+		uint32_t alength = lsh_string_length(self->display->auth_data);
 		  
-                  /* Cookies match! */
-                  verbose("client_x11: Allowing X11 connection; cookies match.\n");
+		/* Cookies match! */
+		verbose("client_x11: Allowing X11 connection; cookies match.\n");
                   
-                  if (self->little_endian)
-                    {
-                      LE_WRITE_UINT16(lengths, nlength);
-                      LE_WRITE_UINT16(lengths + 2, alength);
-                    }
-                  else
-                    {
-                      WRITE_UINT16(lengths, nlength);
-                      WRITE_UINT16(lengths + 2, alength);
-                    }
+		if (self->little_endian)
+		  {
+		    LE_WRITE_UINT16(lengths, nlength);
+		    LE_WRITE_UINT16(lengths + 2, alength);
+		  }
+		else
+		  {
+		    WRITE_UINT16(lengths, nlength);
+		    WRITE_UINT16(lengths + 2, alength);
+		  }
 
-                  /* FIXME: Perhaps it would be easier to build the
-                   * message by hand than using ssh_format? */
-                  /* Construct the real setup message. */
-                  msg = ssh_format("%ls%ls%c%c%lS%ls%lS%ls",
-                                   X11_SETUP_VERSION_LENGTH, buffer,
-                                   4, lengths,
-                                   0, 0,
-                                   self->display->auth_name,
-                                   PAD(nlength), pad,
-                                   self->display->auth_data,
-                                   self->i - length,
-                                   buffer + self->i);
+		/* FIXME: Perhaps it would be easier to build the
+		 * message by hand than using ssh_format? */
+		/* Construct the real setup message. */
+		msg = ssh_format("%ls%ls%c%c%lS%ls%lS%ls",
+				 X11_SETUP_VERSION_LENGTH, buffer,
+				 4, lengths,
+				 0, 0,
+				 self->display->auth_name,
+				 PAD(nlength), pad,
+				 self->display->auth_data,
+				 self->i - length,
+				 buffer + self->i);
 
-                  lsh_string_free(self->buffer);
-                  self->buffer = NULL;
+		lsh_string_free(self->buffer);
+		self->buffer = NULL;
 
-                  /* Bump window size */
-                  channel_start_receive(&self->super.super,
-					X11_WINDOW_SIZE - lsh_string_length(msg));
+		/* Bump window size */
+		channel_start_receive(&self->super.super,
+				      X11_WINDOW_SIZE - lsh_string_length(msg));
 
-                  debug("client_x11.c: Sending real X11 setup message: %xS\n",
-                        msg);
+		/* Replaces receive method, so that we are not called again. */
+		channel_forward_start_io(&self->super);
+
+		debug("client_x11.c: Sending real X11 setup message: %xS\n",
+		      msg);
                   
-                  /* Send real x11 connection setup message. */
-                  A_WRITE(&self->super.socket->write_buffer->super, msg);
-
-                  self->state = CLIENT_X11_OK;
-                }
-              else
-                {
-                  werror("client_x11: X11 connection denied; bad cookie.\n");
-                  goto fail;
-                }
-              break;
+		/* Send real x11 connection setup message. */
+		channel_forward_write(&self->super, STRING_LD(msg));
+		lsh_string_free(msg);
+		  
+		self->state = CLIENT_X11_CANT_HAPPEN;
+	      }
+	    else
+	      {
+		werror("client_x11: X11 connection denied; bad cookie.\n");
+	      fail:
+		channel_close(&self->super.super);
+		self->state = CLIENT_X11_CANT_HAPPEN;
+	      }
+	    break;
 #undef PAD
-            }
-          default:
-            fatal("Internal error. do_client_channel_x11_receive");
-            break;
-          }
-      }
-      break;
+	  }
+	}
     }
 }
 
 static struct client_x11_channel *
-make_client_x11_channel(struct lsh_fd *fd,
+make_client_x11_channel(int fd,
 			struct client_x11_display *display)
 {
   NEW(client_x11_channel, self);
 
   /* Use a limited window size for the setup */
-  init_channel_forward(&self->super, fd, X11_SETUP_MAX_LENGTH);
+  /* FIXME: Do we need any x11 specific event handler? */
+  init_channel_forward(&self->super, fd, X11_SETUP_MAX_LENGTH, NULL);
+  self->super.super.receive = do_client_channel_x11_receive;
+
   self->display = display;
   self->state = 0;
   self->buffer = lsh_string_alloc(X11_SETUP_MAX_LENGTH);
@@ -362,118 +359,151 @@ make_client_x11_channel(struct lsh_fd *fd,
 
 /* GABA:
    (class
-     (name channel_open_x11_continuation)
-     (super command_continuation)
+     (name x11_connect_state)
+     (super io_connect_state)
      (vars
        (display object client_x11_display)
-       (up object command_continuation)))
+       (info const object channel_open_info)))
 */
 
 static void
-do_channel_open_x11_continuation(struct command_continuation *s,
-				 struct lsh_object *a)
+x11_connect_done(struct io_connect_state *s, int fd)
 {
-  CAST(channel_open_x11_continuation, self, s);
-  CAST(lsh_fd, fd, a);
-  
-  struct client_x11_channel *channel = make_client_x11_channel(fd, self->display);
-  channel_forward_start_io(&channel->super);
-  channel->super.super.receive = do_client_channel_x11_receive;
+  CAST(x11_connect_state, self, s);
 
-  COMMAND_RETURN(self->up, channel);
+  struct client_x11_channel *channel
+    = make_client_x11_channel(fd, self->display);
+  
+  channel_open_confirm(self->info, &channel->super.super);
 }
-				     
-static struct command_continuation *
-make_channel_open_x11_continuation(struct client_x11_display *display,
-				   struct command_continuation *up)
+
+/* Identical to tcpforward_connect_error. Unify? */
+static void
+x11_connect_error(struct io_connect_state *s, int error)
 {
-  NEW(channel_open_x11_continuation, self);
-  self->super.c = do_channel_open_x11_continuation;
+  CAST(x11_connect_state, self, s);
+  
+  werror("Connection failed, socket error %i\n", error);
+  channel_open_deny(self->info,
+		    EXC_CHANNEL_OPEN, "Connection failed");
+}
+
+static struct resource *
+x11_connect(struct client_x11_display *display,
+	    const struct channel_open_info *info)
+{
+  NEW(x11_connect_state, self);
+
+  init_io_connect_state(&self->super,
+			x11_connect_done,
+			x11_connect_error);
+
   self->display = display;
-  self->up = up;
+  self->info = info;
+  
+  if (!io_connect(&self->super, display->address_length, display->address))
+    {
+      werror("Connecting to X11 server failed %e\n", errno);
+      return NULL;
+    }
+  return &self->super.super;
+}
+
+static struct resource *
+make_client_x11_handler(struct client_x11_display *display,
+			struct ssh_connection *gateway)
+{
+  NEW(client_x11_handler, self);
+  init_resource(&self->super, NULL);
+
+  assert((!display) ^ (!gateway));
+
+  self->only_once = 0;
+  self->display = display;
+  self->gateway = gateway;
 
   return &self->super;
 }
 
-/* Exception handler that promotes connect errors to CHANNEL_OPEN
- * exceptions */
-
-static void
-do_exc_x11_connect_handler(struct exception_handler *s,
-			   const struct exception *e)
-{
-  switch(e->type)
-    {
-    case EXC_IO_CONNECT:
-      EXCEPTION_RAISE(s->parent,
-		      make_channel_open_exception(SSH_OPEN_CONNECT_FAILED,
-						  e->msg));
-      break;
-    default:
-      EXCEPTION_RAISE(s->parent, e);
-    }
-}
-
-static struct exception_handler *
-make_exc_x11_connect_handler(struct exception_handler *parent,
-			     const char *context)
-{
-  return make_exception_handler(do_exc_x11_connect_handler, parent, context);
-}
-
 DEFINE_CHANNEL_OPEN(channel_open_x11)
-     (struct channel_open *s UNUSED,
-      struct channel_table *table,
-      struct channel_open_info *info UNUSED,
-      struct simple_buffer *args,
-      struct command_continuation *c,
-      struct exception_handler *e)
+	(struct channel_open *s UNUSED,
+	 const struct channel_open_info *info,
+	 struct simple_buffer *args)
 {
-  uint32_t originator_length;
-  const uint8_t *originator;
-  uint32_t originator_port;
+  CAST(client_connection, connection, info->connection);
+  CAST(client_x11_handler, handler,
+       resource_list_top(connection->x11_displays));
 
-  if (parse_string(args, &originator_length, &originator)
-      && parse_uint32(args, &originator_port) 
-      && parse_eod(args))
+  if (handler)
     {
-      struct client_x11_display *display = table->x11_display;
-      
-      verbose("x11 connection attempt, originator: %s:%i\n",
-	      originator_length, originator, originator_port);
+      if (handler->only_once)
+	KILL_RESOURCE(&handler->super);
 
-      if (display)
+      if (handler->gateway)
 	{
-	  struct lsh_fd *fd
-	    = io_connect(display->address,
-			 display->address_length,
-			 make_connect_callback
-			 (make_channel_open_x11_continuation(display,
-							     c)),
-			 make_exc_x11_connect_handler(e, HANDLER_CONTEXT));
+	  uint32_t arg_length;
+	  const uint8_t *arg;
+      
+	  assert(!handler->display);
 
-	  if (fd)
-	    remember_resource(table->resources, &fd->super);
+	  /* FIXME: Some duplication with gateway_channel_open. */
+	  if (handler->gateway->pending_close)
+	    /* We are waiting for channels to close. Don't open any new ones. */
+	    channel_open_deny(info, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+			      "Waiting for channels to close.");
 	  else
-	    EXCEPTION_RAISE(e, 
-		      make_channel_open_exception(SSH_OPEN_CONNECT_FAILED,
-						  STRERROR(errno)));
-	  
- 	  /* FIXME: To handle single-connection feature,
-	   * remove the display here. */
+	    {
+	      parse_rest(args, &arg_length, &arg);
+
+	      if (!gateway_forward_channel(handler->gateway,
+					   info, arg_length, arg))
+		channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
+				  "Too many channels.");
+	    }
 	}
       else
-	EXCEPTION_RAISE(e, make_channel_open_exception
-			(SSH_OPEN_CONNECT_FAILED,
-			 "No X11 forwarding has been requested."));
+	{
+	  assert(handler->display);
+
+	  uint32_t originator_length;
+	  const uint8_t *originator;
+	  uint32_t originator_port;
+
+	  if (parse_string(args, &originator_length, &originator)
+	      && parse_uint32(args, &originator_port) 
+	      && parse_eod(args))
+	    {
+	      struct resource *r;
+
+	      verbose("x11 connection attempt, originator: %s:%i\n",
+		      originator_length, originator, originator_port);
+
+	      r = x11_connect(handler->display, info);
+	      if (r)
+		remember_resource(info->connection->resources, r);
+	    }
+	  else
+	    {
+	      werror("client_open_x11: Invalid message!\n");
+	  
+	      SSH_CONNECTION_ERROR(info->connection, "Invalid CHANNEL_OPEN x11 message.");
+	    }
+	}
     }
   else
-    {
-      werror("do_channel_open_x11: Invalid message!\n");
-      PROTOCOL_ERROR(table->e, "Invalid CHANNEL_OPEN x11 message.");
-    }
+    channel_open_deny(info,
+		      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+		      "Unexpected x11 request");
 }
 
+
+/* Setting up the forwarding. */
+void
+client_add_x11_handler(struct client_connection *connection,
+		       struct resource *handler)
+{
+  remember_resource(connection->x11_displays, handler);
+}
 
 /* Format is host:display.screen, where display and screen are numbers */
 static int
@@ -548,17 +578,38 @@ parse_display(struct client_x11_display *self, const char *display)
   
   if (host)
     {
-      /* NOTE: How do we support IPv6 displays? I have no idea how
-       * that would work with xauth. Actually, xauth ought to use DNS
+      /* NOTE: How do we support IPv6 displays?  Actually, xauth ought to use DNS
        * names rather than IP addresses. */
-      struct address_info *a = make_address_info(host, X11_BASE_PORT + display_num);
+
+      /* FIXME: Some duplication with io_lookup_address. */
+      struct addrinfo hints;
+      struct addrinfo *list;
+      int err;
+      char service[10];
+
+      /* For now, uses IPv4 only. I have no idea how IPv6 works work
+       * with xauth. */
+      memset(&hints, 0, sizeof(hints));
+      hints.ai_family = AF_INET;
+      hints.ai_socktype = SOCK_STREAM;
+
+      snprintf(service, sizeof(service), "%d", X11_BASE_PORT + display_num);
       
-      self->address = address_info2sockaddr(&self->address_length, a, NULL, 1);
+      err = getaddrinfo(lsh_get_cstring(host), service, &hints, &list);
+      lsh_string_free(host);
 
-      KILL(a);
+      if (err)
+	{
+	  werror("parse_display: getaddrinfo failed: %z\n",
+		 gai_strerror(err));
+	  return 0;
+	}
+      self->address_length = list->ai_addrlen;
+      
+      self->address = lsh_space_alloc(self->address_length);
+      memcpy(self->address, list->ai_addr, self->address_length);
 
-      if (!self->address)
-	return 0;
+      freeaddrinfo(list);      
     }
   else
     {
@@ -594,12 +645,11 @@ parse_display(struct client_x11_display *self, const char *display)
   return 1;
 }
 
-struct client_x11_display *
-make_client_x11_display(const char *display, struct lsh_string *fake)
+static struct client_x11_display *
+make_client_x11_display(const char *display)
 {
   NEW(client_x11_display, self);
-
-  self->fake = fake;
+  self->fake = NULL;
   
   if (!parse_display(self, display))
     {
@@ -613,144 +663,118 @@ make_client_x11_display(const char *display, struct lsh_string *fake)
 
 /* GABA:
    (class
-     (name client_x11_display_resource)
-     (super resource)
+     (name client_x11_fake_handler)
+     (super client_random_handler)
      (vars
-       (table object channel_table)
+       (session object client_session)
        (display object client_x11_display)))
 */
 
 static void
-do_kill_x11_display(struct resource *s)
+do_client_x11_handle_random_reply(struct client_random_handler *s,
+				  uint32_t length,
+				  const uint8_t *data)
 {
-  CAST(client_x11_display_resource, self, s);
+  CAST(client_x11_fake_handler, self, s);
 
-  if (self->super.alive)
+  assert(!self->display->fake);
+
+  debug("do_client_x11_handle_random_reply: Fake cookie is %xs\n",
+	length, data);
+
+  if (length != X11_COOKIE_LENGTH)
     {
-      self->super.alive = 0;
+      werror("Unexpected length %i in RANDOM_REPLY for fake X11 cookie.\n",
+	     length);
+      channel_close(&self->session->super);
+    }
+  else
+    {
+      self->display->fake = ssh_format("%ls", length, data);
 
-      if (self->table->x11_display == self->display)
-	self->table->x11_display = NULL;
-      else
-	werror("do_kill_x11_display: Display has been replaced.\n");
+      /* NOTE: The cookie is hex encoded, apparently so that it can be
+	 passed directly to the xauth command line. That's ugly, but
+	 it's how the other ssh implementations do it. */
+      
+      if (!channel_send_request(&self->session->super, ATOM_X11_REQ, 1,
+				"%c%s%xS%i",
+				0, /* FIXME: Single connection not supported */
+				MIT_COOKIE_NAME_LENGTH, MIT_COOKIE_NAME,
+				self->display->fake,
+				self->display->screen))
+	werror("Session channel was closed in the middle of x11 forwarding setup.");
     }
 }
 
-static struct resource *
-make_client_x11_display_resource(struct channel_table *table,
-				 struct client_x11_display *display)
-{
-  NEW(client_x11_display_resource, self);
-  init_resource(&self->super, do_kill_x11_display);
-
-  self->table = table;
-  self->display = display;
-
-  return &self->super;
-}
-
 /* GABA:
    (class
-     (name request_x11_continuation)
-     (super command_continuation)
+     (name client_x11_action)
+     (super client_session_action)
      (vars
-       (table object channel_table)
-       (display object client_x11_display)
-       (up object command_continuation)))
-*/
-
-static void
-do_request_x11_continuation(struct command_continuation *s,
-			    struct lsh_object *a)
-{
-  CAST(request_x11_continuation, self, s);
-  CAST_SUBTYPE(ssh_channel, channel, a);
-
-  verbose("X11 request succeeded\n");
-
-  if (self->table->x11_display)
-    werror("client_x11.c: Replacing old x11 forwarding.\n");
-
-  self->table->x11_display = self->display;
-
-  remember_resource(channel->resources,
-		    make_client_x11_display_resource(self->table,
-						     self->display));
-
-  COMMAND_RETURN(self->up, a);
-}
-
-static struct command_continuation *
-make_request_x11_continuation(struct channel_table *table,
-			      struct client_x11_display *display,
-			      struct command_continuation *up)
-{
-  NEW(request_x11_continuation, self);
-  self->super.c = do_request_x11_continuation;
-
-  self->table = table;
-  self->display = display;
-  self->up = up;
-
-  return &self->super;
-}
-
-/* GABA:
-   (class
-     (name request_x11_forward_command)
-     (super channel_request_command)
-     (vars
-       (connection object ssh_connection)
        (display object client_x11_display)))
 */
 
-static struct lsh_string *
-do_format_request_x11_forward(struct channel_request_command *s,
-			      struct ssh_channel *channel,
-			      struct command_continuation **c)
+static void
+do_action_x11_start(struct client_session_action *s,
+		    struct client_session *session)
 {
-  CAST(request_x11_forward_command, self, s);
+  CAST(client_x11_action, self, s);
+  CAST(client_connection, connection, session->super.connection);
 
-  verbose("Requesting X11 forwarding.\n");
-  
-  *c = make_request_x11_continuation(channel->table,
-				     self->display, *c);
+  NEW(client_x11_fake_handler, handler);
+  handler->super.gateway = NULL;
+  handler->super.reply = do_client_x11_handle_random_reply;
 
-  /* NOTE: The cookie is hex encoded, appearantly so that it can be
-   * passed directly to the xauth command line. That's really ugly,
-   * but it's how the other ssh implementations do it. */
+  handler->session = session;
+  handler->display = self->display;
+
+  client_random_request(connection,
+			X11_COOKIE_LENGTH, &handler->super);  
+}
+       
+static void
+do_action_x11_success(struct client_session_action *s,
+		      struct client_session *session)
+{
+  CAST(client_x11_action, self, s);
+  CAST(client_connection, connection, session->super.connection);
+  struct resource *handler;
+
+  verbose("X11 request succeeded\n");
+
+  handler = make_client_x11_handler(self->display, NULL);
+  client_add_x11_handler(connection, handler);
   
-  return format_channel_request(ATOM_X11_REQ, channel, 1, "%c%s%xS%i",
-				0, /* Single connection not supported */
-				MIT_COOKIE_NAME_LENGTH, MIT_COOKIE_NAME,
-				self->display->fake,
-				self->display->screen);
+  remember_resource(session->resources, handler);
 }
 
-/* Consumes fake */
-struct command *
-make_forward_x11(const char *display_string,
-		 struct randomness *random)
+static int
+do_action_x11_failure(struct client_session_action *s UNUSED,
+		      struct client_session *session UNUSED)
 {
-  struct lsh_string *fake;
+  verbose("x11 request failed\n");
+
+  return 1;
+}
+
+struct client_session_action *
+make_x11_action(const char *display_string)
+{
   struct client_x11_display *display;
 
-  assert(random->quality == RANDOM_GOOD);
-  fake = lsh_string_random(random, X11_COOKIE_LENGTH);
-
-  debug("Generated X11 fake cookie %xS\n", fake);
-  
-  /* This deallocates fake if it fails. */
-  display = make_client_x11_display(display_string, fake);
+  display = make_client_x11_display(display_string);
 
   if (display)
     {
-      NEW(request_x11_forward_command, self);
-      self->super.super.call = do_channel_request_command;
-      self->super.format_request = do_format_request_x11_forward;
+      NEW(client_x11_action, self);
+      self->super.serial = 0;
+      self->super.start = do_action_x11_start;
+      self->super.success = do_action_x11_success;
+      self->super.failure = do_action_x11_failure;
 
       self->display = display;
-      return &self->super.super;
+
+      return &self->super;
     }
   else
     return NULL;
