@@ -177,6 +177,10 @@ do_send_adjust(struct ssh_channel *s,
 static void
 session_next_action(struct client_session *session)
 {
+  trace("session_next_action: next = %i, done = %i, length = %i\n",
+	session->action_next, session->action_done,
+	LIST_LENGTH(session->actions));
+
   while (session->action_next < LIST_LENGTH(session->actions))
     {
       CAST_SUBTYPE(client_session_action, action,
@@ -210,9 +214,6 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       /* FIXME: Setup escape handler, and raw tty? */
       if (session->super.send_window_size)
 	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
-
-      channel_start_receive(&session->super,
-			    lsh_string_length(session->out.state->buffer));
 
       session_next_action(session);
 
@@ -416,11 +417,22 @@ static void
 do_action_shell_start(struct client_session_action *s UNUSED,
 		      struct client_session *session)
 {
+  verbose("Sending shell request.\n");
   channel_send_request(&session->super, ATOM_SHELL, 1, "");
 }
 
+static void
+do_action_shell_success(struct client_session_action *s UNUSED,
+			struct client_session *session)
+{
+  verbose("Shell/exec/subsystem request succeeded.\n");
+
+  channel_start_receive(&session->super,
+			lsh_string_length(session->out.state->buffer));
+}
+
 struct client_session_action client_request_shell =
-  { STATIC_HEADER, 1, do_action_shell_start, NULL, NULL };
+  { STATIC_HEADER, 1, do_action_shell_start, do_action_shell_success, NULL };
 
 /* Used for both exec and subsystem request. */
 /* GABA:
@@ -438,6 +450,7 @@ do_action_command_start(struct client_session_action *s,
 {
   CAST(client_action_command, self, s);
 
+  verbose("Sending %a request\n", self->type);
   channel_send_request(&session->super, self->type, 1, "%S", self->arg);  
 }
 
@@ -446,8 +459,9 @@ make_action_command(int type, struct lsh_string *arg)
 {
   NEW(client_action_command, self);
 
+  self->super.serial = 1;
   self->super.start = do_action_command_start;
-  self->super.success = NULL;
+  self->super.success = do_action_shell_success;
   self->super.failure = NULL;
   self->type = type;
   self->arg = arg;
