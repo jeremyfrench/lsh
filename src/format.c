@@ -320,16 +320,20 @@ format_string(struct lsh_string *buffer, uint32_t pos,
 	      int literal, int hex)
 {  
   static const uint8_t hexchars[16] = "0123456789abcdef";
-  uint32_t length = hex ? (2*size) : size;
 
   if (!literal)
     {
+      uint32_t length = hex ? (2*size) : size;
+
       lsh_string_write_uint32(buffer, pos, length);
       pos += 4;
     }
 
   if (!hex)
-    lsh_string_write(buffer, pos, size, data);
+    {
+      lsh_string_write(buffer, pos, size, data);
+      pos += size;
+    }
   else
     {
       uint32_t i;
@@ -339,7 +343,7 @@ format_string(struct lsh_string *buffer, uint32_t pos,
 	  lsh_string_putc(buffer, pos++, hexchars[ data[i] & 0x0f]);
 	}
     }
-  return pos + length;
+  return pos;
 }
 
 void
