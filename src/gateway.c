@@ -34,6 +34,7 @@
 #include "environ.h"
 #include "format.h"
 #include "io.h"
+#include "io_commands.h"
 #include "lsh_string.h"
 #include "service.h"
 #include "ssh.h"
@@ -44,6 +45,11 @@
 #define GABA_DEFINE
 #include "gateway.h.x"
 #undef GABA_DEFINE
+
+struct command_2 gateway_accept;
+#define GATEWAY_ACCEPT (&gateway_accept.super.super)
+
+#include "gateway.c.x"
 
 #define GATEWAY_WRITE_BUFFER_SIZE (100 * SSH_MAX_PACKET)
 
@@ -284,13 +290,14 @@ gateway_packet_handler(struct gateway_connection *connection,
   switch (packet[0])
     {
     case SSH_LSH_GATEWAY_STOP:
-      /* The correct behaviour is to kill the port object. */
-      fatal("Not implemented.\n");
+      KILL_RESOURCE(connection->port);
+      return 1;
+
     case SSH_LSH_RANDOM_REQUEST:
       client_gateway_random_request(connection->shared, length, packet,
 				    connection);
       return 1;
-      break;
+
     default:
       return channel_packet_handler(&connection->super, length, packet);
     }
@@ -395,7 +402,8 @@ do_disconnect(struct ssh_connection *s, uint32_t reason, const char *msg)
 }
 
 struct gateway_connection *
-make_gateway_connection(struct client_connection *shared, int fd)
+make_gateway_connection(struct client_connection *shared,
+			struct resource *port, int fd)
 {
   NEW(gateway_connection, self);
   init_ssh_connection(&self->super, kill_gateway_connection,
@@ -403,7 +411,8 @@ make_gateway_connection(struct client_connection *shared, int fd)
 
   self->super.open_fallback = &gateway_channel_open;
   self->shared = shared;
-  
+  self->port = port;
+
   io_register_fd(fd, "lsh gateway connection");
 
   self->fd = fd;
@@ -415,3 +424,51 @@ make_gateway_connection(struct client_connection *shared, int fd)
   
   return self;
 }
+
+/* (gateway_accept main-connection gateway-connection) */
+DEFINE_COMMAND2(gateway_accept)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST(client_connection, connection, a1);
+  CAST(listen_value, lv, a2);
+
+  static const char hello[LSH_HELLO_LINE_LENGTH]
+    = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK lsh-transport";
+  
+  struct gateway_connection *gateway
+    = make_gateway_connection(connection, lv->port, lv->fd);
+
+  int error = gateway_write_data (gateway, sizeof(hello), hello);
+  if (error)
+    {
+      werror ("Sending gateway hello message failed: %e\n", error);
+      KILL_RESOURCE (&gateway->super.super);
+      return;
+    }
+
+  if (!connection->write_blocked)
+    gateway_start_read(gateway);
+
+  /* Kill gateway connection if the main connection goes down. */
+  remember_resource(connection->gateway_connections, &gateway->super.super);
+
+  COMMAND_RETURN(c, gateway);
+}
+
+/* GABA:
+   (expr
+     (name make_gateway_setup)
+     (params
+       (local object local_info))
+     (expr
+       (lambda (connection)
+         (connection_remember connection
+	   (listen_local
+	     (lambda (peer)
+	       (gateway_accept connection peer))
+	       ;; prog1, to delay binding until we are connected.
+	     (prog1 local connection) )))))
+*/

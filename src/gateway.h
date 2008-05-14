@@ -49,6 +49,10 @@ make_gateway_address(const char *local_user, const char *remote_user,
        ; Using the type client_connection rather than ssh_connection
        ; is needed for the handling of SSH_LSH_RANDOM_REQUEST.
        (shared object client_connection)
+
+       ; The correspondign listening port. Needed when we are asked to close.
+       (port object resource)
+
        (fd . int)
        (reader object service_read_state)
        (read_active . int)
@@ -74,7 +78,11 @@ void
 gateway_stop_read(struct gateway_connection *self);
 
 struct gateway_connection *
-make_gateway_connection(struct client_connection *shared, int fd);
+make_gateway_connection(struct client_connection *shared,
+			struct resource *port, int fd);
+
+struct command *
+make_gateway_setup(struct local_info *local);
 
 int
 gateway_forward_channel(struct ssh_connection *target_connection,
