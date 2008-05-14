@@ -246,6 +246,8 @@ lsh_transport_service_packet_handler(struct transport_forward *self,
 				     uint32_t length, const uint8_t *data)
 {
   assert(length > 0);
+  debug("lsh_transport_service_packet_handler: %xs\n",
+	length, data);
   if (data[0] == SSH_LSH_RANDOM_REQUEST)
     {
       struct simple_buffer buffer;
@@ -258,11 +260,11 @@ lsh_transport_service_packet_handler(struct transport_forward *self,
 	  struct lsh_string *response;
 	  uint32_t pos;
 
-	  if (length > RANDOM_REQUEST_MAX)
-	    length = RANDOM_REQUEST_MAX;
+	  if (random_length > RANDOM_REQUEST_MAX)
+	    random_length = RANDOM_REQUEST_MAX;
 
-	  response = ssh_format("%c%r", SSH_LSH_RANDOM_REPLY, length, &pos);
-	  lsh_string_write_random(response, pos, self->super.ctx->random, length);
+	  response = ssh_format("%c%r", SSH_LSH_RANDOM_REPLY, random_length, &pos);
+	  lsh_string_write_random(response, pos, self->super.ctx->random, random_length);
 
 	  /* Note: Bogus sequence number. */
 	  transport_forward_service_packet(self, 0, STRING_LD(response));
