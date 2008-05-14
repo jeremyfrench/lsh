@@ -11,7 +11,9 @@ dist_classes = \
     client_escape.c.x \
     client_keyexchange.c.x \
     client_pty.c.x \
+    client_session.c.x \
     client_tcpforward.c.x \
+    client_x11.c.x \
     combinators.c.x \
     command.c.x \
     command.h.x \
@@ -21,6 +23,7 @@ dist_classes = \
     crypto.h.x \
     dsa.c.x \
     exception.h.x \
+    gateway.c.x \
     gateway.h.x \
     gateway_channel.c.x \
     interact.h.x \
