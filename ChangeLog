@@ -1,3 +1,178 @@
+2008-05-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.h (CHANNEL_RECEIVE): Deleted macro, updated the only
+	call in channel.c.
+	(CHANNEL_SEND_ADJUST): Likewise.
+	(CHANNEL_REQUEST): Likewise.
+	(CHANNEL_OPEN_CONFIRM): Deleted macro.
+	(CHANNEL_OPEN_FAILURE): Likewise.
+
+	* src/.dist_classes: Added client_session.c.x, client_x11.c.x and
+	gateway.c.x.
+
+	* src/make-class-map: Use /usr/bin/awk as interpreter.
+
+	* src/lsh.h (MAX, SQR): Deleted unused macros.
+
+	* src/testsuite/sockaddr2info-test.c: Deleted file. Tested
+	function no longer exists.
+	* src/testsuite/Makefile.in (TS_SOURCES): Removed
+	sockaddr2info-test.c.
+	(TS_SH): Added lsh-13-test.
+
+	* src/Makefile.in (lsh_SOURCES): Added client_x11.c and xauth.c.
+	(class-map): New target.
+
+	* src/lsh.c (command gateway_accept): Moved to gateway.c.
+	(make_gateway_setup): Likewise.
+	(maybe_x11): New function, replacing client_maybe_x11 in client.c.
+	(client_shell_session, client_command_session): X11 handling.
+	(main): Install CHANNEL_OPEN handler for x11.
+
+	* src/io.c (io_lookup_address): Fixed error message.
+
+	* src/gateway.c (gateway_packet_handler): Implemented
+	SSH_LSH_GATEWAY_STOP.
+	(make_gateway_connection): Set port attribute. Corresponding new
+	argument.
+	(command gateway_accept): Moved here, from lsh.c. Use the port
+	object provided in the listen_value.
+	(make_gateway_setup): Moved here, from lsh.c.
+
+	* src/client.h: Updated x11-related prototypes.
+
+	* src/client.c (oop_read_service): More debug output for
+	unexpected message types.
+	(client_maybe_x11): Deleted function (moved to lsh.c).
+
+	* src/client_pty.c (do_kill_client_tty_resource): Check alive
+	flag. New trace message.
+
+	* src/client_session.c (do_client_session_event): Deleted call to
+	channel_start_receive.
+	(do_action_shell_success): New function. Calls
+	channel_start_receive. The old ordering of the CHANNEL_REQUEST
+	message and the CHANNEL_WINDOW_ADJUST caused interoperability
+	problems with Sun_SSH_1.1 (no comprehensive interoperability
+	testing done).
+	(client_request_shell): Use do_action_shell_success.
+	(make_action_command): Use do_action_shell_success. Set the serial
+	attribute to true.
+
+	* src/client_x11.c: Total reorganization. Adapted to new
+	client_session_action conventions, and the new handling of channel
+	open and channel requests.
+
+	* src/testsuite/daemon-fd-test: Use ls -1, to get the same output
+	regardless of presence of pty.
+
+	* src/lsh-transport.c (lsh_transport_service_packet_handler):
+	Fixed handling of SSH_LSH_RANDOM_REQUEST.
+
+	* src/format.c (format_string): Fixed length calculation for hex output.
+
+	* src/channel.c (channel_send_request): Check if we have sent
+	channel_close. Return success/failure.
+
+2008-05-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c (make_listen_value): Moved function here, from
+	io.c. Also made static, changed interface to take a sockaddr as
+	argument, and merged contents of sockaddr2info,
+	(oop_io_port_accept): Updated call to make_listen_value.
+
+	* src/io.h (class listen_value): Added port attribute.
+
+	* src/io.c (make_listen_value, sockaddr2info): Deleted, moved to
+	io_commands.c.
+
+	* src/lsh.c (DEFAULT_ESCAPE_CHAR, DEFAULT_SOCKS_PORT): Moved from
+	client.c.
+	(class lsh_options): Don't inherit client_options, its contents is
+	moved here.
+	(make_options): Moved initialization code from init_client_options.
+	(add_action, prepend_action): New functions, moved from client.c.
+	(make_client_session): New function, moved from client.c.
+	(maybe_pty): New function, moved from client.c. 
+	(client_shell_session): Rewritten to use client_session_action.
+	(client_subsystem_session): Likewise.
+	(client_command_session): Likewise.
+	(main_options): Copied options from client.c.
+	(main_argp_children): Inherit werror_argp, not client_argp.
+	(parse_arg_unsigned, parse_forward_arg): Moved from client.c.
+	(CASE_ARG, CASE_FLAG): Updated, not member is no longer in super class.
+	(main_argp_parser): Moved option parsing from client.c.
+	(fork_lsh_transport): Updated to changes in lsh_options.
+	(main): Updated to changes in lsh_options. Modify inhibit_actions
+	flag around call to env_parse.
+
+	Moved option parsing and configuration from client.c.
+
+	* src/client_pty.c (class pty_request): Deleted.
+	(do_client_winch_handler): Updated call to channel_send_request.
+	(class client_pty_action): New class, more or less replaces the
+	pty_request class.
+	(do_pty_continuation): Deleted function.
+	(make_pty_continuation): Deleted function.
+	(do_pty_request): Deleted function.
+	(make_pty_request): Deleted function.
+	(do_action_pty_start): New function.
+	(do_action_pty_success): New function.
+	(do_action_pty_failure): New function.
+	(make_pty_action): New function.
+
+	* src/client_session.c (session_next_action): New function.
+	(do_client_session_event): Deleted installation of exit-status and
+	exit-signal. Use session_next_action, and implement the new way of
+	sending channel requests for the session.
+	(handle_exit_status): Moved from client.c, and rewritten to use
+	DEFINE_CHANNEL_REQUEST, and to use the exit_status pointer in the
+	session.
+	(handle_exit_signal): Likewise.
+	(make_client_session_channel): New argument actions. Initialize
+	actions, action_next and action_done. Initialize the request_types
+	alist with handlers for exit-status and exit-signal.
+	(do_action_shell_start): New function. (These and below related to
+	session actions).
+	(class client_action_command): New class.
+	(do_action_command_start): New function.
+	(make_action_command): New function.
+	(make_exec_action): New function.
+	(make_subsystem_action): New function.
+
+	* src/client.h (class client_session_action): New class.
+	(class client_session): New attributes actions, action_next,
+	action_done, replacing the attribute requests.
+	(class client_options)): Deleted, merged with lsh_options in
+	lsh.c.
+
+	* src/client.c: All code related to options and configuration
+	moved to lsh.c.
+	(make_client_escape): New function.
+	(env_parse): Don't touch the inhibit_actions flag, let the caller
+	do that.
+
+	* src/server_session.c (do_exit_shell): Updated call to
+	channel_send_request.
+	(do_server_session_event): Ignore CHANNEL_EVENT_SUCCESS and
+	CHANNEL_EVENT_FAILURE.
+
+	* src/channel_forward.c (do_channel_forward_event): Ignore
+	CHANNEL_EVENT_SUCCESS and CHANNEL_EVENT_FAILURE.
+	* src/gateway_channel.c (do_gateway_channel_event): Likewise.
+	* src/socks.c (do_socks_channel_event): Likewise.
+
+	* src/channel.c (handle_channel_success): Generate a
+	CHANNEL_EVENT_SUCCESS to notify the channel.
+	(handle_channel_failure): Generate a CHANNEL_EVENT_FAILURE.
+	(init_channel): Updated initialization of pending_requests.
+	(channel_send_request): Deleted command_context argument.
+
+	* src/channel.h (enum channel_event): New constants
+	CHANNEL_EVENT_SUCCESS, CHANNEL_EVENT_FAILURE.
+	(class ssh_channel): Made pending_requests a simple counter, not a
+	queue of objects.
+
 2008-05-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c (handle_random_reply): New function.
