@@ -1,0 +1,15 @@
+#! /bin/sh
+
+echo lsh test 13
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+# Pipeline analoguous to that in lshg-1-test
+spawn_lshd && echo foo | exec_lsh cat | grep foo > /dev/null \
+    && test_success
+
+test_done
