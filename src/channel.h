@@ -245,7 +245,7 @@ channel_open_new_type(struct ssh_connection *connection,
 struct exception *
 make_channel_open_exception(uint32_t error_code, const char *msg);
 
-void
+int
 channel_send_request(struct ssh_channel *channel, int type,
 		     int want_reply,
 		     const char *format, ...);

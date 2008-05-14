@@ -1485,7 +1485,7 @@ channel_open_new_type(struct ssh_connection *connection,
 
 /* If want_reply != 0 and ctx == NULL, channel is closed if the
    request fails. */
-void
+int
 channel_send_request(struct ssh_channel *channel, int type,
 		     int want_reply,
 		     const char *format, ...)
@@ -1493,6 +1493,9 @@ channel_send_request(struct ssh_channel *channel, int type,
   va_list args;
   uint32_t l1, l2;
   struct lsh_string *packet;
+
+  if (channel->flags & CHANNEL_SENT_CLOSE)
+    return 0;
 
 #define REQUEST_FORMAT "%c%i%a%c"
 #define REQUEST_ARGS SSH_MSG_CHANNEL_REQUEST, channel->remote_channel_number, \
@@ -1519,6 +1522,8 @@ channel_send_request(struct ssh_channel *channel, int type,
 
   if (want_reply)
     channel->pending_requests++;
+
+  return 1;
 }
 
 void
