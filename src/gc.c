@@ -51,12 +51,6 @@ static void sanity_check_object_list(void)
 {
   unsigned i = 0;
   struct lsh_object *o;
-
-#if 0
-  wwrite("sanity_check_object_list: Objects on list:\n");
-  for(o = all_objects; o; o = o->next)
-    werror("  %xi, class: %z\n", (uint32_t) o, o->isa ? o->isa->name : "UNKNOWN");
-#endif
   
   for(o = all_objects; o; o = o->next)
     i++;
@@ -96,11 +90,6 @@ static void gc_mark(struct lsh_object *o)
       {
 	struct lsh_class *class;
 
-#if 0
-	debug("gc_mark: Marking object of class '%z'\n",
-	      o->isa ? o->isa->name : "UNKNOWN");
-#endif
-	
 	for (class = o->isa; class; class = class->super_class)
 	  {
 	    if (class->mark_instance)
@@ -133,10 +122,6 @@ static void gc_sweep(void)
 	  /* ... and resurrect the dead. */
 	  struct lsh_class *class;
 
-#if 0
-	  debug("gc_sweep: Freeing object of class '%z'\n",
-		o->isa->name);
-#endif  
 	  for (class = o->isa; class; class = class->super_class)
 	    if (class->free_instance)
 	      FREE_INSTANCE(class, o);
@@ -199,19 +184,10 @@ void gc_kill(struct lsh_object *o)
 
   o->dead = 1;
 
-#if 0
-  debug("gc_kill: Killing object of type %z.\n",
-	o->isa ? o->isa->name : "UNKNOWN");
-#endif
-  
   if (o == all_objects)
     {
       struct lsh_class *class;
-      
-#if 0
-      debug("gc_kill:   Deallocating immediately.\n");
-#endif
-      
+
       for (class = o->isa; class; class = class->super_class)
 	if (class->free_instance)
 	  FREE_INSTANCE(class, o);
@@ -219,12 +195,6 @@ void gc_kill(struct lsh_object *o)
       all_objects = o->next;
       number_of_objects--;
       lsh_object_free(o);
-    }
-  else
-    {
-#if 0
-      debug("gc_kill:   Deferring deallocation to gc_sweep\n");
-#endif
     }
   
   sanity_check_object_list();
@@ -282,22 +252,3 @@ void gc_final(void)
   lsh_string_final_check();
 #endif /* DEBUG_ALLOC */
 }
-
-/* For debugging */
-#if 0
-struct lsh_object *
-gc_iterate_objects(const struct lsh_class *class, struct lsh_object *o)
-{
-  if (!o)
-    o = all_objects;
-  else
-    o = o->next;
-    
-  for (; o; o = o->next)
-    {
-      if (o->isa == class)
-	return o;
-    }
-  return NULL;
-}
-#endif

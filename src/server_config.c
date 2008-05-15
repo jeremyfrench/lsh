@@ -187,17 +187,6 @@ parser_finalize(struct parser_state *state, int err)
 {
   struct group *group;
 
-#if 0
-  if (!err)
-    {
-      /* Success */
-      for (group = state->egroup - 1;
-	   group >= state->groups && (!err || err == EINVAL);
-	   group--)
-	err = group->parser->handler (CONFIG_PARSE_KEY_END, NULL, &group->state);
-    }
-#endif
-  
   /* Call parsers once more, to do any final cleanup.  Errors are ignored.  */
   for (group = state->egroup - 1; group >= state->groups; group--)
     group->parser->handler (CONFIG_PARSE_KEY_END, 0, NULL, &group->state);

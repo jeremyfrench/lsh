@@ -284,22 +284,6 @@ get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
  * misc/rndunix.c. <URL:
  * http://www.cs.auckland.ac.nz/~pgut001/cryptlib/> */
 
-#if 0
-static struct RI {
-	const char *path;		/* Path to check for existence of source */
-	const char *arg;		/* Args for source */
-	const int usefulness;	/* Usefulness of source */
-	FILE *pipe;				/* Pipe to source as FILE * */
-	int pipeFD;				/* Pipe to source as FD */
-	pid_t pid;				/* pid of child for waitpid() */
-	int length;				/* Quantity of output produced */
-	const BOOLEAN hasAlternative;	/* Whether source has alt.location */
-	} dataSources[] = {
-	{ "/bin/vmstat", "-s", SC( -3 ), NULL, 0, 0, 0, TRUE },
-	{ "/usr/bin/vmstat", "-s", SC( -3 ), NULL, 0, 0, 0, FALSE },
-	... };
-#endif
-
 /* FIXME: Are we too conservative here? Most sources get credited with
  * only one or two bits per KB of output. On my system, get_system
  * estimates a total of eight bits of entropy... */
@@ -438,20 +422,6 @@ system_sources[] = {
   { "/usr/sbin/advfsstat", "-l 2 usr_domain", 0, WLARGE(5) },
   { "/usr/sbin/advfsstat", "-p usr_domain", 0, WLARGE(0) },
 
-  /* This is a complex and screwball program.  Some
-     systems have things like rX_dmn, x = integer,
-     for RAID systems, but the statistics are
-     pretty dodgy */
-#if 0
-  /* The following aren't enabled since they're somewhat slow and not very
-     unpredictable, however they give an indication of the sort of sources
-     you can use (for example the finger might be more useful on a
-     firewalled internal network) */
-  { "/usr/bin/finger", "@ml.media.mit.edu", 0, WLARGE(9) },
-  { "/usr/local/bin/wget", "-O - http://lavarand.sgi.com/block.html",
-    0, WLARGE(9) },
-  { "/bin/cat", "/usr/spool/mqueue/syslog", 0, WLARGE(9) },
-#endif /* 0 */
   { NULL, NULL, 0, 0, 0 }
 };
 

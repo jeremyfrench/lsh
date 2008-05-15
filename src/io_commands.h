@@ -27,19 +27,12 @@
 #include "connection.h"
 #include "io.h"
 
+/* FIXME: Move to io.h? */
 extern struct command_2 listen_tcp_command;
 #define LISTEN_TCP (&listen_tcp_command.super.super)
 
 extern struct command_2 listen_local_command;
 #define LISTEN_LOCAL (&listen_local_command.super.super)
 
-#if 0
-extern struct command io_log_peer_command;
-#define LOG_PEER (&io_log_peer_command.super)
-
-
-struct command *
-make_tcp_wrapper(struct lsh_string *name, struct lsh_string *msg);
-#endif
 
 #endif /* LSH_IO_COMMANDS_H_INCLUDED */

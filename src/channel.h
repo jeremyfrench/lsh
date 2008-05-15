@@ -279,15 +279,6 @@ channel_maybe_close(struct ssh_channel *channel);
 struct lsh_callback *
 make_channel_read_close_callback(struct ssh_channel *channel);
 
-#if 0
-struct exception_handler *
-make_channel_io_exception_handler(struct ssh_channel *channel,
-				  const char *prefix,
-				  int silent,
-				  struct exception_handler *parent,
-				  const char *context);
-#endif
-
 void
 channel_transmit_data(struct ssh_channel *channel,
 		      uint32_t length, const uint8_t *data);

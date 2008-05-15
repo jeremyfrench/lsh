@@ -64,10 +64,6 @@ sanity_check_queue(struct lsh_queue *q)
   struct lsh_queue_node *n;
   unsigned count;
   
-#if 0
-  debug("sanity_check_queue: q = %xi\n", (uint32_t) q);
-#endif
-
   if (EMPTYP(q) != EMPTYP_1(q))
     fatal("inconsistent emptyness!\n");
 
