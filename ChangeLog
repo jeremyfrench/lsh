@@ -1,3 +1,13 @@
+2008-05-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.h: Deleted old if:ed out code.
+	* src/gc.c, src/gc.h: Likewise.
+	* src/io.c, src/io_commands.h: Likewise.
+	* src/lsh-make-seed.c: Likewise.
+	* src/queue.c: Likewise.
+	* src/server_config.c: Likewise.
+	* src/werror.c: Likewise.
+
 2008-05-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/channel.h (CHANNEL_RECEIVE): Deleted macro, updated the only
