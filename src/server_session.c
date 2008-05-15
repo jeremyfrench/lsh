@@ -915,8 +915,9 @@ window_change_request_handler =
 #if 0
 #if WITH_X11_FORWARD
 
-/* FIXME: We must delay the handling of any shell request until
- * we have responded to the x11-req message. */
+/* FIXME: We must delay the handling of any shell request until we
+ * have responded to the x11-req message. Or maybe leave that problem
+ * to the client? */
 DEFINE_CHANNEL_REQUEST(x11_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
