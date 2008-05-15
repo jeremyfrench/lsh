@@ -950,7 +950,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
 #if 0
-
     CASE_FLAG(OPT_DH, with_dh_keyexchange);
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 #endif
