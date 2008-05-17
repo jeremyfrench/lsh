@@ -32,6 +32,8 @@
 
 struct client_session;
 
+enum escape_state { ESCAPE_GOT_NONE = 0, ESCAPE_GOT_NEWLINE, ESCAPE_GOT_ESCAPE };
+
 #define GABA_DECLARE
 #include "client.h.x"
 #undef GABA_DECLARE
@@ -113,8 +115,10 @@ struct escape_info *make_escape_info(uint8_t escape);
 struct escape_info *
 make_client_escape(uint8_t escape);
 
-struct abstract_write *
-make_handle_escape(struct escape_info *info, struct abstract_write *next);
+enum escape_state
+client_escape_process(const struct escape_info *info, enum escape_state state,
+		      uint32_t length, const uint8_t *data,
+		      uint32_t *copy, uint32_t *done);
 
 struct command *make_open_session_command(struct ssh_channel *session);
 
@@ -184,7 +188,9 @@ channel_open_x11;
        (e object exception_handler)
 
        ; Escape char handling
-       (escape object escape_info)
+       (escape const object escape_info)
+       (escape_state . "enum escape_state")
+
        ; Where to save the exit code.
        (exit_status . "int *")))
 */
