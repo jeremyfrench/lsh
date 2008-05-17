@@ -137,23 +137,42 @@ oop_read_stdin(oop_source *source UNUSED,
 	       int fd, oop_event event, void *state)
 {
   CAST(client_session, session, (struct lsh_object *) state);
-  uint32_t done;
+  uint32_t length;
   
   assert(fd == session->in.fd);
   assert(event == OOP_READ);
 
-  if (channel_io_read(&session->super, &session->in, &done) != CHANNEL_IO_OK)
+  if (channel_io_read(&session->super, &session->in, &length) != CHANNEL_IO_OK)
     {
       /* This resource list is used only for tty-related things.
 	 Killing it will restore the tty modes. */
       KILL_RESOURCE_LIST (session->resources);
       channel_read_state_close(&session->in);
     }
-  else if (done > 0)
+  else if (length > 0)
     {
-      /* FIXME: Look for escape char */
-      channel_transmit_data(&session->super,
-			    done, lsh_string_data(session->in.buffer));
+      const uint8_t *data = lsh_string_data(session->in.buffer);
+
+      if (session->escape)
+	{
+	  uint32_t copy;
+	  uint32_t done;
+
+	  while (length > 0)
+	    {
+	      session->escape_state
+		= client_escape_process(session->escape, session->escape_state,
+					length, data, &copy, &done);
+
+	      if (copy > 0)
+		channel_transmit_data(&session->super, copy, data);
+	      
+	      data += done;
+	      length -= done;
+	    }	
+	}
+      else
+	channel_transmit_data(&session->super, length, data);
     }
   else
     {
@@ -401,6 +420,7 @@ make_client_session_channel(int in, int out, int err,
   self->e = e;
 
   self->escape = escape;
+  self->escape_state = ESCAPE_GOT_NONE;
 
 #if 0
   /* Implement send break */
