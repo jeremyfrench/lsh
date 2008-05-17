@@ -130,8 +130,6 @@ do_receive(struct ssh_channel *s, int type,
 }
 
 /* Reading stdin */
-/* FIXME: Escape char handling */
-
 static void *
 oop_read_stdin(oop_source *source UNUSED,
 	       int fd, oop_event event, void *state)
@@ -154,23 +152,22 @@ oop_read_stdin(oop_source *source UNUSED,
       const uint8_t *data = lsh_string_data(session->in.buffer);
 
       if (session->escape)
-	{
-	  uint32_t copy;
-	  uint32_t done;
+	while (length > 0)
+	  {
+	    uint32_t copy;
+	    uint32_t done;
 
-	  while (length > 0)
-	    {
-	      session->escape_state
-		= client_escape_process(session->escape, session->escape_state,
-					length, data, &copy, &done);
+	    session->escape_state
+	      = client_escape_process(session->escape, session->escape_state,
+				      length, data, &copy, &done);
 
-	      if (copy > 0)
-		channel_transmit_data(&session->super, copy, data);
+	    if (copy > 0)
+	      channel_transmit_data(&session->super, copy, data);
 	      
-	      data += done;
-	      length -= done;
-	    }	
-	}
+	    data += done;
+	    length -= done;
+	  }	
+
       else
 	channel_transmit_data(&session->super, length, data);
     }
