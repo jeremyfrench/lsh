@@ -1,3 +1,21 @@
+2008-05-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_session.c (oop_read_stdin): Implemented handling of
+	escape character.
+	(make_client_session_channel): Initialize escape_state.
+
+	* src/client.h (enum escape_state): Moved here, from
+	client_escape.c. Renamed constants with ESCAPE_ prefixes.
+	(class client_session): New attribute escape_state.
+
+	* src/client_escape.c (do_escape_help): Better display of ^Z.
+	(class escape_handler): Deleted class.
+	(scan_escape): Deleted function.
+	(do_escape_handler): Deleted function.
+	(make_handle_escape): Deleted function.
+	(escape_dispatch): Use const argument.
+	(client_escape_process): New function, replacing old code.
+
 2008-05-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/channel.h: Deleted old if:ed out code.
