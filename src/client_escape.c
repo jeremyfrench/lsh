@@ -37,10 +37,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-/* This must be defined before including the .x file. */
-
-enum escape_state { GOT_NONE, GOT_NEWLINE, GOT_ESCAPE };
-
 #include "client_escape.c.x"
 
 /* GABA:
@@ -62,7 +58,14 @@ do_escape_help(struct lsh_callback *s)
 
   werror("Available commands:\n\n");
   
-  for (i = 0; i < 0x100; i++)
+  for (i = 0; i < 0x20; i++)
+    {
+      struct escape_callback *c = self->info->dispatch[i];
+
+      if (c)
+	werror("`^%c': %z\n", i + 64, c->help);
+    }    
+  for (; i < 0x100; i++)
     {
       struct escape_callback *c = self->info->dispatch[i];
 
@@ -98,46 +101,9 @@ make_escape_info(uint8_t escape)
   return self;
 }
 
-#if 0
-
-/* ;; GABA:
-   (class
-     (name escape_handler)
-     (super abstract_write_pipe)
-     (vars
-       (info object escape_info)
-       ; Number of characters of the prefix NL escape
-       ; that have been read.
-       (state . "enum escape_state")))
-*/
-
-static inline int
-newlinep(uint8_t c)
-{
-  return (c == '\n') || (c == '\r');
-}
-
-/* Search for NEWLINE ESCAPE, starting at pos. If successful, returns
- * 1 and returns the index of the escape char. Otherwise, returns
- * zero. */
-static uint32_t
-scan_escape(struct lsh_string *packet, uint32_t pos, uint8_t escape)
-{
-  uint32_t length = lsh_string_length(packet);
-  const uint8_t *data = lsh_string_data(packet);
-  
-  for ( ; (pos + 2) <= length; pos++)
-    {
-      if (newlinep(data[pos])
-	  && (data[pos+1] == escape))
-	return pos + 1;
-    }
-  return 0;
-}
-
 /* Returns 1 for the quote action. */ 
 static int
-escape_dispatch(struct escape_info *info,
+escape_dispatch(const struct escape_info *info,
 		uint8_t c)
 {
   struct escape_callback *f;
@@ -154,135 +120,83 @@ escape_dispatch(struct escape_info *info,
   return 0;
 }
 
-static void
-do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
+static inline int
+newlinep(uint8_t c)
 {
-  CAST(escape_handler, self, s);
-  uint32_t pos;
-  uint32_t done;
-  uint32_t length;
-  const uint8_t *data;
-  
-  if (!packet)
+  return (c == '\n') || (c == '\r');
+}
+
+/* Scans data for the first escape sequence, and invokes the
+   appropriate handler. The amount of input processed is stored in
+   *done, and the amount of data to be copied through is stored in
+   *copy. */
+enum escape_state
+client_escape_process(const struct escape_info *info, enum escape_state state,
+		      uint32_t length, const uint8_t *data,
+		      uint32_t *copy, uint32_t *done)
+{
+  assert(length > 0);
+
+  switch (state)
     {
-      /* EOF. Pass it on */
-      A_WRITE(self->super.next, packet);
-      return;
-    }
+    default:
+      fatal("Internal error in escape processing.\n");
 
-  length = lsh_string_length(packet);
-  data = lsh_string_data(packet);
-  
-  assert(length);
+    case ESCAPE_GOT_ESCAPE:
+      *done = 1;
+      *copy = escape_dispatch(info, data[0]);
 
-  /* done is the length of the prefix of the data that is already
-   * consumed in one way or the other, while pos is the next position
-   * where it makes sense to look for the escape sequence. */
-  done = pos = 0;
-
-  /* Look for an escape at the start of the packet. */
-  switch (self->state)
-    {
-    case GOT_NEWLINE:
-      /* We already got newline. Is the next character the escape? */
-      if (data[0] == self->info->escape)
+      return ESCAPE_GOT_NONE;
+      
+    case ESCAPE_GOT_NEWLINE:
+      if (data[0] == info->escape)
 	{
 	  if (length == 1)
 	    {
-              self->state = GOT_ESCAPE;
-	      lsh_string_free(packet);
-	      return;
+	      *done = 1;
+              *copy = 0;
+	      return ESCAPE_GOT_ESCAPE;
 	    }
 	  else
 	    {
-	      pos = 2;
-	      if (escape_dispatch(self->info, data[1]))
-		/* The quote action. Keep the escape. */
-		done = 1;
-	      else
-		done = 2;
-            }
+	      *done = 2;
+	      *copy = escape_dispatch(info, data[1]);
+
+	      return ESCAPE_GOT_NONE;
+	    }
 	}
-      break;
-    case GOT_ESCAPE:
-      pos = 1;
-      if (escape_dispatch(self->info, data[0]))
-	/* The quote action. Keep the escape. */
-	done = 0;
-      else
-	done = 1;
+      /* Fall through */
+    case ESCAPE_GOT_NONE:
+      {
+	uint32_t i;
 
-      break;
-
-    case GOT_NONE:
-      /* No special processing needed. */
-      break;
-    }
-  
-  while ( (pos = scan_escape(packet, pos, self->info->escape)) )
-    {
-      /* We found another escape char! */
-
-      /* First, pass on the data before the escape.  */
-      assert(pos > done);
-      A_WRITE(self->super.next,
-	      ssh_format("%ls", pos - done, data + done));
-      
-      /* Point to the action character. */
-      pos++;
-      if (pos == length)
-	{
-	  /* Remember how far we got. */
-	  self->state = GOT_ESCAPE;
-	  lsh_string_free(packet);
-	  return;
-	}
-      if (escape_dispatch(self->info, data[pos]))
-	/* Keep escape */
-	done = pos;
-      else
-	done = pos + 1;
-      pos++;
-    }
-
-  /* Handle any data after the final escape */
-  if (done < length)
-    {
-      /* Rember if the last character is a newline. */
-      if (newlinep(data[length - 1]))
-	self->state = GOT_NEWLINE;
-      else
-	self->state = GOT_NONE;
-      
-      /* Send data on */
-      if (done)
-	{
-	  /* Partial packet */
-	  A_WRITE(self->super.next,
-		  ssh_format("%ls", length - done,
-			     data + done));
-	  lsh_string_free(packet);
-	}
-      else
-	A_WRITE(self->super.next, packet);
-    }
-  else
-    {
-      self->state = GOT_NONE;
-      lsh_string_free(packet);
+	for (i = 0; i < length;)
+	  {
+	    if (newlinep(data[i++]))
+	      {
+		if (i == length)
+		  {
+		    *copy = *done = i;
+		    return ESCAPE_GOT_NEWLINE;
+		  }
+		if (data[i] == info->escape)
+		  {
+		    i++;
+		    if (i == length)
+		      {
+			*copy = i - 1;
+			*done = i;
+			return ESCAPE_GOT_ESCAPE;
+		      }
+		    *copy = i - 1 + escape_dispatch(info, data[i]);
+		    *done = i + 1;
+		    return ESCAPE_GOT_NONE;
+		  }
+	      }
+	  }
+	
+	*copy = *done = length;
+	return ESCAPE_GOT_NONE;
+      }
     }
 }
-
-struct abstract_write *
-make_handle_escape(struct escape_info *info, struct abstract_write *next)
-{
-  NEW(escape_handler, self);
-
-  self->super.super.write = do_escape_handler;
-  self->super.next = next;
-  self->info = info;
-  self->state = GOT_NONE;
-  
-  return &self->super.super;
-}
-#endif
