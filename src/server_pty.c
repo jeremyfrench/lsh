@@ -46,6 +46,7 @@
 #include "lsh_string.h"
 #include "parse.h"
 #include "ssh.h"
+#include "tty.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -182,7 +183,7 @@ pty_open_slave(struct pty_info *pty)
 #endif /* defined(TIOCSCTTY) */
 
   /* Set terminal modes */
-  if (!tty_getattr(fd, &ios))
+  if (!tcgetattr(fd, &ios) == -1)
     {
       werror("pty_open_slave: Failed to get tty attributes.\n"
 	     "   %e\n", errno);
@@ -197,15 +198,15 @@ pty_open_slave(struct pty_info *pty)
       return -1;
     }
 
-  if (!tty_setattr(fd, &ios))
+  if (!tcsetattr(fd, TCSADRAIN, &ios) == -1)
     {
       werror("pty_open_slave: Failed to set tty attributes.\n"
 	     "   %e\n", errno);
       close(fd);
       return -1;
     }
-	  
-  if (!tty_setwinsize(fd, &pty->dims))
+
+  if (ioctl(fd, TIOCSWINSZ, &pty->dims) == -1)  
     {
       werror("pty_open_slave: Failed to set tty window size.\n"
 	     "   %e\n", errno);
