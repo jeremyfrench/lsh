@@ -50,7 +50,6 @@
 #include "ssh.h"
 #include "tcpforward.h"
 #include "translate_signal.h"
-#include "tty.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -817,6 +816,10 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
 {
   CAST(server_session, session, channel);
   struct lsh_string *term = NULL;
+  uint32_t char_width;
+  uint32_t char_height;
+  uint32_t pixel_width;
+  uint32_t pixel_height;
 
   static const struct exception pty_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "pty request failed");
@@ -826,15 +829,20 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
   verbose("Client requesting a tty...\n");
 
   if ((term = parse_string_copy(args))
-      && parse_uint32(args, &pty->dims.char_width)
-      && parse_uint32(args, &pty->dims.char_height)
-      && parse_uint32(args, &pty->dims.pixel_width)
-      && parse_uint32(args, &pty->dims.pixel_height)
+      && parse_uint32(args, &char_width)
+      && parse_uint32(args, &char_height)
+      && parse_uint32(args, &pixel_width)
+      && parse_uint32(args, &pixel_height)
       && (pty->mode = parse_string_copy(args))
       && parse_eod(args))
     {
       /* The client may only request one tty, and only before
        * starting a process. */
+
+      pty->dims.ws_col = char_width;
+      pty->dims.ws_row = char_height;
+      pty->dims.ws_xpixel = pixel_height;
+      pty->dims.ws_ypixel = pixel_width;
 
       if (session->pty || session->process
 	  || !pty_open_master(pty))
@@ -870,32 +878,40 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
   KILL(pty);
 }
 
-/* FIXME: Use DEFINE_CHANNEL_REQUEST */
-static void
-do_window_change_request(struct channel_request *c UNUSED,
-			 struct ssh_channel *channel,
-			 const struct channel_request_info *info UNUSED,
-			 struct simple_buffer *args,
-			 struct command_continuation *s,
-			 struct exception_handler *e)
+DEFINE_CHANNEL_REQUEST(window_change_request_handler)
+	(struct channel_request *c UNUSED,
+	 struct ssh_channel *channel,
+	 const struct channel_request_info *info UNUSED,
+	 struct simple_buffer *args,
+	 struct command_continuation *s,
+	 struct exception_handler *e)
 {
   CAST(server_session, session, channel);
-  struct terminal_dimensions dims;
+  uint32_t char_width;
+  uint32_t char_height;
+  uint32_t pixel_width;
+  uint32_t pixel_height;
+  struct winsize dims;
 
   verbose("Receiving window-change request...\n");
 
-  if (parse_uint32(args, &dims.char_width)
-      && parse_uint32(args, &dims.char_height)
-      && parse_uint32(args, &dims.pixel_width)
-      && parse_uint32(args, &dims.pixel_height)
+  if (parse_uint32(args, &char_width)
+      && parse_uint32(args, &char_height)
+      && parse_uint32(args, &pixel_width)
+      && parse_uint32(args, &pixel_height)
       && parse_eod(args))
     {
       static const struct exception winch_request_failed =
 	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0,
 			 "window-change request failed: No pty");
 
+      dims.ws_col = char_width;
+      dims.ws_row = char_height;
+      dims.ws_xpixel = pixel_height;
+      dims.ws_ypixel = pixel_width;
+
       if (session->pty && session->in.fd >= 0
-          && tty_setwinsize(session->in.fd, &dims))
+          && ioctl(session->in.fd, TIOCSWINSZ, &dims) != -1)
         /* Success. Rely on the terminal driver sending SIGWINCH */
         COMMAND_RETURN(s, channel);
       else
@@ -905,10 +921,6 @@ do_window_change_request(struct channel_request *c UNUSED,
     SSH_CONNECTION_ERROR(channel->connection,
 			 "Invalid window-change request.");
 }
-
-struct channel_request
-window_change_request_handler =
-{ STATIC_HEADER, do_window_change_request };
 
 #endif /* WITH_PTY_SUPPORT */
 
