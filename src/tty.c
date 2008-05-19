@@ -1,10 +1,10 @@
-/* tty.h
+/* tty.c
  *
  */
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998, 1999, Niels Möller, Balázs Scheidler
+ * Copyright (C) 1998, 1999, 2008, Niels Möller, Balázs Scheidler
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -41,52 +41,15 @@
 #include "werror.h"
 #include "xalloc.h"
 
+/* NOTE: tty_decode_term_mode is used only on the server side, and
+   tty_encode_term_mode is used only on the client side. They use the
+   same tables. It would make some sense to put the tables and the two
+   functions in three different files, to avoid linking in the
+   unnecessary one, but it's easier to keep it all together. */
+
 #if WITH_PTY_SUPPORT
 
-int
-tty_getattr(int fd, struct termios *ios)
-{
-  return tcgetattr(fd, ios) != -1 ? 1 : 0;
-}
-
-int
-tty_setattr(int fd, struct termios *ios)
-{
-  return tcsetattr(fd, TCSADRAIN, ios) != -1 ? 1 : 0;
-}
-
-int
-tty_getwinsize(int fd, struct terminal_dimensions *dims)
-{
-  struct winsize ws;
-  int rc;
-  
-  rc = ioctl(fd, TIOCGWINSZ, &ws);
-  if (rc != -1)
-    {
-      dims->char_width = ws.ws_col;
-      dims->char_height = ws.ws_row;
-      dims->pixel_width = ws.ws_xpixel;
-      dims->pixel_height = ws.ws_ypixel;
-      return 1;
-    }
-  return 0;
-}
-
-int
-tty_setwinsize(int fd, const struct terminal_dimensions *dims)
-{
-  struct winsize ws;
-  
-  ws.ws_col = dims->char_width;
-  ws.ws_row = dims->char_height;
-  ws.ws_xpixel = dims->pixel_width;
-  ws.ws_ypixel = dims->pixel_height;
-  
-  return ioctl(fd, TIOCSWINSZ, &ws) == -1 ? 0 : 1;
-}
-
-static int cc_ndx[] = 
+static const short int termios_cc_index[] = 
 {
 #ifdef VINTR
   VINTR, 
@@ -180,7 +143,7 @@ static int cc_ndx[] =
 #endif
 };
 
-static int cc_iflags[] = {
+static const unsigned termios_iflags[] = {
 #ifdef IGNPAR
   IGNPAR,
 #else
@@ -243,7 +206,7 @@ static int cc_iflags[] = {
 #endif
 };
 
-static int cc_oflags[] = {
+static const unsigned termios_oflags[] = {
 #ifdef OPOST
   OPOST,
 #else
@@ -276,7 +239,7 @@ static int cc_oflags[] = {
 #endif    
 };
 
-static int cc_cflags[] = {
+static const unsigned termios_cflags[] = {
 #ifdef CS7
   CS7,
 #else
@@ -299,7 +262,7 @@ static int cc_cflags[] = {
 #endif    
 };
 
-static int cc_lflags[] = {
+static int termios_lflags[] = {
 #ifdef ISIG
   ISIG,
 #else
@@ -371,7 +334,7 @@ static int cc_lflags[] = {
 
 /* FIXME: TTY_?SPEED not handled */
 
-#define PARSE_FLAGS(cc, bits, offset) do {			\
+#define ENCODE_FLAGS(cc, bits, offset) do {			\
   debug("tty_encode_term_mode: termios bits %xi (offset %i)\n",	\
 	(bits), (offset));					\
   for (i=0; i<SIZE(cc); i++)					\
@@ -389,7 +352,7 @@ static int cc_lflags[] = {
 } while(0)
      
 struct lsh_string *
-tty_encode_term_mode(struct termios *ios)
+tty_encode_term_mode(const struct termios *ios)
 {
   unsigned int i;
   struct lsh_string *new;
@@ -397,22 +360,22 @@ tty_encode_term_mode(struct termios *ios)
   const uint32_t length = 650;
   new = lsh_string_alloc(length);
 
-  for (i=0; i<SIZE(cc_ndx); i++)
+  for (i=0; i<SIZE(termios_cc_index); i++)
     {
-      if (cc_ndx[i] != -1)
+      if (termios_cc_index[i] != -1)
 	{
 	  if (p + 5 > length)
 	    goto fail;
 
 	  lsh_string_putc(new, p++, i+1);
-	  lsh_string_write_uint32(new, p, ios->c_cc[cc_ndx[i]]);
+	  lsh_string_write_uint32(new, p, ios->c_cc[termios_cc_index[i]]);
 	  p += 4;
 	}
     }
-  PARSE_FLAGS(cc_iflags, ios->c_iflag, 30);
-  PARSE_FLAGS(cc_lflags, ios->c_lflag, 50);
-  PARSE_FLAGS(cc_oflags, ios->c_oflag, 70);
-  PARSE_FLAGS(cc_cflags, ios->c_cflag, 90);
+  ENCODE_FLAGS(termios_iflags, ios->c_iflag, 30);
+  ENCODE_FLAGS(termios_lflags, ios->c_lflag, 50);
+  ENCODE_FLAGS(termios_oflags, ios->c_oflag, 70);
+  ENCODE_FLAGS(termios_cflags, ios->c_cflag, 90);
 
   if (p + 1 > length)
     goto fail;
@@ -427,21 +390,11 @@ fail:
   return NULL;
 }
 
-#undef PARSE_FLAGS
-
-#define TTY_SET_VALUE(target, param, table, index)	\
-do {							\
-  int _value;						\
-  if ((index) < (sizeof(table) / sizeof((table)[0]))	\
-      && ((_value = (table)[index]) >= 0))		\
-    target[_value] = param;				\
-} while(0)
-
-#define TTY_SET_FLAG(target, flag, table, index)	\
+#define TTY_DECODE_FLAG(target, flag, table, index)	\
 do {							\
   int _mask;						\
-  if ((index) < (sizeof(table) / sizeof((table)[0]))	\
-      && ((_mask = (table)[index]) >= 0))		\
+  if ((index) < SIZE(table)				\
+      && ((_mask = (table)[index]) > 0))		\
     {							\
       if (flag)						\
 	(target) |= _mask;				\
@@ -461,62 +414,56 @@ tty_decode_term_mode(struct termios *ios, uint32_t t_len, const uint8_t *t_modes
   for (;;)
     {
       unsigned opcode;
+      uint32_t param;
       
       if (!parse_uint8(&buffer, &opcode))
 	return 0;
-	  
-      {
-	uint32_t param;
 	
-	if ( (opcode == SSH_TTY_OP_END)
-	     || (opcode > SSH_TTY_OP_RESERVED))
-	  break;
+      if ( (opcode == SSH_TTY_OP_END)
+	   || (opcode >= SSH_TTY_OP_RESERVED))
+	break;
 
-	if (!parse_uint32(&buffer, &param))
-	  return 0;
+      if (!parse_uint32(&buffer, &param))
+	return 0;
+
+      if (opcode < 30)
 	{
-	  /* FIXME: This code might be simplified a little. I
-	   * think some table lookups (mapping each opcode to some
-	   * "action class", including ranges to check as well as
-	   * further tables... Something like 
-
-	   struct action = at[opcode];
-	   switch (action->type)
-	   {
-	   case ACTION_FLAG:
-	   ...
-	  */
-	  if (opcode < 30) 
-	    TTY_SET_VALUE(ios->c_cc, param, cc_ndx, opcode - 1);
-	  else if (opcode < 50)
-	    TTY_SET_FLAG(ios->c_iflag, param, cc_iflags, opcode - 30);
-	  else if (opcode < 70)
-	    TTY_SET_FLAG(ios->c_lflag, param, cc_lflags, opcode - 50);
-	  else if (opcode < 90)
-	    TTY_SET_FLAG(ios->c_oflag, param, cc_oflags, opcode - 70);
-	  else if (opcode < 128)
-	    TTY_SET_FLAG(ios->c_cflag, param, cc_cflags, opcode - 90);
-	  else
+	  unsigned flag_index = opcode - 1;
+	      
+	  if (flag_index < SIZE(termios_cc_index))
 	    {
-	      switch(opcode)
-		{
-		case SSH_TTY_OP_ISPEED:
-		case SSH_TTY_OP_OSPEED:
-		  /* FIXME: set input/output speed there's no point
-		   * in setting the speed of a pseudo tty IMHO */
-		  /* The speed of the user's terminal could be
-		   * useful for programs like emacs that try to
-		   * optimize the redraw algorithm (slower
-		   * terminals gets partial updates. But that is
-		   * pretty useless as long as 9600 bps is
-		   * considered fast... */
-		  break;
-		default:
-		  werror("Unsupported terminal mode: %i\n", opcode);
-		}
+	      int index = termios_cc_index[flag_index];
+	      if (index >= 0)
+		ios->c_cc[index] = param;
 	    }
 	}
-      }
+      else if (opcode < 50)
+	TTY_DECODE_FLAG(ios->c_iflag, param, termios_iflags, opcode - 30);
+      else if (opcode < 70)
+	TTY_DECODE_FLAG(ios->c_lflag, param, termios_lflags, opcode - 50);
+      else if (opcode < 90)
+	TTY_DECODE_FLAG(ios->c_oflag, param, termios_oflags, opcode - 70);
+      else if (opcode < 128)
+	TTY_DECODE_FLAG(ios->c_cflag, param, termios_cflags, opcode - 90);
+      else
+	{
+	  switch(opcode)
+	    {
+	    case SSH_TTY_OP_ISPEED:
+	    case SSH_TTY_OP_OSPEED:
+	      /* FIXME: set input/output speed there's no point
+	       * in setting the speed of a pseudo tty IMHO */
+	      /* The speed of the user's terminal could be
+	       * useful for programs like emacs that try to
+	       * optimize the redraw algorithm (slower
+	       * terminals gets partial updates. But that is
+	       * pretty useless as long as 9600 bps is
+	       * considered fast... */
+	      break;
+	    default:
+	      werror("Unsupported terminal mode: %i\n", opcode);
+	    }
+	}
     }
   return 1;
 }

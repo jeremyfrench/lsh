@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998, 1999, Niels Möller, Balázs Scheidler
+ * Copyright (C) 1998, 1999, 2008, Niels Möller, Balázs Scheidler
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,39 +28,10 @@
 
 #include "lsh.h"
 
-struct terminal_dimensions
-{
-  uint32_t char_width;
-  uint32_t char_height;
-  uint32_t pixel_width;
-  uint32_t pixel_height;
-};
-
-int tty_getattr(int fd, struct termios *ios);
-int tty_setattr(int fd, struct termios *ios);
-
-int tty_getwinsize(int fd, struct terminal_dimensions *dims);
-int tty_setwinsize(int fd, const struct terminal_dimensions *dims);
-
 struct lsh_string *
-tty_encode_term_mode(struct termios *ios);
+tty_encode_term_mode(const struct termios *ios);
+
 int
 tty_decode_term_mode(struct termios *ios, uint32_t t_len, const uint8_t *t_modes);
-
-#if HAVE_CFMAKERAW
-#define CFMAKERAW cfmakeraw
-#else /* !HAVE_CFMAKERAW */
-/* The flags part definition is probably from the linux cfmakeraw man
- * page. We also set the MIN and TIME attributes (note that these use
- * the same fields as VEOF and VEOL). */
-
-#define CFMAKERAW(ios) do {						   \
-  (ios)->c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON); \
-  (ios)->c_oflag &= ~OPOST;						   \
-  (ios)->c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);			   \
-  (ios)->c_cflag &= ~(CSIZE|PARENB); (ios)->c_cflag |= CS8;		   \
-  (ios)->c_cc[VMIN] = 3; (ios)->c_cc[VTIME] = 2;			   \
-} while(0)
-#endif /* !HAVE_CFMAKERAW */
 
 #endif /* LSH_TTY_H_INCLUDED */
