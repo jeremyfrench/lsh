@@ -131,7 +131,7 @@ struct command *make_background_process(int write_pid);
      (vars
        ; If non-zero, wait for previous requests to complete.
        (serial . int)
-
+       ; FIXME: Use const methods? 
        (start method void "struct client_session *session")
        (success method void "struct client_session *session")
        ; Returns 1 if we should continue despite the error.
@@ -147,8 +147,7 @@ make_exec_action(struct lsh_string *command);
 struct client_session_action *
 make_subsystem_action(struct lsh_string *subsystem);
 
-struct client_session_action *
-make_pty_action(struct interact *tty);
+struct client_session_action client_request_pty;
 
 struct client_session_action *
 make_x11_action(const char *display_string);

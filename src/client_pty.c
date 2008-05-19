@@ -38,41 +38,27 @@
 
 #include "client_pty.c.x"
 
-/* GABA:
-   (class
-     (name client_tty_resource)
-     (super resource)
-     (vars
-       (tty object interact)
-       (attr object terminal_attributes)))
-*/
-
 static void
-do_kill_client_tty_resource(struct resource *s)
+do_kill_client_tty_resource(struct resource *self)
 {
-  CAST(client_tty_resource, self, s);
   trace("do_kill_client_tty_resource\n");
 
-  if (self->super.alive)
+  if (self->alive)
     {
-      self->super.alive = 0;
-      INTERACT_SET_ATTRIBUTES(self->tty, self->attr);
+      self->alive = 0;
+      interact_set_mode(0);
       /* Tell the werror functions that terminal mode is restored. */
       set_error_raw(0);
     }
 }
 
 static struct resource *
-make_client_tty_resource(struct interact *tty,
-			 struct terminal_attributes *attr)
+make_client_tty_resource(void)
 {
-  NEW(client_tty_resource, self);
-  init_resource(&self->super, do_kill_client_tty_resource);
+  NEW(resource, self);
+  init_resource(self, do_kill_client_tty_resource);
 
-  self->tty = tty;
-  self->attr = attr;
-
-  return &self->super;
+  return self;
 }
 
 /* GABA:
@@ -85,18 +71,14 @@ make_client_tty_resource(struct interact *tty,
 
 static void
 do_client_winch_handler(struct window_change_callback *s,
-			struct interact *tty)
+			const struct winsize *dims)
 {
   CAST(client_winch_handler, self, s);
-  struct terminal_dimensions dims;
-
-  if (!INTERACT_WINDOW_SIZE(tty, &dims))
-    return;
 
   channel_send_request(self->channel, ATOM_WINDOW_CHANGE, 0,
 		       "%i%i%i%i",
-		       dims.char_width, dims.char_height,
-		       dims.pixel_width, dims.pixel_height);
+		       dims->ws_col, dims->ws_row,
+		       dims->ws_xpixel, dims->ws_ypixel);
 }
 
 static struct window_change_callback *
@@ -109,67 +91,49 @@ make_client_winch_handler(struct ssh_channel *channel)
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name client_pty_action)
-     (super client_session_action)
-     (vars
-       (tty object interact)
-       (attr object terminal_attributes)))
-*/
 
 static void
-do_action_pty_start(struct client_session_action *s,
+do_action_pty_start(struct client_session_action *s UNUSED,
 		    struct client_session *session)
 {
-  CAST(client_pty_action, self, s);
-
-  struct terminal_dimensions dims;
+  struct winsize dims;
   char *term;
   
   trace("do_action_pty_start: Sending pty request.\n");
 
-  if (!INTERACT_WINDOW_SIZE(self->tty, &dims))
-    dims.char_width = dims.char_height
-      = dims.pixel_width = dims.pixel_height = 0;
+  if (!interact_get_window_size(&dims))
+    dims.ws_col = dims.ws_row
+      = dims.ws_xpixel = dims.ws_ypixel = 0;
 
-  self->attr = INTERACT_GET_ATTRIBUTES(self->tty);
   term = getenv(ENV_TERM);
 
   channel_send_request(&session->super, ATOM_PTY_REQ, 1,
 		       "%z%i%i%i%i%fS",
 		       term ? term : "",
-		       dims.char_width, dims.char_height,
-		       dims.pixel_width, dims.pixel_height,
-		       TERM_ENCODE(self->attr));
+		       dims.ws_col, dims.ws_row,
+		       dims.ws_xpixel, dims.ws_ypixel,
+		       tty_encode_term_mode(interact_get_terminal_mode()));
 }
 
 static void
-do_action_pty_success(struct client_session_action *s,
+do_action_pty_success(struct client_session_action *s UNUSED,
 		      struct client_session *session)
 {
-  CAST(client_pty_action, self, s);
-
-  struct terminal_attributes *raw;
-  
   verbose("pty request succeeded\n");
-  
-  raw = TERM_MAKE_RAW(self->attr);
-  if (!INTERACT_SET_ATTRIBUTES(self->tty, raw))
+
+  if (!interact_set_mode(1))
     {
       werror("action_pty_success: "
 	     "Setting the attributes of the local terminal failed.\n");
     }
 
-  /* Tell the werror functions that terminal mode is restored. */
+  /* Tell the werror functions that terminal mode is raw. */
   set_error_raw(1);
   
-  remember_resource(session->resources,
-		    make_client_tty_resource(self->tty, self->attr));
+  remember_resource(session->resources, make_client_tty_resource());
   
   remember_resource(session->resources,
-		    INTERACT_WINDOW_SUBSCRIBE
-		    (self->tty, make_client_winch_handler(&session->super)));
+		    interact_on_window_change(make_client_winch_handler(&session->super)));
 }
 
 static int
@@ -181,17 +145,6 @@ do_action_pty_failure(struct client_session_action *s UNUSED,
   return 1;
 }
 
-struct client_session_action *
-make_pty_action(struct interact *tty)
-{
-  NEW(client_pty_action, self);
-  self->super.serial = 0;
-  self->super.start = do_action_pty_start;
-  self->super.success = do_action_pty_success;
-  self->super.failure = do_action_pty_failure;
-
-  self->tty = tty;
-  self->attr = NULL;
-
-  return &self->super;
-}
+struct client_session_action client_request_pty =
+  { STATIC_HEADER, 0,
+    do_action_pty_start, do_action_pty_success, do_action_pty_failure };
