@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998, 1999, 2000 Niels Möller
+ * Copyright (C) 1998, 1999, 2000, 2008 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -50,7 +50,6 @@
 #include "parse.h"
 #include "service.h"
 #include "ssh.h"
-#include "suspend.h"
 #include "tcpforward.h"
 #include "translate_signal.h"
 #include "xalloc.h"
@@ -603,6 +602,13 @@ client_rebuild_command_line(unsigned argc, char **argv)
 DEFINE_ESCAPE(exit_callback, "Exit.")
 {
   exit(EXIT_SUCCESS);
+}
+
+/* A callback that suspends the process. */
+DEFINE_ESCAPE(suspend_callback, "Suspend.")
+{
+  if (kill(getpid(), SIGTSTP) < 0)
+    werror("do_suspend: kill failed %e\n", errno);
 }
 
 DEFINE_ESCAPE(quiet_callback, "Toggle warning messages.")
