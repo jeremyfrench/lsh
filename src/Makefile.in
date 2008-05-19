@@ -78,9 +78,7 @@ COMMON_SOURCES = atoms.c \
 		 ssh_write.c \
 		 xalloc.c
 
-INTERACT_SOURCES = interact.c \
-		   suspend.c \
-		   unix_interact.c
+INTERACT_SOURCES = interact.c unix_interact.c
 
 TTY_SOURCES = tty.c
 
@@ -97,6 +95,9 @@ CRYPTO_SOURCES = algorithms.c \
 		 sexp.c \
 		 spki.c \
 		 unix_random.c \
+
+# Decryption of private keys not needed on the server side.
+CRYPTO_CLIENT_SOURCES = spki-decrypt.c
 
 TRANSPORT_SOURCES = dh_exchange.c \
 		    encrypt.c \
@@ -137,8 +138,6 @@ lsh_SOURCES = arglist.c \
 	      socks.c \
 	      xauth.c
 
-# FIXME: tty.c, suspend.c should not be needed. Maybe split unix_interact.c and tty.c
-# differently.
 lsh_transport_SOURCES = client_keyexchange.c \
 			lsh-transport.c
 
@@ -172,7 +171,8 @@ lshd_pty_helper_SOURCES = lshd-pty-helper.c
 SPECIAL_SOURCES = format.c lsh_string.c parse.c werror.c
 
 SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) \
-	  $(CRYPTO_SOURCES) $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
+	  $(CRYPTO_SOURCES) $(CRYPTO_CLIENT_SOURCES) \
+	  $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
 	  $(SERVER_SOURCES) $(INTERACT_SOURCES) $(TTY_SOURCES) \
 	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
 	  $(lsh_keygen_SOURCES) $(lsh_writekey_SOURCES) $(lsh_decrypt_key_SOURCES) \
@@ -192,6 +192,7 @@ COMMON_OBJS = $(COMMON_SOURCES:.c=.$(OBJEXT))
 INTERACT_OBJS = $(INTERACT_SOURCES:.c=.$(OBJEXT))
 TTY_OBJS = $(TTY_SOURCES:.c=.$(OBJEXT))
 CRYPTO_OBJS = $(CRYPTO_SOURCES:.c=.$(OBJEXT))
+CRYPTO_CLIENT_OBJS = $(CRYPTO_CLIENT_SOURCES:.c=.$(OBJEXT))
 TRANSPORT_OBJS = $(TRANSPORT_SOURCES:.c=.$(OBJEXT))
 CONNECTION_OBJS = $(CONNECTION_SOURCES:.c=.$(OBJEXT))
 SERVER_OBJS = $(SERVER_SOURCES:.c=.$(OBJEXT))
@@ -201,23 +202,22 @@ lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
 	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
 
 lsh_transport_OBJS = $(lsh_transport_SOURCES:.c=.$(OBJEXT)) \
-		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
-		     $(CRYPTO_OBJS) $(TRANSPORT_OBJS)
+		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) \
+		     $(CRYPTO_OBJS) $(CRYPTO_CLIENT_OBJS) $(TRANSPORT_OBJS)
 
 lsh_keygen_OBJS = $(lsh_keygen_SOURCES:.c=.$(OBJEXT)) \
 		  $(COMMON_OBJS) $(SPECIAL_OBJS) $(CRYPTO_OBJS)
 
 lsh_writekey_OBJS = $(lsh_writekey_SOURCES:.c=.$(OBJEXT)) \
-		    $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
+		    $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) \
 		    $(CRYPTO_OBJS)
 
 lsh_decrypt_key_OBJS = $(lsh_decrypt_key_SOURCES:.c=.$(OBJEXT)) \
-		       $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) \
-		       $(CRYPTO_OBJS)
+		       $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) \
+		       $(CRYPTO_OBJS) $(CRYPTO_CLIENT_OBJS)
 
 lsh_decode_key_OBJS = $(lsh_decode_key_SOURCES:.c=.$(OBJEXT)) \
 		      $(COMMON_OBJS) $(SPECIAL_OBJS) $(CRYPTO_OBJS)
-
 
 lsh_export_key_OBJS = $(lsh_export_key_SOURCES:.c=.$(OBJEXT)) \
 		      $(COMMON_OBJS) $(SPECIAL_OBJS) \
