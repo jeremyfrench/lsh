@@ -41,6 +41,11 @@
 struct lsh_string *
 make_ssh_hostkey_tag(const char *host);
 
+const struct lsh_object *
+spki_algorithm_lookup(struct alist *algorithms,
+		      struct sexp_iterator *i,
+		      int *type);
+
 struct verifier *
 spki_make_verifier(struct alist *algorithms,
 		   struct sexp_iterator *i,
@@ -132,7 +137,6 @@ spki_pkcs5_encrypt(struct randomness *r,
 struct lsh_string *
 spki_pkcs5_decrypt(struct alist *mac_algorithms,
                    struct alist *crypto_algorithms,
-                   struct interact *interact,
                    struct lsh_string *expr);
 
 #endif /* LSH_SPKI_H_INCLUDED */
