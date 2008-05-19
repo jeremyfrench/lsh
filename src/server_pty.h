@@ -27,9 +27,11 @@
 #include "lsh.h"
 
 #include "resource.h"
-#include "tty.h"
 
 #include <sys/types.h>
+
+/* For struct winsize */
+#include <sys/ioctl.h>
 
 #define MAX_TTY_NAME	32
 
@@ -55,7 +57,7 @@
 	 ; This string should be NUL-terminated
 	 (tty_name string)
 
-	 (dims . "struct terminal_dimensions")
+	 (dims . "struct winsize")
 	 ; SSH mode string
 	 (mode string)))
 */
