@@ -1,12 +1,13 @@
 /* unix_interact.c
  *
- * Interact with the user.
+ * Interact with the user. Implements the fairly abstract interface in
+ * interact.h.
  *
  */
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1999 Niels Möller
+ * Copyright (C) 1999, 2008 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,15 +30,18 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <string.h>
 
 #include <signal.h>
 
 #include <fcntl.h>
+#include <termios.h>
 #if HAVE_UNISTD_H
 # include <unistd.h>
 #endif
 
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 
 #include "interact.h"
@@ -46,23 +50,143 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "resource.h"
-#include "suspend.h"
 #include "tty.h"
 #include "werror.h"
 #include "xalloc.h"
 
 #include "unix_interact.c.x"
 
+static int tty_fd = -1;
+static const char *askpass_program = NULL;
+static struct termios original_mode;
+static struct termios raw_mode;
+
+#define IS_TTY() ((tty_fd) >= 0)
+
+#define GET_ATTR(ios) (tcgetattr(tty_fd, (ios)))
+#define SET_ATTR(ios) (tcsetattr(tty_fd, TCSADRAIN, (ios)))
+
+/* On SIGTSTP, we record the tty mode and the stdio flags, and restore
+   the tty to the original mode. */
+static void
+stop_handler(int signum)
+{
+  struct termios mode;
+  int stdin_flags;
+  int stdout_flags;
+  int stderr_flags;
+  
+  assert(signum == SIGTSTP);
+
+  stdin_flags = fcntl(STDIN_FILENO, F_GETFL);
+  stdout_flags = fcntl(STDOUT_FILENO, F_GETFL);
+  stderr_flags = fcntl(STDERR_FILENO, F_GETFL);
+
+  if (tty_fd >= 0)
+    {
+      GET_ATTR(&mode);
+      SET_ATTR(&original_mode);
+    }
+
+  kill(getpid(), SIGSTOP);
+
+  if (tty_fd >= 0)
+    SET_ATTR(&mode);
+
+  if (stdin_flags >= 0)
+    fcntl(STDIN_FILENO, F_SETFL, stdin_flags);
+
+  if (stdout_flags >= 0)
+    fcntl(STDOUT_FILENO, F_SETFL, stdout_flags);
+
+  if (stderr_flags >= 0)
+    fcntl(STDERR_FILENO, F_SETFL, stderr_flags);
+}
+
+static void
+restore_tty(void)
+{
+  SET_ATTR(&original_mode);
+}
+
+int
+unix_interact_init(int prepare_raw_mode)
+{
+  tty_fd = open("/dev/tty", O_RDWR);
+  if (IS_TTY())
+    {
+      io_set_close_on_exec(tty_fd);
+
+      if (prepare_raw_mode)
+	{
+	  if (GET_ATTR(&original_mode) == -1)
+	    {
+	      werror("interact_init: tty_getattr failed %e\n", errno);
+	      return 0;
+	    }
+	  else
+	    {
+	      struct sigaction stop;
+
+	      memset(&stop, 0, sizeof(stop));
+	      stop.sa_handler = stop_handler;
+
+	      if (sigaction(SIGTSTP, &stop, NULL) < 0)
+		{
+		  werror("interact_init: Failed to install SIGTSTP handler %e\n", errno);
+		  return 0;
+		}
+	      raw_mode = original_mode;
+	  
+	      /* The flags part definition is from the linux cfmakeraw man
+	       * page. */
+	      raw_mode.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
+	      raw_mode.c_oflag &= ~OPOST;
+	      raw_mode.c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
+
+	      raw_mode.c_cflag &= ~(CSIZE|PARENB);
+	      raw_mode.c_cflag |= CS8;
+
+	      /* Modify VMIN and VTIME, to save some bandwidth and make
+	       * traffic analysis of interactive sessions a little harder.
+	       * (These use the same fields as VEOF and VEOL)*/
+	      raw_mode.c_cc[VMIN] = 3;
+	      /* Inter-character timer, in units of 0.1s */
+	      raw_mode.c_cc[VTIME] = 2;
+
+	      if (atexit(restore_tty) < 0)
+		{
+		  werror("interact_init: atexit failed.\n");
+		  return 0;
+		}
+	    }
+	}
+    }
+  return 1;
+}
+
+int
+interact_is_tty(void)
+{
+  return tty_fd >= 0;
+}
+
+void
+interact_set_askpass(const char *askpass)
+{
+  askpass_program = askpass;
+}
+
 /* Depends on the tty being line buffered. FIXME: Doesn't distinguish
    between errors, empty input, and EOF. */
 static uint32_t
-read_line(int fd, uint32_t size, uint8_t *buffer)
+read_line(uint32_t size, uint8_t *buffer)
 {
   uint32_t i = 0;
 
   while (i < size)
     {
-      int res = read(fd, buffer + i, size - i);
+      int res = read(tty_fd, buffer + i, size - i);
       if (!res)
 	/* User pressed EOF (^D) */
 	return i;
@@ -90,7 +214,7 @@ read_line(int fd, uint32_t size, uint8_t *buffer)
   for (;;)
     {
       uint8_t b[BUFSIZE];
-      int res = read(fd, b, BUFSIZE);
+      int res = read(tty_fd, b, BUFSIZE);
       if (!res)
 	/* EOF */
 	return size;
@@ -116,71 +240,55 @@ read_line(int fd, uint32_t size, uint8_t *buffer)
 #undef BUFSIZE
 }
 
-
-/* NOTE: If there are more than one instance of this class, window
- * changes can be missed, as only one of them will have its signal
- * handler installed properly. */
-
-/* GABA:
-   (class
-     (name window_subscriber)
-     (super resource)
-     (vars
-       (interact object unix_interact)
-       (next object window_subscriber)
-       (callback object window_change_callback)))
-*/
-
-static void
-do_kill_window_subscriber(struct resource *s)
+int
+interact_yes_or_no(const struct lsh_string *prompt, int def, int free)
 {
-  CAST(window_subscriber, self, s);
+#define TTY_BUFSIZE 10
 
-  if (self->super.alive)
+  if (!IS_TTY())
     {
-      self->super.alive = 0;
-      assert(self->interact->nsubscribers);
-      assert(self->interact->winch_handler);
-      
-      if (!--self->interact->nsubscribers)
-        {
-          KILL_RESOURCE(self->interact->winch_handler);
-          self->interact->winch_handler = NULL;
-        }
+      if (free)
+	lsh_string_free(prompt);
+      return def;
     }
+  else
+    for (;;)
+      {
+	uint8_t buffer[TTY_BUFSIZE];
+	int res;
+      
+	res = write_raw(tty_fd, STRING_LD(prompt));
+
+	if (free)
+	  lsh_string_free(prompt);
+
+	if (!res)
+	  return def;
+
+	if (!read_line(sizeof(buffer), buffer))
+	  return def;
+
+	switch (buffer[0])
+	  {
+	  case 'y':
+	  case 'Y':
+	    return 1;
+	  case 'n':
+	  case 'N':
+	    return 0;
+	  default:
+	    /* Try again. */
+	    ;
+	  }
+      }
+#undef TTY_BUFSIZE
 }
 
-/* FIXME: Remove subscribers list, and register multiple liboop signal
- * handlers instead? */
-/* GABA:
-   (class
-     (name unix_interact)
-     (super interact)
-     (vars
-       (tty_fd . int)
-       (askpass . "const char *")
-       ; Signal handler
-       (winch_handler object resource)
-       (nsubscribers . unsigned)
-       (subscribers object window_subscriber)))
-*/
-
-#define IS_TTY(self) ((self)->tty_fd >= 0)
-
-static int
-unix_is_tty(struct interact *s)
-{
-  CAST(unix_interact, self, s);
-
-  return IS_TTY(self);
-}
-
-/* FIXME: Rewrite to operate on tty_fd. */
+/* FIXME: Rewrite to operate on tty_fd? */
 static struct lsh_string *
-read_password(struct unix_interact *self,
-	      const struct lsh_string *prompt)
+read_password(const struct lsh_string *prompt)
 {
-  if (self->askpass)
+  if (askpass_program)
     {
       const char *argv[3];
       
@@ -193,8 +301,9 @@ read_password(struct unix_interact *self,
 	  return NULL;
 	}
       
-      argv[0] = self->askpass;
+      argv[0] = askpass_program;
       argv[1] = lsh_get_cstring(prompt);
+
       if (!argv[1])
 	{
 	  close(null);
@@ -204,9 +313,9 @@ read_password(struct unix_interact *self,
       argv[2] = NULL;
 
       trace("unix_interact.c: spawning askpass program `%z'\n",
-	    self->askpass);
+	    askpass_program);
 
-      return lsh_popen_read(self->askpass, argv, null, 100);
+      return lsh_popen_read(askpass_program, argv, null, 100);
     }
   else
     {
@@ -215,16 +324,16 @@ read_password(struct unix_interact *self,
       char *password;
       const char *cprompt;
 
-      if (!IS_TTY(self))
+      if (!IS_TTY())
 	return NULL;
 
-      cprompt = lsh_get_cstring(prompt);
+      cprompt = lsh_get_cstring(prompt);      
       if (!cprompt)
 	return NULL;
 
       /* NOTE: This function uses a static buffer. */
       password = getpass(cprompt);
-  
+
       if (!password)
 	return NULL;
   
@@ -232,86 +341,27 @@ read_password(struct unix_interact *self,
     }
 }
 
-static struct lsh_string *
-unix_read_password(struct interact *s,
-		   uint32_t max_length UNUSED,
-		   const struct lsh_string *prompt)
+struct lsh_string *
+interact_read_password(const struct lsh_string *prompt)
 {
-  CAST(unix_interact, self, s);
-  struct lsh_string *password;
-  
-  trace("unix_interact.c:unix_read_password\n");
-
-  password = read_password(self, prompt);
+  struct lsh_string *passwd = read_password(prompt);
   lsh_string_free(prompt);
-  
-  return password;
-}
 
-static void
-unix_set_askpass(struct interact *s,
-		 const char *askpass)
-{
-  CAST(unix_interact, self, s);
-  trace("unix_interact.c:unix_set_askpass\n");
-  assert(askpass);
-  
-  self->askpass = askpass;
-}
-
-static int
-unix_yes_or_no(struct interact *s,
-	       const struct lsh_string *prompt,
-	       int def, int free)
-{
-#define TTY_BUFSIZE 10
-
-  CAST(unix_interact, self, s);
-  if (!IS_TTY(self))
-    {
-      if (free)
-	lsh_string_free(prompt);
-      return def;
-    }
-  else    
-    {
-      uint8_t buffer[TTY_BUFSIZE];
-      int res;
-  
-      res = write_raw(self->tty_fd, STRING_LD(prompt));
-
-      if (free)
-	lsh_string_free(prompt);
-
-      if (!res)
-	return def;
-
-      if (!read_line(self->tty_fd, TTY_BUFSIZE, buffer))
-	return def;
-
-      switch (buffer[0])
-	{
-	case 'y':
-	case 'Y':
-	  return 1;
-	default:
-	  return 0;
-	}
-#undef TTY_BUFSIZE
-    }
+  return passwd;
 }
 
 /* The prompts are typically not trusted, but it's the callers
    responsibility to sanity check them. */
-static int
-unix_dialog(struct interact *s,
-	    const struct interact_dialog *dialog)
+int
+interact_dialog(const struct interact_dialog *dialog)
 {
 #define DIALOG_BUFSIZE 150
-  CAST(unix_interact, self, s);
   unsigned i;
-  
-  if (!write_raw(self->tty_fd, STRING_LD(dialog->instruction)))
+
+  if (!IS_TTY())
+    return 0;
+
+  if (!write_raw(tty_fd, STRING_LD(dialog->instruction)))
     return 0;
 
   for (i = 0; i < dialog->nprompt; i++)
@@ -322,9 +372,9 @@ unix_dialog(struct interact *s,
 	  uint8_t buffer[DIALOG_BUFSIZE];
 	  uint32_t length;
 	  
-	  if (!write_raw(self->tty_fd, STRING_LD(prompt)))
+	  if (!write_raw(tty_fd, STRING_LD(prompt)))
 	    return 0;
-	  length = read_line(self->tty_fd, DIALOG_BUFSIZE, buffer);
+	  length = read_line(sizeof(buffer), buffer);
 	  if (!length)
 	    return 0;
 	  
@@ -332,196 +382,72 @@ unix_dialog(struct interact *s,
 	}
       else
 	{
-	  if (!(dialog->response[i] = read_password(self, prompt)))
+	  if (!(dialog->response[i] = read_password(prompt)))
 	    return 0;
 	}
     }
   return 1;
 }
 
-
-/* GABA:
-   (class
-     (name unix_termios)
-     (super terminal_attributes)
-     (vars
-       (ios . "struct termios")))
-*/
-
-static struct terminal_attributes *
-do_make_raw(struct terminal_attributes *s)
+int
+interact_set_mode(int raw)
 {
-  CAST(unix_termios, self, s);
-  CLONED(unix_termios, res, self);
+  int res;
 
-  CFMAKERAW(&res->ios);
-
-  /* Modify VMIN and VTIME, to save some bandwidth and make traffic
-   * analysis of interactive sessions a little harder. */
-  res->ios.c_cc[VMIN] = 4;
-  /* Inter-character timer, in units of 0.1s */
-  res->ios.c_cc[VTIME] = 1;
-  
-  return &res->super;
-}
-
-static struct lsh_string *
-do_encode(struct terminal_attributes *s)
-{
-  CAST(unix_termios, self, s);
-  return tty_encode_term_mode(&self->ios);
-}
-
-static struct terminal_attributes *
-unix_get_attributes(struct interact *s)
-{
-  CAST(unix_interact, self, s);
-
-  if (!IS_TTY(self))
-    return NULL;
+  if (raw)
+    res = SET_ATTR(&raw_mode);
   else
-    {
-      NEW(unix_termios, res);
-      res->super.make_raw = do_make_raw;
-      res->super.encode = do_encode;
-      
-      if (!tty_getattr(self->tty_fd, &res->ios) < 0)
-	{
-	  KILL(res);
-	  return NULL;
-	}
-      return &res->super;
-    }
+    res = SET_ATTR(&original_mode);
+
+  return res != -1;
 }
 
-static int
-unix_set_attributes(struct interact *s,
-		    struct terminal_attributes *a)
+int
+interact_get_window_size(struct winsize *dims)
 {
-  CAST(unix_interact, self, s);
-  CAST(unix_termios, attr, a);
-
-  return IS_TTY(self)
-    && tty_setattr(self->tty_fd, &attr->ios);
+  return ioctl(tty_fd, TIOCGWINSZ, dims) != -1;
 }
-
-static int
-unix_window_size(struct interact *s,
-		 struct terminal_dimensions *d)
-{
-  CAST(unix_interact, self, s);
-
-  return IS_TTY(self)
-    && tty_getwinsize(self->tty_fd, d);
-}
-
 
 /* GABA:
    (class
      (name winch_handler)
      (super lsh_callback)
      (vars
-       (interact object unix_interact)))
+       (callback object window_change_callback)))
 */
 
 static void
 do_winch_handler(struct lsh_callback *s)
 {
   CAST(winch_handler, self, s);
-  struct unix_interact *i = self->interact;
+  struct winsize dims;
 
-  assert(!!i->nsubscribers == !!i->winch_handler);
-  
-  if (i->subscribers)
-    {
-      struct window_subscriber *s;
-      struct window_subscriber **s_p;
-      unsigned alive;
-
-      for (alive = 0, s_p = &i->subscribers; (s = *s_p) ;)
-	{
-	  if (!s->super.alive)
-	    *s_p = s->next;
-	  else
-	    {
-	      WINDOW_CHANGE_CALLBACK(s->callback, &i->super);
-	      s_p = &s->next;
-              alive++;
-	    }
-	}
-
-      assert(alive == i->nsubscribers);
-    }
+  if (interact_get_window_size(&dims))
+    self->callback->f(self->callback, &dims);
 }
 
 static struct lsh_callback *
-make_winch_handler(struct unix_interact *i)
+make_winch_handler(struct window_change_callback *callback)
 {
   NEW(winch_handler, self);
   self->super.f = do_winch_handler;
-  self->interact = i;
+  self->callback = callback;
 
-  return &self->super;
+  return &self->super;  
 }
 
-static struct resource *
-unix_window_change_subscribe(struct interact *s,
-			     struct window_change_callback *callback)
+struct resource *
+interact_on_window_change(struct window_change_callback *callback)
 {
-  CAST(unix_interact, self, s);
-
-  NEW(window_subscriber, subscriber);
-
-  init_resource(&subscriber->super, do_kill_window_subscriber);
-
-  subscriber->interact = self;
-  subscriber->next = self->subscribers;
-  subscriber->callback = callback;
-
-  self->subscribers = subscriber;
-  self->nsubscribers++;
-  
-  if (!self->winch_handler)
-    {
-      /* This is the first subscriber */
-      self->winch_handler
-        = io_signal_handler(SIGWINCH,
-                            make_winch_handler(self));
-    }
-  
-  return &subscriber->super;
+  return io_signal_handler(SIGWINCH, make_winch_handler(callback));
 }
 
-struct interact *
-make_unix_interact(void)
+/* NOTE: It would be somewhat cleaner to call tty_encode_term_mode
+   here, but returning the termios structure and leaving the
+   conversion makes this file more self-contained, avoiding a link
+   dependency on tty.o. */
+const struct termios *
+interact_get_terminal_mode(void)
 {
-  NEW(unix_interact, self);
-
-  self->super.is_tty = unix_is_tty;
-  self->super.read_password = unix_read_password;
-  self->super.set_askpass = unix_set_askpass;
-  self->super.yes_or_no = unix_yes_or_no;
-  self->super.dialog = unix_dialog;
-  self->super.get_attributes = unix_get_attributes;
-  self->super.set_attributes = unix_set_attributes;
-  self->super.window_size = unix_window_size;
-  self->super.window_change_subscribe = unix_window_change_subscribe;
-
-  self->tty_fd = -1;
-  self->askpass = NULL;
-  
-#if HAVE_STDTTY_FILENO
-  if (isatty(STDTTY_FILENO))
-    self->tty_fd = STDTTY_FILENO;
-#else /* ! HAVE_STDTTY_FILENO */
-  self->tty_fd = open("/dev/tty", O_RDWR);
-#endif
-
-  if (self->tty_fd >= 0)
-    {
-      io_set_close_on_exec(self->tty_fd);
-      /* Restore and reset tty if process is suspended. */      
-      suspend_handle_tty(self->tty_fd);
-    }
-  return &self->super;
+  return &original_mode;
 }
