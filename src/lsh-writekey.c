@@ -74,7 +74,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (private_file string)
 
        (server . int)
-       (tty object interact)
        
        (label string)
        (passphrase string)
@@ -100,9 +99,6 @@ make_lsh_writekey_options(void)
   self->private_file = NULL;
   self->server = 0;
   
-  /* We don't need window change tracking. */
-  self->tty = make_unix_interact();
-    
   self->label = NULL;
 
   self->passphrase = NULL;
@@ -355,8 +351,7 @@ process_private(const struct lsh_string *key,
 	  struct lsh_string *pw;
 	  struct lsh_string *again;
 	  
-	  pw = INTERACT_READ_PASSWORD(options->tty, 500,
-				      ssh_format("Enter new passphrase: "));
+	  pw = interact_read_password(ssh_format("Enter new passphrase: "));
 	  if (!pw)
 	    {
 	      werror("Aborted.");
@@ -364,8 +359,7 @@ process_private(const struct lsh_string *key,
 	    }
 
 	  
-	  again = INTERACT_READ_PASSWORD(options->tty, 500,
-					 ssh_format("Again: "));
+	  again = interact_read_password(ssh_format("Again: "));
 	  if (!again)
 	    {
 	      werror("Aborted.");
@@ -422,6 +416,10 @@ main(int argc, char **argv)
   int public_fd;
   const struct lsh_string *private;
   const struct lsh_string *public;
+
+  if (!unix_interact_init(0))
+    return EXIT_FAILURE;
+
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   if (! (check_file(options->private_file)

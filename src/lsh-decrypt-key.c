@@ -71,7 +71,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (super werror_config)
      (vars
        ; Base filename
-       (tty object interact)
        (in_fd . int) 
        (out_fd . int)))
 */
@@ -82,9 +81,6 @@ make_lsh_decryptkey_options(void)
   NEW(lsh_decryptkey_options, self);
 
   init_werror_config(&self->super);
-
-  /* We don't need window change tracking. */
-  self->tty = make_unix_interact();
 
   self->in_fd = 0; /* stdin */
   self->out_fd = 1; /* stdout */
@@ -136,7 +132,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_ASKPASS:
-      INTERACT_SET_ASKPASS(self->tty, arg);
+      interact_set_askpass(arg);
       break;
 
     case OPT_INFILE:
@@ -184,6 +180,9 @@ main(int argc, char **argv)
   struct lsh_string *output;
   struct alist *mac = make_alist(0, -1);
   struct alist *crypto = make_alist(0, -1);
+
+  if (!unix_interact_init(0))
+    return EXIT_FAILURE;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -205,7 +204,6 @@ main(int argc, char **argv)
   
   output = spki_pkcs5_decrypt(mac, 
 			      crypto,
-			      options->tty,
 			      input);
   if (!output)
     {

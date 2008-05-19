@@ -69,8 +69,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name srp_gen_options)
      (super werror_config)
      (vars
-       (tty object interact)
-       
        (e object exception_handler)
        (G const object zn_group)
        (H const object hash_algorithm)
@@ -89,9 +87,6 @@ make_srp_gen_options(struct exception_handler *e)
   NEW(srp_gen_options, self);
   init_werror_config(&self->super);
 
-  /* We don't need window change tracking. */
-  self->tty = make_unix_interact();
-  
   self->e = e;
 
   self->G = make_ssh_ring_srp_1();
@@ -167,13 +162,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  struct lsh_string *pw;
 	  struct lsh_string *again;
 
-	  pw = INTERACT_READ_PASSWORD(self->tty, 500,
-				      ssh_format("Enter new SRP password: "));
+	  pw = interact_read_password(ssh_format("Enter new SRP password: "));
 	  if (!pw)
 	    argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
-	  again = INTERACT_READ_PASSWORD(self->tty, 500,
-					 ssh_format("Again: "));
+	  again = interact_read_password(ssh_format("Again: "));
 	  if (!again)
 	    argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
@@ -246,8 +239,11 @@ int main(int argc, char **argv)
 
   struct lsh_string *generator;
   
+  if (!unix_interact_init(1))
+    return EXIT_FAILURE;
+
   io_init();
-  
+
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   generator = srp_gen(options);
