@@ -1,3 +1,150 @@
+2008-05-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Deleted check for cfmakeraw.
+
+	* src/lsh-transport.c (class lsh_transport_config): Deleted tty attribute.
+	(try_password_auth): Use interact_read_password.
+	(send_userauth_info_response): Use interact_dialog.
+	(read_user_key): Updated for alist_select_l change.
+	(OPT_ASKPASS): New constant. Use an enum for all the options constants.
+	(main_options): Added --askpass option.
+	(main_argp_parser): Use interact_set_askpass.
+	(main): Use unix_interact_init.
+
+	* src/lsh-decrypt-key.c (main): Updated for alist_select_l change.
+
+	* src/alist.h (meta-class alist): Use const for the get method. 
+
+	* src/alist.c (alist_select_l): Changed to return the new alist.
+	Inlined work, no longer calls alist_select and make_int_list.
+	(alist_select): Deleted unused function.
+	
+	* src/lsh.c (class lsh_options): Deleted tty attribute.
+	(maybe_pty): Use interact_is_tty and client_request_pty.
+	(main_argp_parser): Removed call to suspend_install_handler.
+	Pass on --askpass option to lsh-transport.
+	(main): Call unix_interact_init.
+
+2008-05-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-connection.c (make_lshd_connection): Install
+	window-change handler.
+
+	* src/server_session.c (pty_request_handler): Convert dimensions
+	to struct winsize.
+	(window_change_request_handler): Likewise. Also use ioctl, not
+	tty_setwinsize, and use DEFINE_CHANNEL_REQUEST.
+
+	* src/server_pty.c (pty_open_slave): Replaced uses of tty_getattr,
+	tty_setattr and tty_setwinsize, by calls to the underlying
+	functions tcgetattr, tcsetattr and ioctl with TIOCSWINSZ.
+
+	* src/server_pty.h: Don't include tty.h. Include sys/ioctl.h.
+	(class pty_info): Change type of the dims attribute to struct
+	winsize.
+
+	* src/Makefile.in (INTERACT_SOURCES): Deleted suspend.c.
+	(CRYPTO_CLIENT_SOURCES): New variable.
+	(SOURCES): Added CRYPTO_CLIENT_SOURCES.
+	(CRYPTO_CLIENT_OBJS): New variable.
+	(lsh_transport_OBJS): Deleted TTY_OBJS. Added CRYPTO_CLIENT_OBJS.
+	(lsh_decrypt_key_OBJS): Likewise.
+	(lsh_writekey_OBJS): Deleted TTY_OBJS.
+
+	* src/lsh-decrypt-key.c: Updated for interact changes.
+	* src/lsh-writekey.c: Likewise.
+	* src/srp-gen.c: Likewise.
+
+	* src/client_pty.c (class client_tty_resource): Deleted class, it
+	needs no attributes beyond the superclass resource.
+	(do_kill_client_tty_resource): Use interact_set_mode.
+	(make_client_tty_resource): Deleted arguments.
+	(do_client_winch_handler): Updated to new interface, with new
+	domensions as argument.
+	(class client_pty_action): Deleted class, it needs no attributes
+	beyond the superclass client_session_action.
+	(do_action_pty_start): Updated for interact changes.
+	(do_action_pty_success): Likewise.
+	(client_request_pty): New static object, replacing
+	make_pty_action.
+	(make_pty_action): Deleted function.
+
+	* src/client.c (suspend_callback): Moved here, from deleted file
+	suspend.c.
+
+	* src/tty.h (struct terminal_dimensions): Deleted struct. Replaced
+	by struct winsize, from sys/ioctl.h.
+	(CFMAKERAW): Deleted macro.
+	
+	* src/tty.c: (tty_getattr, tty_setattr): Deleted functions.
+	(tty_getwinsize, tty_setwinsize): Deleted functions.	
+	(termios_cc_index): Renamed, was cc_ndx. Made const.
+	(termios_iflags): Renamed, was cc_iflags. Made const.
+	(termios_oflags): Renamed, was cc_oflags. Made const.
+	(termios_cflags): Renamed, was cc_cflags. Made const.
+	(termios_lflags): Renamed, was cc_lflags. Made const.
+	(ENCODE_FLAGS): Renamed, was PARSE_FLAGS.
+	(tty_encode_term_mode): Updated for new names. Made the argument
+	const.
+	(TTY_SET_VALUE): Deleted macro.
+	(TTY_DECODE_FLAG): Renamed, was TTY_SET_FLAG. Use SIZE macro.
+	Fixed test for non-existent flag.
+	(tty_decode_term_mode): Fixed off-by-one error in check for
+	SSH_TTY_OP_RESERVED. Inlined handling of c_cc.
+
+	* src/unix_interact.c (tty_fd): New global variable.
+	(askpass_program): Likewise.
+	(original_mode): Likewise.
+	(raw_mode): Likewise.
+	(unix_interact_init): New function. Optionally installs signal
+	handler and atexit handler to restore tty modes.
+	(interact_is_tty): New function, replacing method unix_is_tty.
+	(interact_set_askpass): Likewise.
+	(read_line): Deleted fd argument.
+	(class window_subscriber): Deleted class.
+	(class unix_interact): Deleted class.
+	(interact_yes_or_no): New function, replacing unix_yes_or_no. Loop
+	until we get a yes or no answer.
+	(read_password): Deleted self argument. Use globals instead.
+	(interact_read_password): New function, replacing method
+	unix_read_password.
+	(interact_dialog): New function, replacing unix_dialog method.
+	(class unix_termio): Deleted class.
+	(interact_set_mode): New function, replacing methods
+	unix_set_attributes and do_make_raw.
+	(interact_get_window_size): New function, replacing
+	unix_window_size method.
+	(class winch_handler): Replace interact poitner with a pointer
+	directly to a window_change_callback.
+	(do_winch_handler): Pass new window size to callback. Invoke a
+	single window_change_callback, not a list of subscribers.
+	(interact_on_window_change): New function, replacing
+	unix_window_change_subscribe method.
+	(make_unix_interact): Deleted function.
+	(interact_get_terminal_mode): New function, unix_get_attributes
+	method.
+
+	* src/interact.h: Forward declare struct winsize and struct
+	termios.
+	(class terminal_attributes): Deleted.
+	(class window_change_callback): Change callback argument, it now
+	gets the new window size.
+	(class interact): Deleted class. Use ordinary functions instead.
+
+	* src/suspend.c: Deleted file. Moved signal handler to
+	unix_interact.c. Moved suspend_callback to client.c.
+
+	* src/suspend.h: Deleted file.
+
+	* src/spki.c (spki_algorithm_lookup): Made non-static. Moved
+	functions depending on interact_read_password to a separat file
+	spki-decrypt.c.
+
+	* src/spki-decrypt.c: New file.
+	(parse_pkcs5): Moved function from spki.c.
+	(parse_pkcs5_payload): Likewise.
+	(spki_pkcs5_decrypt): Likewise. Deleted interact argument.
+
 2008-05-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client_session.c (oop_read_stdin): Implemented handling of
