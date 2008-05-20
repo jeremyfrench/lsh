@@ -61,7 +61,6 @@
 #include "sexp.h"
 #include "ssh.h"
 #include "ssh_write.h"
-#include "suspend.h"
 #include "tcpforward.h"
 #include "version.h"
 #include "werror.h"
@@ -100,8 +99,6 @@
      (super werror_config)
      (vars
        (home . "const char *")
-
-       (tty object interact)
 
        ; -1 means default.
        (escape . int)
@@ -175,7 +172,6 @@ make_options(struct exception_handler *handler,
 
   self->home = home;
 
-  self->tty = make_unix_interact();
   self->escape = -1;
 
   self->handler = handler;
@@ -372,11 +368,11 @@ maybe_pty(struct lsh_options *options, int default_pty)
     {
       options->used_pty = 1;
       
-      if (options->tty && INTERACT_IS_TTY(options->tty))
-	return make_pty_action(options->tty);
+      if (interact_is_tty())
+	return &client_request_pty;
       else
 	/* FIXME: Try allocating a remote pty even if we don't have a
-	   pty locally? I think lsh.x and 2.x did that. */
+	   pty locally? I think lsh-1.x and 2.x did that. */
 	werror("No tty available.\n");
     }
 #endif
@@ -782,8 +778,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
-      /* Install suspend-handler */
-      suspend_install_handler();
       break;
 
     case 'p':
@@ -795,7 +789,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_ASKPASS:
-      INTERACT_SET_ASKPASS(self->tty, arg);
+      arglist_push(&self->transport_args, "--askpass");
+      arglist_push(&self->transport_args, arg);
+      
+      interact_set_askpass(arg);      
       break;
       
     case 'e':
@@ -1180,6 +1177,9 @@ main(int argc, char **argv)
 
   struct exception_handler *handler
     = make_lsh_default_handler(&lsh_exit_code, HANDLER_CONTEXT);
+
+  if (!unix_interact_init(1))
+    return EXIT_FAILURE;
 
   io_init();
   reaper_init();
