@@ -178,8 +178,6 @@ main(int argc, char **argv)
   struct lsh_decryptkey_options *options = make_lsh_decryptkey_options();
   struct lsh_string *input;
   struct lsh_string *output;
-  struct alist *mac = make_alist(0, -1);
-  struct alist *crypto = make_alist(0, -1);
 
   if (!unix_interact_init(0))
     return EXIT_FAILURE;
@@ -193,18 +191,14 @@ main(int argc, char **argv)
       werror("Failed to read key %e\n", errno);
       return EXIT_FAILURE;
     }
-  
-  
-  
-  alist_select_l(mac, all_symmetric_algorithms(),
-		 2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
-  alist_select_l(crypto, all_symmetric_algorithms(),
-		 4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
-		 ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1);
-  
-  output = spki_pkcs5_decrypt(mac, 
-			      crypto,
-			      input);
+
+  output
+    = spki_pkcs5_decrypt(alist_select_l(all_symmetric_algorithms(),
+					2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1),
+			 alist_select_l(all_symmetric_algorithms(),
+					4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+					ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1),
+			 input);
   if (!output)
     {
       werror("Decrypting private key failed.\n");
