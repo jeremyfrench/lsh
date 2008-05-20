@@ -44,7 +44,7 @@ struct alist;
    (meta
      (name alist)
      (methods
-       "struct lsh_object * (*get)(struct alist *self, int atom)"
+       "struct lsh_object * (*get)(const struct alist *self, int atom)"
        "void (*set)(struct alist *self, int atom, struct lsh_object *value)"))
 */
 
@@ -76,12 +76,7 @@ struct alist *make_linked_alist(unsigned n, ...);
 
 #define make_alist make_linear_alist
 
-unsigned
-alist_select(struct alist *dst, struct alist *src,
-	     struct int_list *names);
-
-unsigned
-alist_select_l(struct alist *dst, struct alist *src,
-	       unsigned n, ...);
+struct alist *
+alist_select_l(const struct alist *src, unsigned n, ...);
 
 #endif /* LSH_ALIST_H_INCLUDED */

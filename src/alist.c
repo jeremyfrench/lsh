@@ -70,7 +70,7 @@ struct alist_node
 /* Prototypes */
 
 static struct lsh_object *
-do_linear_get(struct alist *c, int atom);
+do_linear_get(const struct alist *c, int atom);
 static void
 do_linear_set(struct alist *c, int atom, struct lsh_object *value);
 
@@ -81,7 +81,7 @@ static void
 do_free_list(struct alist_node *n);
 
 static struct lsh_object *
-do_linked_get(struct alist *c, int atom);
+do_linked_get(const struct alist *c, int atom);
 static void
 do_linked_set(struct alist *c, int atom, struct lsh_object *value);
 
@@ -101,7 +101,7 @@ do_linked_set(struct alist *c, int atom, struct lsh_object *value);
 */
 
 static struct lsh_object *
-do_linear_get(struct alist *c, int atom)
+do_linear_get(const struct alist *c, int atom)
 {
   CAST(alist_linear, self, c);
 
@@ -181,7 +181,7 @@ do_free_list(struct alist_node *n)
 }
 
 static struct lsh_object *
-do_linked_get(struct alist *c, int atom)
+do_linked_get(const struct alist *c, int atom)
 {
   CAST(alist_linked, self, c);
   struct alist_node *p;
@@ -265,43 +265,31 @@ make_linked_alist(unsigned n, ...)
   return res;
 }
 
-/* Copies selected elements from one alist to another. */
-
-unsigned
-alist_select(struct alist *dst, struct alist *src,
-	     struct int_list *names)
-{
-  unsigned selected;
-  unsigned i;
-  for (i = 0, selected = 0; i < LIST_LENGTH(names); i++)
-    {
-      int atom = LIST(names)[i];
-      struct lsh_object *o = ALIST_GET(src, atom);
-      if (o)
-	{
-	  ALIST_SET(dst, atom, o);
-	  selected ++;
-	}
-    }
-  return selected;
-}
-
-unsigned
-alist_select_l(struct alist *dst, struct alist *src,
+/* Copies selected elements from the src alist. */
+struct alist *
+alist_select_l(const struct alist *src,
 	       unsigned n, ...)
 {
   va_list args;
-  struct int_list *names;
-  unsigned selected;
+  struct alist *dst = make_alist(0, -1);
+  unsigned i;
   
   va_start(args, n);
-  names = make_int_listv(n, args);
+
+  for (i=0; i<n; i++)
+    {
+      struct lsh_object *o;
+      int atom = va_arg(args, int);
+
+      assert(atom >= 0);
+
+      o = ALIST_GET(src, atom);
+      if (o)
+	ALIST_SET(dst, atom, o);
+    }
+  assert(va_arg(args, int) == -1);
   va_end(args);
 
-  selected = alist_select(dst, src, names);
-
-  KILL(names);
-
-  return selected;
+  return dst;
 }
   
