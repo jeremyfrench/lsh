@@ -107,8 +107,6 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
 
        (kex_algorithms object int_list)
 
-       (tty object interact)
-       
        (sloppy . int)
        (capture_file . "const char *")
        (capture_fd . int)
@@ -159,7 +157,6 @@ make_lsh_transport_config(void)
 
   self->signature_algorithms = all_signature_algorithms(self->super.random);
 
-  self->tty = make_unix_interact();
   self->host_db = make_lsh_transport_lookup_verifier(self);
 
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
@@ -522,8 +519,7 @@ static int
 try_password_auth(struct lsh_transport_connection *self)
 {
   struct lsh_string *password
-    = INTERACT_READ_PASSWORD(self->config->tty, MAX_PASSWORD,
-			     ssh_format("Password for %lz: ",
+    = interact_read_password(ssh_format("Password for %lz: ",
 					self->config->user));
   if (!password)
     return 0;
@@ -697,7 +693,7 @@ send_userauth_info_response(struct lsh_transport_connection *self,
       else
 	dialog->instruction = ssh_format("%lfS\n", dialog->instruction);
 
-      if (!INTERACT_DIALOG(self->config->tty, dialog))
+      if (!interact_dialog(dialog))
 	{
 	  transport_disconnect(&self->super.super,
 			       SSH_DISCONNECT_AUTH_CANCELLED_BY_USER,
@@ -854,25 +850,17 @@ read_user_key(struct lsh_transport_config *config)
 
   /* FIXME: We should read the public key somehow, and decrypt the
      private key only if it is needed. */
-  if (config->tty)
+  contents
+    = spki_pkcs5_decrypt(alist_select_l(config->super.algorithms,
+					2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1),
+			 alist_select_l(config->super.algorithms,
+					4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+					ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1),
+			 contents);
+  if (!contents)
     {
-      struct alist *mac = make_alist(0, -1);
-      struct alist *crypto = make_alist(0, -1);
-
-      alist_select_l(mac, config->super.algorithms,
-		     2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
-      alist_select_l(crypto, config->super.algorithms,
-		     4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
-		     ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1);
-      
-      contents = spki_pkcs5_decrypt(mac, crypto,
-				    config->tty,
-				    contents);
-      if (!contents)
-        {
-          werror("Decrypting private key failed.\n");
-          return NULL;;
-        }
+      werror("Decrypting private key failed.\n");
+      return NULL;;
     }
   
   s = spki_make_signer(config->signature_algorithms, contents,
@@ -1043,9 +1031,8 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 				    1 
 				    );
 	  
-	  if (!INTERACT_YES_OR_NO
-	      (self->config->tty,
-	       ssh_format("Received unauthenticated key for host %lz\n"
+	  if (!interact_yes_or_no
+	      (ssh_format("Received unauthenticated key for host %lz\n"
 			  "Key details:\n"
 			  "Bubble Babble: %lfS\n"
 			  "Fingerprint:   %lfS\n"
@@ -1173,22 +1160,25 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
-#define ARG_NOT 0x400
+enum {
+  ARG_NOT = 0x400,
 
-/* Transport options */
-#define OPT_SLOPPY 0x202
-#define OPT_STRICT 0x203
-#define OPT_CAPTURE 0x204
-#define OPT_HOST_DB 0x205
+  /* Transport options */
+  OPT_SLOPPY = 0x201,
+  OPT_STRICT,
+  OPT_CAPTURE,
+  OPT_HOST_DB,
 
-/* Userauth options */
-#define OPT_USERAUTH 0x210
-#define OPT_PUBLICKEY 0x211
+  /* Userauth options */
+  OPT_USERAUTH,
+  OPT_PUBLICKEY,
 
-/* FIXME: Enable/disable password, kbdinteract, etc */
+  /* FIXME: Enable/disable password, kbdinteract, etc */
 
-/* Service options */
-#define OPT_SERVICE 0x220
+  /* Service options */
+  OPT_SERVICE,
+  OPT_ASKPASS,
+};
 
 static const struct argp_option
 main_options[] =
@@ -1216,7 +1206,11 @@ main_options[] =
   
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
   { "service" , OPT_SERVICE, "Name", 0, "Service to request. Default is `ssh-connection'.", 0},
-  
+
+  { "askpass", OPT_ASKPASS, "Program", 0,
+    "Program to use for reading passwords. "
+    "Should be an absolute filename.", 0 },
+
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -1325,6 +1319,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case OPT_SERVICE:
       self->service = arg;
       break;
+
+    case OPT_ASKPASS:
+      interact_set_askpass(arg);
+      break;
     }
   return 0;
 }
@@ -1353,6 +1351,9 @@ int
 main(int argc, char **argv)
 {
   struct lsh_transport_config *config;
+
+  if (!unix_interact_init(0))
+    return EXIT_FAILURE;
 
   io_init();
 
