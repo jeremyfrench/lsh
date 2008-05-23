@@ -119,30 +119,25 @@ do_linear_set(struct alist *c, int atom, struct lsh_object *value)
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
   
-  self->super.size += !self->table[atom] - !value; 
-  
   self->table[atom] = value;
 }
 
 struct alist *
 make_linear_alist(unsigned n, ...)
 {
-  int i;
   va_list args;
+  int i;
   
-  NEW(alist_linear, res);
+  NEW(alist_linear, self);
 
-  res->super.size = 0;
-  
   for (i = 0; i<NUMBER_OF_ATOMS; i++)
-    res->table[i] = NULL;
+    self->table[i] = NULL;
 
   va_start(args, n);
-
-  alist_addv(&res->super, n, args);
+  alist_addv(&self->super, n, args);
   va_end(args);
   
-  return &res->super;
+  return &self->super;
 }
 
 /* NOTE: A linked alist does not have any limit on the size of its keys. */
@@ -219,8 +214,6 @@ do_linked_set(struct alist *c, int atom, struct lsh_object *value)
       p->value = value;
 
       self->head = p;
-
-      self->super.size++;
     }
   else
     { /* Remove atom */
@@ -233,8 +226,6 @@ do_linked_set(struct alist *c, int atom, struct lsh_object *value)
 	    {
 	      *p = o->next;
 	      lsh_space_free(o);
-
-	      self->super.size--;
 	      return;
 	    }
 	  p = &o->next;
@@ -248,21 +239,15 @@ make_linked_alist(unsigned n, ...)
 {
   va_list args;
   
-  struct alist *res;
-  
   NEW(alist_linked, self);
-  res = &self->super;
-
-  res->size = 0;
 
   self->head = NULL;
 
   va_start(args, n);
-
-  alist_addv(res, n, args);
+  alist_addv(&self->super, n, args);
   va_end(args);
     
-  return res;
+  return &self->super;
 }
 
 /* Copies selected elements from the src alist. */
