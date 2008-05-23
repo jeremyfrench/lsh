@@ -165,6 +165,21 @@ oop_io_port_accept(oop_source *source UNUSED,
   return OOP_CONTINUE;  
 }
 
+struct resource *
+io_listen(int fd, struct command *callback)
+{
+  struct io_port *port;
+
+  if (listen(fd, 256) < 0)
+    return NULL;
+
+  port = make_io_port(fd, callback);
+  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
+			   oop_io_port_accept, port);
+
+  return &port->super;
+}
+
 /* (listen_tcp callback port) */
 DEFINE_COMMAND2(listen_tcp_command)
      (struct lsh_object *a1,
@@ -176,7 +191,7 @@ DEFINE_COMMAND2(listen_tcp_command)
   CAST(address_info, a, a2);
   struct sockaddr *addr;
   socklen_t addr_length;
-  struct io_port *port;
+  struct resource *port;
   int fd;
 
   addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
@@ -187,26 +202,22 @@ DEFINE_COMMAND2(listen_tcp_command)
     }
 
   fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
+  lsh_space_free(addr);
 
   if (fd < 0)
     {
       EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "socket failed"));
-      lsh_space_free(addr);
       return;
     }
 
-  if (listen(fd, 256) < 0)
+  port = io_listen(fd, callback);
+  if (port)
+    COMMAND_RETURN(c, port);
+  else
     {
       EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
       close(fd);
-      return;
     }    
-
-  port = make_io_port(fd, callback);
-  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
-			   oop_io_port_accept, port);
-
-  COMMAND_RETURN(c, port);
 }
 
 /* (listen_local callback port) */
@@ -219,7 +230,7 @@ DEFINE_COMMAND2(listen_local_command)
   CAST_SUBTYPE(command, callback, a1);
   CAST(local_info, a, a2);
 
-  struct io_port *port;
+  struct resource *port;
   int fd;
 
   fd = io_bind_local(a);
@@ -230,19 +241,14 @@ DEFINE_COMMAND2(listen_local_command)
       return;
     }
 
-  if (listen(fd, 256) < 0)
+  port = io_listen(fd, callback);
+  if (port)
+    COMMAND_RETURN(c, port);
+  else
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno,
-					"listen on local socket failed"));
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
       close(fd);
-      return;
     }    
-
-  port = make_io_port(fd, callback);
-  global_oop_source->on_fd(global_oop_source, fd, OOP_READ,
-			   oop_io_port_accept, port);
-
-  COMMAND_RETURN(c, port);
 }
 
 #if 0
