@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2001 Niels Möller
+ * Copyright (C) 2001, 2008 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <X11/X.h>
 #if HAVE_X11_XAUTH_H
 #include <X11/Xauth.h>
 #endif
@@ -40,50 +41,7 @@
 #include "lsh_string.h"
 #include "werror.h"
 
-#if HAVE_LIBXAU
-static int
-xauth_process(const char *filename,
-	      unsigned family,
-	      unsigned address_length, const char *address,
-	      unsigned number_length, const char *number,
-	      struct lsh_string **name,
-	      struct lsh_string **data)
-{
-  FILE *f = fopen(filename, "rb");
-  Xauth *xa;
-
-  if (!f)
-    return 0;
-
-  while ( (xa = XauReadAuth(f)) )
-    {
-      debug("xauth: family: %i\n", xa->family);
-      debug("       address: %ps\n", xa->address_length, xa->address);
-      debug("       display: %s\n", xa->number_length, xa->number);
-      debug("       name: %s\n", xa->name_length, xa->name);
-      debug("       data length: %i\n", xa->data_length);
-      
-      if ( (xa->family == family)
-	   && (xa->address_length == address_length)
-	   && (xa->number_length == number_length)
-	   && !memcmp(xa->address, address, address_length)
-	   && !memcmp(xa->number, number, number_length) )
-	{
-	  *name = ssh_format("%ls", xa->name_length, xa->name);
-	  *data = ssh_format("%ls", xa->data_length, xa->data);
-
-	  XauDisposeAuth(xa);
-	  fclose(f);
-
-	  return 1;
-	}
-    }
-  XauDisposeAuth(xa);
-  fclose(f);
-  
-  return 0;
-}
-
+/* FIXME: Merge in parse_display in client_x11.c. */
 int
 xauth_lookup(struct sockaddr *sa,
              unsigned number_length,
@@ -91,18 +49,21 @@ xauth_lookup(struct sockaddr *sa,
              struct lsh_string **name,
              struct lsh_string **data)
 {
+#if HAVE_LIBXAU
+
   int res = 0;
   unsigned family;
 
   const char *address;
   unsigned address_length;
   
-  /* FIXME: Use xgethostbyname */
+  /* FIXME: Use xgethostname */
 #define HOST_MAX 200
   char host[HOST_MAX];
   
   const char *filename = XauFileName();
-  
+  Xauth *xa;
+
   if (!filename)
     return 0;
 
@@ -122,7 +83,7 @@ xauth_lookup(struct sockaddr *sa,
 	
 	address = (char *) &s->sin_addr;
 	address_length = 4;
-	family = 0;
+	family = FamilyInternet;
 	break;
       }
 
@@ -133,37 +94,43 @@ xauth_lookup(struct sockaddr *sa,
 	
 	address = (char *) &s->sin6_addr;
 	address_length = 16;
-	family = 0;
+	family = FamilyInternet6;
 	break;
       }
 #endif
     default:
       return 0;
     }
-  
+
   /* 5 retries, 1 second each */
   if (XauLockAuth(filename, 5, 1, 0) != LOCK_SUCCESS)
     return 0;
 
-  res = xauth_process(filename,
-		      family,
-		      address_length, address,
-		      number_length, number,
-		      name, data);
-    
+  /* NOTE: The man page doesn't list the last two arguments,
+     name_length and name. From the source, it seems that a zero
+     name_length means match any name. */
+  xa = XauGetAuthByAddr(family, address_length, address,
+			number_length, number, 0, "");
+  if (xa)
+    {
+      debug("xauth: family: %i\n", xa->family);
+      debug("       address: %ps\n", xa->address_length, xa->address);
+      debug("       display: %s\n", xa->number_length, xa->number);
+      debug("       name: %s\n", xa->name_length, xa->name);
+      debug("       data length: %i\n", xa->data_length);
+
+      *name = ssh_format("%ls", xa->name_length, xa->name);
+      *data = ssh_format("%ls", xa->data_length, xa->data);
+
+      XauDisposeAuth(xa);
+      res = 1;
+    }
+  else
+    res = 0;
+
   XauUnlockAuth(filename);
-
   return res;
-}
 #else /* !HAVE_LIBXAU */
-
-int
-xauth_lookup(struct sockaddr *address UNUSED,
-             unsigned display_length UNUSED,
-             const char *display UNUSED,
-             struct lsh_string **name UNUSED,
-             struct lsh_string **auth UNUSED)
-{
   return 0;
-}
 #endif /* !HAVE_LIBXAU */
+}
