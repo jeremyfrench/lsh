@@ -41,6 +41,10 @@ export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
 
+unset DISPLAY
+TEST_DISPLAY=:17
+export XAUTHORITY="`pwd`/xauthority"
+
 # FIXME: Are these flags obsolete?
 
 # Ignore any options the tester might have put in the environment.
@@ -92,16 +96,17 @@ check_x11_support () {
     ../lsh --help | grep 'x11-forward' >/dev/null || test_skip
 }
 
+need_xvfb () {
+    check_x11_support
+    type Xvfb >/dev/null 2>&1 || test_skip
+}
+
 need_tcputils () {
-    if type tcpconnect >/dev/null 2>&1 ; then : ; else
-	test_skip
-    fi
+    type tcpconnect >/dev/null 2>&1 || test_skip
 }
 
 need_tsocks () {
-    if type tsocks >/dev/null 2>&1 ; then : ; else
-	test_skip
-    fi
+    type tsocks >/dev/null 2>&1 || test_skip
 }
 
 at_exit () {
@@ -172,6 +177,13 @@ spawn_lshg () {
     ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
     at_exit 'kill `cat $LSHG_PIDFILE`'
 }
+
+spawn_xvfb () {
+    Xvfb -nolisten tcp $TEST_DISPLAY &
+    at_exit "kill $!"
+    xauth generate $TEST_DISPLAY . 
+}
+
 
 # at_connect local-port max-connections shell-command
 at_connect () {
