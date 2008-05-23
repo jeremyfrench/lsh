@@ -1,3 +1,73 @@
+2008-05-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (TS_SH): Added x11-1-test and
+	x11-2-test.
+
+	* src/testsuite/functions.sh (XAUTHORITY: New exported variables.
+	(TEST_DISPLAY): New variable.
+	(DISPLAY): Unset.
+
+	* src/testsuite/x11-1-test: Use LSH_FLAGS to pass the --x11 flag to lsh.
+
+	* src/testsuite/x11-2-test: New testcase, using an Xvfb X server.
+
+	* src/Makefile.in (lshd_connection_SOURCES): Added server_x11.c.
+
+	* src/server_x11.h (class server_x11_info): Use const strings.
+
+	* src/server_x11.c (make_x11_server_info): New function.
+	(class forwarded_x11_callback): New class, replacing
+	channel_open_command_x11.
+	(do_open_forwarded_x11): New function, replacing new_x11_channel.
+	(make_forwarded_x11_callback): New function.
+	(class open_forwarded_x11): Deleted.
+	(expr server_x11_callback): Deleted.
+	(class server_x11_socket): Replaced old lsh_fd pointer by an fd.
+	This class should be merged with the corresponding port object.
+	(make_server_x11_socket): New function.
+	(open_x11_socket): Updated to new io_bind_sockaddr. Use
+	make_server_x11_socket. Don't call io_listen, leave that to the
+	caller.
+	(class xauth_exit_callback): Deleted.
+	(make_xauth_exit_callback): Deleted function.
+	(bad_string): Deleted function.
+	(create_xauth): New function using XauWriteAuth.
+	(server_x11_setup): Support the single flag. Deleted code for
+	spawnign an xauth process, use create_xauth and libXau instead.
+	Use io_listen and make_forwarded_x11_callback. Deleted
+	continuation and exception handling arguments. Changed DISPLAY to
+	unix:<number>:<screen>. 
+
+	* src/server_session.c (class server_session): New attribute
+	resources.
+	(do_kill_server_session): Kill additional resources.
+	(make_server_session): Initialize resources.
+	(x11_request_handler): Decode hex cookie. Deleted continuation
+	and exception handler arguments to server_x11_setup.
+
+	* src/lshd-userauth.c (main_argp_parser): Use lsh_string_hex_decode.
+	(decode_hex): Deleted function.
+
+	* src/lshd-connection.c (make_lshd_connection): Enable X11 forwarding.
+
+	* src/lsh_string.c (lsh_string_hex_decode): New function.
+
+	* src/io_commands.c (io_listen): New function.
+	(listen_tcp_command): Use io_listen. Deallocate sockaddr also in the
+	success case.
+	(listen_local_command): Use io_listen.
+
+	* src/io.h (class local_info): Use const strings.
+	* src/io.c (make_local_info): Use const arguments.
+
+	* src/xauth.c (xauth_process): Deleted function.
+	(xauth_lookup): Set family correctly for IPv6. Use XauGetAuthByAddr.
+
+	* src/scm/gaba.scm (process-class): Allow absent variable list.
+
+	* src/alist.h (class alist): Deleted size attribute. 
+	* src/alist.c: Deleted code to update size.
+
 2008-05-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Deleted check for cfmakeraw.
