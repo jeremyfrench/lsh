@@ -31,6 +31,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#if HAVE_X11_XAUTH_H
+#include <X11/Xauth.h>
+#endif
+
 #include <sys/types.h>
 
 #include <sys/socket.h>
@@ -42,10 +46,12 @@
 #include "channel_forward.h"
 #include "environ.h"
 #include "format.h"
+#include "io_commands.h"
 #include "lsh_string.h"
 #include "lsh_process.h"
 #include "reaper.h"
 #include "resource.h"
+#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -53,12 +59,6 @@
 #define GABA_DEFINE
 #include "server_x11.h.x"
 #undef GABA_DEFINE
-
-/* Forward declarations */
-
-/* FIXME: Should be static */
-struct command open_forwarded_x11;
-#define OPEN_FORWARDED_X11 (&open_forwarded_x11.super)
 
 #include "server_x11.c.x"
 
@@ -72,78 +72,72 @@ struct command open_forwarded_x11;
 
 #define X11_WINDOW_SIZE 10000
 
+static struct server_x11_info *
+make_x11_server_info(const struct lsh_string *display,
+		     const struct lsh_string *xauthority)
+{
+  NEW(server_x11_info, info);
+
+  info->display = display;
+  info->xauthority = xauthority;
+
+  return info;
+}
+
 /* GABA:
    (class
-     (name channel_open_command_x11)
-     (super channel_open_command)
+     (name forwarded_x11_callback)
+     (super command)
      (vars
-       (peer object listen_value)))
+       (connection object ssh_connection)
+       (single . int)))
 */
 
-static struct ssh_channel *
-new_x11_channel(struct channel_open_command *c,
-		struct channel_table *table,
-		uint32_t local_channel_number,
-		struct lsh_string **request)
+static void
+do_open_forwarded_x11(struct command *s,
+		      struct lsh_object *a,
+		      struct command_continuation *c UNUSED,
+		      struct exception_handler *e)
 {
-  CAST(channel_open_command_x11, self, c);
+  CAST(forwarded_x11_callback, self, s);
+  CAST(listen_value, lv, a);
   struct ssh_channel *channel;
 
-  /* NOTE: All accepted fd:s must end up in this function, so it
-   * should be ok to delay the REMEMBER call until here. It is done
-   * by make_channel_forward. */
+  trace("open_forwarded_x11_command\n");
 
-  debug("server_x11.c: new_x11_channel\n");
+  io_register_fd(lv->fd, "forwarded X11 socket");
+  if (self->single)
+    KILL_RESOURCE(lv->port);
 
-  channel = &make_channel_forward(self->peer->fd, X11_WINDOW_SIZE)->super;
-  channel->table = table;
-
+  channel = &make_channel_forward(lv->fd, X11_WINDOW_SIZE)->super;
+  
   /* NOTE: The request ought to include some reference to the
    * corresponding x11 request, but no such id is specified in the
    * protocol spec. */
   /* NOTE: The name "unix-domain" was suggested by Tatu in
    * <200011290813.KAA17106@torni.hel.fi.ssh.com> */
-  *request = format_channel_open(ATOM_X11, local_channel_number,
-				 channel,
-				 "%z%i", "unix-domain", 0);
-  
-  return channel;
+  if (!channel_open_new_type(self->connection, channel,
+			     ATOM_LD(ATOM_X11),
+			     "%z%i", "unix-domain", 0))
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
+					"Allocating a local channel number failed."));
+      KILL_RESOURCE(&channel->super);
+    }
 }
 
-DEFINE_COMMAND(open_forwarded_x11)
-     (struct command *s UNUSED,
-      struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)      
+static struct command *
+make_forwarded_x11_callback(struct ssh_connection *connection,
+			    int single)
 {
-  CAST(listen_value, peer, x);
+  NEW(forwarded_x11_callback, self);
+  self->super.call = do_open_forwarded_x11;
+  self->connection = connection;
+  self->single = single;
 
-  NEW(channel_open_command_x11, self);
-  self->super.super.call = do_channel_open_command;
-  self->super.new_channel = new_x11_channel;
-
-  self->peer = peer;
-
-  COMMAND_RETURN(c, self);
+  return &self->super;
 }
-
-/* Quite similar to forward_local_port in tcpforward_commands.c */
-/* GABA:
-   (expr
-     (name server_x11_callback)
-     (storage static)
-     (params
-       (table object channel_table))
-     (expr
-       ;; FIXME: This is a common construction for all types of
-       ;; forwardings.
-       (lambda (peer)
-	 (start_io
-	   (catch_channel_open 
-       	     (open_forwarded_x11 peer) table)))))
-*/
 	     
-#define XAUTH_DEBUG_TO_STDERR 0
 #define X11_MIN_COOKIE_LENGTH 10
 #define X11_SOCKET_DIR "/tmp/.X11-unix"
 
@@ -156,6 +150,8 @@ DEFINE_COMMAND(open_forwarded_x11)
  * "unix:17" instead of just ":17".
  */
 
+/* FIXME: Reorganize with the listening commands, so that this can
+   inherit io_port in io_commands.c? */
 /* GABA:
    (class
      (name server_x11_socket)
@@ -164,10 +160,10 @@ DEFINE_COMMAND(open_forwarded_x11)
        ; fd to the directory where the socket lives
        (dir . int)
        ; Name of the local socket
-       (name string)
+       (name const string)
        (display_number . int)
-       ; The corresponding listening fd
-       (fd object lsh_fd)))
+       ; The listening fd. Transferred to the port object later.
+       (fd . int)))
 */
 
 /* This code is quite paranoid in order to avoid symlink attacks when
@@ -186,9 +182,6 @@ do_kill_x11_socket(struct resource *s)
     {
       self->super.alive = 0;
 
-      assert(self->fd);
-      close_fd(self->fd);
-
       assert(self->dir >= 0);
 
       /* Temporarily change to the right directory. */
@@ -204,19 +197,38 @@ do_kill_x11_socket(struct resource *s)
 	       self->name, errno);
 
       lsh_popd(old_cd, X11_SOCKET_DIR);
+      if (self->fd >= 0)
+	close(self->fd);
     }
 }
 
-/* Creates a socket in tmp, accessible only by ourself. */
 static struct server_x11_socket *
-open_x11_socket(struct ssh_channel *channel)
+make_server_x11_socket(int dir, const struct lsh_string *name,
+		       int display_number, int fd)
+{
+  NEW(server_x11_socket, self);
+  init_resource(&self->super, do_kill_x11_socket);
+
+  self->dir = dir;
+  self->name = name;
+  self->display_number = display_number;
+  self->fd = fd;
+
+  return self;
+}
+
+/* Creates a socket in tmp. Some duplication with io_bind_local in
+   io.c, but sufficiently different that it doesn't seem practical to
+   unify them. */
+static struct server_x11_socket *
+open_x11_socket(void)
 {
   int old_cd;
   int dir;
   mode_t old_umask;
   
   int number;
-  struct lsh_fd *s;
+  int s;
   struct lsh_string *name = NULL;
 
   /* We have to change the umask, as that's the only way to control
@@ -243,14 +255,9 @@ open_x11_socket(struct ssh_channel *channel)
       sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
       snprintf(sa.sun_path, sizeof(sa.sun_path), "X%d", number);
 
-      s = io_bind_sockaddr((struct sockaddr *) &sa, SUN_LEN(&sa),
-			   /* Use the connection's exception handler,
-			    * as the channel may live shorter.
-			    *
-			    * FIXME: How does that handle i/o errors?
-			    */
-			   channel->table->e);
-      if (s)
+      s = io_bind_sockaddr((struct sockaddr *) &sa, SUN_LEN(&sa));
+
+      if (s >= 0)
 	{
 	  /* Store name */
 	  name = ssh_format("%lz", sa.sun_path);
@@ -270,88 +277,44 @@ open_x11_socket(struct ssh_channel *channel)
       return NULL;
     }
 
-  {
-    CAST_SUBTYPE(command, callback, server_x11_callback(channel->table));
-    
-    if (!io_listen(s, make_listen_callback(callback,
-					   channel->table->e)))
-      {
-	close(dir);
-	close_fd(s);
-	return NULL;
-      }
-  }
-  {
-    NEW(server_x11_socket, self);
-    init_resource(&self->super, do_kill_x11_socket);
-
-    self->dir = dir;
-    self->name = name;
-    self->fd = s;
-    self->display_number = number;
-    
-    remember_resource(channel->resources, &self->super);
-    return self;
-  }
+  return make_server_x11_socket(dir, name, number, s);
 }
 
-/* GABA:
-   (class
-     (name xauth_exit_callback)
-     (super exit_callback)
-     (vars
-       (c object command_continuation)
-       (e object exception_handler)))
-*/
-
-static void
-do_xauth_exit(struct exit_callback *s, int signaled,
-	      int core UNUSED, int value)
-{
-  CAST(xauth_exit_callback, self, s);
-  
-  if (signaled || value)
-    {
-      /* xauth failed */
-      const struct exception xauth_failed
-	= STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "xauth failed");
-      EXCEPTION_RAISE(self->e, &xauth_failed);
-      if (signaled)
-	werror("xauth invocation failed: Signal %i\n", value);
-      else
-	werror("xauth invocation failed: exit code: %i\n", value);
-    }
-  else
-    /* FIXME: Doesn't return the channel. */
-    COMMAND_RETURN(self->c, NULL);
-}
-
-static struct exit_callback *
-make_xauth_exit_callback(struct command_continuation *c,
-			 struct exception_handler *e)
-{
-  NEW(xauth_exit_callback, self);
-  self->super.exit = do_xauth_exit;
-  self->c = c;
-  self->e = e;
-
-  return &self->super;
-}
-
-/* NOTE: We don't check the arguments for spaces or other magic
- * characters. The xauth process in unprivileged, and the user is
- * properly authenticated to call it with arbitrary commands. We still
- * check for NUL characters, though. */
 static int
-bad_string(uint32_t length, const uint8_t *data)
+create_xauth(const char *file, Xauth *xa)
 {
-  return !!memchr(data, '\0', length);
-}
+  FILE *f;
+  int fd;
+  int res;
 
-/* FIXME: Use autoconf */
-#ifndef XAUTH_PROGRAM
-# define XAUTH_PROGRAM "/usr/X11R6/bin/xauth"
-#endif
+  /* Is locking overkill? */
+  if (XauLockAuth(file, 1, 1, 0) != LOCK_SUCCESS)
+    return 0;
+
+  fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  if (fd < 0)
+    {
+      werror("Opening xauth file %z failed %e\n", file, errno);
+    fail:
+      XauUnlockAuth(file);
+      return 0;
+    }
+	    
+  f = fdopen(fd, "wb");
+  if (!f)
+    {
+      werror("fdopen of xauth file %z failed.\n", file);
+      close(fd);
+      goto fail;
+    }
+  res = XauWriteAuth(f, xa);
+
+  if (fclose(f) != 0)
+    res = 0;
+
+  XauUnlockAuth(file);
+  return res;
+}
 
 /* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
 struct server_x11_info *
@@ -360,133 +323,79 @@ server_x11_setup(struct ssh_channel *channel,
 		 uint32_t protocol_length, const uint8_t *protocol,
 		 uint32_t cookie_length, const uint8_t *cookie,
 		 uint32_t screen,
-		 struct command_continuation *c,
-		 struct exception_handler *e)
+		 /* FIXME: Kludge, needs to move declaration of
+		    server_session to some header file. */ 
+		 struct resource_list *resources)
 {
-  struct lsh_string *display;
   struct lsh_string *xauthority;
   struct server_x11_socket *socket;
-  
+  Xauth xa;  
   const char *tmp;
+#define HOST_MAX 200
+  char host[HOST_MAX];
+  char number[10];
 
-  if (single)
-    {
-      werror("server_x11_setup: Single forwardings not yet supported.\n");
-      return NULL;
-    }
-  
-  if (bad_string(protocol_length, protocol))
-    {
-      werror("server_x11_setup: Bogus protocol name.\n");
-      return NULL;
-    }
-  
-  if (bad_string(cookie_length, cookie))
-    {
-      werror("server_x11_setup: Bogus cookie.\n");
-      return NULL;
-    }
-  
   if (cookie_length < X11_MIN_COOKIE_LENGTH)
     {
       werror("server_x11_setup: Cookie too small.\n");
       return NULL;
     }
 
+  if (gethostname(host, sizeof(host) - 1) < 0)
+    return 0;
+  
   /* Get a free socket under /tmp/.X11-unix/ */
-  socket = open_x11_socket(channel);
+  socket = open_x11_socket();
   if (!socket)
     return NULL;
 
   tmp = getenv(ENV_TMPDIR);
   if (!tmp)
     tmp = "/tmp";
-  
-  display = ssh_format(":%di.%di", socket->display_number, screen);
-  xauthority = ssh_format("%lz/.lshd.%li.Xauthority", tmp, socket->display_number);
-  
-  {
-    struct spawn_info spawn;
-#if SPAWN_INFO_FIRST_ARG != 1
-#error Can not handle SPAWN_INFO_FIRST_ARG != 1
-#endif
-    const char *args[4] = { NULL, "-c", XAUTH_PROGRAM, NULL };
-    struct env_value env;
 
-    struct lsh_process *process;
+  /* FIXME: What naming convention should be used? Include user name? */
+  xauthority = ssh_format("%lz/.lshd.%di.Xauthority", tmp, socket->display_number);
 
-    int null;
+  snprintf(number, sizeof(number), "%d", socket->display_number);
+  xa.family = FamilyLocal;
+  xa.address_length = strlen(host);
+  xa.address = host;
+  xa.number_length = strlen(number);
+  xa.number = number;
+  xa.name_length = protocol_length;
+  /* Casts needed since the Xauth pointers are non-const. */
+  xa.name = (char *) protocol;
+  xa.data_length = cookie_length;
+  xa.data = (char *) cookie;
 
-    env.name = "XAUTHORITY";
-    env.value = xauthority;
-    
-    memset(&spawn, 0, sizeof(spawn));
-    /* FIXME: Arrange that stderr data (and perhaps stdout data as
-     * well) is sent as extended data on the channel. To do that, we
-     * need another channel flag to determine whether or not EOF
-     * should be sent when the number of sources gets down to 0. */
-#if XAUTH_DEBUG_TO_STDERR
-    null = dup(STDERR_FILENO);
-#else
-    null = open("/dev/null", O_WRONLY);
-#endif
-    if (null < 0)
-      goto fail;
+  if (!create_xauth(lsh_get_cstring(xauthority), &xa))
+    {
+      lsh_string_free(xauthority);
+      KILL_RESOURCE(&socket->super);
+      return NULL;
+    }
+  else
+    {
+      struct resource *port;
+      port = io_listen(socket->fd,
+		       make_forwarded_x11_callback(channel->connection, single));
+      if (!port)
+	{
+	  KILL_RESOURCE(&socket->super);
+	  return NULL;
+	}
+      else
+	{
+	  /* Transferred to the port object. FIXME: Cleanup? */
+	  socket->fd = -1;
+	  remember_resource(resources, &socket->super);
+	  remember_resource(resources, port);
 
-    /* [0] for reading, [1] for writing */
-    if (!lsh_make_pipe(spawn.in))
-      {
-	close(null);
-	goto fail;
-      }
-    spawn.out[0] = -1; spawn.out[1] = null;
-    spawn.err[0] = -1; spawn.err[1] = null;
-    
-    spawn.pty = NULL;
-    spawn.login = 0;
-    spawn.argv = args;
-    spawn.env_length = 1;
-    spawn.env = &env;
-
-    process = spawn_shell(&spawn, make_xauth_exit_callback(c, e));
-    if (process)
-      {
-	NEW(server_x11_info, info);
-	static const struct report_exception_info report =
-	  STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO, "writing xauth stdin");
-
-	struct lsh_fd *in
-	  = io_write(make_lsh_fd(spawn.in[1], IO_NORMAL,
-				 "xauth stdin",
-				 make_report_exception_handler
-				 (&report, e, HANDLER_CONTEXT)),
-		     1024, NULL);
-
-	A_WRITE(&in->write_buffer->super,
-		/* NOTE: We pass arbitrary data to the xauth process,
-		 * if the user so wish. */
-		 ssh_format("add %lS %ls %ls\n",
-			   display,
-			   protocol_length, protocol,
-			   cookie_length, cookie));
-	close_fd_write(in);
-
-	remember_resource(channel->resources, &process->super);
-	remember_resource(channel->resources, &in->super);	
-	
-	info->display = display;
-	info->xauthority = xauthority;
-	
-	return info;
-      }
-    else
-      {
-      fail:
-	lsh_string_free(display);
-	lsh_string_free(xauthority);
-	return NULL;
-      }
-  }
+	  return make_x11_server_info(ssh_format("unix:%di.%di",
+						 socket->display_number, screen),
+				      xauthority);
+	}
+    }
 }
 
 #endif /* WITH_X11_FORWARD */

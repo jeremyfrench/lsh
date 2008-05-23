@@ -35,8 +35,8 @@
    (class
      (name server_x11_info)
      (vars
-       (display string)
-       (xauthority string)))
+       (display const string)
+       (xauthority const string)))
 */
 
 struct server_x11_info *
@@ -45,8 +45,7 @@ server_x11_setup(struct ssh_channel *channel,
 		 uint32_t protocol_length, const uint8_t *protocol,
 		 uint32_t cookie_length, const uint8_t *cookie,
 		 uint32_t screen,
-		 struct command_continuation *c,
-		 struct exception_handler *e);
+		 struct resource_list *resources);
 
 
 #endif /* LSH_SERVER_X11_H_INCLUDED */
