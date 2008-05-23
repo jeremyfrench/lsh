@@ -146,7 +146,7 @@ lsh_string_hex_decode(uint32_t length, const uint8_t *hex)
     return NULL;
 
   s = lsh_string_alloc(length / 2);
-  for (i = 0; i < length; i+= 2)
+  for (i = 0; i < length; i += 2)
     {
       int d1, d2;
 
