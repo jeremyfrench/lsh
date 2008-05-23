@@ -461,7 +461,7 @@
   (let* ((name (get 'name attributes cadr))
 	 (condition (get 'condition attributes cadr))
 	 (super (get 'super attributes cadr))
-	 (vars (preprocess-vars name (get 'vars attributes cdr)))
+	 (vars (preprocess-vars name (or (get 'vars attributes cdr) '())))
 	 (meta (get 'meta attributes cadr))
 	 (methods (get 'methods attributes cdr)))
     (werror "Processing class ~S\n" name)
