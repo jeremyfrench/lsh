@@ -203,6 +203,9 @@ unsigned
 lsh_string_base64_encode_final(struct lsh_string *s, uint32_t start,
 			       struct base64_encode_ctx *ctx);
 
+struct lsh_string *
+lsh_string_hex_decode(uint32_t length, const uint8_t *hex);
+
 int
 lsh_string_transport_iterator_first(struct lsh_string *s,
 				    struct sexp_iterator *iterator);

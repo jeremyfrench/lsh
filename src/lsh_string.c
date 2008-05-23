@@ -123,6 +123,52 @@ lsh_string_dup(const struct lsh_string *s)
   return n;
 }
 
+struct lsh_string *
+lsh_string_hex_decode(uint32_t length, const uint8_t *hex)
+{
+  /* Copied from nettle/base16-decode.c */
+  static const signed char
+    table[0x80] =
+    {
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -2, -2, -1, -1, -2, -1, -1, 
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
+      -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    };
+  struct lsh_string *s;
+  uint32_t i;
+
+  if (length & 1)
+    return NULL;
+
+  s = lsh_string_alloc(length / 2);
+  for (i = 0; i < length; i+= 2)
+    {
+      int d1, d2;
+
+      if (hex[i] >= 0x80 || hex[i+1] >= 0x80)
+	{
+	fail:
+	  debug("lsh_string_decode_hex: Invalid hex input.\n");
+	  lsh_string_free(s);
+	  return NULL;
+	}
+      d1 = table[hex[i]];
+      if (d1 < 0)
+	goto fail;
+      d2 = table[hex[i+1]];
+      if (d2 < 0)
+	goto fail;
+
+      lsh_string_putc(s, i/2, (d1 << 4) | d2);
+    }
+  return s;
+}
+
 /* FIXME: Could move some of the more obscure utility functions to a
    separate file. */
 
