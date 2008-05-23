@@ -163,6 +163,7 @@ lshd_connection_SOURCES = lshd-connection.c \
 			  server_pty.c \
 			  server_session.c \
 			  server_tcpforward.c \
+ 			  server_x11.c \
 			  translate_signal.c \
 			  unix_process.c
 
