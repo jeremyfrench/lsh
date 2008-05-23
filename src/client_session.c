@@ -293,9 +293,7 @@ DEFINE_CHANNEL_REQUEST(handle_exit_status)
 	(struct channel_request *s UNUSED,
 	 struct ssh_channel *channel,
 	 const struct channel_request_info *info,
-	 struct simple_buffer *args,
-	 struct command_continuation *c,
-	 struct exception_handler *e UNUSED)
+	 struct simple_buffer *args)
 {
   CAST(client_session, session, channel);
   uint32_t status;
@@ -314,8 +312,6 @@ DEFINE_CHANNEL_REQUEST(handle_exit_status)
       assert(channel->sinks);
       channel->sinks--;
       channel_maybe_close(channel);
-
-      COMMAND_RETURN(c, channel);
     }
   else
     /* Invalid request */
@@ -326,9 +322,7 @@ DEFINE_CHANNEL_REQUEST(handle_exit_signal)
 	(struct channel_request *s UNUSED,
 	 struct ssh_channel *channel,
 	 const struct channel_request_info *info,
-	 struct simple_buffer *args,
-	 struct command_continuation *c,
-	 struct exception_handler *e UNUSED)
+	 struct simple_buffer *args)
 {
   CAST(client_session, session, channel);
 
@@ -363,8 +357,6 @@ DEFINE_CHANNEL_REQUEST(handle_exit_signal)
       assert(channel->sinks);
       channel->sinks--;
       channel_maybe_close(channel);
-
-      COMMAND_RETURN(c, channel);
     }
   else
     /* Invalid request */
