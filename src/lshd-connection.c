@@ -265,15 +265,15 @@ make_lshd_connection(struct lshd_connection_config *config)
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  /* FIXME: Never enables X11 */
+  /* FIXME: Make pty and x11 support configurable. */
   ALIST_SET(self->super.channel_types, ATOM_SESSION,
 	    &make_open_session(
-	      make_alist(4,
+	      make_alist(5,
 			 ATOM_SHELL, &shell_request_handler,
 			 ATOM_EXEC, &exec_request_handler,
 			 ATOM_PTY_REQ, &pty_request_handler,
 			 ATOM_WINDOW_CHANGE, &window_change_request_handler,
-			 /* ATOM_X11_REQ, &x11_request_handler, */ -1),
+			 ATOM_X11_REQ, &x11_request_handler, -1),
 	      self->config->helper_fd)->super);
 
   /* FIXME: Make tcpip forwarding optional */
