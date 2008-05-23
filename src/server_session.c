@@ -641,91 +641,72 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 DEFINE_CHANNEL_REQUEST(shell_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info UNUSED,
-      struct simple_buffer *args,
-      struct command_continuation *c,
-      struct exception_handler *e)
+      const struct channel_request_info *info,
+      struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
   struct spawn_info spawn;
   struct env_value env[5];
   
-  static const struct exception shell_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Shell request failed");
-
   trace("shell_request_handler\n");
-  if (!parse_eod(args))
-    {
-      SSH_CONNECTION_ERROR(channel->connection,
-			   "Invalid shell CHANNEL_REQUEST message.");
-      return;
+  if (parse_eod(args))
+    {    
+      if (session->process)
+	{
+	  /* Already spawned a shell or command */
+	  channel_request_reply(channel, info, 0);
+	  return;
+	}
+
+      init_spawn_info(&spawn, session, NULL, 5, env);
+      spawn.login = 1;
+
+      channel_request_reply(channel, info,
+			    spawn_process(session, &spawn));
     }
-    
-  if (session->process)
-    /* Already spawned a shell or command */
-    goto fail;
-
-  init_spawn_info(&spawn, session, NULL, 5, env);
-  spawn.login = 1;
-
-  if (spawn_process(session, &spawn))
-    COMMAND_RETURN(c, channel);
   else
-    {
-    fail:
-      EXCEPTION_RAISE(e, &shell_request_failed);
-    }
+    SSH_CONNECTION_ERROR(channel->connection,
+			 "Invalid shell CHANNEL_REQUEST message.");
 }
 
 DEFINE_CHANNEL_REQUEST(exec_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info UNUSED,
-      struct simple_buffer *args,
-      struct command_continuation *c,
-      struct exception_handler *e)
+      const struct channel_request_info *info,
+      struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
 
-  static const struct exception exec_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Exec request failed");
-  
   uint32_t command_len;
   const uint8_t *command;
 
-  if (!(parse_string(args, &command_len, &command)
-	&& parse_eod(args)))
+  if (parse_string(args, &command_len, &command)
+	&& parse_eod(args))
     {
-      SSH_CONNECTION_ERROR(channel->connection,
-			   "Invalid exec CHANNEL_REQUEST message.");
-      return;
-    }
-    
-  if (/* Already spawned a shell or command */
-      session->process
       /* Command can't contain NUL characters. */
-      || memchr(command, '\0', command_len))
-    
-    EXCEPTION_RAISE(e, &exec_request_failed);
-  else
-    {
-      struct spawn_info spawn;
-      const char *args[4] = { NULL, "-c", NULL, NULL };
-      struct env_value env[5];
-
-      struct lsh_string *s = ssh_format("%ls", command_len, command);
-      args[2] = lsh_get_cstring(s);
-      
-      init_spawn_info(&spawn, session, args, 5, env);
-      spawn.login = 0;      
-      
-      if (spawn_process(session, &spawn))
-	COMMAND_RETURN(c, channel);
+      if (session->process || memchr(command, '\0', command_len))
+	channel_request_reply(channel, info, 0);
       else
-	EXCEPTION_RAISE(e, &exec_request_failed);
+	{
+	  struct spawn_info spawn;
+	  const char *args[4] = { NULL, "-c", NULL, NULL };
+	  struct env_value env[5];
+	  int res;
+	  struct lsh_string *s = ssh_format("%ls", command_len, command);
 
-      lsh_string_free(s);
+	  args[2] = lsh_get_cstring(s);
+      
+	  init_spawn_info(&spawn, session, args, 5, env);
+	  spawn.login = 0;      
+      
+	  res = spawn_process(session, &spawn);
+	  lsh_string_free(s);
+	  channel_request_reply(channel, info, res);
+	}
     }
+  else
+    SSH_CONNECTION_ERROR(channel->connection,
+			 "Invalid exec CHANNEL_REQUEST message.");
 }
 
 /* For simplicity, represent a subsystem simply as a name of the
@@ -744,56 +725,47 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 static void
 do_spawn_subsystem(struct channel_request *s,
 		   struct ssh_channel *channel,
-		   const struct channel_request_info *info UNUSED,
-		   struct simple_buffer *args,
-		   struct command_continuation *c,
-		   struct exception_handler *e)
+		   const struct channel_request_info *info,
+		   struct simple_buffer *args)
 {
   CAST(subsystem_request, self, s);
   CAST(server_session, session, channel);
 
-  static const struct exception subsystem_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "Subsystem request failed");
-
   const uint8_t *name;
   uint32_t name_length;
 
-  const char *program;
-      
-  if (! (parse_string(args, &name_length, &name) && parse_eod(args)))
-    {
-      SSH_CONNECTION_ERROR(channel->connection,
-			   "Invalid subsystem CHANNEL_REQUEST message.");
-      return;
-    }
+  if (parse_string(args, &name_length, &name)
+      && parse_eod(args))
+    {    
+      const char * program = server_lookup_module(self->subsystems, name_length, name);
   
-  program = server_lookup_module(self->subsystems, name_length, name);
-  
-  if (!session->process && program)
-    {
-      struct spawn_info spawn;
-      const char *args[4] = { NULL, "-c", NULL, NULL };
-      struct env_value env[5];
-
-      /* Don't use any pty */
-      if (session->pty)
+      if (!session->process && program)
 	{
-	  KILL_RESOURCE(&session->pty->super);
-	  session->pty = NULL;
-	}
+	  struct spawn_info spawn;
+	  const char *args[4] = { NULL, "-c", NULL, NULL };
+	  struct env_value env[5];
 
-      args[2] = program;
+	  /* Don't use any pty */
+	  if (session->pty)
+	    {
+	      KILL_RESOURCE(&session->pty->super);
+	      session->pty = NULL;
+	    }
+
+	  args[2] = program;
       
-      init_spawn_info(&spawn, session, args, 5, env);
-      spawn.login = 0;
+	  init_spawn_info(&spawn, session, args, 5, env);
+	  spawn.login = 0;
 
-      if (spawn_process(session, &spawn))
-	{
-	  COMMAND_RETURN(c, channel);
-	  return;
+	  channel_request_reply(channel, info,
+				spawn_process(session, &spawn));
 	}
+      else
+	channel_request_reply(channel, info, 0);
     }
-  EXCEPTION_RAISE(e, &subsystem_request_failed);
+  else
+    SSH_CONNECTION_ERROR(channel->connection,
+			 "Invalid subsystem CHANNEL_REQUEST message.");
 }
 
 struct channel_request *
@@ -814,10 +786,8 @@ make_subsystem_handler(const char **subsystems)
 DEFINE_CHANNEL_REQUEST(pty_request_handler)
      (struct channel_request *c UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info UNUSED,
-      struct simple_buffer *args,
-      struct command_continuation *s,
-      struct exception_handler *e)
+      const struct channel_request_info *info,
+      struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
   struct lsh_string *term = NULL;
@@ -825,9 +795,6 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
   uint32_t char_height;
   uint32_t pixel_width;
   uint32_t pixel_height;
-
-  static const struct exception pty_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "pty request failed");
 
   struct pty_info *pty = make_pty_info();
 
@@ -855,7 +822,7 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
 	  werror("pty_request_handler: pty %s NULL, process %s NULL\n",
 		 session->pty ? "!=" : "=", session->process ? "!=" : "=");
 	  verbose("Pty allocation failed.\n");
-	  EXCEPTION_RAISE(e, &pty_request_failed);
+	  channel_request_reply(channel, info, 0);
 	}
       else
 	{
@@ -866,9 +833,8 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
 
 	  verbose(" ... granted.\n");
 	  debug("pty master fd: %i\n", pty->master);
-	  COMMAND_RETURN(s, channel);
 
-	  /* Success */
+	  channel_request_reply(channel, info, 1);
 	  return;
 	}
     }
@@ -886,10 +852,8 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
 DEFINE_CHANNEL_REQUEST(window_change_request_handler)
 	(struct channel_request *c UNUSED,
 	 struct ssh_channel *channel,
-	 const struct channel_request_info *info UNUSED,
-	 struct simple_buffer *args,
-	 struct command_continuation *s,
-	 struct exception_handler *e)
+	 const struct channel_request_info *info,
+	 struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
   uint32_t char_width;
@@ -900,27 +864,23 @@ DEFINE_CHANNEL_REQUEST(window_change_request_handler)
 
   verbose("Receiving window-change request...\n");
 
-  if (parse_uint32(args, &char_width)
+  if (!info->want_reply
+      && parse_uint32(args, &char_width)
       && parse_uint32(args, &char_height)
       && parse_uint32(args, &pixel_width)
       && parse_uint32(args, &pixel_height)
       && parse_eod(args))
     {
-      static const struct exception winch_request_failed =
-	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0,
-			 "window-change request failed: No pty");
-
       dims.ws_col = char_width;
       dims.ws_row = char_height;
       dims.ws_xpixel = pixel_height;
       dims.ws_ypixel = pixel_width;
 
+      /* On success, rely on the terminal driver sending SIGWINCH */
       if (session->pty && session->in.fd >= 0
-          && ioctl(session->in.fd, TIOCSWINSZ, &dims) != -1)
-        /* Success. Rely on the terminal driver sending SIGWINCH */
-        COMMAND_RETURN(s, channel);
-      else
-        EXCEPTION_RAISE(e, &winch_request_failed);
+	  && ioctl(session->in.fd, TIOCSWINSZ, &dims) == -1)
+	werror("window_change_request_handler: ioctl TIOCSWINSZ failed: %e\n",
+	       errno);
     }
   else
     SSH_CONNECTION_ERROR(channel->connection,
@@ -933,15 +893,10 @@ DEFINE_CHANNEL_REQUEST(window_change_request_handler)
 DEFINE_CHANNEL_REQUEST(x11_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info UNUSED,
-      struct simple_buffer *args,
-      struct command_continuation *c,
-      struct exception_handler *e)
+      const struct channel_request_info *info,
+      struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
-
-  static const struct exception x11_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "x11-req failed");
 
   const uint8_t *protocol;
   uint32_t protocol_length;
@@ -970,15 +925,13 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
 					       session->resources)))
 	{
 	  verbose("X11 request failed.\n");
-	  lsh_string_free(cookie);
-	  EXCEPTION_RAISE(e, &x11_request_failed);
+	  channel_request_reply(channel, info, 0);
 	}
       else
 	{
-	  lsh_string_free(cookie);
-	  COMMAND_RETURN(c, channel);
-	  return;
+	  channel_request_reply(channel, info, 1);
 	}
+      lsh_string_free(cookie);
     }
   else
     {
