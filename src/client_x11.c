@@ -578,17 +578,13 @@ parse_display(struct client_x11_display *self, const char *display)
   
   if (host)
     {
-      /* NOTE: How do we support IPv6 displays?  Actually, xauth ought to use DNS
-       * names rather than IP addresses. */
-
       /* FIXME: Some duplication with io_lookup_address. */
       struct addrinfo hints;
       struct addrinfo *list;
       int err;
       char service[10];
 
-      /* For now, uses IPv4 only. I have no idea how IPv6 works work
-       * with xauth. */
+      /* FIXME: uses IPv4 only. */
       memset(&hints, 0, sizeof(hints));
       hints.ai_family = AF_INET;
       hints.ai_socktype = SOCK_STREAM;
