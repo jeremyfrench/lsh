@@ -1,0 +1,17 @@
+#! /bin/sh
+
+echo lshd X11, test 1
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+need_xvfb
+
+spawn_lshd && spawn_xvfb \
+  && DISPLAY=$TEST_DISPLAY LSH_FLAGS="$LSH_FLAGS --x11" exec_lsh xdpyinfo > /dev/null \
+  && test_success
+
+test_done
