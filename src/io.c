@@ -804,8 +804,8 @@ io_set_close_on_exec(int fd)
 /* AF_LOCAL sockets */
 
 struct local_info *
-make_local_info(struct lsh_string *directory,
-		struct lsh_string *name)
+make_local_info(const struct lsh_string *directory,
+		const struct lsh_string *name)
 {
   if (!directory || !name
       || memchr(lsh_string_data(name), '/', lsh_string_length(name)))
@@ -1056,7 +1056,6 @@ io_bind_local(struct local_info *info)
 
   old_umask = umask(0077);
 
-  /* Bind and listen */
   fd = io_bind_sockaddr((struct sockaddr *) local, local_length);
   
   /* Ok, now we restore umask and cwd */

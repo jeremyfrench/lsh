@@ -81,13 +81,13 @@ io_close_fd(int fd);
    (class
      (name local_info)
      (vars
-       (directory string)
-       (name string)))
+       (directory const string)
+       (name const string)))
 */
 
 struct local_info *
-make_local_info(struct lsh_string *directory,
-		struct lsh_string *name);
+make_local_info(const struct lsh_string *directory,
+		const struct lsh_string *name);
 
 
 /* Passed to the listen callback. Note that the fd here isn't
