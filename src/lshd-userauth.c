@@ -641,39 +641,6 @@ start_service(struct lshd_user *user, char **argv)
   werror("start_service: exec failed: %e.", errno);
 }
 
-static struct lsh_string *
-decode_hex(const char *hex)
-{
-  struct base16_decode_ctx ctx;
-  struct lsh_string *s;
-  unsigned length = strlen(hex);
-  unsigned i;
-  
-  s = lsh_string_alloc(BASE16_DECODE_LENGTH(length));
-  
-  base16_decode_init(&ctx);
-  for (i = 0; *hex; hex++)
-    {
-      uint8_t octet;
-      switch(base16_decode_single(&ctx, &octet, *hex))
-	{
-	case -1:
-	  lsh_string_free(s);
-	  return NULL;
-	case 0:
-	  break;
-	case 1:
-	  lsh_string_putc(s, i++, octet);
-	}
-    }
-  if (!base16_decode_final(&ctx))
-    {
-      lsh_string_free(s);
-      return NULL;
-    }
-  lsh_string_trunc(s, i);
-  return s;      
-}
 
 /* Option parsing */
 
@@ -743,7 +710,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_SESSION_ID:
-      self->session_id = decode_hex(arg);
+      self->session_id = lsh_string_hex_decode(strlen(arg), arg);
       if (!self->session_id)
 	argp_error(state, "Invalid argument for --session-id.");
       break;
