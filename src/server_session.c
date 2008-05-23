@@ -75,6 +75,8 @@
 
        ; X11 forwarding.
        (x11 object server_x11_info)
+       ; FIXME: Should use an x11 forward object that is a resource.
+       (resources object resource_list)
        
        ; Value of the TERM environment variable
        (term string)
@@ -104,7 +106,9 @@ do_kill_server_session(struct resource *s)
 
       if (self->pty)
 	KILL_RESOURCE(&self->pty->super);
-      
+
+      KILL_RESOURCE_LIST(self->resources);
+
       /* Doesn't use channel_write_state_close, since the channel is
 	 supposedly dead already. */
       io_close_fd(self->in.fd);
@@ -285,6 +289,7 @@ make_server_session(uint32_t initial_window,
 
   self->pty = NULL;
   self->x11 = NULL;
+  self->resources = make_resource_list();
   self->term = NULL;
   self->client = NULL;
 
@@ -921,19 +926,14 @@ DEFINE_CHANNEL_REQUEST(window_change_request_handler)
     SSH_CONNECTION_ERROR(channel->connection,
 			 "Invalid window-change request.");
 }
-
 #endif /* WITH_PTY_SUPPORT */
 
-#if 0
 #if WITH_X11_FORWARD
 
-/* FIXME: We must delay the handling of any shell request until we
- * have responded to the x11-req message. Or maybe leave that problem
- * to the client? */
 DEFINE_CHANNEL_REQUEST(x11_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      struct channel_request_info *info UNUSED,
+      const struct channel_request_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *c,
       struct exception_handler *e)
@@ -941,12 +941,13 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
   CAST(server_session, session, channel);
 
   static const struct exception x11_request_failed =
-    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "x11-req failed");
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, 0, "x11-req failed");
 
   const uint8_t *protocol;
   uint32_t protocol_length;
-  const uint8_t *cookie;
-  uint32_t cookie_length;
+  const uint8_t *hex_cookie;
+  uint32_t hex_cookie_length;
+  struct lsh_string *cookie;
   uint32_t screen;
   unsigned single;
 
@@ -954,8 +955,9 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
 
   if (parse_uint8(args, &single)
       && parse_string(args, &protocol_length, &protocol)
-      && parse_string(args, &cookie_length, &cookie)
-      && parse_uint32(args, &screen))
+      && parse_string(args, &hex_cookie_length, &hex_cookie)
+      && parse_uint32(args, &screen)
+      && (cookie = lsh_string_hex_decode(hex_cookie_length, hex_cookie)))
     {
       /* The client may only request one x11-forwarding, and only
        * before starting a process. */
@@ -963,14 +965,18 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
 	  || !(session->x11 = server_x11_setup(channel,
 					       single,
 					       protocol_length, protocol,
-					       cookie_length, cookie,
-					       screen, c, e)))
+					       STRING_LD(cookie),
+					       screen,
+					       session->resources)))
 	{
 	  verbose("X11 request failed.\n");
+	  lsh_string_free(cookie);
 	  EXCEPTION_RAISE(e, &x11_request_failed);
 	}
       else
-	{	  
+	{
+	  lsh_string_free(cookie);
+	  COMMAND_RETURN(c, channel);
 	  return;
 	}
     }
@@ -980,6 +986,4 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
       SSH_CONNECTION_ERROR(channel->connection, "Invalid x11 request.");
     }
 }
-
 #endif /* WITH_X11_FORWARD */
-#endif
