@@ -70,7 +70,6 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
 			     "%S%i%S%i",
 			     target->ip, target->port,
 			     lv->peer->ip, lv->peer->port))
-			     
     {
       EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
 					"Allocating a local channel number failed."));
