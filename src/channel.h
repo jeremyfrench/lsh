@@ -158,12 +158,7 @@ enum channel_flag {
        (event method void "enum channel_event")
   
        ; Number of channel requests that we expect replies on.
-       (pending_requests . unsigned)
-
-       ; Channel requests that we have received, and should reply to
-       ; in the right order
-       (active_requests struct object_queue)))
-       
+       (pending_requests . unsigned)))
 */
 
 #define CHANNEL_EVENT(s, t) \
@@ -176,21 +171,20 @@ enum channel_flag {
    (class
      (name channel_request)
      (vars
+       ; The handler is expected to call channel_request_reply before
+       ; returning, to ensure that requests are replied to in the
+       ; right order.
        (handler method void
 		"struct ssh_channel *channel"
 		"const struct channel_request_info *info"
-		"struct simple_buffer *args"
-		"struct command_continuation *c"
-		"struct exception_handler *e")))
+		"struct simple_buffer *args")))
 */
 
 #define DEFINE_CHANNEL_REQUEST(name)				\
 static void do_##name(struct channel_request *s,		\
 		      struct ssh_channel *channel,		\
                       const struct channel_request_info *info,	\
-		      struct simple_buffer *args,		\
-		      struct command_continuation *c,		\
-		      struct exception_handler *e);		\
+		      struct simple_buffer *args);		\
 								\
 struct channel_request name =					\
 { STATIC_HEADER, do_##name };					\
@@ -241,11 +235,6 @@ channel_send_global_request(struct ssh_connection *connection, int type,
 			    const char *format, ...);
 
 struct lsh_string *
-format_channel_request_i(struct channel_request_info *info,
-			 struct ssh_channel *channel,
-			 uint32_t args_length, const uint8_t *args_data);
-
-struct lsh_string *
 format_open_confirmation(struct ssh_channel *channel,
 			 const char *format, ...);
 
@@ -266,6 +255,11 @@ channel_open_confirm(const struct channel_open_info *info,
 void
 channel_open_deny(const struct channel_open_info *info,
 		  int error, const char *msg);
+
+void
+channel_request_reply(struct ssh_channel *channel,
+		      const struct channel_request_info *info,
+		      int result);
 
 void
 channel_eof(struct ssh_channel *channel);
