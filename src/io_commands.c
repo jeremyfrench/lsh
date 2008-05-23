@@ -125,6 +125,7 @@ make_listen_value(struct resource *port, int fd,
       /* Silently use NULL. This happens when a gateway client
        * connects. */
       self->peer = NULL;
+      break;
     default:
       werror("make_listen_value: Unsupported address family.\n");
       self->peer = NULL;
