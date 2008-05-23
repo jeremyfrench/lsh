@@ -1,5 +1,38 @@
 2008-05-23  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/server_session.c (shell_request_handler): Updated to new
+	channel_request interface.
+	(exec_request_handler): Likewise.
+	(do_spawn_subsystem): Likewise.
+	(pty_request_handler): Likewise.
+	(x11_request_handler): Likewise.
+	(window_change_request_handler): Updated to new channel_request
+	interface. Never send a reply. Write a warning if ioctl fails.
+
+	* src/client_session.c (handle_exit_status): Updated to new
+	channel_request interface. Never send a reply.
+	(handle_exit_signal): Likewise.
+
+	* src/channel.h (class ssh_channel): Deleted the active_requests
+	queue.
+	(class channel_request): Deleted contuniation and exception
+	handler arguments to the handler method.
+	(DEFINE_CHANNEL_REQUEST): Updated prototype.
+
+	* src/channel.c (class channel_request_continuation): Deleted.
+	(send_channel_request_responses): Deleted function.
+	(do_channel_request_response): Deleted function.
+	(make_channel_request_response): Deleted function.
+	(class channel_request_exception_handler): Deleted.
+	(do_exc_channel_request_handler): Deleted function.
+	(make_channel_request_exception_handler): Deleted function.
+	(handle_channel_request): Pass no continuation and exception
+	handler to the request handler. Request handlers are expected to
+	call channel_request_reply before returning, making unnecessary
+	the old code for ensuring that requests are replied to in order.
+	(channel_request_reply): New function.
+	(init_channel): No initialization of active_requests.
+
 	* src/testsuite/Makefile.in (TS_SH): Added x11-1-test and
 	x11-2-test.
 
