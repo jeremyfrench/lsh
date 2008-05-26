@@ -16,7 +16,7 @@ TS_SOURCES = arcfour-test.c aes-test.c blowfish-test.c cast128-test.c \
 	     serpent-test.c twofish-test.c \
              md5-test.c sha1-test.c rsa-test.c dsa-test.c \
 	     server-config-test.c spki-tag-test.c \
-             string-test.c \
+             string-test.c sockaddr2info-test.c \
 	     utf8-test.c
 
 TS_SH = conv-1-test conv-2-test conv-3-test \
