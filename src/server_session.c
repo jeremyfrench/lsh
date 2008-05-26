@@ -74,9 +74,7 @@
        (pty object pty_info)
 
        ; X11 forwarding.
-       (x11 object server_x11_info)
-       ; FIXME: Should use an x11 forward object that is a resource.
-       (resources object resource_list)
+       (x11 object x11_listen_port)
        
        ; Value of the TERM environment variable
        (term string)
@@ -107,7 +105,8 @@ do_kill_server_session(struct resource *s)
       if (self->pty)
 	KILL_RESOURCE(&self->pty->super);
 
-      KILL_RESOURCE_LIST(self->resources);
+      if (self->x11)
+	KILL_RESOURCE(&self->x11->super.super);
 
       /* Doesn't use channel_write_state_close, since the channel is
 	 supposedly dead already. */
@@ -289,7 +288,6 @@ make_server_session(uint32_t initial_window,
 
   self->pty = NULL;
   self->x11 = NULL;
-  self->resources = make_resource_list();
   self->term = NULL;
   self->client = NULL;
 
@@ -921,8 +919,7 @@ DEFINE_CHANNEL_REQUEST(x11_request_handler)
 					       single,
 					       protocol_length, protocol,
 					       STRING_LD(cookie),
-					       screen,
-					       session->resources)))
+					       screen)))
 	{
 	  verbose("X11 request failed.\n");
 	  channel_request_reply(channel, info, 0);
