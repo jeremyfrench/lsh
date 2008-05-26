@@ -25,7 +25,7 @@
 #define LSH_SERVER_X11_H_INCLUDED
 
 #include "channel.h"
-#include "resource.h"
+#include "io.h"
 
 #define GABA_DECLARE
 #include "server_x11.h.x"
@@ -33,19 +33,29 @@
 
 /* GABA:
    (class
-     (name server_x11_info)
+     (name x11_listen_port)
+     (super io_listen_port)
      (vars
        (display const string)
-       (xauthority const string)))
+       (xauthority const string)
+
+       ; fd to the directory where the socket lives
+       (dir . int)
+       ; Name of the local socket
+       (name const string)
+       (display_number . int)
+       ; The listening fd. Transferred to the port object later.
+     
+       (connection object ssh_connection)
+       (single . int)))
 */
 
-struct server_x11_info *
+struct x11_listen_port *
 server_x11_setup(struct ssh_channel *channel,
 		 int single,
 		 uint32_t protocol_length, const uint8_t *protocol,
 		 uint32_t cookie_length, const uint8_t *cookie,
-		 uint32_t screen,
-		 struct resource_list *resources);
+		 uint32_t screen);
 
 
 #endif /* LSH_SERVER_X11_H_INCLUDED */
