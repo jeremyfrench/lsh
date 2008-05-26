@@ -33,7 +33,7 @@
 
 #include "channel_forward.h"
 #include "exception.h"
-#include "io_commands.h"
+#include "io.h"
 #include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
@@ -54,19 +54,35 @@ struct command_3 open_forwarded_tcpip_command;
      (name server_forward)
      (super forwarded_port)
      (vars
-       ; port == NULL means that we are setting up a forward for this
-       ; port, but are not done yet.
        (port object resource)))
 */
 
 static struct server_forward *
-make_server_forward(struct address_info *address, struct resource *port)
+make_server_forward(struct ssh_connection *connection,
+		    const struct address_info *address)
 {
-  NEW(server_forward, self);
+  struct io_listen_port *port
+    = make_tcpforward_listen_port(connection, ATOM_FORWARDED_TCPIP,
+				  address, address);
+  if (!port)
+    return NULL;
 
-  self->super.address = address;
-  self->port = port;
-  return self;
+  if (!io_listen(port))
+    {
+      KILL_RESOURCE(&port->super);
+      return NULL;
+    }
+  else
+    {
+      NEW(server_forward, self);
+
+      self->super.address = address;
+      self->port = &port->super;
+
+      remember_resource(connection->resources, self->port);
+      
+      return self;      
+    }
 }
 
 static struct server_forward *
@@ -90,142 +106,6 @@ remove_server_forward(struct object_queue *q,
   return NULL;
 }
 
-
-/* FIXME: Some duplication with open_direct_tcpip in client_tcpforward.c. */
-
-/* (open_forwarded_tcpip port connection listen_value) */
-DEFINE_COMMAND3(open_forwarded_tcpip_command)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct lsh_object *a3,
-      struct command_continuation *c UNUSED,
-      struct exception_handler *e)
-{
-  CAST(address_info, port, a1);
-  CAST_SUBTYPE(ssh_connection, connection, a2);
-  CAST(listen_value, lv, a3);
-
-  struct channel_forward *channel;
-
-  io_register_fd(lv->fd, "forwarded socket");
-  channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
-
-  if (!channel_open_new_type(connection, &channel->super,
-			     ATOM_LD(ATOM_FORWARDED_TCPIP),
-			     "%S%i%S%i",
-			     port->ip, port->port,
-			     lv->peer->ip, lv->peer->port))
-
-    {
-      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
-					"Allocating a local channel number failed."));
-      KILL_RESOURCE(&channel->super.super);
-    }
-}
-
-/* GABA:
-   (expr
-     (name tcpforward_forwarded_tcpip)
-     (storage static)
-     (params
-       (port object address_info))
-     (expr
-       (lambda (connection)
-	 ;; The continuation is responsible for putting the port
-	 ;; on the connection's resource list
-	 (listen_tcp
-	   (lambda (peer)
-	     (open_forwarded_tcpip port connection peer))
-	   (prog1 port connection)))))
-*/
-
-/* GABA:
-   (class
-     (name tcpip_forward_request_continuation)
-     (super command_continuation)
-     (vars
-       (forward object server_forward)
-       (connection object ssh_connection)
-       (c object command_continuation)))
-*/
-
-static void
-do_tcpip_forward_request_continuation(struct command_continuation *c,
-				      struct lsh_object *x)
-{
-  CAST(tcpip_forward_request_continuation, self, c);
-  CAST_SUBTYPE(resource, port, x);
-
-  trace("do_tcpip_forward_request_continuation\n");
-  assert(self->forward);
-  assert(port);
-  assert(!self->forward->port);
-
-  self->forward->port = port;
-  remember_resource(self->connection->resources, port);
-
-  /* FIXME: Is there anything useful we can return? */
-  COMMAND_RETURN(self->c, &self->forward->super.super);
-}
-
-static struct command_continuation *
-make_tcpip_forward_request_continuation(struct server_forward *forward,
-					struct ssh_connection *connection,
-					struct command_continuation *c)
-{
-  NEW(tcpip_forward_request_continuation, self);
-
-  trace("make_tcpip_forward_request_continuation\n");
-  self->forward = forward;
-  self->connection = connection;
-  self->c = c;
-
-  self->super.c = do_tcpip_forward_request_continuation;
-
-  return &self->super;
-}
-
-/* GABA:
-   (class
-     (name tcpip_forward_request_exception_handler)
-     (super exception_handler)
-     (vars
-       (connection object ssh_connection)
-       (forward object server_forward)
-       (parent object exception_handler)))
-*/
-
-static void
-do_tcpip_forward_request_exc(struct exception_handler *s,
-			     const struct exception *e)
-{
-  CAST(tcpip_forward_request_exception_handler, self, s);
-
-  int res = tcpforward_remove_port(&self->connection->forwarded_ports,
-				   &self->forward->super);
-
-  assert(res);
-
-  EXCEPTION_RAISE(self->parent, e);
-}
-
-static struct exception_handler *
-make_tcpip_forward_request_exc(struct ssh_connection *connection,
-			       struct server_forward *forward,
-			       struct exception_handler *parent,
-			       const char *context)
-{
-  NEW(tcpip_forward_request_exception_handler, self);
-  self->super.raise = do_tcpip_forward_request_exc;
-  self->super.context = context;
-
-  self->connection = connection;
-  self->forward = forward;
-  self->parent = parent;
-
-  return &self->super;
-}
-
 static void
 do_tcpip_forward_handler(struct global_request *s UNUSED,
 			 struct ssh_connection *connection,
@@ -244,7 +124,6 @@ do_tcpip_forward_handler(struct global_request *s UNUSED,
     {
       struct address_info *a = make_address_info(bind_host, bind_port);
       struct server_forward *forward;
-      struct command *callback;
 
       trace("forward-tcpip request for port %i.\n", bind_port);
 
@@ -265,20 +144,24 @@ do_tcpip_forward_handler(struct global_request *s UNUSED,
 	  return;
 	}
 
-      forward = make_server_forward(a, NULL);
-      object_queue_add_head(&connection->forwarded_ports,
-			    &forward->super.super);
+      forward = make_server_forward(connection, a);
+      
+      if (!forward)
+	{
+	  static const struct exception x =
+	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, 0, "Listen failed for tcpip-forward");
 
-      callback = tcpforward_forwarded_tcpip(a);
+	  EXCEPTION_RAISE(e, &x);	  
+	}
+      else
+	{
+	  object_queue_add_head(&connection->forwarded_ports,
+				&forward->super.super);
 
-      COMMAND_CALL(callback, connection,
-		   make_tcpip_forward_request_continuation(forward,
-							   connection,
-							   c),
-		   make_tcpip_forward_request_exc(connection, forward,
-						  e, HANDLER_CONTEXT));
-
-      return;
+	  /* FIXME: The continuation/exception handler stuff here is
+	     not very useful. Maybe for gateway forwardings? */
+	  COMMAND_RETURN(c, &forward->super.super);
+	}
     }
   else
     {
@@ -308,12 +191,6 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
       parse_uint32(args, &bind_port) &&
       parse_eod(args))
     {
-      /* FIXME: If tcpforward_forwarded_tcpip doesn't return
-	 immediately, and we receive a cancel request before the
-	 forwarding is setup (which should be ok, if the forwarding
-	 was requested with want_reply == 0), cancelling fails and the
-	 client has to try again later. */
-
       struct server_forward *forward
 	= remove_server_forward(&connection->forwarded_ports,
 				bind_host_length,
