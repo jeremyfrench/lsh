@@ -81,8 +81,9 @@ struct gateway_connection *
 make_gateway_connection(struct client_connection *shared,
 			struct resource *port, int fd);
 
-struct command *
-make_gateway_setup(struct local_info *local);
+struct resource *
+make_gateway_port(const struct local_info *local,
+		  struct client_connection *connection);
 
 int
 gateway_forward_channel(struct ssh_connection *target_connection,

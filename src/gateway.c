@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2000 Niels Möller
+ * Copyright (C) 2000, 2008 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -34,7 +34,6 @@
 #include "environ.h"
 #include "format.h"
 #include "io.h"
-#include "io_commands.h"
 #include "lsh_string.h"
 #include "service.h"
 #include "ssh.h"
@@ -45,9 +44,6 @@
 #define GABA_DEFINE
 #include "gateway.h.x"
 #undef GABA_DEFINE
-
-struct command_2 gateway_accept;
-#define GATEWAY_ACCEPT (&gateway_accept.super.super)
 
 #include "gateway.c.x"
 
@@ -425,21 +421,27 @@ make_gateway_connection(struct client_connection *shared,
   return self;
 }
 
-/* (gateway_accept main-connection gateway-connection) */
-DEFINE_COMMAND2(gateway_accept)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(client_connection, connection, a1);
-  CAST(listen_value, lv, a2);
+/* GABA:
+   (class
+     (name gateway_port)
+     (super io_listen_port)
+     (vars
+       (connection object client_connection)))
+*/
 
+static void
+do_gateway_port_accept(struct io_listen_port *s,
+		       int fd,
+		       socklen_t addr_length UNUSED,
+		       const struct sockaddr *addr UNUSED)
+{
+  CAST(gateway_port, self, s);
   static const char hello[LSH_HELLO_LINE_LENGTH]
     = "LSH " STRINGIZE(LSH_HELLO_VERSION) " OK lsh-transport";
   
   struct gateway_connection *gateway
-    = make_gateway_connection(connection, lv->port, lv->fd);
+    = make_gateway_connection(self->connection,
+			      &self->super.super, fd);
 
   int error = gateway_write_data (gateway, sizeof(hello), hello);
   if (error)
@@ -449,26 +451,38 @@ DEFINE_COMMAND2(gateway_accept)
       return;
     }
 
-  if (!connection->write_blocked)
+  if (!self->connection->write_blocked)
     gateway_start_read(gateway);
 
   /* Kill gateway connection if the main connection goes down. */
-  remember_resource(connection->gateway_connections, &gateway->super.super);
-
-  COMMAND_RETURN(c, gateway);
+  remember_resource(self->connection->gateway_connections,
+		    &gateway->super.super);
 }
 
-/* GABA:
-   (expr
-     (name make_gateway_setup)
-     (params
-       (local object local_info))
-     (expr
-       (lambda (connection)
-         (connection_remember connection
-	   (listen_local
-	     (lambda (peer)
-	       (gateway_accept connection peer))
-	       ;; prog1, to delay binding until we are connected.
-	     (prog1 local connection) )))))
-*/
+struct resource *
+make_gateway_port(const struct local_info *local,
+		  struct client_connection *connection)
+{
+  int fd;
+
+  fd = io_bind_local(local);
+  if (fd < 0)
+    {
+      werror("Binding local gateway socket failed: %e\n", errno);
+      return NULL;
+    }
+  else
+    {
+      NEW(gateway_port, self);
+      init_io_listen_port(&self->super, fd, do_gateway_port_accept);
+
+      self->connection = connection;
+      if (io_listen(&self->super))
+	return &self->super.super;
+      else
+	{
+	  KILL_RESOURCE(&self->super.super);
+	  return NULL;
+	}
+    }
+}
