@@ -45,11 +45,11 @@
 
 void
 init_channel_forward(struct channel_forward *self,
-		     int fd, uint32_t initial_window,
+		     int fd, uint32_t write_buffer_size,
 		     void (*event)(struct ssh_channel *, enum channel_event));
 
 struct channel_forward *
-make_channel_forward(int fd, uint32_t initial_window);
+make_channel_forward(int fd, uint32_t write_buffer_size);
 
 void
 channel_forward_start_io(struct channel_forward *channel_forward);

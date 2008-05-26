@@ -191,7 +191,7 @@ do_channel_forward_event(struct ssh_channel *s, enum channel_event event)
 /* NOTE: It's the caller's responsibility to call io_register_fd. */
 void
 init_channel_forward(struct channel_forward *self,
-		     int socket, uint32_t initial_window,
+		     int socket, uint32_t write_buffer_size,
 		     void (*event)(struct ssh_channel *, enum channel_event))
 {
   if (!event)
@@ -203,22 +203,22 @@ init_channel_forward(struct channel_forward *self,
   /* The rest of the callbacks are not set up until
    * channel_forward_start_io. */
 
-  self->super.rec_window_size = initial_window;
+  self->super.rec_window_size = write_buffer_size;
 
   /* FIXME: Make maximum packet size configurable. */
   self->super.rec_max_packet = SSH_MAX_PACKET;
 
   init_channel_read_state(&self->read, socket, FORWARD_READ_BUFFER_SIZE);
-  init_channel_write_state(&self->write, socket, initial_window);
+  init_channel_write_state(&self->write, socket, write_buffer_size);
 }
 
 /* NOTE: It's the caller's responsibility to call io_register_fd. */
 struct channel_forward *
-make_channel_forward(int socket, uint32_t initial_window)
+make_channel_forward(int socket, uint32_t write_buffer_size)
 {
   NEW(channel_forward, self);
-  init_channel_forward(self, socket, initial_window, NULL);
-  
+  init_channel_forward(self, socket, write_buffer_size, NULL);
+
   return self;
 }
 
