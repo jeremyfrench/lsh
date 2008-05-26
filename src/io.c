@@ -388,11 +388,9 @@ kill_io_connect_state(struct resource *s)
   if (self->super.alive)
     {
       self->super.alive = 0;
-      if (self->fd >= 0)
-	{
-	  io_close_fd(self->fd);
-	  self->fd = 0;
-	}
+
+      io_close_fd(self->fd);
+      self->fd = -1;
     }
 }
 
@@ -463,6 +461,78 @@ io_connect(struct io_connect_state *self,
   gc_global(&self->super);
   return 1;
 }
+
+
+/* Listening */
+/* FIXME: Duplicates kill_io_connect_state */
+static void
+kill_io_listen_port(struct resource *s)
+{
+  CAST_SUBTYPE(io_listen_port, self, s);
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+
+      io_close_fd(self->fd);
+      self->fd = -1;
+    }
+}
+
+void
+init_io_listen_port(struct io_listen_port *self, int fd,
+		    void (*accept)(struct io_listen_port *self,
+				   int fd,
+				   socklen_t addr_len,
+				   const struct sockaddr *addr))
+{
+  init_resource(&self->super, kill_io_listen_port);
+
+  io_register_fd(fd, "listen port");
+
+  self->fd = fd;
+  self->accept = accept;  
+}
+
+static void *
+oop_io_accept(oop_source *source UNUSED,
+	      int fd, oop_event event, void *state)
+{
+  CAST_SUBTYPE(io_listen_port, self, (struct lsh_object *) state);
+
+#if WITH_IPV6
+  struct sockaddr_storage peer;
+#else
+  struct sockaddr_in peer;
+#endif
+
+  socklen_t peer_length = sizeof(peer);
+  int s;
+  
+  assert(event == OOP_READ);
+  assert(self->fd == fd);
+
+  s = accept(self->fd, (struct sockaddr *) &peer, &peer_length);
+  if (s < 0)
+    werror("accept failed, fd = %i: %e\n", self->fd, errno);
+
+  else
+    self->accept(self, s, peer_length, (struct sockaddr *) &peer);
+
+  return OOP_CONTINUE;
+}
+
+int
+io_listen(struct io_listen_port *self)
+{
+  if (listen(self->fd, 256) < 0)
+    return 0;
+
+  global_oop_source->on_fd(global_oop_source, self->fd, OOP_READ,
+			   oop_io_accept, self);
+
+  return 1;
+}
+
 
 /* These functions are used by werror and friends */
 
@@ -585,6 +655,50 @@ make_address_info(struct lsh_string *host, uint32_t port)
   info->port = port;
   info->ip = host;
   return info;
+}
+
+/* FIXME: Review need for this function. And maybe also the need for
+   the address_info type? */
+struct address_info *
+sockaddr2info(size_t addr_length,
+              const struct sockaddr *addr)
+{
+  NEW(address_info, info);
+  
+  switch(addr->sa_family)
+    {
+    case AF_INET:
+      assert(addr_length == sizeof(struct sockaddr_in));
+      {
+        const struct sockaddr_in *in = (const struct sockaddr_in *) addr;
+        uint32_t ip = ntohl(in->sin_addr.s_addr);
+        
+        info->port = ntohs(in->sin_port);
+        info->ip = ssh_format("%di.%di.%di.%di",
+                              (ip >> 24) & 0xff,
+                              (ip >> 16) & 0xff,
+                              (ip >> 8) & 0xff,
+                              ip & 0xff);
+      }
+      return info;
+      
+#if WITH_IPV6
+    case AF_INET6:
+      assert(addr_length == sizeof(struct sockaddr_in6));
+      {
+        const struct sockaddr_in6 *in = (const struct sockaddr_in6 *) addr;
+
+        info->port = ntohs(in->sin6_port);
+        info->ip = lsh_string_ntop(addr->sa_family, INET6_ADDRSTRLEN,
+                                   &in->sin6_addr);
+
+      }
+      return info;
+#endif /* WITH_IPV6 */
+
+    default:
+      fatal("io.c: sockaddr2info: Unsupported address family.\n");
+    }
 }
 
 /* Creates a sockaddr. Only handles ip-addresses, no dns names. This
@@ -1004,7 +1118,7 @@ io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length)
 }
 
 int
-io_bind_local(struct local_info *info)
+io_bind_local(const struct local_info *info)
 {
   int old_cd;
 
@@ -1068,7 +1182,7 @@ io_bind_local(struct local_info *info)
 
 /* Uses a blocking connect */
 int
-io_connect_local(struct local_info *info)
+io_connect_local(const struct local_info *info)
 {
   int old_cd;
   int fd;
