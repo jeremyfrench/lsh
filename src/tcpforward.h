@@ -36,19 +36,19 @@
 #define TCPIP_WINDOW_SIZE 10000
 
 struct command *
-forward_local_port(struct address_info *local,
-		   struct address_info *target);
+forward_local_port(const struct address_info *local,
+		   const struct address_info *target);
 
 struct command *
-forward_remote_port(struct address_info *port,
-		    struct address_info *target);
+forward_remote_port(const struct address_info *port,
+		    const struct address_info *target);
 
 /* GABA:
    (class
      (name forwarded_port)
      (vars
        ; The key we use for looking up the port
-       (address object address_info)))
+       (address const object address_info)))
 */
 
 struct forwarded_port *
@@ -59,8 +59,15 @@ int
 tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port);
 
 struct resource *
-tcpforward_connect(struct address_info *a,
+tcpforward_connect(const struct address_info *a,
 		   const struct channel_open_info *info);
+
+struct io_listen_port *
+make_tcpforward_listen_port(struct ssh_connection *connection,
+			    int type,
+			    const struct address_info *local,
+			    const struct address_info *forward);
+
 
 extern struct channel_open channel_open_direct_tcpip;
 extern struct channel_open channel_open_forwarded_tcpip;
@@ -72,6 +79,6 @@ extern struct global_request
 tcpip_cancel_forward_handler;
 
 struct command *
-make_socks_server(struct address_info *local);
+make_socks_server(const struct address_info *local);
 
 #endif /* LSH_TCPFORWARD_H_INCLUDED */
