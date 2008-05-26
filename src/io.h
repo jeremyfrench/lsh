@@ -90,18 +90,6 @@ make_local_info(const struct lsh_string *directory,
 		const struct lsh_string *name);
 
 
-/* Passed to the listen callback. Note that the fd here isn't
-   registered anywhere, so it must be taken care of immediately, or
-   risk being leaked. */
-/* GABA:
-   (class
-     (name listen_value)
-     (vars
-       (port object resource)
-       (fd . int)
-       (peer object address_info)))
-*/
-
 void
 io_init(void);
 
@@ -123,16 +111,22 @@ make_address_info(struct lsh_string *host,
 		  uint32_t port);
 
 struct address_info *
+sockaddr2info(size_t addr_len,
+              const struct sockaddr *addr);
+
+struct address_info *
 io_lookup_address(const char *ip, const char *service);
 
 struct sockaddr *
 io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port);
 
+#if 0
 struct sockaddr *
 address_info2sockaddr(socklen_t *length,
 		      struct address_info *a,
 		      const int *preference,
 		      int lookup);
+#endif
 
 unsigned
 io_resolv_address(const char *host, const char *service,
@@ -179,11 +173,32 @@ io_connect(struct io_connect_state *self,
 int
 io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length);
 
+/* GABA:
+   (class
+     (name io_listen_port)
+     (super resource)
+     (vars
+       (fd . int)
+       (accept method void "int fd"
+                            "socklen_t addr_len"
+			    "const struct sockaddr *addr")))
+*/
+
+void
+init_io_listen_port(struct io_listen_port *self,  int fd,
+		    void (*accept)(struct io_listen_port *self,
+				   int fd,
+				   socklen_t addr_len,
+				   const struct sockaddr *addr));
+					
 int
-io_bind_local(struct local_info *info);
+io_listen(struct io_listen_port *self);
 
 int
-io_connect_local(struct local_info *info);
+io_bind_local(const struct local_info *info);
+
+int
+io_connect_local(const struct local_info *info);
 
 int
 lsh_make_pipe(int *fds);
