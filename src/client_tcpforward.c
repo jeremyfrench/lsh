@@ -32,7 +32,7 @@
 #include "tcpforward.h"
 
 #include "channel_forward.h"
-#include "io_commands.h"
+#include "io.h"
 #include "ssh.h"
 #include "werror.h"
 
@@ -44,57 +44,59 @@ struct command_3 open_direct_tcpip_command;
 #include "client_tcpforward.c.x"
 
 
-/* Local forwarding using direct-tcpip */
+/* FIXME: Use one function to create the port object (called by the
+   options parsing in lsh.c), and another function to activate the
+   forwarding, called when the connection is ready. */
 
-/* (open_direct_tcpip target connection listen_value) */
-DEFINE_COMMAND3(open_direct_tcpip_command)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct lsh_object *a3,
-      struct command_continuation *c UNUSED,
-      struct exception_handler *e)
+/* GABA:
+   (class
+     (name forward_local_port_command)
+     (super command)
+     (vars
+       (local const object address_info)
+       (target const object address_info)))       
+*/
+
+static void
+do_forward_local_port(struct command *s,
+		      struct lsh_object *a,
+		      struct command_continuation *c,
+		      struct exception_handler *e)
 {
-  CAST(address_info, target, a1);
-  CAST_SUBTYPE(ssh_connection, connection, a2);
-  CAST(listen_value, lv, a3);
+  CAST(forward_local_port_command, self, s);
+  CAST_SUBTYPE(ssh_connection, connection, a);
+  struct io_listen_port *port;
 
-  struct channel_forward *channel;
-
-  trace("open_direct_tcpip_command\n");
-
-  io_register_fd(lv->fd, "forwarded socket");
-  channel = make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE);
-  
-  if (!channel_open_new_type(connection, &channel->super,
-			     ATOM_LD(ATOM_DIRECT_TCPIP),
-			     "%S%i%S%i",
-			     target->ip, target->port,
-			     lv->peer->ip, lv->peer->port))
+  port = make_tcpforward_listen_port(connection, ATOM_DIRECT_TCPIP,
+				     self->local, self->target);
+  if (!port)
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
-					"Allocating a local channel number failed."));
-      KILL_RESOURCE(&channel->super.super);
+      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
+      return;
+    }
+  else if (!io_listen(port))
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
+      KILL_RESOURCE(&port->super);
+    }
+  else
+    {
+      remember_resource(connection->resources, &port->super);
+      COMMAND_RETURN(c, port);
     }
 }
 
-/* GABA:
-   (expr
-     (name forward_local_port)
-     (params
-       (local object address_info)
-       (target object address_info))
-     (expr
-       (lambda (connection)
-         (connection_remember connection
-           (listen_tcp
-	     (lambda (peer)
-	       (open_direct_tcpip target connection peer))
-	       
-	     ; NOTE: The use of prog1 is needed to delay the
-	     ; listen_tcp call until the (otherwise ignored)
-	     ; connection argument is available.
-	     (prog1 local connection))))))
-*/
+struct command *
+forward_local_port(const struct address_info *local,
+		   const struct address_info *target)
+{
+  NEW(forward_local_port_command, self);
+  self->super.call = do_forward_local_port;
+  self->local = local;
+  self->target = target;
+
+  return &self->super;
+}
 
 /* Remote forwarding, using tcpip-forward and forwarded-tcpip. */
 
@@ -105,12 +107,12 @@ DEFINE_COMMAND3(open_direct_tcpip_command)
      (super forwarded_port)
      (vars
        (active . int)
-       (target object address_info)))
+       (target const object address_info)))
 */
 
 static struct remote_port *
-make_remote_port(struct address_info *listen,
-		 struct address_info *target)
+make_remote_port(const struct address_info *listen,
+		 const struct address_info *target)
 {
   NEW(remote_port, self);
 
@@ -256,9 +258,9 @@ make_remote_port_exception_handler(struct ssh_connection *connection,
      (super command)
      (vars
        ; Remote port to listen on
-       (port object address_info)
+       (port const object address_info)
        ; Target for forwarded connections
-       (target object address_info)))
+       (target const object address_info)))
 */
 
 static void
@@ -286,8 +288,8 @@ do_request_tcpip_forward(struct command *s,
 }
 
 struct command *
-forward_remote_port(struct address_info *port,
-		    struct address_info *target)
+forward_remote_port(const struct address_info *port,
+		    const struct address_info *target)
 {
   NEW(request_tcpip_forward_command, self);
   self->super.call = do_request_tcpip_forward;
