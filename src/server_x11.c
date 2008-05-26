@@ -46,7 +46,7 @@
 #include "channel_forward.h"
 #include "environ.h"
 #include "format.h"
-#include "io_commands.h"
+#include "io.h"
 #include "lsh_string.h"
 #include "lsh_process.h"
 #include "reaper.h"
@@ -60,9 +60,6 @@
 #include "server_x11.h.x"
 #undef GABA_DEFINE
 
-#include "server_x11.c.x"
-
-
 #if WITH_X11_FORWARD
 
 #ifndef SUN_LEN
@@ -72,72 +69,6 @@
 
 #define X11_WINDOW_SIZE 10000
 
-static struct server_x11_info *
-make_x11_server_info(const struct lsh_string *display,
-		     const struct lsh_string *xauthority)
-{
-  NEW(server_x11_info, info);
-
-  info->display = display;
-  info->xauthority = xauthority;
-
-  return info;
-}
-
-/* GABA:
-   (class
-     (name forwarded_x11_callback)
-     (super command)
-     (vars
-       (connection object ssh_connection)
-       (single . int)))
-*/
-
-static void
-do_open_forwarded_x11(struct command *s,
-		      struct lsh_object *a,
-		      struct command_continuation *c UNUSED,
-		      struct exception_handler *e)
-{
-  CAST(forwarded_x11_callback, self, s);
-  CAST(listen_value, lv, a);
-  struct ssh_channel *channel;
-
-  trace("open_forwarded_x11_command\n");
-
-  io_register_fd(lv->fd, "forwarded X11 socket");
-  if (self->single)
-    KILL_RESOURCE(lv->port);
-
-  channel = &make_channel_forward(lv->fd, X11_WINDOW_SIZE)->super;
-  
-  /* NOTE: The request ought to include some reference to the
-   * corresponding x11 request, but no such id is specified in the
-   * protocol spec. */
-  /* NOTE: The name "unix-domain" was suggested by Tatu in
-   * <200011290813.KAA17106@torni.hel.fi.ssh.com> */
-  if (!channel_open_new_type(self->connection, channel,
-			     ATOM_LD(ATOM_X11),
-			     "%z%i", "unix-domain", 0))
-    {
-      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
-					"Allocating a local channel number failed."));
-      KILL_RESOURCE(&channel->super);
-    }
-}
-
-static struct command *
-make_forwarded_x11_callback(struct ssh_connection *connection,
-			    int single)
-{
-  NEW(forwarded_x11_callback, self);
-  self->super.call = do_open_forwarded_x11;
-  self->connection = connection;
-  self->single = single;
-
-  return &self->super;
-}
-	     
 #define X11_MIN_COOKIE_LENGTH 10
 #define X11_SOCKET_DIR "/tmp/.X11-unix"
 
@@ -145,42 +76,16 @@ make_forwarded_x11_callback(struct ssh_connection *connection,
 #define X11_MIN_DISPLAY 10
 #define X11_MAX_DISPLAY 1000
 
-/* FIXME: Create the /tmp/.X11-unix directory, if needed. Figure out
- * if and how we should use /tmp/.X17-lock. Consider using display
- * "unix:17" instead of just ":17".
- */
-
-/* FIXME: Reorganize with the listening commands, so that this can
-   inherit io_port in io_commands.c? */
-/* GABA:
-   (class
-     (name server_x11_socket)
-     (super resource)
-     (vars
-       ; fd to the directory where the socket lives
-       (dir . int)
-       ; Name of the local socket
-       (name const string)
-       (display_number . int)
-       ; The listening fd. Transferred to the port object later.
-       (fd . int)))
-*/
-
-/* This code is quite paranoid in order to avoid symlink attacks when
- * creating the socket. Similar paranoia in xlib would be desirable,
- * but not realistic. However, most of this is not needed if the
- * sticky bit is set properly on the /tmp and /tmp/.X11-unix
- * directories. */
-
 static void
-do_kill_x11_socket(struct resource *s)
+do_kill_x11_listen_port(struct resource *s)
 {
-  CAST(server_x11_socket, self, s);
+  CAST(x11_listen_port, self, s);
   int old_cd;
 
-  if (self->super.alive)
+  if (self->super.super.alive)
     {
-      self->super.alive = 0;
+      self->super.super.alive = 0;
+      io_close_fd(self->super.fd);
 
       assert(self->dir >= 0);
 
@@ -191,37 +96,85 @@ do_kill_x11_socket(struct resource *s)
 
       close(self->dir);
       self->dir = -1;
-      
+
       if (unlink(lsh_get_cstring(self->name)) < 0)
 	werror("Failed to delete x11 socket %S: %e\n",
 	       self->name, errno);
 
       lsh_popd(old_cd, X11_SOCKET_DIR);
-      if (self->fd >= 0)
-	close(self->fd);
     }
 }
 
-static struct server_x11_socket *
-make_server_x11_socket(int dir, const struct lsh_string *name,
-		       int display_number, int fd)
+static void
+do_x11_listen_port_accept(struct io_listen_port *s,
+				 int fd,
+				 socklen_t addr_length UNUSED,
+				 const struct sockaddr *addr UNUSED)
 {
-  NEW(server_x11_socket, self);
-  init_resource(&self->super, do_kill_x11_socket);
+  CAST(x11_listen_port, self, s);
+  struct ssh_channel *channel;
+
+  trace("x11_listen_port_accept\n");
+
+  io_register_fd(fd, "forwarded X11 socket");
+  if (self->single)
+    KILL_RESOURCE(&self->super.super);
+
+  channel = &make_channel_forward(fd, X11_WINDOW_SIZE)->super;
+
+  /* NOTE: The request ought to include some reference to the
+   * corresponding x11 request, but no such id is specified in the
+   * protocol spec. */
+  /* NOTE: The name "unix-domain" was suggested by Tatu in
+   * <200011290813.KAA17106@torni.hel.fi.ssh.com> */
+  if (!channel_open_new_type(self->connection, channel,
+			     ATOM_LD(ATOM_X11),
+			     "%z%i", "unix-domain", 0))
+    {
+      werror("tcpforward_listen_port: Allocating a local channel number failed.");
+      KILL_RESOURCE(&channel->super);
+    }
+}
+
+static struct x11_listen_port *
+make_x11_listen_port(int dir, const struct lsh_string *name,
+		     int display_number, int fd,
+		     struct ssh_connection *connection,
+		     int single)
+{
+  NEW(x11_listen_port, self);
+  init_io_listen_port(&self->super, fd, do_x11_listen_port_accept);
+  self->super.super.kill = do_kill_x11_listen_port;
+
+  self->display = NULL;
+  self->xauthority = NULL;
 
   self->dir = dir;
   self->name = name;
   self->display_number = display_number;
-  self->fd = fd;
+
+  self->connection = connection;
+  self->single = single;
 
   return self;
 }
 
+/* FIXME: Create the /tmp/.X11-unix directory, if needed. Figure out
+ * if and how we should use /tmp/.X17-lock. Consider using display
+ * "unix:17" instead of just ":17".
+ */
+
 /* Creates a socket in tmp. Some duplication with io_bind_local in
    io.c, but sufficiently different that it doesn't seem practical to
    unify them. */
-static struct server_x11_socket *
-open_x11_socket(void)
+/* This code is quite paranoid in order to avoid symlink attacks when
+ * creating the socket. Similar paranoia in xlib would be desirable,
+ * but not realistic. However, most of this is not needed if the
+ * sticky bit is set properly on the /tmp and /tmp/.X11-unix
+ * directories. */
+static struct x11_listen_port *
+open_x11_socket(struct ssh_connection *connection,
+		int single)
 {
   int old_cd;
   int dir;
@@ -277,7 +230,7 @@ open_x11_socket(void)
       return NULL;
     }
 
-  return make_server_x11_socket(dir, name, number, s);
+  return make_x11_listen_port(dir, name, number, s, connection, single);
 }
 
 static int
@@ -316,19 +269,14 @@ create_xauth(const char *file, Xauth *xa)
   return res;
 }
 
-/* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
-struct server_x11_info *
+struct x11_listen_port *
 server_x11_setup(struct ssh_channel *channel,
 		 int single,
 		 uint32_t protocol_length, const uint8_t *protocol,
 		 uint32_t cookie_length, const uint8_t *cookie,
-		 uint32_t screen,
-		 /* FIXME: Kludge, needs to move declaration of
-		    server_session to some header file. */ 
-		 struct resource_list *resources)
+		 uint32_t screen)
 {
-  struct lsh_string *xauthority;
-  struct server_x11_socket *socket;
+  struct x11_listen_port *port;
   Xauth xa;  
   const char *tmp;
 #define HOST_MAX 200
@@ -345,18 +293,17 @@ server_x11_setup(struct ssh_channel *channel,
     return 0;
   
   /* Get a free socket under /tmp/.X11-unix/ */
-  socket = open_x11_socket();
-  if (!socket)
+  port = open_x11_socket(channel->connection, single);
+  if (!port)
     return NULL;
 
   tmp = getenv(ENV_TMPDIR);
   if (!tmp)
     tmp = "/tmp";
 
-  /* FIXME: What naming convention should be used? Include user name? */
-  xauthority = ssh_format("%lz/.lshd.%di.Xauthority", tmp, socket->display_number);
+  port->xauthority = ssh_format("%lz/.lshd.%di.Xauthority", tmp, port->display_number);
 
-  snprintf(number, sizeof(number), "%d", socket->display_number);
+  snprintf(number, sizeof(number), "%d", port->display_number);
   xa.family = FamilyLocal;
   xa.address_length = strlen(host);
   xa.address = host;
@@ -368,33 +315,21 @@ server_x11_setup(struct ssh_channel *channel,
   xa.data_length = cookie_length;
   xa.data = (char *) cookie;
 
-  if (!create_xauth(lsh_get_cstring(xauthority), &xa))
+  if (!create_xauth(lsh_get_cstring(port->xauthority), &xa))
     {
-      lsh_string_free(xauthority);
-      KILL_RESOURCE(&socket->super);
+      KILL_RESOURCE(&port->super.super);
+      return NULL;
+    }
+  else if (!io_listen(&port->super))
+    {
+      KILL_RESOURCE(&port->super.super);
       return NULL;
     }
   else
     {
-      struct resource *port;
-      port = io_listen(socket->fd,
-		       make_forwarded_x11_callback(channel->connection, single));
-      if (!port)
-	{
-	  KILL_RESOURCE(&socket->super);
-	  return NULL;
-	}
-      else
-	{
-	  /* Transferred to the port object. FIXME: Cleanup? */
-	  socket->fd = -1;
-	  remember_resource(resources, &socket->super);
-	  remember_resource(resources, port);
-
-	  return make_x11_server_info(ssh_format("unix:%di.%di",
-						 socket->display_number, screen),
-				      xauthority);
-	}
+      port->display = ssh_format("unix:%di.%di",
+				 port->display_number, screen);
+      return port;
     }
 }
 
