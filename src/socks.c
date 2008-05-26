@@ -8,7 +8,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2004 Niels Möller
+ * Copyright (C) 2004, 2008 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -37,7 +37,7 @@
 #include "channel_forward.h"
 #include "command.h"
 #include "format.h"
-#include "io_commands.h"
+#include "io.h"
 #include "lsh_string.h"
 #include "resource.h"
 #include "ssh.h"
@@ -613,10 +613,13 @@ do_socks_channel_event(struct ssh_channel *s, enum channel_event event)
 
 static struct socks_channel *
 make_socks_channel(struct ssh_connection *connection,
-		   struct listen_value *lv)
+		   int fd, struct address_info *peer)
 {
   NEW(socks_channel, self);
-  init_channel_forward(&self->super, lv->fd, TCPIP_WINDOW_SIZE,
+
+  io_register_fd(fd, "socks forwarding");
+
+  init_channel_forward(&self->super, fd, TCPIP_WINDOW_SIZE,
 		       do_socks_channel_event);
   self->super.super.connection = connection;
 
@@ -627,7 +630,7 @@ make_socks_channel(struct ssh_connection *connection,
   self->pos = 0;
   self->length = 3;
 
-  self->peer = lv->peer;
+  self->peer = peer;
   self->state = SOCKS_VERSION_HEADER;
   self->length = SOCKS_HEADER_SIZE;
   
@@ -642,38 +645,99 @@ make_socks_channel(struct ssh_connection *connection,
 #define SOCKS_READ_BUF_SIZE 100
 #define SOCKS_WRITE_BUF_SIZE (SSH_MAX_PACKET * 10)
 
-/* (socks_handshake connection peer) */
-DEFINE_COMMAND2(socks_handshake)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+/* GABA:
+   (class
+     (name socks_listen_port)
+     (super io_listen_port)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static void
+do_socks_accept(struct io_listen_port *s,
+		int fd,
+		socklen_t addr_length,
+		const struct sockaddr *addr)
 {
-  CAST_SUBTYPE(ssh_connection, connection, a1);
-  CAST(listen_value, lv, a2);
+  CAST(socks_listen_port, self, s);
+
+  struct socks_channel *channel
+    = make_socks_channel(self->connection, fd, 
+			 sockaddr2info(addr_length, addr));
   
-  struct socks_channel *self = make_socks_channel(connection, lv);
-  io_register_fd(lv->fd, "socks forwarding");
-  remember_resource(connection->resources, &self->super.super.super);
+  remember_resource(self->connection->resources, &channel->super.super.super);
 
-  socks_start_read(self);
+  socks_start_read(channel);
+}
 
-  COMMAND_RETURN(c, self);
+static struct io_listen_port *
+make_socks_listen_port(struct ssh_connection *connection,
+		       const struct address_info *local)
+{
+  struct sockaddr *addr;
+  socklen_t addr_length;
+  int fd;
+
+  addr = io_make_sockaddr(&addr_length,
+			  lsh_get_cstring(local->ip), local->port);
+  if (!addr)
+    return NULL;
+
+  fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
+  if (fd < 0)
+    return NULL;
+
+  {
+    NEW(socks_listen_port, self);
+    init_io_listen_port(&self->super, fd, do_socks_accept);
+
+    self->connection = connection;
+    return &self->super;
+  }
 }
 
 /* GABA:
-   (expr
-     (name make_socks_server)
-     (params
-       (local object address_info))
-     (expr
-       (lambda (connection)
-         (connection_remember connection
-           (listen_tcp
-	     (lambda (peer)
-	       (socks_handshake connection peer))
-	     ; NOTE: The use of prog1 is needed to delay the bind call
-	     ; until the (otherwise ignored) connection argument is
-	     ; available.
-	     (prog1 local connection))))))
+   (class
+     (name make_socks_server_command)
+     (super command)
+     (vars
+       (local const object address_info)))
 */
+
+static void
+do_make_socks_server(struct command *s,
+		     struct lsh_object *a,
+		     struct command_continuation *c,
+		     struct exception_handler *e)
+{
+  CAST(make_socks_server_command, self, s);
+  CAST_SUBTYPE(ssh_connection, connection, a);
+  struct io_listen_port *port;
+
+  port = make_socks_listen_port(connection, self->local);
+  if (!port)
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
+      return;
+    }
+  else if (!io_listen(port))
+    {
+      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
+      KILL_RESOURCE(&port->super);
+    }
+  else
+    {
+      remember_resource(connection->resources, &port->super);
+      COMMAND_RETURN(c, port);
+    }
+}
+  
+struct command *
+make_socks_server(const struct address_info *local)
+{
+  NEW(make_socks_server_command, self);
+  self->super.call = do_make_socks_server;
+  self->local = local;
+
+  return &self->super;
+}
