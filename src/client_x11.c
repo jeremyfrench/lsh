@@ -347,7 +347,9 @@ make_client_x11_channel(int fd,
 
   /* Use a limited window size for the setup */
   /* FIXME: Do we need any x11 specific event handler? */
-  init_channel_forward(&self->super, fd, X11_SETUP_MAX_LENGTH, NULL);
+  init_channel_forward(&self->super, fd, X11_WINDOW_SIZE, NULL);
+
+  self->super.super.rec_window_size = X11_SETUP_MAX_LENGTH;
   self->super.super.receive = do_client_channel_x11_receive;
 
   self->display = display;
