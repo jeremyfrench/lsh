@@ -232,14 +232,6 @@ add_action(struct lsh_options *options,
   object_queue_add_tail(&options->actions, &action->super);
 }
 
-static void
-prepend_action(struct lsh_options *options,
-	       struct command *action)
-{
-  assert(action);
-  object_queue_add_head(&options->actions, &action->super);
-}
-
 /* Create a session object. stdout and stderr are shared (although
  * with independent lsh_fd objects). stdin can be used by only one
  * session. */
@@ -1259,8 +1251,14 @@ main(int argc, char **argv)
   gc_global(&connection->super.super);
 
   if (options->start_gateway == 1)
-    prepend_action(options, make_gateway_setup(options->gateway));
-
+    {
+      struct resource *port = make_gateway_port(options->gateway, connection);
+      if (port)
+	remember_resource(connection->super.resources, port);
+      else
+	werror("Failed to setup gateway.\n");
+    }
+  
   /* Contains session channels to be opened. */
   remember_resource(connection->super.resources,
 		    &options->resources->super);
