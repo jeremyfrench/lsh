@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998, 2005 Balázs Scheidler, Niels Möller
+ * Copyright (C) 1998, 2005, 2008 Balázs Scheidler, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -32,7 +32,7 @@
 
 #include "channel_forward.h"
 #include "format.h"
-#include "io_commands.h"
+#include "io.h"
 #include "lsh_string.h"
 #include "ssh.h"
 
@@ -80,6 +80,73 @@ tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port)
 
 /* GABA:
    (class
+     (name tcpforward_listen_port)
+     (super io_listen_port)
+     (vars
+       (type . int)
+       (connection object ssh_connection)
+       (forward const object address_info)))       
+*/
+
+static void
+do_tcpforward_listen_port_accept(struct io_listen_port *s,
+				 int fd,
+				 socklen_t addr_length,
+				 const struct sockaddr *addr)  
+{
+  CAST(tcpforward_listen_port, self, s);
+
+  struct channel_forward *channel;
+  struct address_info *peer = sockaddr2info(addr_length, addr);
+  trace("forward_local_port\n");
+
+  io_register_fd(fd, "forwarded socket");
+  channel = make_channel_forward(fd, TCPIP_WINDOW_SIZE);
+
+  if (!channel_open_new_type(self->connection, &channel->super,
+			     ATOM_LD(self->type),
+			     "%S%i%S%i",
+			     self->forward->ip, self->forward->port,
+			     peer->ip, peer->port))
+    {
+      werror("tcpforward_listen_port: Allocating a local channel number failed.");
+      KILL_RESOURCE(&channel->super.super);
+    }
+}
+
+struct io_listen_port *
+make_tcpforward_listen_port(struct ssh_connection *connection,
+			    int type,
+			    const struct address_info *local,
+			    const struct address_info *forward)
+{
+  struct sockaddr *addr;
+  socklen_t addr_length;
+  int fd;
+
+  addr = io_make_sockaddr(&addr_length,
+			  lsh_get_cstring(local->ip), local->port);
+  if (!addr)
+    return NULL;
+
+  fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
+  if (fd < 0)
+    return NULL;
+
+  {
+    NEW(tcpforward_listen_port, self);
+    init_io_listen_port(&self->super, fd, do_tcpforward_listen_port_accept);
+
+    self->connection = connection;
+    self->type = type;
+    self->forward = forward;
+
+    return &self->super;
+  }
+}
+
+/* GABA:
+   (class
      (name tcpforward_connect_state)
      (super io_connect_state)
      (vars
@@ -109,7 +176,7 @@ tcpforward_connect_error(struct io_connect_state *s, int error)
 }
 
 struct resource *
-tcpforward_connect(struct address_info *a,
+tcpforward_connect(const struct address_info *a,
 		   const struct channel_open_info *info)
 {
   struct sockaddr *addr;
