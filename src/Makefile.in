@@ -114,7 +114,6 @@ CONNECTION_SOURCES = channel.c \
 		     combinators.c \
 		     command.c \
 		     exception.c \
-		     io_commands.c \
 		     queue.c \
 		     reaper.c \
 		     tcpforward.c
