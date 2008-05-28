@@ -41,7 +41,6 @@
 
 #define LSH_ALLOC_HEAP 0
 #define LSH_ALLOC_STATIC 1
-#define LSH_ALLOC_STACK 2
 
 struct lsh_class;
 
@@ -62,7 +61,6 @@ struct lsh_object
  * use some class for lsh_class objects... */
 
 #define STATIC_HEADER { NULL, NULL, LSH_ALLOC_STATIC, 0, 0 }
-#define STACK_HEADER  { NULL, NULL, LSH_ALLOC_STACK, 0, 0 }
 
 struct lsh_class
 {
