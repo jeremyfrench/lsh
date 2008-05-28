@@ -131,7 +131,7 @@ kill_gateway_connection(struct resource *s)
   if (self->super.super.alive)
     {
       uint32_t i;
-      werror("kill_gateway_connection\n");
+      trace("kill_gateway_connection\n");
 
       self->super.super.alive = 0;      
 
@@ -332,7 +332,7 @@ oop_read_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state
 	  KILL_RESOURCE(&self->super.super);
 	  break;
 	case SSH_READ_EOF:
-	  werror("Gateway disconnected.\n", error_msg);
+	  verbose("Gateway disconnected.\n");
 	  KILL_RESOURCE(&self->super.super);
 	  return OOP_CONTINUE;
 	  break;
