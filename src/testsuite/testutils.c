@@ -194,7 +194,7 @@ test_sign(const char *name,
   uint32_t key_length;
   
   struct knuth_lfib_ctx ctx;
-  struct bad_random r = { { STACK_HEADER, RANDOM_GOOD /* a lie */,
+  struct bad_random r = { { STATIC_HEADER, RANDOM_GOOD /* a lie */,
 			    do_bad_random, NULL },
 			  &ctx
 			  };
