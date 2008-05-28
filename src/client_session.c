@@ -65,7 +65,11 @@ do_kill_client_session(struct resource *s)
       io_close_fd(self->err.fd);
       self->err.fd = -1;
 
-      KILL_RESOURCE_LIST(self->resources);
+      if (self->pty)
+	KILL_RESOURCE(self->pty);
+      if (self->x11)
+	KILL_RESOURCE(self->x11);
+
       ssh_connection_pending_close(self->super.connection);
     }
 }
@@ -142,9 +146,10 @@ oop_read_stdin(oop_source *source UNUSED,
 
   if (channel_io_read(&session->super, &session->in, &length) != CHANNEL_IO_OK)
     {
-      /* This resource list is used only for tty-related things.
-	 Killing it will restore the tty modes. */
-      KILL_RESOURCE_LIST (session->resources);
+      /* Killing the pty resource restores the tty modes. */
+      if (session->pty)
+	KILL_RESOURCE(session->pty);
+
       channel_read_state_close(&session->in);
     }
   else if (length > 0)
@@ -227,6 +232,7 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
 	 exit-status/exit-signal message */
       session->super.sinks += 3;
 
+      /* FIXME: Move channel_io_start_read to do_action_shell_success? */
       /* FIXME: Setup escape handler, and raw tty? */
       if (session->super.send_window_size)
 	channel_io_start_read(&session->super, &session->in, oop_read_stdin);
@@ -400,7 +406,8 @@ make_client_session_channel(int in, int out, int err,
   io_register_fd(out, "session stdout");
   io_register_fd(err, "session stderr");
 
-  self->resources = make_resource_list();
+  self->pty = NULL;
+  self->x11 = NULL;
 
   self->actions = actions;
   self->action_next = 0;
