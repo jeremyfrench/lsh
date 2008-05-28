@@ -169,10 +169,13 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
       break;
 
     case CHANNEL_EVENT_SUCCESS:
+      SSH_CONNECTION_WRITE(self->chain->connection,
+			   format_channel_success(self->chain->remote_channel_number));
+      break;
+
     case CHANNEL_EVENT_FAILURE:
-      /* Currently unused, due to the request_methods hook. FIXME: But
-	 we maybe don't need that hook anymore, we can just pass on
-	 the success or failure message. */
+      SSH_CONNECTION_WRITE(self->chain->connection,
+			   format_channel_failure(self->chain->remote_channel_number));
       break;
       
     case CHANNEL_EVENT_STOP:
@@ -184,10 +187,11 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
     }      
 }  
 
-static void
-do_gateway_channel_request(struct ssh_channel *c,
-			   const struct channel_request_info *info,
-			   struct simple_buffer *buffer)
+DEFINE_CHANNEL_REQUEST(gateway_forward_channel_request)
+	(struct channel_request *s UNUSED,
+	 struct ssh_channel *c,
+	 const struct channel_request_info *info,
+	 struct simple_buffer *buffer)
 {
   CAST(gateway_channel, self, c);
   uint32_t arg_length;
@@ -195,46 +199,16 @@ do_gateway_channel_request(struct ssh_channel *c,
 
   parse_rest(buffer, &arg_length, &arg);
 
-  /* FIXME: Use a format_channel_request function. */
-  SSH_CONNECTION_WRITE(self->chain->connection,
-		       ssh_format("%c%i%s%c%ls",
-				  SSH_MSG_CHANNEL_REQUEST,
-				  self->chain->remote_channel_number,
-				  info->type_length, info->type_data,
-				  info->want_reply,
-				  arg_length, arg));
+  channel_send_request(self->chain,
+		       info->type_length, info->type_data,
+		       info->want_reply,
+		       "%ls", arg_length, arg);
 }
-
-static void
-do_gateway_channel_success(struct ssh_channel *c)
-{
-  CAST(gateway_channel, self, c);
-
-  SSH_CONNECTION_WRITE(self->chain->connection,
-		       format_channel_success(self->chain->remote_channel_number));
-}
-
-static void
-do_gateway_channel_failure(struct ssh_channel *c)
-{
-  CAST(gateway_channel, self, c);
-
-  SSH_CONNECTION_WRITE(self->chain->connection,
-		       format_channel_failure(self->chain->remote_channel_number));
-}
-
-static struct channel_request_methods
-gateway_request_methods =
-{
-  do_gateway_channel_request,
-  do_gateway_channel_success,
-  do_gateway_channel_failure
-};
 
 int
-gateway_forward_channel(struct ssh_connection *target_connection,
-			const struct channel_open_info *info,
-			uint32_t arg_length, const uint8_t *arg)
+gateway_forward_channel_open(struct ssh_connection *target_connection,
+			     const struct channel_open_info *info,
+			     uint32_t arg_length, const uint8_t *arg)
 {
   NEW(gateway_channel, origin);
   NEW(gateway_channel, target);
@@ -244,8 +218,8 @@ gateway_forward_channel(struct ssh_connection *target_connection,
   init_channel(&target->super,
 	       do_kill_gateway_channel, do_gateway_channel_event);
 
-  origin->super.request_methods = &gateway_request_methods;
-  target->super.request_methods = &gateway_request_methods;
+  origin->super.request_fallback = &gateway_forward_channel_request;
+  target->super.request_fallback = &gateway_forward_channel_request;
 
   origin->chain = &target->super;
   target->chain = &origin->super;
@@ -292,8 +266,8 @@ DEFINE_CHANNEL_OPEN(gateway_channel_open)
     {
       parse_rest(args, &arg_length, &arg);
 
-      if (!gateway_forward_channel(&connection->shared->super,
-				   info, arg_length, arg))
+      if (!gateway_forward_channel_open(&connection->shared->super,
+					info, arg_length, arg))
 	channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
 			  "Too many channels.");
     }
