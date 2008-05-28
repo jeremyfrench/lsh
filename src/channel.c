@@ -582,6 +582,11 @@ void
 channel_open_confirm(const struct channel_open_info *info,
 		     struct ssh_channel *channel)
 {
+  assert(info->local_channel_number < info->connection->used_channels);  
+  assert(info->connection->alloc_state[info->local_channel_number]
+	 == CHANNEL_ALLOC_RECEIVED_OPEN);
+  assert(!info->connection->channels[info->local_channel_number]);
+
   /* FIXME: This copying, and the ssh_connection_register_channel
    * call, could just as well be done by the CHANNEL_OPEN handler? */
   channel->send_window_size = info->send_window_size;
@@ -607,7 +612,7 @@ channel_open_deny(const struct channel_open_info *info,
 {
   assert(info->local_channel_number < info->connection->used_channels);  
   assert(info->connection->alloc_state[info->local_channel_number]
-	 == CHANNEL_ALLOC_SENT_OPEN);
+	 == CHANNEL_ALLOC_RECEIVED_OPEN);
   assert(!info->connection->channels[info->local_channel_number]);
 
   ssh_connection_dealloc_channel(info->connection, info->local_channel_number);
