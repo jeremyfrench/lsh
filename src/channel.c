@@ -524,30 +524,28 @@ handle_channel_request(struct ssh_connection *connection,
 					CHANNEL_ALLOC_ACTIVE);
       if (channel)
 	{
-	  if (channel->request_methods)
+	  struct channel_request *req = NULL;
+
+	  trace("handle_channel_request: Request type `%ps' on channel %i\n",
+		info.type_length, info.type_data, channel_number);
+
+	  info.type = lookup_atom(info.type_length, info.type_data);
+
+	  if (channel->request_types && info.type)
 	    {
-	      channel->request_methods->request(channel, &info, buffer);
-	      return;
+	      CAST_SUBTYPE(channel_request, r,
+			   ALIST_GET(channel->request_types, info.type));
+	      req = r;
 	    }
-	  else if (channel->request_types)
-	    {
-	      trace("handle_channel_request: Request type `%ps' on channel %i\n",
-		    info.type_length, info.type_data, channel_number);
 
-	      info.type = lookup_atom(info.type_length, info.type_data);
+	  if (!req)
+	    req = channel->request_fallback;
 
-	      {
-		CAST_SUBTYPE(channel_request, req,
-			     ALIST_GET(channel->request_types, info.type));
+	  if (req)
+	    req->handler(req, channel, &info, buffer);
+	  else
+	    channel_request_reply(channel, &info, 0);
 
-		if (req)
-		  {
-		    req->handler(req, channel, &info, buffer);
-		    return;
-		  }
-	      }
-	    }
-	  channel_request_reply(channel, &info, 0);
 	  return;
 	}
       else
@@ -575,7 +573,6 @@ channel_request_reply(struct ssh_channel *channel,
       SSH_CONNECTION_WRITE(channel->connection, response);
     }
 }
-
 
 
 void
@@ -1085,12 +1082,6 @@ handle_channel_success(struct ssh_connection *connection,
 						  channel_number,
 						  CHANNEL_ALLOC_ACTIVE)))
     {
-      if (channel->request_methods)
-	{
-	  channel->request_methods->success(channel);
-	  return;
-	}
-      
       if (!channel->pending_requests)
 	werror("do_channel_success: Unexpected message. Ignoring.\n");
 
@@ -1117,12 +1108,6 @@ handle_channel_failure(struct ssh_connection *connection,
 						  channel_number,
 						  CHANNEL_ALLOC_ACTIVE)))
     {
-      if (channel->request_methods)
-	{
-	  channel->request_methods->failure(channel);
-	  return;
-	}
-
       if (!channel->pending_requests)
 	werror("do_channel_failure: Unexpected message. Ignoring.\n");
 
@@ -1200,8 +1185,8 @@ init_channel(struct ssh_channel *channel,
   channel->sources = 0;
   channel->sinks = 0;
 
-  channel->request_methods = NULL;
   channel->request_types = NULL;
+  channel->request_fallback = NULL;
   
   channel->receive = NULL;
   channel->send_adjust = NULL;
@@ -1372,7 +1357,8 @@ channel_open_new_type(struct ssh_connection *connection,
 }
 
 int
-channel_send_request(struct ssh_channel *channel, int type,
+channel_send_request(struct ssh_channel *channel,
+		     uint32_t type_length, const uint8_t *type,
 		     int want_reply,
 		     const char *format, ...)
 {
@@ -1383,9 +1369,9 @@ channel_send_request(struct ssh_channel *channel, int type,
   if (channel->flags & CHANNEL_SENT_CLOSE)
     return 0;
 
-#define REQUEST_FORMAT "%c%i%a%c"
+#define REQUEST_FORMAT "%c%i%s%c"
 #define REQUEST_ARGS SSH_MSG_CHANNEL_REQUEST, channel->remote_channel_number, \
-  type, want_reply
+    type_length, type, want_reply
 
   l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);
   
