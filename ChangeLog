@@ -1,4 +1,170 @@
+2008-05-28  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.in (CONNECTION_SOURCES): Removed combinators.c.
+
+	* src/testsuite/Makefile.in (TS_SH): Added x11-3-test and x11-4-test.
+
+	* src/testsuite/functions.sh (stdin_lsh): New function.
+
+	* src/testsuite/testutils.c (test_sign): Use STATIC_HEADER, not
+	STACK_HEADER.
+
+	* src/testsuite/x11-2-test: Use xmodmap, not xdpyinfo to test
+	connecting to the X server.
+
+	* src/testsuite/x11-4-test: New test case, testing that bad
+	cookies are rejected.
+
+	* src/testsuite/x11-3-test: New test case, testing that fake and
+	real cookie differs.
+
+	* src/resource.c (resource_list_top): Corrected handling of empty
+	list.
+
+	* src/lsh.h (LSH_ALLOC_STACK): Deleted constant.
+	(STACK_HEADER): Deleted macro.
+
+	* src/gc.c (gc_mark): Removed support for LSH_ALLOC_STACK.
+
+	* src/connection.c (connection_remember): Deleted command.
+
+	* src/command.h: Deleted macros and declarations related to the
+	combinator commands.
+
+	* src/command.c (class command_apply): Deleted.
+	(do_command_apply): Deleted function.
+	(make_apply): Deleted function.
+	(class gaba_continuation)): Deleted.
+	(do_gaba_continuation): Deleted function.
+	(gaba_apply): Deleted function.
+
+	* src/client_x11.c (do_action_x11_success): Set session->x11.
+
+	* src/client_session.c (do_kill_client_session): Kill pty and x11
+	resources.
+	(oop_read_stdin): When reading is finished, kill pty resource, and
+	no other resources.
+	(make_client_session_channel): Initialize pty and x11 attributes.
+	Replaces initialization of the resource list.
+
+	* src/client_pty.c (client_pty_resource): Reintroduced class.
+	Previous incarnation was called client_tty_resource.
+	(do_kill_client_pty_resource): Kill window change callback.
+	(make_client_pty_resource): Renamed, was make_client_tty_resource.
+	Added session argument. Install window change callback.
+	(do_action_pty_success): Use new make_client_pty_resource, and
+	store result in sesion->pty.
+
+	* src/client.h (class client_session): Deleted resource list.
+	Replaced by separate resources for pty and x11.
+
+	* src/channel.c (channel_open_deny): Fixed assertion.
+	(channel_open_confirm): Added assertion.
+
+2008-05-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/combinators.c: Deleted file.
+
+	* src/Makefile.in (CONNECTION_SOURCES): Deleted io_commands.c.
+
+	* src/testsuite/Makefile.in (TS_SOURCES): Resurrected
+	sockaddr2info-test.c.
+	* src/testsuite/sockaddr2info-test.c: Resurrected file.
+
+	* src/server_session.c (class server_session): x11 object now
+	refers to the listen port. Deleted resources list.
+	(x11_request_handler): Adapted to server_x11_setup changes.
+
+	* src/server_x11.c (make_x11_server_info): Deleted function.
+	(class server_x11_socket): Deleted class.
+	(do_kill_x11_socket): Deleted function.
+	(make_server_x11_socket): Deleted function.
+	(do_kill_x11_listen_port): New function.
+	(do_x11_listen_port_accept): New function.
+	(make_x11_listen_port): New function.
+	(open_x11_socket): Use make_x11_listen_port.
+	(server_x11_setup): Use new io_listen. Return port object.
+
+	* src/server_x11.h (class x11_listen_port): New class, merging
+	server_x11_info and server_x11_socket.
+
+	* src/socks.c (make_socks_channel): listen_value argument replaced
+	by fd and peer info. Call io_register_fd.
+	(socks_handshake): Deleted command.
+	(socks_listen_port): New class.
+	(do_socks_accept): New function.
+	(make_socks_listen_port): New function.
+	(class make_socks_server_command): New class.
+	(do_make_socks_server): New function, wrapping
+	make_socks_listen_port.
+	(make_socks_server): New function, replacing the old
+	expr-construction.
+
+	* src/server_tcpforward.c (make_server_forward): Use
+	make_tcpforward_listen_port and io-listen. New argument
+	connection.
+	(open_forwarded_tcpip_command): Deleted command.
+	(expr tcpforward_forwarded_tcpip): Deleted.
+	(class tcpip_forward_request_continuation): Deleted.
+	(do_tcpip_forward_request_continuation): Deleted function.
+	(make_tcpip_forward_request_continuation): Deleted function.
+	(class tcpip_forward_request_exception_handler): Deleted.
+	(do_tcpip_forward_request_exc): Deleted.
+	(make_tcpip_forward_request_exc): Deleted.
+	(do_tcpip_forward_handler): Simplified, letting
+	make_server_forward to most of the work.
+
+	* src/client_tcpforward.c (open_direct_tcpip_command): Deleted
+	command.
+	(class forward_local_port_command): New class.
+	(do_forward_local_port): New function, wrapping
+	make_tcpforward_listen_port.
+	(forward_local_port): New function, replacing the old
+	expr-construction.
+	(forward_remote_port): Use const. Also affects other classes
+	related to remote forwarding.
+
+	* src/lsh.c (prepend_action): Deleted function.
+	(main): Use new make_gateway_port.
+
+	* src/gateway.c (command gateway_accept): Deleted.
+	(class gateway_port): New class.
+	(do_gateway_port_accept): New function.
+	(expr make_gateway_setup): Deleted.
+	(make_gateway_port): New function, replacing make_gateway_setup.
+
+	* src/io.c (kill_io_connect_state): Simplified, io_close_fd
+	ignores negative fd:s.
+	(kill_io_listen_port): New function.
+	(init_io_listen_port): New function.
+	(oop_io_accept): New function.
+	(io_listen): New function, replacing function in io_commands.c.
+	(sockaddr2info): Resurrected function. Use const sockaddr *
+	argument. Handle only AF_INET and AF_INET6.
+	(io_bind_local): Use const argument.
+	(io_connect_local): Likewise.
+
+	* src/io.h (class listen_value): Deleted class.
+	(class io_listen_port): New class.
+
+	* src/io_commands.c, src/io_commands.h: Deleted files.
+
+	* src/tcpforward.h (class forwarded_port): Use const.
+
+	* src/tcpforward.c (tcpforward_connect): Use const for
+	address_info argument.
+	(tcpforward_listen_port): New class.
+	(do_tcpforward_listen_port_accept): New function.
+	(make_tcpforward_listen_port): New function.
+
+	* src/client_x11.c (make_client_x11_channel): Use a write buffer
+	size corresponding to a full window, and initialize
+	rec_window_size to a smaller value corresponding to the initial
+	X11 packet wth authentication data.
+
 2008-05-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c (make_listen_value): Added missing break.
 
 	* src/server_session.c (shell_request_handler): Updated to new
 	channel_request interface.
