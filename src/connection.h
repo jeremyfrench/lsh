@@ -218,7 +218,5 @@ struct channel_open name =					\
 								\
 static void do_##name
 
-extern struct command_2 connection_remember;
-#define CONNECTION_REMEMBER (&connection_remember.super.super)
 
 #endif /* LSH_CONNECTION_H_INCLUDED */

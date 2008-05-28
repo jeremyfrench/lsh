@@ -192,22 +192,6 @@ ssh_connection_pending_close(struct ssh_connection *connection)
   connection->pending_close = 1;
 }
 
-/* (remember connection resource) */
-DEFINE_COMMAND2(connection_remember)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(ssh_connection, connection, a1);
-  CAST_SUBTYPE(resource, resource, a2);
-  
-  if (resource)
-    remember_resource(connection->resources, resource);
-
-  COMMAND_RETURN(c, resource);
-}
-
 /* Iterates over the active channels. */
 void
 ssh_connection_foreach(struct ssh_connection *connection,
