@@ -52,7 +52,7 @@ do_client_winch_handler(struct window_change_callback *s,
 {
   CAST(client_winch_handler, self, s);
 
-  channel_send_request(self->channel, ATOM_WINDOW_CHANGE, 0,
+  channel_send_request(self->channel, ATOM_LD(ATOM_WINDOW_CHANGE), 0,
 		       "%i%i%i%i",
 		       dims->ws_col, dims->ws_row,
 		       dims->ws_xpixel, dims->ws_ypixel);
@@ -120,7 +120,7 @@ do_action_pty_start(struct client_session_action *s UNUSED,
 
   term = getenv(ENV_TERM);
 
-  channel_send_request(&session->super, ATOM_PTY_REQ, 1,
+  channel_send_request(&session->super, ATOM_LD(ATOM_PTY_REQ), 1,
 		       "%z%i%i%i%i%fS",
 		       term ? term : "",
 		       dims.ws_col, dims.ws_row,

@@ -371,13 +371,13 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	      channel->remote_channel_number);
 
       if (signaled)
-	channel_send_request(&session->super, ATOM_EXIT_SIGNAL, 0,
+	channel_send_request(&session->super, ATOM_LD(ATOM_EXIT_SIGNAL), 0,
 			     "%a%c%z%z",
 			     signal_local_to_network(value),
 			     core,
 			     STRSIGNAL(value), "");
       else
-	channel_send_request(&session->super, ATOM_EXIT_STATUS, 0,
+	channel_send_request(&session->super, ATOM_LD(ATOM_EXIT_STATUS), 0,
 			     "%i", value);
 
       /* We want to close the channel as soon as all stdout and stderr

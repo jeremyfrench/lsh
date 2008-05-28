@@ -434,7 +434,7 @@ do_action_shell_start(struct client_session_action *s UNUSED,
 		      struct client_session *session)
 {
   verbose("Sending shell request.\n");
-  channel_send_request(&session->super, ATOM_SHELL, 1, "");
+  channel_send_request(&session->super, ATOM_LD(ATOM_SHELL), 1, "");
 }
 
 static void
@@ -467,7 +467,7 @@ do_action_command_start(struct client_session_action *s,
   CAST(client_action_command, self, s);
 
   verbose("Sending %a request\n", self->type);
-  channel_send_request(&session->super, self->type, 1, "%S", self->arg);  
+  channel_send_request(&session->super, ATOM_LD(self->type), 1, "%S", self->arg);  
 }
 
 static struct client_session_action *
