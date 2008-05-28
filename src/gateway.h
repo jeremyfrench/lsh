@@ -86,9 +86,9 @@ make_gateway_port(const struct local_info *local,
 		  struct client_connection *connection);
 
 int
-gateway_forward_channel(struct ssh_connection *target_connection,
-			const struct channel_open_info *info,
-			uint32_t arg_length, const uint8_t *arg);
+gateway_forward_channel_open(struct ssh_connection *target_connection,
+			     const struct channel_open_info *info,
+			     uint32_t arg_length, const uint8_t *arg);
 
 extern struct channel_open gateway_channel_open;
 
