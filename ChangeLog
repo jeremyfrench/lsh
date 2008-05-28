@@ -1,5 +1,32 @@
 2008-05-28  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/gateway_channel.c (do_gateway_channel_event): Pass on
+	CHANNEL_SUCCESS and CHANNEL_FAILURE to the other channel.
+	(do_gateway_channel_request): Deleted.
+	(gateway_forward_channel_request): New channel request handler,
+	replacing do_gateway_channel_request. Use channel_send_request.
+	(do_gateway_channel_success): Deleted.
+	(do_gateway_channel_failure): Deleted.
+	(gateway_request_methods): Deleted.
+	(gateway_forward_channel_open): Renamed, was gateway_forward_open.
+	Updated all callers. Initialize request_fallback.
+
+	* src/gateway.c (oop_read_gateway): Use verbose for message at EOF.
+	(kill_gateway_connection): Use trace.
+
+	* src/channel.c (handle_channel_request): Use request_fallback.
+	(handle_channel_success): Deleted check for request_methods.
+	(handle_channel_failure): Likewise.
+	(init_channel): Initialize request_fallback.
+	(channel_send_request): The type is now specified as length and
+	pointer. Updated all callers.
+
+	* src/channel.h (struct channel_request_methods): Deleted.
+	(class ssh_channel): New attribute request_fallback, replacing
+	request_methods.
+
+	* src/scm/Makefile.am: Deleted obsolete file.
+
 	* src/Makefile.in (CONNECTION_SOURCES): Removed combinators.c.
 
 	* src/testsuite/Makefile.in (TS_SH): Added x11-3-test and x11-4-test.
