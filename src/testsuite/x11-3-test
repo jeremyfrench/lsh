@@ -1,0 +1,26 @@
+#! /bin/sh
+
+echo lshd X11, test 3
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+need_xvfb
+
+spawn_lshd && spawn_xvfb \
+  && DISPLAY=$TEST_DISPLAY LSH_FLAGS="$LSH_FLAGS --x11" exec_lsh xauth list \
+  | awk '{ print $3 }' > test.out1
+
+xauth list | awk '{ print $3 }' > test.out2
+
+if cmp test.out1 test.out2; then
+    echo "Using real X11 cookie!"
+    test_fail
+else
+    test_success
+fi
+
+test_done
