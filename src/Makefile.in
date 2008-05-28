@@ -111,7 +111,6 @@ CONNECTION_SOURCES = channel.c \
 		     channel_forward.c \
 		     channel_io.c \
 		     connection.c \
-		     combinators.c \
 		     command.c \
 		     exception.c \
 		     queue.c \
