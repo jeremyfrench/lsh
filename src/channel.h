@@ -70,16 +70,6 @@ struct channel_request_info
   int want_reply;
 };
 
-/* Overridden for gatewayed channels. */
-struct channel_request_methods
-{
-  void (*request)(struct ssh_channel *channel,
-		  const struct channel_request_info *info,
-		  struct simple_buffer *args);
-  void (*success)(struct ssh_channel *channel);
-  void (*failure)(struct ssh_channel *channel);
-};
-
 #define GABA_DECLARE
 #include "channel.h.x"
 #undef GABA_DECLARE
@@ -128,10 +118,9 @@ enum channel_flag {
        (send_window_size . uint32_t)
        (send_max_packet . uint32_t)
 
-       ; At most one of these can be non-NULL. The first is used
-       ; for gatewayed channels.
-       (request_methods . "const struct channel_request_methods *")
        (request_types object alist)
+       ; If non-NULL, invoked for unknown request types.
+       (request_fallback object channel_request)
 
        (flags . int)
 
@@ -225,7 +214,8 @@ struct exception *
 make_channel_open_exception(uint32_t error_code, const char *msg);
 
 int
-channel_send_request(struct ssh_channel *channel, int type,
+channel_send_request(struct ssh_channel *channel,
+		     uint32_t type_length, const uint8_t *type,
 		     int want_reply,
 		     const char *format, ...);
 
