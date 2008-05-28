@@ -171,7 +171,8 @@ channel_open_x11;
        (out struct channel_write_state)
        (err struct channel_write_state)
 
-       (resources object resource_list)
+       (pty object resource)
+       (x11 object resource)
 
        ; Actions to be invoked after the session is opened.
        (actions object object_list)
