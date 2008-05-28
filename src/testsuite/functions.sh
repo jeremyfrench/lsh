@@ -149,7 +149,12 @@ run_lsh () {
     echo "$cmd" | HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
 	--no-use-gateway --sloppy-host-authentication \
 	--capture-to /dev/null -p $PORT "$@" localhost
+}
 
+stdin_lsh () {
+    HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
+	--no-use-gateway --sloppy-host-authentication \
+	--capture-to /dev/null -p $PORT "$@" localhost
 }
 
 exec_lsh () {
