@@ -1,0 +1,36 @@
+#! /bin/sh
+
+echo lshd X11, test 4
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+need_xvfb
+
+# Note that xauth add replaces any existing data for a given display
+
+spawn_lshd && spawn_xvfb \
+  && ( DISPLAY=$TEST_DISPLAY stdin_lsh --x11 <<'LSHEOF'
+read display protocol cookie <<EOF
+`xauth list`
+EOF
+first=`echo $cookie | cut -c -30`
+last=`echo $cookie | cut -c 31-`
+
+echo first = $first, last = $last 1>&2
+
+xmodmap > /dev/null || exit 1
+
+xauth add "$display" "$protocol" "$first"
+xmodmap > /dev/null && exit 1
+
+xauth add "$display" "$protocol" "$first`echo "$last" |tr 0-9a-fA-F 1-90b-faB-FA`"
+xmodmap > /dev/null && exit 1
+exit 0
+LSHEOF
+) && test_success
+
+test_done
