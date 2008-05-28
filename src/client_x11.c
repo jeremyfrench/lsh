@@ -743,7 +743,7 @@ do_action_x11_success(struct client_session_action *s,
   handler = make_client_x11_handler(self->display, NULL);
   client_add_x11_handler(connection, handler);
   
-  remember_resource(session->resources, handler);
+  session->x11 = handler;
 }
 
 static int
