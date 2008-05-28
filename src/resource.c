@@ -141,10 +141,11 @@ resource_list_foreach(struct resource_list *self,
 struct resource *
 resource_list_top(struct resource_list *self)
 {
-  while (self->q && !self->q->resource->alive)
-    self->q = self->q->next;
+  for (; self->q; self->q = self->q->next)
+    if (self->q->resource->alive)
+      return self->q->resource;
 
-  return self->q->resource;
+  return NULL;
 }
 
 void
