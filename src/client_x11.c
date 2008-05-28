@@ -457,8 +457,8 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 	    {
 	      parse_rest(args, &arg_length, &arg);
 
-	      if (!gateway_forward_channel(handler->gateway,
-					   info, arg_length, arg))
+	      if (!gateway_forward_channel_open(handler->gateway,
+						info, arg_length, arg))
 		channel_open_deny(info, SSH_OPEN_RESOURCE_SHORTAGE,
 				  "Too many channels.");
 	    }
@@ -694,7 +694,7 @@ do_client_x11_handle_random_reply(struct client_random_handler *s,
 	 passed directly to the xauth command line. That's ugly, but
 	 it's how the other ssh implementations do it. */
       
-      if (!channel_send_request(&self->session->super, ATOM_X11_REQ, 1,
+      if (!channel_send_request(&self->session->super, ATOM_LD(ATOM_X11_REQ), 1,
 				"%c%s%xS%i",
 				0, /* FIXME: Single connection not supported */
 				MIT_COOKIE_NAME_LENGTH, MIT_COOKIE_NAME,
