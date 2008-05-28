@@ -75,9 +75,6 @@ static void gc_mark(struct lsh_object *o)
   
   switch(o->alloc_method)
     {
-    case LSH_ALLOC_STACK:
-      fatal("gc_mark: Unexpected stack object!\n");
-
     case LSH_ALLOC_HEAP:
       if (o->marked)
 	return;
