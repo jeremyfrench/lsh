@@ -38,29 +38,6 @@
 
 #include "client_pty.c.x"
 
-static void
-do_kill_client_tty_resource(struct resource *self)
-{
-  trace("do_kill_client_tty_resource\n");
-
-  if (self->alive)
-    {
-      self->alive = 0;
-      interact_set_mode(0);
-      /* Tell the werror functions that terminal mode is restored. */
-      set_error_raw(0);
-    }
-}
-
-static struct resource *
-make_client_tty_resource(void)
-{
-  NEW(resource, self);
-  init_resource(self, do_kill_client_tty_resource);
-
-  return self;
-}
-
 /* GABA:
    (class
      (name client_winch_handler)
@@ -91,6 +68,42 @@ make_client_winch_handler(struct ssh_channel *channel)
   return &self->super;
 }
 
+/* GABA:
+   (class
+     (name client_pty_resource)
+     (super resource)
+     (vars
+       (window_change object resource)))
+*/
+
+static void
+do_kill_client_pty_resource(struct resource *s)
+{
+  CAST(client_pty_resource, self, s);
+
+  trace("do_kill_client_pty_resource\n");
+
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+
+      KILL_RESOURCE(self->window_change);
+      interact_set_mode(0);
+      /* Tell the werror functions that terminal mode is restored. */
+      set_error_raw(0);
+    }
+}
+
+static struct resource *
+make_client_pty_resource(struct ssh_channel *session)
+{
+  NEW(client_pty_resource, self);
+  init_resource(&self->super, do_kill_client_pty_resource);
+  self->window_change
+    = interact_on_window_change(make_client_winch_handler(session));
+
+  return &self->super;
+}
 
 static void
 do_action_pty_start(struct client_session_action *s UNUSED,
@@ -130,10 +143,7 @@ do_action_pty_success(struct client_session_action *s UNUSED,
   /* Tell the werror functions that terminal mode is raw. */
   set_error_raw(1);
   
-  remember_resource(session->resources, make_client_tty_resource());
-  
-  remember_resource(session->resources,
-		    interact_on_window_change(make_client_winch_handler(&session->super)));
+  session->pty = make_client_pty_resource(&session->super);
 }
 
 static int
