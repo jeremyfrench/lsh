@@ -66,6 +66,7 @@
 /* GABA:
    (class
      (name client_x11_display)
+     (super client_x11_handler)
      (vars
        (address_length . socklen_t)
        (address space "struct sockaddr")
@@ -79,20 +80,6 @@
        ; Real authentication info
        (auth_name string)
        (auth_data string)))
-*/
-
-/* GABA:
-   (class
-     (name client_x11_handler)
-     (super resource)
-     (vars
-       (only_once . int)
-
-       ;; Exactly one should be non-null. NOTE: Could use a single
-       ;; pointer, and examine the object's isa pointer, but that's
-       ;; probably not worth the hassle.       
-       (display object client_x11_display)
-       (gateway object ssh_connection)))
 */
 
 /* GABA:
@@ -411,22 +398,6 @@ x11_connect(struct client_x11_display *display,
   return &self->super.super;
 }
 
-static struct resource *
-make_client_x11_handler(struct client_x11_display *display,
-			struct ssh_connection *gateway)
-{
-  NEW(client_x11_handler, self);
-  init_resource(&self->super, NULL);
-
-  assert((!display) ^ (!gateway));
-
-  self->only_once = 0;
-  self->display = display;
-  self->gateway = gateway;
-
-  return &self->super;
-}
-
 DEFINE_CHANNEL_OPEN(channel_open_x11)
 	(struct channel_open *s UNUSED,
 	 const struct channel_open_info *info,
@@ -438,10 +409,13 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 
   if (handler)
     {
-      if (handler->only_once)
+      if (handler->single_connection)
 	KILL_RESOURCE(&handler->super);
 
-      if (handler->gateway)
+      handler->open(handler, info, args);
+    }
+#if 0
+  if (handler->gateway)
 	{
 	  uint32_t arg_length;
 	  const uint8_t *arg;
@@ -463,35 +437,7 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 				  "Too many channels.");
 	    }
 	}
-      else
-	{
-	  assert(handler->display);
-
-	  uint32_t originator_length;
-	  const uint8_t *originator;
-	  uint32_t originator_port;
-
-	  if (parse_string(args, &originator_length, &originator)
-	      && parse_uint32(args, &originator_port) 
-	      && parse_eod(args))
-	    {
-	      struct resource *r;
-
-	      verbose("x11 connection attempt, originator: %s:%i\n",
-		      originator_length, originator, originator_port);
-
-	      r = x11_connect(handler->display, info);
-	      if (r)
-		remember_resource(info->connection->resources, r);
-	    }
-	  else
-	    {
-	      werror("client_open_x11: Invalid message!\n");
-	  
-	      SSH_CONNECTION_ERROR(info->connection, "Invalid CHANNEL_OPEN x11 message.");
-	    }
-	}
-    }
+#endif
   else
     channel_open_deny(info,
 		      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
@@ -502,9 +448,9 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 /* Setting up the forwarding. */
 void
 client_add_x11_handler(struct client_connection *connection,
-		       struct resource *handler)
+		       struct client_x11_handler *handler)
 {
-  remember_resource(connection->x11_displays, handler);
+  remember_resource(connection->x11_displays, &handler->super);
 }
 
 /* Format is host:display.screen, where display and screen are numbers */
@@ -643,12 +589,48 @@ parse_display(struct client_x11_display *self, const char *display)
   return 1;
 }
 
+static void
+do_client_x11_display_open(struct client_x11_handler *s,
+			   const struct channel_open_info *info,
+			   struct simple_buffer *args)
+{
+  CAST(client_x11_display, self, s);
+
+  uint32_t originator_length;
+  const uint8_t *originator;
+  uint32_t originator_port;
+
+  if (parse_string(args, &originator_length, &originator)
+      && parse_uint32(args, &originator_port) 
+      && parse_eod(args))
+    {
+      struct resource *r;
+
+      verbose("x11 connection attempt, originator: %s:%i\n",
+	      originator_length, originator, originator_port);
+
+      r = x11_connect(self, info);
+      if (r)
+	remember_resource(info->connection->resources, r);
+    }
+  else
+    {
+      werror("do_client_x11_display_open: Invalid message!\n");
+	  
+      SSH_CONNECTION_ERROR(info->connection, "Invalid CHANNEL_OPEN x11 message.");
+    }
+}
+
 static struct client_x11_display *
-make_client_x11_display(const char *display)
+make_client_x11_display(const char *display, int single_connection)
 {
   NEW(client_x11_display, self);
+  init_resource(&self->super.super, NULL);
+
+  self->super.single_connection = single_connection;
+  self->super.open = do_client_x11_display_open;
   self->fake = NULL;
-  
+
   if (!parse_display(self, display))
     {
       werror("Can't parse X11 display: `%z'\n", display);
@@ -736,14 +718,12 @@ do_action_x11_success(struct client_session_action *s,
 {
   CAST(client_x11_action, self, s);
   CAST(client_connection, connection, session->super.connection);
-  struct resource *handler;
 
   verbose("X11 request succeeded\n");
 
-  handler = make_client_x11_handler(self->display, NULL);
-  client_add_x11_handler(connection, handler);
+  client_add_x11_handler(connection, &self->display->super);
   
-  session->x11 = handler;
+  session->x11 = &self->display->super.super;
 }
 
 static int
@@ -756,11 +736,10 @@ do_action_x11_failure(struct client_session_action *s UNUSED,
 }
 
 struct client_session_action *
-make_x11_action(const char *display_string)
+make_x11_action(const char *display_string, int single_connection)
 {
-  struct client_x11_display *display;
-
-  display = make_client_x11_display(display_string);
+  struct client_x11_display *display
+    = make_client_x11_display(display_string, single_connection);
 
   if (display)
     {
