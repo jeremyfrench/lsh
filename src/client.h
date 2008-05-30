@@ -150,11 +150,21 @@ make_subsystem_action(struct lsh_string *subsystem);
 struct client_session_action client_request_pty;
 
 struct client_session_action *
-make_x11_action(const char *display_string);
+make_x11_action(const char *display_string, int single_connection);
 
+/* GABA:
+   (class
+     (name client_x11_handler)
+     (super resource)
+     (vars
+       (single_connection . int)
+       (open method void "const struct channel_open_info *info"
+		         "struct simple_buffer *args")))
+*/
+   
 void
 client_add_x11_handler(struct client_connection *connection,
-		       struct resource *handler);
+		       struct client_x11_handler *handler);
 
 extern struct channel_open
 channel_open_x11;
