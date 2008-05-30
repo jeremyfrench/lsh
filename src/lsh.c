@@ -379,8 +379,10 @@ maybe_x11(struct lsh_options *options)
       char *display = getenv(ENV_DISPLAY);
       struct client_session_action *action = NULL;
 
+      /* FIXME: Make single_connection feature configurable. Should be
+	 enabled by default for exec. */
       if (display)
-	action = make_x11_action(display);
+	action = make_x11_action(display, 0);
 
       if (action)
 	options->x11_forward = 1;
