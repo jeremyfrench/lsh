@@ -1,3 +1,23 @@
+2008-05-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (maybe_x11): Pass zero single_connection argument to
+	make_x11_action.
+
+	* src/client_x11.c (make_client_x11_handler): Deleted function.
+	(class client_x11_display): Inherit client_x11_handler.
+	(channel_open_x11): Invoke the handler's open method.
+	(client_add_x11_handler): Take an argument of type
+	client_x11_handler *, not resource *.
+	(do_client_x11_display_open): New function.
+	(make_client_x11_display): New argument single_connection.
+	Initialize super class and open method.
+	(do_action_x11_success): Updated for client_x11_display inheriting
+	client_x11_handler.
+	(make_x11_action): New argument single_connection.
+
+	* src/client.h (class client_x11_handler): New class, replacing
+	similar class in client_x11.c.
+
 2008-05-28  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_gateway_channel_event): Pass on
