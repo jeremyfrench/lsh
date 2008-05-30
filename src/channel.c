@@ -1290,6 +1290,7 @@ channel_transmit_extended(struct ssh_channel *channel,
 			 type, length, data));
 }
 
+/* FIXME: Merge into channel_open_new_type? */
 int
 channel_open_new_v(struct ssh_connection *connection,
 		   struct ssh_channel *channel,
