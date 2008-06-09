@@ -60,16 +60,6 @@ enum channel_event
   CHANNEL_EVENT_START,
 };
 
-struct channel_request_info
-{
-  uint32_t type_length;
-  const uint8_t *type_data;
-  
-  enum lsh_atom type;
-
-  int want_reply;
-};
-
 #define GABA_DECLARE
 #include "channel.h.x"
 #undef GABA_DECLARE
@@ -165,14 +155,14 @@ enum channel_flag {
        ; right order.
        (handler method void
 		"struct ssh_channel *channel"
-		"const struct channel_request_info *info"
+		"const struct request_info *info"
 		"struct simple_buffer *args")))
 */
 
 #define DEFINE_CHANNEL_REQUEST(name)				\
 static void do_##name(struct channel_request *s,		\
 		      struct ssh_channel *channel,		\
-                      const struct channel_request_info *info,	\
+                      const struct request_info *info,	\
 		      struct simple_buffer *args);		\
 								\
 struct channel_request name =					\
@@ -219,9 +209,16 @@ channel_send_request(struct ssh_channel *channel,
 		     int want_reply,
 		     const char *format, ...);
 
+/* GABA:
+   (class
+     (name global_request_state)
+     (vars
+       (done method void "struct ssh_connection *" int)))
+*/
+
 void
 channel_send_global_request(struct ssh_connection *connection, int type,
-			    struct command_context *ctx,
+			    struct global_request_state *state,
 			    const char *format, ...);
 
 struct lsh_string *
@@ -246,9 +243,15 @@ void
 channel_open_deny(const struct channel_open_info *info,
 		  int error, const char *msg);
 
+
+void
+global_request_reply(struct ssh_connection *connection,
+		     const struct request_info *info,
+		     int result);
+
 void
 channel_request_reply(struct ssh_channel *channel,
-		      const struct channel_request_info *info,
+		      const struct request_info *info,
 		      int result);
 
 void

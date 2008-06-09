@@ -41,8 +41,6 @@
 #include "channel.h.x"
 #undef GABA_DEFINE
 
-#include "channel.c.x"
-
 /* Opening a new channel: There are two cases, depending on which side
    sends the CHANNEL_OPEN. When we send it, the following
    steps are taken:
@@ -295,135 +293,25 @@ channel_start_receive(struct ssh_channel *channel,
 
 /* Channel related messages */
 
-/* GABA:
-   (class
-     (name request_status)
-     (vars
-       ; -1 for still active requests,
-       ; 0 for failure,
-       ; 1 for success
-       (status . int)))
-*/
-
-static struct request_status *
-make_request_status(void)
-{
-  NEW(request_status, self);
-  self->status = -1;
-
-  return self;
-}
-
-/* GABA:
-   (class
-     (name global_request_continuation)
-     (super command_continuation)
-     (vars
-       (connection object ssh_connection)
-       (active object request_status)))
-*/
-
-static void 
-send_global_request_responses(struct ssh_connection *connection)
-{
-  struct object_queue *q = &connection->active_global_requests;
-
-  assert(!object_queue_is_empty(q));
-
-  for (;;)
-    {
-      CAST(request_status, n, object_queue_peek_head(q));
-      if (!n || (n->status < 0))
-	break;
- 
-      object_queue_remove_head(q);
-
-      SSH_CONNECTION_WRITE(connection, (n->status
-				  ? format_global_success()
-				  : format_global_failure()));
-    }
-}
-
-static void
-do_global_request_response(struct command_continuation *s,
-			   struct lsh_object *x UNUSED)
-{
-  CAST(global_request_continuation, self, s);
-
-  assert(self->active->status == -1);
-  self->active->status = 1;
-
-  send_global_request_responses(self->connection);
-}
-
-static struct command_continuation *
-make_global_request_response(struct ssh_connection *connection,
-			     struct request_status *active)
-{
-  NEW(global_request_continuation, self);
-
-  self->super.c = do_global_request_response;
-  self->connection = connection;
-  self->active = active;
-   
-  return &self->super;
-}
-
-
-/* GABA:
-   (class
-     (name global_request_exception_handler)
-     (super exception_handler)
-     (vars
-       (connection object ssh_connection)
-       (active object request_status)))
-*/
-
-/* All exceptions are treated as a failure. */
-static void 
-do_exc_global_request_handler(struct exception_handler *c,
-			      const struct exception *e)
-{
-  CAST(global_request_exception_handler, self, c);
-
-  assert(self->active->status == -1);
-  self->active->status = 0;
-
-  werror("Denying global request: %z\n", e->msg);
-  send_global_request_responses(self->connection);
-}
-
-static struct exception_handler *
-make_global_request_exception_handler(struct ssh_connection *connection,
-				      struct request_status *active,
-				      const char *context)
-{
-  NEW(global_request_exception_handler, self);
-
-  self->super.raise = do_exc_global_request_handler;
-  self->super.context = context;
-  self->active = active;
-  self->connection = connection;
-  return &self->super;
-}
-
 static void
 handle_global_request(struct ssh_connection *connection,
 		      struct simple_buffer *buffer)
 {
-  enum lsh_atom name;
-  int want_reply;
+  struct request_info info;
   
-  if (parse_atom(buffer, &name)
-      && parse_boolean(buffer, &want_reply))
+  if (parse_string(buffer,
+		   &info.type_length, &info.type_data)
+      && parse_boolean(buffer, &info.want_reply))
     {
       struct global_request *req = NULL;
 
-      if (name && connection->global_requests)
+      info.type = lookup_atom(info.type_length, info.type_data);
+      
+      if (info.type && connection->global_requests)
 	{
 	  CAST_SUBTYPE(global_request, r,
 		       ALIST_GET(connection->global_requests,
-				 name));
+				 info.type));
 	  req = r;
 	}
       if (!req)
@@ -433,6 +321,7 @@ handle_global_request(struct ssh_connection *connection,
 	}
       else
 	{
+#if 0
 	  struct command_continuation *c;
 	  struct exception_handler *e;
 	  if (want_reply)
@@ -452,11 +341,29 @@ handle_global_request(struct ssh_connection *connection,
 	      c = &discard_continuation;
 	      e = &ignore_exception_handler;
 	    }
-	  GLOBAL_REQUEST(req, connection, name, want_reply, buffer, c, e);
+#endif
+	  req->handler(req, connection, &info, buffer);
 	}
     }
   else
     SSH_CONNECTION_ERROR(connection, "Invalid SSH_MSG_GLOBAL_REQUEST message.");
+}
+
+/* FIXME: Move to connection.c? */
+void
+global_request_reply(struct ssh_connection *connection,
+		     const struct request_info *info,
+		     int result)
+{
+  if (!info || info->want_reply)
+    {
+      struct lsh_string *response
+	= (result
+	   ? format_global_success()
+	   : format_global_failure());
+      
+      SSH_CONNECTION_WRITE(connection, response);
+    }
 }
 
 static void
@@ -475,14 +382,16 @@ handle_global_success(struct ssh_connection *connection,
       return;
     }
   {
-    CAST_SUBTYPE(command_context, ctx,
+    CAST_SUBTYPE(global_request_state, state,
 		 object_queue_remove_head(&connection->pending_global_requests));
-    COMMAND_RETURN(ctx->c, connection);
+    state->done(state, connection, 1);
   }
 }
 
+#if 0
 struct exception global_request_exception =
 STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, 0, "Global request failed");
+#endif
 
 static void
 handle_global_failure(struct ssh_connection *connection,
@@ -500,9 +409,9 @@ handle_global_failure(struct ssh_connection *connection,
     }
   else
     {
-      CAST_SUBTYPE(command_context, ctx,
+      CAST_SUBTYPE(global_request_state, state,
 		   object_queue_remove_head(&connection->pending_global_requests));
-      EXCEPTION_RAISE(ctx->e, &global_request_exception);
+      state->done(state, connection, 0);
     }
 }
 
@@ -511,10 +420,10 @@ handle_channel_request(struct ssh_connection *connection,
 		       struct simple_buffer *buffer)
 {
   uint32_t channel_number;
-  struct channel_request_info info;
+  struct request_info info;
   
   if (parse_uint32(buffer, &channel_number)
-      &&parse_string(buffer,
+      && parse_string(buffer,
 		     &info.type_length, &info.type_data)
       && parse_boolean(buffer, &info.want_reply))
     {    
@@ -560,7 +469,7 @@ handle_channel_request(struct ssh_connection *connection,
 
 void
 channel_request_reply(struct ssh_channel *channel,
-		      const struct channel_request_info *info,
+		      const struct request_info *info,
 		      int result)
 {
   if (info->want_reply)
@@ -1401,7 +1310,7 @@ channel_send_request(struct ssh_channel *channel,
 
 void
 channel_send_global_request(struct ssh_connection *connection, int type,
-			    struct command_context *ctx,
+			    struct global_request_state *state,
 			    const char *format, ...)
 {
   va_list args;
@@ -1412,7 +1321,7 @@ channel_send_global_request(struct ssh_connection *connection, int type,
 #define REQUEST_FORMAT "%c%a%c"
 #define REQUEST_ARGS SSH_MSG_GLOBAL_REQUEST, type, want_reply
 
-  want_reply = (ctx != NULL);
+  want_reply = (state != NULL);
 
   l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);
   
@@ -1434,10 +1343,10 @@ channel_send_global_request(struct ssh_connection *connection, int type,
   SSH_CONNECTION_WRITE(connection, packet);
   if (want_reply)
     {
-      assert(ctx);
+      assert(state);
       object_queue_add_tail(&connection->pending_global_requests,
-			    &ctx->super);
-    }      
+			    &state->super);
+    }
 }
 
 /* In principle, these belong to connection.c, but it needs the
