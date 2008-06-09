@@ -404,7 +404,7 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 	 struct simple_buffer *args)
 {
   CAST(client_connection, connection, info->connection);
-  CAST(client_x11_handler, handler,
+  CAST_SUBTYPE(client_x11_handler, handler,
        resource_list_top(connection->x11_displays));
 
   if (handler)
@@ -722,7 +722,6 @@ do_action_x11_success(struct client_session_action *s,
   verbose("X11 request succeeded\n");
 
   client_add_x11_handler(connection, &self->display->super);
-  
   session->x11 = &self->display->super.super;
 }
 
