@@ -28,6 +28,7 @@
 #include "keyexchange.h"
 #include "channel.h"
 #include "channel_io.h"
+#include "tcpforward.h"
 #include "werror.h"
 
 struct client_session;
@@ -168,6 +169,18 @@ client_add_x11_handler(struct client_connection *connection,
 
 extern struct channel_open
 channel_open_x11;
+
+/* GABA:
+   (class
+     (name client_tcpforward_handler)
+     (super forwarded_port)
+     (vars
+       (active . int)
+       (open method void "const struct channel_open_info *info"
+		         "uint32_t peer_ip_length"
+			 "const uint8_t *peer_ip"
+			 "uint32_t peer_port")))
+*/
 
 /* Initiate and manage a session */
 /* GABA:
