@@ -298,7 +298,7 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
 DEFINE_CHANNEL_REQUEST(handle_exit_status)
 	(struct channel_request *s UNUSED,
 	 struct ssh_channel *channel,
-	 const struct channel_request_info *info,
+	 const struct request_info *info,
 	 struct simple_buffer *args)
 {
   CAST(client_session, session, channel);
@@ -327,7 +327,7 @@ DEFINE_CHANNEL_REQUEST(handle_exit_status)
 DEFINE_CHANNEL_REQUEST(handle_exit_signal)
 	(struct channel_request *s UNUSED,
 	 struct ssh_channel *channel,
-	 const struct channel_request_info *info,
+	 const struct request_info *info,
 	 struct simple_buffer *args)
 {
   CAST(client_session, session, channel);
