@@ -190,7 +190,7 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 DEFINE_CHANNEL_REQUEST(gateway_forward_channel_request)
 	(struct channel_request *s UNUSED,
 	 struct ssh_channel *c,
-	 const struct channel_request_info *info,
+	 const struct request_info *info,
 	 struct simple_buffer *buffer)
 {
   CAST(gateway_channel, self, c);
