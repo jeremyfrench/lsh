@@ -490,7 +490,6 @@ process_request(struct pty_state *state,
   switch(request->header.type)
     {
     case PTY_REQUEST_CREATE:
-      werror("PTY_REQUEST_CREATE\n");
       if (request->header.ref != -1)
 	{
 	  response->header.type = EINVAL;
@@ -529,7 +528,6 @@ process_request(struct pty_state *state,
       break;
 
     case PTY_REQUEST_MASTER:
-      werror("PTY_REQUEST_MASTER\n");
 
       /* Useful only for old bsd-style tty allocation. When using
 	 /devptmx and grantpt, it's better to let the client create
@@ -618,7 +616,6 @@ process_request(struct pty_state *state,
       break;
 
     case PTY_REQUEST_LOGIN:
-      werror("PTY_REQUEST_LOGIN\n");
       if (!request->has_creds)
 	response->header.type = EPERM;
       else if (!pty)
@@ -636,7 +633,6 @@ process_request(struct pty_state *state,
       break;
 
     case PTY_REQUEST_LOGOUT:
-      werror("PTY_REQUEST_LOGOUT\n");
       if (!pty)
 	{
 	  response->header.type = EINVAL;
@@ -651,7 +647,6 @@ process_request(struct pty_state *state,
       break;
 
     case PTY_REQUEST_DESTROY:
-      werror("PTY_REQUEST_DESTROY\n");
       if (!pty)
 	{
 	  response->header.type = EINVAL;
