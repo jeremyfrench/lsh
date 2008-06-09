@@ -314,36 +314,10 @@ handle_global_request(struct ssh_connection *connection,
 				 info.type));
 	  req = r;
 	}
-      if (!req)
-	{
-	  SSH_CONNECTION_WRITE(connection, format_global_failure());
-	  return;
-	}
+      if (req)
+	req->handler(req, connection, &info, buffer);
       else
-	{
-#if 0
-	  struct command_continuation *c;
-	  struct exception_handler *e;
-	  if (want_reply)
-	    {
-	      struct request_status *a = make_request_status();
-	      
-	      object_queue_add_tail(&connection->active_global_requests,
-				    &a->super);
-	      
-	      c = make_global_request_response(connection, a);
-	      e = make_global_request_exception_handler(connection, a,
-							HANDLER_CONTEXT);
-	    }
-	  else
-	    {
-	      /* We should ignore failures. */
-	      c = &discard_continuation;
-	      e = &ignore_exception_handler;
-	    }
-#endif
-	  req->handler(req, connection, &info, buffer);
-	}
+	SSH_CONNECTION_WRITE(connection, format_global_failure());
     }
   else
     SSH_CONNECTION_ERROR(connection, "Invalid SSH_MSG_GLOBAL_REQUEST message.");
@@ -387,11 +361,6 @@ handle_global_success(struct ssh_connection *connection,
     state->done(state, connection, 1);
   }
 }
-
-#if 0
-struct exception global_request_exception =
-STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, 0, "Global request failed");
-#endif
 
 static void
 handle_global_failure(struct ssh_connection *connection,
