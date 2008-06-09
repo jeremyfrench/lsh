@@ -40,6 +40,16 @@ enum channel_alloc_state {
   CHANNEL_ALLOC_ACTIVE,
 };
 
+struct request_info
+{
+  uint32_t type_length;
+  const uint8_t *type_data;
+  
+  enum lsh_atom type;
+
+  int want_reply;
+};
+
 #define GABA_DECLARE
 #include "connection.h.x"
 #undef GABA_DECLARE
@@ -98,10 +108,6 @@ enum channel_alloc_state {
        ; forwarded-tcpip requests on.       
        (forwarded_ports struct object_queue)
 
-       ; Global requests that we have received, and should reply to
-       ; in the right order
-       (active_global_requests struct object_queue)
-
        ; Queue of global requests that we expect replies on.
        (pending_global_requests struct object_queue)
        
@@ -158,22 +164,16 @@ ssh_connection_start_channels(struct ssh_connection *connection);
 
 /* SSH_MSG_GLOBAL_REQUEST */
 
+/* FIXME: Does this really need a class, are there any subclasses with
+   instance variables? */
 /* GABA:
    (class
      (name global_request)
      (vars
-       (handler method void "struct ssh_connection *table"
-                            "uint32_t type"
-			    ; want-reply is needed only by
-			    ; do_gateway_global_request.
-                            "int want_reply"
-                            "struct simple_buffer *args"
-			    "struct command_continuation *c"
-			    "struct exception_handler *e")))
+       (handler method void "struct ssh_connection *connection"
+       			    "const struct request_info *info"
+                            "struct simple_buffer *args")))
 */
-
-#define GLOBAL_REQUEST(r, c, t, w, a, n, e) \
-((r)->handler((r), (c), (t), (w), (a), (n), (e)))
 
 /* SSH_MSG_CHANNEL_OPEN */
 
@@ -185,8 +185,8 @@ ssh_connection_start_channels(struct ssh_connection *connection);
        (connection object ssh_connection)
        (local_channel_number . uint32_t)
 
-       ;; NOTE: This is a pointer into the packet, and valid only during the call to the
-       ;; channel open method.
+       ;; NOTE: This is a pointer into the packet, and valid only
+       ;; during the call to the channel open method.       
        (type_length . uint32_t)
        (type_data . "const uint8_t *")
        (type . int)

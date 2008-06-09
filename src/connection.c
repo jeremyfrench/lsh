@@ -75,7 +75,6 @@ init_ssh_connection(struct ssh_connection *connection,
 
   object_queue_init(&connection->forwarded_ports);
   
-  object_queue_init(&connection->active_global_requests);
   object_queue_init(&connection->pending_global_requests);
 }
 
