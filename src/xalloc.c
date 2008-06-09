@@ -260,7 +260,6 @@ lsh_object_check_subtype(struct lsh_class *class,
   switch (instance->alloc_method)
     {
     case LSH_ALLOC_STATIC:
-    case LSH_ALLOC_STACK:
       return instance;
     case LSH_ALLOC_HEAP:
       break;
