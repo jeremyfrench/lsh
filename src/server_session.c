@@ -639,7 +639,7 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 DEFINE_CHANNEL_REQUEST(shell_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info,
+      const struct request_info *info,
       struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
@@ -670,7 +670,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
 DEFINE_CHANNEL_REQUEST(exec_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info,
+      const struct request_info *info,
       struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
@@ -723,7 +723,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 static void
 do_spawn_subsystem(struct channel_request *s,
 		   struct ssh_channel *channel,
-		   const struct channel_request_info *info,
+		   const struct request_info *info,
 		   struct simple_buffer *args)
 {
   CAST(subsystem_request, self, s);
@@ -784,7 +784,7 @@ make_subsystem_handler(const char **subsystems)
 DEFINE_CHANNEL_REQUEST(pty_request_handler)
      (struct channel_request *c UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info,
+      const struct request_info *info,
       struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
@@ -850,7 +850,7 @@ DEFINE_CHANNEL_REQUEST(pty_request_handler)
 DEFINE_CHANNEL_REQUEST(window_change_request_handler)
 	(struct channel_request *c UNUSED,
 	 struct ssh_channel *channel,
-	 const struct channel_request_info *info,
+	 const struct request_info *info,
 	 struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
@@ -891,7 +891,7 @@ DEFINE_CHANNEL_REQUEST(window_change_request_handler)
 DEFINE_CHANNEL_REQUEST(x11_request_handler)
      (struct channel_request *s UNUSED,
       struct ssh_channel *channel,
-      const struct channel_request_info *info,
+      const struct request_info *info,
       struct simple_buffer *args)
 {
   CAST(server_session, session, channel);
