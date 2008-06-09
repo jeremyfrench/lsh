@@ -32,14 +32,10 @@
 #include "tcpforward.h"
 
 #include "channel_forward.h"
+#include "client.h"
 #include "io.h"
 #include "ssh.h"
 #include "werror.h"
-
-/* Forward declarations */
-/* FIXME: Should be static */
-struct command_3 open_direct_tcpip_command;
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip_command.super.super)
 
 #include "client_tcpforward.c.x"
 
@@ -104,20 +100,39 @@ forward_local_port(const struct address_info *local,
 /* GABA:
    (class
      (name remote_port)
-     (super forwarded_port)
+     (super client_tcpforward_handler)
      (vars
-       (active . int)
        (target const object address_info)))
 */
 
+static void
+do_remote_port_open(struct client_tcpforward_handler *s,
+		    const struct channel_open_info *info,
+		    uint32_t peer_ip_length, const uint8_t *peer_ip,
+		    uint32_t peer_port)
+{
+  CAST(remote_port, self, s);
+  struct resource *r;
+
+  verbose("forwarded-tcpip for %pS:%i, from %ps:%i.\n",
+	  self->super.super.address->ip, self->super.super.address->port,
+	  peer_ip_length, peer_ip, peer_port);
+
+  r = tcpforward_connect(self->target, info);
+  if (r)
+    remember_resource(info->connection->resources, r);  
+}
+
+    
 static struct remote_port *
 make_remote_port(const struct address_info *listen,
 		 const struct address_info *target)
 {
   NEW(remote_port, self);
 
-  self->super.address = listen;
-  self->active = 0;
+  self->super.super.address = listen;
+  self->super.active = 0;
+  self->super.open = do_remote_port_open;
   self->target = target;
 
   return self;
@@ -142,21 +157,12 @@ DEFINE_CHANNEL_OPEN(channel_open_forwarded_tcpip)
       && parse_uint32(args, &peer_port)
       && parse_eod(args))
     {
-      CAST(remote_port, port,
-	   tcpforward_lookup(&info->connection->forwarded_ports,
-			     listen_ip_length, listen_ip, listen_port));
+      CAST_SUBTYPE(client_tcpforward_handler, port,
+		   tcpforward_lookup(&info->connection->forwarded_ports,
+				     listen_ip_length, listen_ip, listen_port));
 	   
       if (port && port->active)
-	{
-	  struct resource *r;
-
-	  verbose("forwarded-tcpip for %ps:%i, from %ps:%i.\n",
-		  listen_ip_length, listen_ip, listen_port, peer_ip_length, peer_ip, peer_port);
-	  
-	  r = tcpforward_connect(port->target, info);
-	  if (r)
-	    remember_resource(info->connection->resources, r);
-	}
+	port->open(port, info, peer_ip_length, peer_ip, peer_port);
       else
 	{
 	  werror("Received a forwarded-tcpip request on a port for which we\n"
@@ -178,80 +184,40 @@ DEFINE_CHANNEL_OPEN(channel_open_forwarded_tcpip)
 
 /* GABA:
    (class
-     (name remote_port_continuation)
-     (super command_continuation)
-     (vars
-       (up object command_continuation)
+     (name remote_port_state)
+     (super global_request_state)
+     (vars       
        (port object remote_port)))
 */
 
 static void
-do_remote_port_continuation(struct command_continuation *s,
-			    struct lsh_object *x)
+do_remote_port_state_done(struct global_request_state *s,
+			  struct ssh_connection *connection,
+			  int success)
 {
-  CAST(remote_port_continuation, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, x);
+  CAST(remote_port_state, self, s);
 
-  assert(connection);
-
-  debug("tcpforward_commands.c: do_remote_port_continuation.\n");
-  self->port->active = 1;
-
-  COMMAND_RETURN(self->up, x);
+  if (success)
+    self->port->super.active = 1;
+  else
+    {
+      werror("Forwarding of remote port refused by server.\n");
+      tcpforward_remove_port(&connection->forwarded_ports,
+			     &self->port->super.super);
+    }
 }
 
-static struct command_continuation *
-make_remote_port_continuation(struct remote_port *port,
-			      struct command_continuation *c)
+static struct global_request_state *
+make_remote_port_state(struct remote_port *port)
 {
-  NEW(remote_port_continuation, self);
-
-  debug("tcpforward_commands.c: make_remote_port_continuation\n");
-
-  self->super.c = do_remote_port_continuation;
-  self->up = c;
-
+  NEW(remote_port_state, self);
+  self->super.done = do_remote_port_state_done;
   self->port = port;
 
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name remote_port_exception_handler)
-     (super exception_handler)
-     (vars
-       (e object exception_handler)
-       (connection object ssh_connection)
-       (port object remote_port)))
-*/
 
-static void
-do_remote_port_exception_handler(struct exception_handler *s,
-				 const struct exception *x)
-{
-  CAST(remote_port_exception_handler, self, s);
-  
-  tcpforward_remove_port(&self->connection->forwarded_ports,
-			 &self->port->super);
-
-  EXCEPTION_RAISE(self->e, x);
-}
-
-static struct exception_handler *
-make_remote_port_exception_handler(struct ssh_connection *connection,
-				   struct remote_port *port,
-				   struct exception_handler *e)
-{
-  NEW(remote_port_exception_handler, self);
-  self->super.raise = do_remote_port_exception_handler;
-  self->e = e;
-  self->connection = connection;
-  self->port = port;
-
-  return &self->super;
-}
-    
 /* GABA:
    (class
      (name request_tcpip_forward_command)
@@ -263,27 +229,24 @@ make_remote_port_exception_handler(struct ssh_connection *connection,
        (target const object address_info)))
 */
 
+/* FIXME: Turn into an ordinary function. */
 static void
 do_request_tcpip_forward(struct command *s,
 			 struct lsh_object *x,
-			 struct command_continuation *c,
-			 struct exception_handler *e)
+			 struct command_continuation *c UNUSED,
+			 struct exception_handler *e UNUSED)
 {
   CAST(request_tcpip_forward_command, self, s);
   CAST_SUBTYPE(ssh_connection, connection, x);
   struct remote_port *port;
-  struct command_context *ctx;
 
   debug("client_tcpforward.c: do_request_tcpip_forward\n");
 
   port = make_remote_port(self->port, self->target);
-  ctx = make_command_context(
-    make_remote_port_continuation(port, c),
-    make_remote_port_exception_handler(connection, port, e));
+  object_queue_add_tail(&connection->forwarded_ports, &port->super.super.super);
 
-  object_queue_add_tail(&connection->forwarded_ports, &port->super.super);
-
-  channel_send_global_request(connection, ATOM_TCPIP_FORWARD, ctx,
+  channel_send_global_request(connection, ATOM_TCPIP_FORWARD,
+			      make_remote_port_state(port),
 			      "%S%i", self->port->ip, self->port->port);
 }
 
