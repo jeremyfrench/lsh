@@ -1,3 +1,93 @@
+2008-06-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/xalloc.c (lsh_object_check_subtype): Removed support for
+	LSH_ALLOC_STACK.
+
+	* src/server_tcpforward.c (remove_server_forward): Deleted.
+	(do_tcpip_forward_handler): Adapted to new convention. Use
+	global_request_reply.
+	(do_tcpip_cancel_forward): Adapted to new convention. Use
+	global_request_reply, and tcpforward_remove.
+
+	* src/pty-helper.c (pty_send_message): Moved declaration of creds.
+
+	* src/lshd-pty-helper.c (process_request): Deleted werror messages
+	for each request.
+
+	* src/client_x11.c (channel_open_x11): Use CAST_SUBTYPE, since
+	client_x11_handler has subclasses.
+
+	* src/tcpforward.c (tcpforward_remove): New function.
+
+	* src/client_tcpforward.c (class remote_port): Inherit
+	client_tcpforward_handler.
+	(do_remote_port_open): New function
+	(make_remote_port): Initialize open method.
+	(channel_open_forwarded_tcpip): Look up a
+	client_tcpforward_handler for the port, and invoke its open
+	method. Code for actual connecting is moved to
+	do_remote_port_open.
+	(class remote_port_state): New class, replacing
+	remote_port_continuation and remote_port_exception_handler.
+	(do_remote_port_state_done): New function.
+	(class remote_port_continuation): Deleted.
+	(do_remote_port_continuation): Deleted.
+	(make_remote_port_continuation): Deleted.
+	(class remote_port_exception_handler): Deleted.
+	(do_remote_port_exception_handler): Deleted.
+	(make_remote_port_exception_handler): Deleted.
+	(do_request_tcpip_forward): Adapted to new
+	channel_send_global_request convention, and use
+	make_remote_port_state.
+
+	* src/client_session.c (handle_exit_status): struct
+	channel_request_info renamed to request_info.
+	(handle_exit_signal): Likewise.
+	* src/server_session.c (shell_request_handler): struct
+	channel_request_info renamed to request_info.
+	(exec_request_handler): Likewise.
+	(do_spawn_subsystem): Likewise.
+	(pty_request_handler): Likewise.
+	(window_change_request_handler): Likewise.
+	(x11_request_handler): Likewise.
+
+	* src/client.h (class client_tcpforward_handler): New class.
+
+	* src/channel.c (class request_status): Deleted.
+	(make_request_status): Deleted.
+	(class global_request_continuation): Deleted.
+	(send_global_request_responses): Deleted.
+	(do_global_request_response): Deleted.
+	(make_global_request_response): Deleted.
+	(class global_request_exception_handler): Deleted.
+	(do_exc_global_request_handler): Deleted.
+	(make_global_request_exception_handler): Deleted.
+	(handle_global_request): New simplified handler convention, with
+	no continuation or exception_handler.
+	(global_request_reply): New function.
+	(handle_global_success): Use new global_request_state class.
+	(handle_global_failure): Likewise.
+	(handle_channel_request): struct channel_request_info renamed to
+	request_info.
+	(channel_request_reply): Likewise.
+	(channel_send_global_request): Use struct global_request_state
+	instead of struct command_context.
+
+	* src/channel.h (struct channel_request_info): Deleted.
+	(class channel_request): Use struct request_info for the handler
+	method.
+	(class global_request_state): New class.
+
+	* src/connection.c (init_ssh_connection): Deleted initialization
+	of active_global_requests.
+
+	* src/connection.h (struct request_info): New struct, replaces
+	channel_request_info in channel.h. Used for both global requests
+	and channel requests.
+	(class ssh_connection): Deleted active_global_requests.
+	(class global_request): The handler method now takes a struct
+	request_info as argument, and no continuation or exception_handler.
+
 2008-05-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (maybe_x11): Pass zero single_connection argument to
