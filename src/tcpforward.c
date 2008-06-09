@@ -62,6 +62,24 @@ tcpforward_lookup(struct object_queue *q,
   return NULL;
 }
 
+struct forwarded_port *
+tcpforward_remove(struct object_queue *q,
+		  uint32_t length, const uint8_t *ip, uint32_t port)
+{
+  FOR_OBJECT_QUEUE(q, n)
+    {
+      CAST(forwarded_port, p, n);
+
+      if ( (port == p->address->port)
+	   && lsh_string_eq_l(p->address->ip, length, ip) )
+	{
+	  FOR_OBJECT_QUEUE_REMOVE(q, n);
+	  return p;
+	}
+    }
+  return NULL;
+}
+
 int
 tcpforward_remove_port(struct object_queue *q, struct forwarded_port *port)
 {

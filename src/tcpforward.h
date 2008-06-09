@@ -1,3 +1,4 @@
+
 /* tcpforward.h
  *
  */
@@ -53,6 +54,10 @@ forward_remote_port(const struct address_info *port,
 
 struct forwarded_port *
 tcpforward_lookup(struct object_queue *q,
+		  uint32_t length, const uint8_t *ip, uint32_t port);
+
+struct forwarded_port *
+tcpforward_remove(struct object_queue *q,
 		  uint32_t length, const uint8_t *ip, uint32_t port);
 
 int
