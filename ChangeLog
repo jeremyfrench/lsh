@@ -50,6 +50,8 @@
 	(pty_request_handler): Likewise.
 	(window_change_request_handler): Likewise.
 	(x11_request_handler): Likewise.
+	* src/gateway_channel.c (gateway_forward_channel_request): struct
+	channel_request_info renamed to request_info.
 
 	* src/client.h (class client_tcpforward_handler): New class.
 
