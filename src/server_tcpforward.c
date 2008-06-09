@@ -33,6 +33,7 @@
 
 #include "channel_forward.h"
 #include "exception.h"
+#include "format.h"
 #include "io.h"
 #include "lsh_string.h"
 #include "ssh.h"
@@ -85,6 +86,7 @@ make_server_forward(struct ssh_connection *connection,
     }
 }
 
+#if 0
 static struct server_forward *
 remove_server_forward(struct object_queue *q,
 		      uint32_t length, const uint8_t *ip, uint32_t port)
@@ -105,24 +107,23 @@ remove_server_forward(struct object_queue *q,
     }
   return NULL;
 }
+#endif
 
 static void
 do_tcpip_forward_handler(struct global_request *s UNUSED,
 			 struct ssh_connection *connection,
-			 uint32_t type UNUSED,
-			 int want_reply UNUSED,
-			 struct simple_buffer *args,
-			 struct command_continuation *c,
-			 struct exception_handler *e)
+			 const struct request_info *info,
+			 struct simple_buffer *args)
 {
-  struct lsh_string *bind_host;
+  uint32_t bind_host_length;
+  const uint8_t *bind_host;
   uint32_t bind_port;
 
-  if ((bind_host = parse_string_copy(args))
+  if (parse_string(args, &bind_host_length, &bind_host)
       && parse_uint32(args, &bind_port)
       && parse_eod(args))
     {
-      struct address_info *a = make_address_info(bind_host, bind_port);
+      struct address_info *a;
       struct server_forward *forward;
 
       trace("forward-tcpip request for port %i.\n", bind_port);
@@ -130,37 +131,31 @@ do_tcpip_forward_handler(struct global_request *s UNUSED,
       if (bind_port < 1024)
 	{
 	  werror("Denying forwarding of privileged port %i.\n", bind_port);
-	  EXCEPTION_RAISE(e, make_exception(EXC_GLOBAL_REQUEST, 0,
-					    "Denying forward of privileged port."));
+	  global_request_reply(connection, info, 0);
 	  return;
 	}
 
       if (tcpforward_lookup(&connection->forwarded_ports,
-			    STRING_LD(bind_host), bind_port))
+			    bind_host_length, bind_host, bind_port))
 	{
-	  EXCEPTION_RAISE(e, make_exception(EXC_GLOBAL_REQUEST, 0,
-					    "Port already forwarded"));
-
+	  global_request_reply(connection, info, 0);
 	  return;
 	}
 
+      a = make_address_info(ssh_format("%ls", bind_host_length, bind_host),
+			    bind_port);
       forward = make_server_forward(connection, a);
       
       if (!forward)
 	{
-	  static const struct exception x =
-	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, 0, "Listen failed for tcpip-forward");
-
-	  EXCEPTION_RAISE(e, &x);	  
+	  global_request_reply(connection, info, 0);
 	}
       else
 	{
 	  object_queue_add_head(&connection->forwarded_ports,
 				&forward->super.super);
 
-	  /* FIXME: The continuation/exception handler stuff here is
-	     not very useful. Maybe for gateway forwardings? */
-	  COMMAND_RETURN(c, &forward->super.super);
+	  global_request_reply(connection, info, 1);
 	}
     }
   else
@@ -177,11 +172,8 @@ tcpip_forward_handler =
 static void
 do_tcpip_cancel_forward(struct global_request *s UNUSED,
 			struct ssh_connection *connection,
-			uint32_t type UNUSED,
-			int want_reply UNUSED,
-			struct simple_buffer *args,
-			struct command_continuation *c,
-			struct exception_handler *e)
+			const struct request_info *info,
+			struct simple_buffer *args)
 {
   uint32_t bind_host_length;
   const uint8_t *bind_host;
@@ -191,11 +183,11 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
       parse_uint32(args, &bind_port) &&
       parse_eod(args))
     {
-      struct server_forward *forward
-	= remove_server_forward(&connection->forwarded_ports,
-				bind_host_length,
-				bind_host,
-				bind_port);
+      CAST(server_forward, forward,
+	   tcpforward_remove(&connection->forwarded_ports,
+			     bind_host_length,
+			     bind_host,
+			     bind_port));
 
       if (forward)
 	{
@@ -205,18 +197,13 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
 	  KILL_RESOURCE(forward->port);
 	  forward->port = NULL;
 
-	  /* FIXME: What to return? */
-	  COMMAND_RETURN(c, connection);
-	  return;
+	  global_request_reply(connection, info, 1);
 	}
       else
 	{
-	  static const struct exception notfound =
-	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, 0, "Could not find tcpip-forward to cancel");
 	  verbose("Could not find tcpip-forward to cancel\n");
 
-	  EXCEPTION_RAISE(e, &notfound);
-	  return;
+	  global_request_reply(connection, info, 0);
 	}
     }
   else
