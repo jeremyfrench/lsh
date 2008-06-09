@@ -95,22 +95,21 @@ pty_send_message(int socket, const struct pty_message *message)
 #ifdef SCM_CREDENTIALS
   if (message->has_creds)
     {
+      /* Linux style credentials */
+      struct ucred *creds;
+
       cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
 
-      {
-	struct ucred *creds;
-	/* Linux style credentials */
-	cmsg->cmsg_level = SOL_SOCKET;
-	cmsg->cmsg_type = SCM_CREDENTIALS;
-	cmsg->cmsg_len = CMSG_LEN(sizeof(*creds));
+      cmsg->cmsg_level = SOL_SOCKET;
+      cmsg->cmsg_type = SCM_CREDENTIALS;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(*creds));
 
-	creds = (struct ucred *) CMSG_DATA(cmsg);
-	creds->pid = message->creds.pid;
-	creds->uid = message->creds.uid;
-	creds->gid = message->creds.gid;
+      creds = (struct ucred *) CMSG_DATA(cmsg);
+      creds->pid = message->creds.pid;
+      creds->uid = message->creds.uid;
+      creds->gid = message->creds.gid;
 	
-	controllen += CMSG_SPACE(sizeof(*creds));
-      }
+      controllen += CMSG_SPACE(sizeof(*creds));
     }
 #endif
 
