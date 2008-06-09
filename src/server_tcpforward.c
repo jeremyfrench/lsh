@@ -86,29 +86,6 @@ make_server_forward(struct ssh_connection *connection,
     }
 }
 
-#if 0
-static struct server_forward *
-remove_server_forward(struct object_queue *q,
-		      uint32_t length, const uint8_t *ip, uint32_t port)
-{
-  FOR_OBJECT_QUEUE(q, n)
-    {
-      CAST(server_forward, f, n);
-
-      if ( (port == f->super.address->port)
-	   && lsh_string_eq_l(f->super.address->ip, length, ip) )
-	{
-	  if (!f->port)
-	    break;
-
-	  FOR_OBJECT_QUEUE_REMOVE(q, n);
-	  return f;
-	}
-    }
-  return NULL;
-}
-#endif
-
 static void
 do_tcpip_forward_handler(struct global_request *s UNUSED,
 			 struct ssh_connection *connection,
@@ -146,17 +123,15 @@ do_tcpip_forward_handler(struct global_request *s UNUSED,
 			    bind_port);
       forward = make_server_forward(connection, a);
       
-      if (!forward)
-	{
-	  global_request_reply(connection, info, 0);
-	}
-      else
+      if (forward)
 	{
 	  object_queue_add_head(&connection->forwarded_ports,
 				&forward->super.super);
 
 	  global_request_reply(connection, info, 1);
 	}
+      else
+	global_request_reply(connection, info, 0);
     }
   else
     {
