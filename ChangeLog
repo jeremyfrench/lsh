@@ -1,3 +1,34 @@
+2008-06-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.in (lsh_SOURCES): Added gateway_x11.c.
+
+	* src/testsuite/Makefile.in (TS_SH): Added x11-5-test.
+
+	* src/testsuite/x11-5-test: New test for x11 forwarding over a
+	gateway.
+
+	* src/lsh.c (main): When we're starting a gateway, enable channel
+	open handler for x11 channels.
+
+	* src/gateway_x11.c (gateway_x11_request_handler): Put the handler
+	on the connection's resource list. Record the number of pending
+	replies *including* the one for the x11-req.
+
+	* src/gateway_channel.c (class gateway_channel): Moved to
+	gateway.h. Adapted to changed type of chain.
+	(do_kill_gateway_channel): Kill x11
+	handler, if present.
+	(do_gateway_channel_event): Check for the reply to x11-req, and
+	install x11 handler.
+	(gateway_forward_channel_open): Install handler for x11-req on the
+	originating channel.
+
+	* src/gateway.h (class gateway_channel): Moved definition here,
+	from gateway_chanel.h. Changed type of chain attribute to
+	gateway_channel.
+
+	* src/gateway_x11.c: New file.
+
 2008-06-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/xalloc.c (lsh_object_check_subtype): Removed support for
