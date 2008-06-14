@@ -672,9 +672,9 @@ do_client_x11_handle_random_reply(struct client_random_handler *s,
     {
       self->display->fake = ssh_format("%ls", length, data);
 
-      /* NOTE: The cookie is hex encoded, apparently so that it can be
+      /* NOTE: The cookie is hex encoded, presumably so that it can be
 	 passed directly to the xauth command line. That's ugly, but
-	 it's how the other ssh implementations do it. */
+	 it's what the specification says. */
       
       if (!channel_send_request(&self->session->super, ATOM_LD(ATOM_X11_REQ), 1,
 				"%c%s%xS%i",
