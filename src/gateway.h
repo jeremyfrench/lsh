@@ -92,4 +92,38 @@ gateway_forward_channel_open(struct ssh_connection *target_connection,
 
 extern struct channel_open gateway_channel_open;
 
+/* This is one of a pair of channels that are connected together. */
+/* GABA:
+   (class
+     (name gateway_channel)
+     (super ssh_channel)
+     (vars
+       (chain object gateway_channel)
+
+       ; If non-NULL, we have requested X11 forwarding. Present only
+       ; for the channel belonging to the shared connection, since we
+       ; need it mainly when processing CHANNEL_SUCCESS and
+       ; CHANNEL_FAILURE from the server.       
+       (x11 object gateway_x11_handler)
+
+       ;; Present only in the target channel, but relates to the
+       ;; CHANNEL_OPEN message received for the originating channel.
+       ;; FIXME: Could use a new class, but it's probably not worth
+       ;; the hassle.
+       (info const object channel_open_info)))
+*/
+
+/* GABA:
+   (class
+     (name gateway_x11_handler)
+     (super client_x11_handler)
+     (vars
+       ; Number of pending replies, before we get the reply to the x11
+       ; request.
+       (pending . unsigned)
+       (gateway object ssh_connection)))
+*/
+
+extern struct channel_request gateway_x11_request_handler;
+
 #endif /* LSH_GATEWAY_H_INCLUDED */
