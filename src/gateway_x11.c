@@ -25,6 +25,8 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
+
 #include "gateway.h"
 
 #include "channel.h"
@@ -68,6 +70,9 @@ make_gateway_x11_handler(struct ssh_connection *gateway, int single_connection,
 			 int pending)
 {
   NEW(gateway_x11_handler, self);
+
+  assert(pending > 0);
+
   init_resource(&self->super.super, NULL);
   self->super.single_connection = single_connection;
   self->super.open = do_gateway_x11_open;
@@ -102,15 +107,16 @@ DEFINE_CHANNEL_REQUEST(gateway_x11_request_handler)
 	  
 	  parse_rest(buffer, &arg_length, &arg);
 
-	  self->chain->x11
-	    = make_gateway_x11_handler(self->super.connection, single,
-				       self->chain->super.pending_requests);
-	  remember_resource(self->connection, &self->chain->x11->super.super);
-	  
 	  channel_send_request(&self->chain->super,
 			       info->type_length, info->type_data,
 			       info->want_reply,
 			       "%c%ls", single, arg_length, arg);
+	  
+	  self->chain->x11
+	    = make_gateway_x11_handler(self->super.connection, single,
+				       self->chain->super.pending_requests);
+	  remember_resource(self->super.connection->resources,
+			    &self->chain->x11->super.super);
 	}
     }
   else
