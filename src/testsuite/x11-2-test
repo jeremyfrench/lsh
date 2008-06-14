@@ -1,6 +1,6 @@
 #! /bin/sh
 
-echo lshd X11, test 2
+echo lsh X11, test 2
 
 if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
