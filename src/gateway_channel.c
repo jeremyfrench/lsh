@@ -35,8 +35,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "gateway_channel.c.x"
-
 /* A pair of gateway_channel objects are chained together so that
  * requests and data received on one of the channels are directed to
  * the other.
@@ -55,22 +53,6 @@
  *    we chain the two channel objects together, and reply to the
  *    CHANNEL_OPEN request we received in (1). */
 
-/* This is a channel one of a pair of channels that are connected
-   together. */
-/* GABA:
-   (class
-     (name gateway_channel)
-     (super ssh_channel)
-     (vars
-       (chain object ssh_channel)
-
-       ;; Present only in the target channel, but relates to the
-       ;; CHANNEL_OPEN message received for the originating channel.
-       ;; FIXME: Could use a new class, but it's probably not worth
-       ;; the hassle.
-       (info const object channel_open_info)))
-*/
-
 static void
 do_kill_gateway_channel(struct resource *s)
 {
@@ -79,6 +61,9 @@ do_kill_gateway_channel(struct resource *s)
     {
       trace("do_kill_gateway_channel\n");
       self->super.super.alive = 0;
+
+      if (self->x11)
+	KILL_RESOURCE(&self->x11->super.super);
 
       /* NOTE: We don't attempt to close or kill self->chain (since it
 	 may not yet be active). Instead, we leave to the connection's
@@ -97,11 +82,11 @@ do_receive(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      channel_transmit_data(self->chain, length, data);
+      channel_transmit_data(&self->chain->super, length, data);
       
       break;
     case CHANNEL_STDERR_DATA:
-      channel_transmit_extended(self->chain, SSH_EXTENDED_DATA_STDERR,
+      channel_transmit_extended(&self->chain->super, SSH_EXTENDED_DATA_STDERR,
 				length, data);
       break;
     default:
@@ -116,7 +101,7 @@ do_send_adjust(struct ssh_channel *s,
 {
   CAST(gateway_channel, self, s);
   if (i)
-    channel_adjust_rec_window(self->chain, i);
+    channel_adjust_rec_window(&self->chain->super, i);
 }
 
 static void
@@ -137,16 +122,16 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
           /* This method is invoked on the target channel. Propagate
              the target channel's send variables to the originating
              channel's receive variables. */
-          self->chain->rec_window_size = self->super.send_window_size;
-          self->chain->rec_max_packet = self->super.send_max_packet;
+          self->chain->super.rec_window_size = self->super.send_window_size;
+          self->chain->super.rec_max_packet = self->super.send_max_packet;
 
           self->super.receive = do_receive;
           self->super.send_adjust = do_send_adjust;
 
-          self->chain->receive = do_receive;
-          self->chain->send_adjust = do_send_adjust;
+          self->chain->super.receive = do_receive;
+          self->chain->super.send_adjust = do_send_adjust;
 
-	  channel_open_confirm(self->info, self->chain);
+	  channel_open_confirm(self->info, &self->chain->super);
         }
       break;
     case CHANNEL_EVENT_DENY:
@@ -161,21 +146,39 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
         }
       break;
     case CHANNEL_EVENT_EOF:
-      channel_eof(self->chain);
+      channel_eof(&self->chain->super);
       break;
 
     case CHANNEL_EVENT_CLOSE:
-      channel_close(self->chain);
+      channel_close(&self->chain->super);
       break;
 
     case CHANNEL_EVENT_SUCCESS:
-      SSH_CONNECTION_WRITE(self->chain->connection,
-			   format_channel_success(self->chain->remote_channel_number));
+      if (self->x11 && self->x11->pending)
+	{
+	  if (!--self->x11->pending)
+	    {
+	      CAST(client_connection, connection, self->super.connection);
+	      client_add_x11_handler(connection, &self->x11->super);
+	    }
+	}
+
+      SSH_CONNECTION_WRITE(self->chain->super.connection,
+			   format_channel_success(self->chain->super.remote_channel_number));
       break;
 
     case CHANNEL_EVENT_FAILURE:
-      SSH_CONNECTION_WRITE(self->chain->connection,
-			   format_channel_failure(self->chain->remote_channel_number));
+      if (self->x11 && self->x11->pending)
+	{
+	  if (!--self->x11->pending)
+	    {
+	      KILL_RESOURCE(&self->x11->super.super);
+	      self->x11 = NULL;
+	    }
+	}
+      
+      SSH_CONNECTION_WRITE(self->chain->super.connection,
+			   format_channel_failure(self->chain->super.remote_channel_number));
       break;
       
     case CHANNEL_EVENT_STOP:
@@ -199,7 +202,7 @@ DEFINE_CHANNEL_REQUEST(gateway_forward_channel_request)
 
   parse_rest(buffer, &arg_length, &arg);
 
-  channel_send_request(self->chain,
+  channel_send_request(&self->chain->super,
 		       info->type_length, info->type_data,
 		       info->want_reply,
 		       "%ls", arg_length, arg);
@@ -218,11 +221,16 @@ gateway_forward_channel_open(struct ssh_connection *target_connection,
   init_channel(&target->super,
 	       do_kill_gateway_channel, do_gateway_channel_event);
 
+#if WITH_X11_FORWARD
+  origin->super.request_types = make_alist(1,
+					   ATOM_X11_REQ, &gateway_x11_request_handler,
+					   -1);
+#endif
   origin->super.request_fallback = &gateway_forward_channel_request;
   target->super.request_fallback = &gateway_forward_channel_request;
 
-  origin->chain = &target->super;
-  target->chain = &origin->super;
+  origin->chain = target;
+  target->chain = origin;
 
   origin->info = NULL;
   target->info = info;
@@ -242,17 +250,13 @@ gateway_forward_channel_open(struct ssh_connection *target_connection,
 }
 
 /* Used for all channel open requests sent to the gateway. I.e., the
-   target connection is the shared one. FIXME: Need to split off the
-   parts that can be reused for X11 requests. */
+   target connection is the shared one. */
 DEFINE_CHANNEL_OPEN(gateway_channel_open)
 	(struct channel_open *s UNUSED,
 	 const struct channel_open_info *info,
 	 struct simple_buffer *args)
 {
   CAST(gateway_connection, connection, info->connection);
-  uint32_t arg_length;
-  const uint8_t *arg;
-
   trace("gateway_channel_open\n");
 
   trace("gateway_channel_open: send_window_size = %i\n",
@@ -264,6 +268,9 @@ DEFINE_CHANNEL_OPEN(gateway_channel_open)
 		      "Waiting for channels to close.");
   else
     {
+      uint32_t arg_length;
+      const uint8_t *arg;
+
       parse_rest(args, &arg_length, &arg);
 
       if (!gateway_forward_channel_open(&connection->shared->super,
