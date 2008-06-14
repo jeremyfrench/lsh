@@ -1256,7 +1256,10 @@ main(int argc, char **argv)
     {
       struct resource *port = make_gateway_port(options->gateway, connection);
       if (port)
-	remember_resource(connection->super.resources, port);
+	{
+	  remember_resource(connection->super.resources, port);
+	  options->x11_forward = 1;
+	}
       else
 	werror("Failed to setup gateway.\n");
     }
