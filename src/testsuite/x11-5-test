@@ -1,0 +1,25 @@
+#! /bin/sh
+
+echo lshg X11, test 5
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+need_xvfb
+
+# FIXME: The command DISPLAY= ... is run in a subshell, because
+# otherwise, LSHG_FLAGS leaks to the next command (GNU bash
+# 3.1.17(1)-release). I don't understand why.
+spawn_xvfb \
+  && spawn_lshd \
+  && spawn_lsh --start-gateway \
+  && ( DISPLAY=$TEST_DISPLAY LSHG_FLAGS="$LSHG_FLAGS --x11" exec_lshg xmodmap > /dev/null ) \
+  && if exec_lshg xmodmap > /dev/null ; then false : true; fi \
+  && test_success
+
+test_done
+
+
