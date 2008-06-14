@@ -132,6 +132,7 @@ lsh_SOURCES = arglist.c \
 	      client_x11.c \
 	      gateway.c \
 	      gateway_channel.c \
+	      gateway_x11.c \
 	      lsh.c \
 	      socks.c \
 	      xauth.c
