@@ -17,8 +17,7 @@ spawn_xvfb \
   && spawn_lshd \
   && spawn_lsh --start-gateway \
   && ( DISPLAY=$TEST_DISPLAY LSHG_FLAGS="$LSHG_FLAGS --x11" exec_lshg xmodmap > /dev/null ) \
-  && if exec_lshg xmodmap > /dev/null ; then false : true; fi \
-  && test_success
+  && if exec_lshg xmodmap > /dev/null ; then false ; else test_success; fi
 
 test_done
 
