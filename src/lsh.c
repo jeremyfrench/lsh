@@ -1259,6 +1259,7 @@ main(int argc, char **argv)
 	{
 	  remember_resource(connection->super.resources, port);
 	  options->x11_forward = 1;
+	  options->remote_forward = 1;
 	}
       else
 	werror("Failed to setup gateway.\n");
