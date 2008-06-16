@@ -406,6 +406,11 @@ make_gateway_connection(struct client_connection *shared,
 		      do_write_packet, do_disconnect);
 
   self->super.open_fallback = &gateway_channel_open;
+#if WITH_TCP_FORWARD
+  ALIST_SET(self->super.global_requests, ATOM_TCPIP_FORWARD,
+	    &gateway_tcpip_forward_handler.super);  
+#endif
+
   self->shared = shared;
   self->port = port;
 
