@@ -31,7 +31,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	daemon-fd-test \
 	tcpip-local-test tcpip-local-in-use-test tcpip-remote-test \
 	socks5-test socks4-test \
-	lshg-tcpip-local-test \
+	lshg-tcpip-local-test lshg-tcpip-remote-test \
 	lcp-test \
 	x11-1-test x11-2-test x11-3-test x11-4-test x11-5-test \
 	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test \
