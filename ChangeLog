@@ -1,3 +1,20 @@
+2008-06-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (TS_SH): Added lshg-tcpip-remote-test.
+
+	* src/testsuite/lshg-tcpip-remote-test: New test case.
+
+	* src/Makefile.in (lsh_SOURCES): Added gateway_tcpforward.c.
+
+	* src/gateway.h (gateway_tcpip_forward_handler): New declaration.
+
+	* src/gateway.c (make_gateway_connection): Add handler for
+	GLOBAL_REQUEST tcpip-forward.
+
+2008-06-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/gateway_tcpforward.c: New file.
+
 2008-06-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.in (lsh_SOURCES): Added gateway_x11.c.
@@ -8,7 +25,7 @@
 	gateway.
 
 	* src/lsh.c (main): When we're starting a gateway, enable channel
-	open handler for x11 channels.
+	open handler for x11 and forwrded-tcp channels.
 
 	* src/gateway_x11.c (gateway_x11_request_handler): Put the handler
 	on the connection's resource list. Record the number of pending
