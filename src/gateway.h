@@ -126,4 +126,6 @@ extern struct channel_open gateway_channel_open;
 
 extern struct channel_request gateway_x11_request_handler;
 
+extern struct global_request gateway_tcpip_forward_handler;
+
 #endif /* LSH_GATEWAY_H_INCLUDED */
