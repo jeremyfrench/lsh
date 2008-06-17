@@ -23,7 +23,6 @@ dist_classes = \
     exception.h.x \
     gateway.c.x \
     gateway.h.x \
-    gateway_channel.c.x \
     gateway_tcpforward.c.x \
     interact.h.x \
     io.c.x \
