@@ -1,6 +1,7 @@
 2008-06-17  Niels Möller  <nisse@lysator.liu.se>
 
-	* src/.dist_classes (dist_classes): Deleted channel.c.x. Added
+	* src/.dist_classes (dist_classes): Deleted channel.c.x,
+	combinators.c.x, gateway_channel.c.x, io_commands.c.x. Added
 	gateway_tcpforward.c.x.
 
 	* src/.dist_headers (dist_headers): Deleted io_commands.h and
