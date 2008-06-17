@@ -1,3 +1,11 @@
+2008-06-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/.dist_classes (dist_classes): Deleted channel.c.x. Added
+	gateway_tcpforward.c.x.
+
+	* src/.dist_headers (dist_headers): Deleted io_commands.h and
+	suspend.h.
+
 2008-06-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added lshg-tcpip-remote-test.
