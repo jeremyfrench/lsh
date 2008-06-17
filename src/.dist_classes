@@ -13,7 +13,6 @@ dist_classes = \
     client_session.c.x \
     client_tcpforward.c.x \
     client_x11.c.x \
-    combinators.c.x \
     command.c.x \
     command.h.x \
     compress.h.x \
