@@ -19,7 +19,6 @@ dist_headers = \
     gc.h \
     interact.h \
     io.h \
-    io_commands.h \
     keyexchange.h \
     list.h \
     lock_file.h \
@@ -46,7 +45,6 @@ dist_headers = \
     ssh.h \
     ssh_read.h \
     ssh_write.h \
-    suspend.h \
     tcpforward.h \
     tokenize_config.h \
     translate_signal.h \
