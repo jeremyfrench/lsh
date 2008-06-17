@@ -27,7 +27,6 @@ dist_classes = \
     interact.h.x \
     io.c.x \
     io.h.x \
-    io_commands.c.x \
     keyexchange.c.x \
     keyexchange.h.x \
     list.h.x \
