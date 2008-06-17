@@ -2,7 +2,6 @@ dist_classes = \
     algorithms.h.x \
     alist.c.x \
     alist.h.x \
-    channel.c.x \
     channel.h.x \
     channel_forward.h.x \
     channel_io.h.x \
@@ -26,6 +25,7 @@ dist_classes = \
     gateway.c.x \
     gateway.h.x \
     gateway_channel.c.x \
+    gateway_tcpforward.c.x \
     interact.h.x \
     io.c.x \
     io.h.x \
