@@ -414,7 +414,7 @@ spawn_child(struct spawn_info *info, int sync,
    * signalling EOF on the pty (^D written to the master side mangled
    * into NUL on the reading side. Observed on linux-2.6.16. Not
    * solved; delaying the close a little using io_set_close_on_exec
-   * made no difference. */
+   * made no difference). */
 
   safe_close (sync);
 
