@@ -141,12 +141,11 @@ static void *xalloc(size_t size)
   if (!res)
     fatal("Virtual memory exhausted");
 
-  /* FIXME: The gc can't handle uninitialized pointers. The simple way
-   * is to zero-fill all memory as it is allocated. But initialization
-   * is only necessary for objects, strings need no initialization. By
-   * moving initializing to some higher level, we could avoid
-   * unnecessary clearing, and also initialize mpz objects
-   * automatically. */
+  /* NOTE: The gc can't handle uninitialized pointers. The simple way
+   * is to make sure there are no uninitialized pointers, by
+   * zero-filling all memory as it is allocated, even though this is
+   * mostly redundant since the constructor functions ought to
+   * initialize all fields explicitly. */
   memset(res, 0, size);
 
   return res;
