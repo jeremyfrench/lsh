@@ -36,11 +36,13 @@
 
 #define TCPIP_WINDOW_SIZE 10000
 
-struct command *
+struct client_connection_action;
+
+struct client_connection_action *
 forward_local_port(const struct address_info *local,
 		   const struct address_info *target);
 
-struct command *
+struct client_connection_action *
 forward_remote_port(const struct address_info *port,
 		    const struct address_info *target);
 
@@ -83,7 +85,7 @@ tcpip_forward_handler;
 extern struct global_request
 tcpip_cancel_forward_handler;
 
-struct command *
+struct client_connection_action *
 make_socks_server(const struct address_info *local);
 
 #endif /* LSH_TCPFORWARD_H_INCLUDED */
