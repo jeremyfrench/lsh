@@ -60,14 +60,6 @@
 
 /* GABA:
    (class
-     (name dsa_algorithm)
-     (super signature_algorithm)
-     (vars
-       (random object randomness)))
-*/
-
-/* GABA:
-   (class
      (name dsa_verifier)
      (super verifier)
      (vars
@@ -81,7 +73,6 @@
      (super signer)
      (vars
        (verifier object dsa_verifier)
-       (random object randomness)
        (key indirect-special "struct dsa_private_key"
             #f dsa_private_key_clear)))
 */
@@ -265,7 +256,7 @@ do_dsa_sign(struct signer *c,
   sha1_init(&hash);
   sha1_update(&hash, msg_length, msg);
   dsa_sign(&self->verifier->key, &self->key,
-	   self->random, lsh_random, &hash, &sv);
+	   NULL, lsh_random, &hash, &sv);
   
   debug("do_dsa_sign: r = %xn, s = %xn\n", sv.r, sv.s);
   
@@ -326,10 +317,9 @@ make_dsa_verifier(struct signature_algorithm *self UNUSED,
 }
 
 static struct signer *
-make_dsa_signer(struct signature_algorithm *c,
+make_dsa_signer(struct signature_algorithm *self UNUSED,
 		struct sexp_iterator *i)
 {
-  CAST(dsa_algorithm, self, c);
   NEW(dsa_verifier, verifier);
   NEW(dsa_signer, res);
 
@@ -339,7 +329,6 @@ make_dsa_signer(struct signature_algorithm *c,
 
   if (dsa_keypair_from_sexp_alist(&verifier->key, &res->key, DSA_MAX_BITS, i))
     {
-      res->random = self->random;
       res->verifier = verifier;
       res->super.sign = do_dsa_sign;
       res->super.get_verifier = do_dsa_get_verifier;
@@ -352,18 +341,8 @@ make_dsa_signer(struct signature_algorithm *c,
   return NULL;
 }
 
-struct signature_algorithm *
-make_dsa_algorithm(struct randomness *random)
-{
-  NEW(dsa_algorithm, dsa);
-
-  dsa->super.make_signer = make_dsa_signer;
-  dsa->super.make_verifier = make_dsa_verifier;
-  dsa->random = random;
-
-  return &dsa->super;
-}
-
+struct signature_algorithm dsa_algorithm =
+  { STATIC_HEADER, make_dsa_signer, make_dsa_verifier };
 
 struct verifier *
 make_ssh_dss_verifier(uint32_t length, const uint8_t *key)
