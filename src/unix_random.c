@@ -5,7 +5,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2000, 2001 Niels Möller
+ * Copyright (C) 2000, 2001, 2008 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,6 +27,7 @@
 #endif
 
 #include <assert.h>
+#include <errno.h>
 #include <string.h>
 
 #include <fcntl.h>
@@ -38,7 +39,6 @@
 #include <sys/types.h>
 #include <sys/time.h> /* Must be included before sys/resource.h */
 #include <sys/resource.h>
-#include <sys/stat.h>
 
 #include "nettle/yarrow.h"
 
@@ -47,53 +47,27 @@
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
-#include "lock_file.h"
+#include "io.h"
 #include "lsh_string.h"
-#include "reaper.h"
+#include "seed_file.h"
 #include "xalloc.h"
 #include "werror.h"
 
-#include "unix_random.c.x"
+/* Global state */
+static int seed_file_fd;
+static struct yarrow256_ctx yarrow;
+static struct yarrow_source sources[RANDOM_NSOURCES];
 
-/* GABA:
-   (class
-     (name unix_random)
-     (super randomness)
-     (vars
-       (seed_file_fd . int)
-       (lock object lsh_file_lock_info)
-       (yarrow . "struct yarrow256_ctx")
-       (sources array "struct yarrow_source" RANDOM_NSOURCES)
+static int random_initialized = 0;
 
-       ; For the SOURCE_TRIVIA, count the number of invocations per second
-       (previous_time . long)
-       (time_count . unsigned)
+/* For the SOURCE_TRIVIA, count the number of invocations per second */
+static time_t trivia_previous_time = 0;
+static unsigned trivia_time_count = 0;
 
-       ; For SOURCE_DEVICE
-       (device_fd . int)
-       (device_last_read . time_t)))
-*/
+/* For SOURCE_DEVICE */
+static int device_fd;
+static time_t device_last_read = 0;
 
-static struct unix_random *the_random = NULL;
-
-static int
-write_seed_file(struct yarrow256_ctx *ctx,
-	       int fd)
-{
-  if (lseek(fd, 0, SEEK_SET) < 0)
-    {
-      werror("Seeking to beginning of seed file failed!? %e\n", errno);
-      return 0;
-    }
-
-  if (!write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file))
-    {
-      werror("Overwriting seed file failed: %e\n", errno);
-      return 0;
-    }
-
-  return 1;
-}
 
 static struct lsh_string *
 read_seed_file(int fd)
@@ -113,32 +87,10 @@ read_seed_file(int fd)
 }
 
 static int
-read_initial_seed_file(struct yarrow256_ctx *ctx,
-		       int fd)
+read_initial_seed_file(struct yarrow256_ctx *ctx)
 {
-  struct lsh_string *seed;
-  struct stat sbuf;
+  struct lsh_string *seed = read_seed_file(seed_file_fd);
 
-  if (fstat(fd, &sbuf) < 0)
-    {
-      werror("Couldn't stat seed file %e\n", errno);
-      return 0;
-    }
-
-  /* Check permissions */
-  if (sbuf.st_uid != getuid())
-    {
-      werror("Seed file not owned by you!\n");
-      return 0;
-    }
-
-  if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
-    {
-      werror("Too permissive permissions on seed-file.\n");
-      return 0;
-    }
-  
-  seed = read_seed_file(fd);
   if (!seed)
     return 0;
   
@@ -154,38 +106,35 @@ read_initial_seed_file(struct yarrow256_ctx *ctx,
 
   assert(yarrow256_is_seeded(ctx));
 
-  if (lseek(fd, 0, SEEK_SET) < 0)
-    {
-      werror("Seeking to beginning of seed file failed!? %e\n", errno);
-      return 0;
-    }
-
   return 1;
 }
 
 static void
-update_seed_file(struct unix_random *self)
+update_seed_file(void)
 {
-  struct resource *lock;
   verbose("Overwriting seed file.\n");
 
-  lock = LSH_FILE_LOCK(self->lock, 0);
-  if (!lock)
+  if (!seed_file_lock(seed_file_fd, 0))
     {
       werror("Failed to lock seed file, so not overwriting it now.\n");
     }
   else
     {
-      struct lsh_string *s = read_seed_file(self->seed_file_fd);
-
-      write_seed_file(&self->yarrow, self->seed_file_fd);
-      KILL_RESOURCE(lock);
+      struct lsh_string *s = read_seed_file(seed_file_fd);
+      
+      seed_file_write(seed_file_fd, &yarrow);
+      seed_file_unlock(seed_file_fd);
 
       /* Mix in the old seed file, it might have picked up
        * some randomness. */
+
+      /* FIXME: Ideally, this should be mixed in *before* generating
+	 the new seed file. To mix using yarrow, yarrow256_fast_reseed must be
+	 made non-static. Or, alternatively, we could manually xor
+	 the new seed file on top of the old one. */
       if (s)
 	{
-	  yarrow256_update(&self->yarrow, RANDOM_SOURCE_NEW_SEED,
+	  yarrow256_update(&yarrow, RANDOM_SOURCE_NEW_SEED,
 			   0, STRING_LD(s));
 	  lsh_string_free(s);
 	}
@@ -193,7 +142,7 @@ update_seed_file(struct unix_random *self)
 }
 
 static int
-do_trivia_source(struct unix_random *self, int init)
+trivia_source(void)
 {
   struct {
     struct timeval now;
@@ -213,52 +162,35 @@ do_trivia_source(struct unix_random *self, int init)
     fatal("getrusage failed %e\n", errno);
 #endif
 
-  event.count = 0;
-  if (init)
-    {
-      self->time_count = 0;
-    }
-  else
-    {
-      event.count = self->time_count++;
-      
-      if (event.now.tv_sec != self->previous_time)
-	{
-	  /* Count one bit of entropy if we either have more than two
-	   * invocations in one second, or more than two seconds
-	   * between invocations. */
-	  if ( (self->time_count > 2)
-	       || ( (event.now.tv_sec - self->previous_time) > 2) )
-	    entropy++;
+  event.count = trivia_time_count++;
 
-	  self->time_count = 0;
-	}
+  if (event.now.tv_sec != trivia_previous_time)
+    {
+      /* Count one bit of entropy if we either have more than two
+       * invocations in one second, or more than two seconds
+       * between invocations. */
+      if (trivia_time_count > 2
+	  || (event.now.tv_sec - trivia_previous_time) > 2)
+	entropy++;
+
+      trivia_time_count = 0;
     }
-  self->previous_time = event.now.tv_sec;
+
+  trivia_previous_time = event.now.tv_sec;
   event.pid = getpid();
 
-  return yarrow256_update(&self->yarrow, RANDOM_SOURCE_TRIVIA, entropy,
+  return yarrow256_update(&yarrow, RANDOM_SOURCE_TRIVIA, entropy,
 			  sizeof(event), (const uint8_t *) &event);
 }
 
 #define DEVICE_READ_SIZE 10
 static int
-do_device_source(struct unix_random *self, int init)
+device_source(void)
 {
   time_t now = time(NULL);
-  
-  if (init)
-    {
-      self->device_fd = open("/dev/urandom", O_RDONLY);
-      if (self->device_fd < 0)
-	return 0;
 
-      io_set_close_on_exec(self->device_fd);
-      self->device_last_read = now;
-    }
-
-  if ( (self->device_fd > 0)
-       && (init || ( (now - self->device_last_read) > 60)))
+  if (device_fd > 0
+      && (now - device_last_read) > 60)
     {
       /* More than a minute since we last read the device */
       uint8_t buf[DEVICE_READ_SIZE];
@@ -269,24 +201,25 @@ do_device_source(struct unix_random *self, int init)
 	{
 	  int res;
 	  do
-	    res = read(self->device_fd, buf + done, sizeof(buf) - done);
+	    res = read(device_fd, buf + done, sizeof(buf) - done);
 	  while (res < 0 && errno == EINTR);
 
-	  if (res <= 0)
+	  if (res < 0)
 	    {
-	      if (res < 0)
-		werror("Failed to read /dev/urandom %e\n", errno);
-	      else
-		werror("Failed to read /dev/urandom: end of filee\n");
-
+	      werror("Failed to read /dev/urandom %e\n", errno);
+	      return 0;
+	    }
+	  else if (res == 0)
+	    {
+	      werror("Failed to read /dev/urandom: end of file\n");
 	      return 0;
 	    }
 
 	  done += res;
 	}
-      self->device_last_read = now;
+      device_last_read = now;
       
-      return yarrow256_update(&self->yarrow, RANDOM_SOURCE_DEVICE,
+      return yarrow256_update(&yarrow, RANDOM_SOURCE_DEVICE,
 			      10, /* Estimate 10 bits of entropy */
 			      sizeof(buf), buf);
     }
@@ -294,35 +227,34 @@ do_device_source(struct unix_random *self, int init)
 }
 #undef DEVICE_READ_SIZE
 
-
-static void
-do_unix_random(struct randomness *s,
-	       uint32_t length,
-	       uint8_t *dst)
+void
+random_generate(uint32_t length,
+		uint8_t *dst)
 {
-  CAST(unix_random, self, s);
+  int trivia_reseed;
+  int device_reseed;
 
-  /* First do a "fast" poll. */
-  int trivia_reseed = do_trivia_source(self, 0);
-  int device_reseed = do_device_source(self, 0);
+  assert(random_initialized);
+
+  trivia_reseed = trivia_source();
+  device_reseed = device_source();
 
   if (trivia_reseed || device_reseed)
-    update_seed_file(self);
+    update_seed_file();
 
   /* Ok, generate some output */
-  yarrow256_random(&self->yarrow, length, dst);
+  yarrow256_random(&yarrow, length, dst);
 }
 
-static void
-do_unix_random_add(struct randomness *s,
-		   enum random_source_type type,
-		   uint32_t length,
-		   const uint8_t *data)
+void
+random_add(enum random_source_type type,
+	   uint32_t length,
+	   const uint8_t *data)
 {
-  CAST(unix_random, self, s);
-
   unsigned entropy;
-  
+
+  assert(type >= 0 && type < RANDOM_NSOURCES);
+
   switch(type)
     {
     case RANDOM_SOURCE_SECRET:
@@ -339,139 +271,114 @@ do_unix_random_add(struct randomness *s,
       fatal("Internal error\n");
     }
 
-  if (yarrow256_update(&self->yarrow, type,
+  if (yarrow256_update(&yarrow, type,
 		       entropy,
 		       length, data))
-    update_seed_file(self);
+    update_seed_file();
 }
 
-struct randomness *
-random_init(struct lsh_string *seed_file_name)
+int
+random_init(const struct lsh_string *seed_file_name)
 {
-  assert(!the_random);
-
   trace("random_init\n");
-  {
-    NEW(unix_random, self);
-    struct resource *lock;
 
-    self->super.quality = RANDOM_GOOD;
-    self->super.random = do_unix_random;
-    self->super.add = do_unix_random_add;
-
-    yarrow256_init(&self->yarrow, RANDOM_NSOURCES, self->sources);
+  yarrow256_init(&yarrow, RANDOM_NSOURCES, sources);
     
-    verbose("Reading seed-file `%S'\n", seed_file_name);
-    
-    self->lock
-      = make_lsh_file_lock_info(ssh_format("%lS.lock", seed_file_name));
+  verbose("Reading seed-file `%S'\n", seed_file_name);
 
-    trace("random_init, locking seed file...\n");
-    
-    lock = LSH_FILE_LOCK(self->lock, 5);
-
-    if (!lock)
-      {
-	werror("Could not lock seed-file `%S'\n", seed_file_name);
-	KILL(self);
-	return NULL;
-      }
-
-    trace("random_init, seed file locked successfully.\n");
-    
-    self->seed_file_fd = open(lsh_get_cstring(seed_file_name), O_RDWR);
-    if (self->seed_file_fd < 0)
-      {
-	werror("No seed file. Please create one by running\n");
-	werror("lsh-make-seed -o \"%S\".\n", seed_file_name);
-
-	KILL_RESOURCE(lock);
-	KILL(self);
-	return NULL;
-      }
-
-    io_set_close_on_exec(self->seed_file_fd);
-    trace("random_init, reading seed file...\n");
-    
-    if (!read_initial_seed_file(&self->yarrow, self->seed_file_fd))
-      {
-	KILL_RESOURCE(lock);
-	KILL(self);
-	return NULL;
-      }
-
-    trace("random_init, seed file read successfully.\n");
-    
-    assert(yarrow256_is_seeded(&self->yarrow));
-    
-    /* Ok, now yarrow is initialized. */
-    do_device_source(self, 1);
-    do_trivia_source(self, 1);
-
-    /* Mix that data in before generating any output. */
-    yarrow256_force_reseed(&self->yarrow);
-
-    /* Overwrite seed file. */
-    if (!write_seed_file(&self->yarrow, self->seed_file_fd))
-      {
-	KILL_RESOURCE(lock);
-	KILL(self);
-	return NULL;
-      }
-
-    trace("random_init: All done, releasing lock.\n");
-
-    KILL_RESOURCE(lock);
-    
-    the_random = self;
-    return &self->super;
-  }
-}
-
-struct randomness *
-make_user_random(const char *home)
-{
-  struct randomness *r;
-  struct lsh_string *file_name;
-  const char *env_name;
-
-  env_name = getenv(ENV_SEED_FILE);
-  if (env_name)
-    file_name = make_string(env_name);
-  else
+  seed_file_fd = open(lsh_get_cstring(seed_file_name), O_RDWR);
+  if (seed_file_fd < 0)
     {
-      if (!home)
-	{
-	  werror("Please set HOME in your environment.\n");
-	  return NULL;
-	}
+      /* FIXME: Offer to create seed file for the user. */
+      werror("No seed file. Please create one by running\n");
+      werror("lsh-make-seed -o \"%S\".\n", seed_file_name);
 
-      file_name = ssh_format("%lz/.lsh/yarrow-seed-file", home);
+      return 0;
     }
-  r = random_init(file_name);
-  
-  lsh_string_free(file_name);
 
-  return r;
+  io_set_close_on_exec(seed_file_fd);
+  
+  if (!seed_file_check_permissions(seed_file_fd, seed_file_name))
+    {
+      close(seed_file_fd);
+      seed_file_fd = -1;
+      return 0;
+    }
+
+  trace("random_init, locking seed file...\n");
+  if (!seed_file_lock(seed_file_fd, 1))
+    {
+      werror("Could not lock seed-file `%S'\n", seed_file_name);
+      return 0;
+    }
+
+  trace("random_init, seed file locked successfully.\n");
+
+  trace("random_init, reading seed file...\n");
+    
+  if (!read_initial_seed_file(&yarrow))
+    {
+      seed_file_unlock(seed_file_fd);
+      return 0;
+    }
+
+  trace("random_init, seed file read successfully.\n");
+
+  assert(yarrow256_is_seeded(&yarrow));
+
+  /* Initialize sources. */
+  trivia_time_count = 0;
+  trivia_previous_time = 0;
+
+  device_fd = open("/dev/urandom", O_RDONLY);
+  if (device_fd >= 0)
+    io_set_close_on_exec(device_fd);
+
+  device_last_read = 0;
+  
+  device_source();
+  trivia_source();
+
+  /* Mix that data in before generating any output. */
+  yarrow256_force_reseed(&yarrow);
+
+  /* Overwrite seed file. */
+  if (!seed_file_write(seed_file_fd, &yarrow))
+    {
+      seed_file_unlock(seed_file_fd);
+      return 0;
+    }
+
+  seed_file_unlock(seed_file_fd);
+
+  random_initialized = 1;
+
+  return 1;
 }
 
-struct randomness *
-make_system_random(void)
+int
+random_init_system(void)
 {
-  struct randomness *r;
   struct lsh_string *file_name;
-  
   const char *env_name;
-
+  int res;
+  
   env_name = getenv(ENV_SEED_FILE);
 
-  /* FIXME: What's a proper place for this? */
   file_name = make_string(env_name ? env_name
 			  : "/var/spool/lsh/yarrow-seed-file");
 
-  r = random_init(file_name);
+  res = random_init(file_name);
   
   lsh_string_free(file_name);
 
-  return r;
+  return res;
+}
+
+/* Wrapper for using lsh's randomness generator with nettle
+ * functions. */
+void
+lsh_random(void *x UNUSED, unsigned length, uint8_t *data)
+{
+  random_generate(length, data);
 }
