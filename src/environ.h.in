@@ -24,6 +24,7 @@
 #define FILE_LSHD_PTY_HELPER	SBINDIR "/lshd-pty-helper"
 #define FILE_LSHD_USERAUTH	SBINDIR "/lshd-userauth"
 #define FILE_LSH_TRANSPORT	BINDIR "/lsh-transport"
+#define FILE_LSH_MAKE_SEED	BINDIR "/lsh-make-seed"
 
 #define FILE_LSHD_CONF		"lshd.conf"
 #define FILE_LSHD_USERAUTH_CONF	"lshd-userauth.conf"
@@ -42,6 +43,7 @@
 #define ENV_HOME		"HOME"
 #define ENV_LOGNAME		"LOGNAME"
 #define ENV_LSH_TRANSPORT	"LSH_TRANSPORT"
+#define ENV_LSH_MAKE_SEED	"LSH_MAKE_SEED"
 #define ENV_LSHD_CONFIG_DIR	"LSHD_CONFIG_DIR"
 #define ENV_LSHD_CONF		"LSHD_CONF"
 #define ENV_LSHD_CONNECTION	"LSHD_CONNECTION"
