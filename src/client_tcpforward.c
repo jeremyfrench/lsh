@@ -46,48 +46,45 @@
 
 /* GABA:
    (class
-     (name forward_local_port_command)
-     (super command)
+     (name forward_local_port_action)
+     (super client_connection_action)
      (vars
        (local const object address_info)
        (target const object address_info)))       
 */
 
 static void
-do_forward_local_port(struct command *s,
-		      struct lsh_object *a,
-		      struct command_continuation *c,
-		      struct exception_handler *e)
+do_forward_local_port(struct client_connection_action *s,
+		      struct ssh_connection *connection)
 {
-  CAST(forward_local_port_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, a);
+  CAST(forward_local_port_action, self, s);
   struct io_listen_port *port;
 
   port = make_tcpforward_listen_port(connection, ATOM_DIRECT_TCPIP,
 				     self->local, self->target);
   if (!port)
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
-      return;
+      werror("Invalid local port %S:%i.\n",
+	     self->local->ip, self->local->port);
     }
   else if (!io_listen(port))
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
+      werror("Listening on local port %S:%i failed: %e\n",
+	     self->local->ip, self->local->port, errno);
       KILL_RESOURCE(&port->super);
     }
   else
     {
       remember_resource(connection->resources, &port->super);
-      COMMAND_RETURN(c, port);
     }
 }
 
-struct command *
+struct client_connection_action *
 forward_local_port(const struct address_info *local,
 		   const struct address_info *target)
 {
-  NEW(forward_local_port_command, self);
-  self->super.call = do_forward_local_port;
+  NEW(forward_local_port_action, self);
+  self->super.action = do_forward_local_port;
   self->local = local;
   self->target = target;
 
@@ -220,8 +217,8 @@ make_remote_port_state(struct remote_port *port)
 
 /* GABA:
    (class
-     (name request_tcpip_forward_command)
-     (super command)
+     (name request_tcpip_forward_action)
+     (super client_connection_action)
      (vars
        ; Remote port to listen on
        (port const object address_info)
@@ -231,13 +228,10 @@ make_remote_port_state(struct remote_port *port)
 
 /* FIXME: Turn into an ordinary function. */
 static void
-do_request_tcpip_forward(struct command *s,
-			 struct lsh_object *x,
-			 struct command_continuation *c UNUSED,
-			 struct exception_handler *e UNUSED)
+do_request_tcpip_forward(struct client_connection_action *s,
+			 struct ssh_connection *connection)
 {
-  CAST(request_tcpip_forward_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, x);
+  CAST(request_tcpip_forward_action, self, s);
   struct remote_port *port;
 
   debug("client_tcpforward.c: do_request_tcpip_forward\n");
@@ -250,12 +244,12 @@ do_request_tcpip_forward(struct command *s,
 			      "%S%i", self->port->ip, self->port->port);
 }
 
-struct command *
+struct client_connection_action *
 forward_remote_port(const struct address_info *port,
 		    const struct address_info *target)
 {
-  NEW(request_tcpip_forward_command, self);
-  self->super.call = do_request_tcpip_forward;
+  NEW(request_tcpip_forward_action, self);
+  self->super.action = do_request_tcpip_forward;
   self->port = port;
   self->target = target;
 
