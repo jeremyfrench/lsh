@@ -553,7 +553,7 @@ oop_write_ssh(oop_source *source UNUSED,
   assert(event == OOP_WRITE);
   assert(fd == connection->ssh_output);
 
-  status = transport_write_flush(connection->writer, fd, connection->ctx->random);
+  status = transport_write_flush(connection->writer, fd);
   switch(status)
     {
     default:
@@ -647,10 +647,9 @@ transport_send_packet(struct transport_connection *connection,
   writer = connection->writer;  
   if (packet)
     status = transport_write_packet(writer, connection->ssh_output,
-				    flags, packet, connection->ctx->random);
+				    flags, packet);
   else
-    status = transport_write_flush(writer, connection->ssh_output,
-				   connection->ctx->random);
+    status = transport_write_flush(writer, connection->ssh_output);
   switch (status)
     {
     case TRANSPORT_WRITE_OVERFLOW:
@@ -707,7 +706,7 @@ transport_send_kexinit(struct transport_connection *connection)
     /* This is a reexchange; no more data can be sent */
     connection->event_handler(connection, TRANSPORT_EVENT_STOP_APPLICATION);
   
-  kex = MAKE_KEXINIT(connection->ctx->kexinit, connection->ctx->random);
+  kex = connection->ctx->kexinit->make(connection->ctx->kexinit);
   connection->kex.kexinit[is_server] = kex;
 
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);

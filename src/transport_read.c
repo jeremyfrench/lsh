@@ -41,6 +41,7 @@
 #include "compress.h"
 #include "io.h"
 #include "lsh_string.h"
+#include "randomness.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -192,7 +193,7 @@ decode_packet(struct transport_read_state *self,
      decrypt directly into the output buffer, avoiding an extra
      copying at the end.
 
-     FIXME: But for simplixity, that's not yet implemented, we do
+     FIXME: But for simplicity, that's not yet implemented, we do
      everything in place and copy at the end. */
 
   if (self->crypto && crypt_left > 0)
@@ -221,6 +222,11 @@ decode_packet(struct transport_read_state *self,
   self->super.start += self->total_length;
   self->super.length -= self->total_length;
 
+  if (self->crypto)
+    random_add(RANDOM_SOURCE_REMOTE,
+	       self->padding,
+	       data + self->total_length - mac_size - self->padding);
+
   /* Reset for next header */
   self->total_length = 0;
 
@@ -233,7 +239,7 @@ decode_packet(struct transport_read_state *self,
 
   return SSH_READ_COMPLETE;
 }
-		   
+
 /* First reads the entire packet into the input_buffer, decrypting it
    in place. Next, reads the mac and verifies it. */
 enum ssh_read_status

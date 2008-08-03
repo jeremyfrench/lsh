@@ -181,20 +181,18 @@ write_flush(struct transport_write_state *self, int fd)
 }
 
 static struct lsh_string *
-make_ignore_packet(struct transport_write_state *self,
-		   uint32_t length, struct randomness *random)
+make_ignore_packet(struct transport_write_state *self, uint32_t length)
 {
   uint32_t pad_start;      
   struct lsh_string *packet;
   
   packet = ssh_format("%c%r", SSH_MSG_IGNORE, length, &pad_start);
-  lsh_string_write_random(packet, pad_start, random, length);
+  lsh_string_write_random(packet, pad_start, length);
 
   packet = encrypt_packet(packet,
 			  self->deflate,
 			  self->crypto,
 			  self->mac,
-			  random,
 			  self->seqno++);
 
   return packet;
@@ -207,7 +205,7 @@ make_ignore_packet(struct transport_write_state *self,
 enum transport_write_status
 transport_write_packet(struct transport_write_state *self,
 		       int fd, enum transport_write_flag flags,
-		       struct lsh_string *packet, struct randomness *random)
+		       struct lsh_string *packet)
 {
   uint32_t length;
   uint8_t msg;
@@ -229,7 +227,6 @@ transport_write_packet(struct transport_write_state *self,
 			  self->deflate,
 			  self->crypto,
 			  self->mac,
-			  random,
 			  self->seqno++);
 
   length = lsh_string_length(packet);
@@ -243,7 +240,7 @@ transport_write_packet(struct transport_write_state *self,
       if (status < 0)
 	return status;
 
-      packet = make_ignore_packet(self, TRANSPORT_PADDING_SIZE, random);
+      packet = make_ignore_packet(self, TRANSPORT_PADDING_SIZE);
 
       flags |= TRANSPORT_WRITE_FLAG_IGNORE;
     }
@@ -266,8 +263,7 @@ transport_write_line(struct transport_write_state *self,
 }
 
 enum transport_write_status
-transport_write_flush(struct transport_write_state *self,
-		      int fd, struct randomness *random)
+transport_write_flush(struct transport_write_state *self, int fd)
 {
   if (!self->ignore && self->crypto
       && self->super.length < self->threshold)
@@ -275,7 +271,7 @@ transport_write_flush(struct transport_write_state *self,
       enum transport_write_status status;
       struct lsh_string *packet;
 
-      packet = make_ignore_packet(self, TRANSPORT_PADDING_SIZE, random);
+      packet = make_ignore_packet(self, TRANSPORT_PADDING_SIZE);
       status = write_data(self, fd, TRANSPORT_WRITE_FLAG_IGNORE, STRING_LD(packet));
       lsh_string_free(packet);
 

@@ -151,7 +151,7 @@ make_transport_write_state(void);
 enum transport_write_status
 transport_write_packet(struct transport_write_state *self,
 		       int fd, enum transport_write_flag flags,
-		       struct lsh_string *packet, struct randomness *random);
+		       struct lsh_string *packet);
 
 enum transport_write_status
 transport_write_line(struct transport_write_state *self,
@@ -168,7 +168,7 @@ transport_write_new_keys(struct transport_write_state *self,
    packet */
 enum transport_write_status
 transport_write_flush(struct transport_write_state *self,
-		      int fd, struct randomness *random);
+		      int fd);
 
 /* Fixed state used by all connections. */
 /* GABA:
@@ -176,7 +176,6 @@ transport_write_flush(struct transport_write_state *self,
      (name transport_context)
      (vars
        (is_server . int)
-       (random object randomness)
        (algorithms object alist)
        (kexinit object make_kexinit)))
 */
