@@ -30,7 +30,6 @@
 #include "keyexchange.h"
 
 #include "atoms.h"
-#include "command.h"
 #include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
@@ -154,8 +153,7 @@ client_dh_init(struct keyexchange_algorithm *s,
   handler->hostkey_algorithm = connection->kex.hostkey_algorithm;
   
   /* Generate clients 's secret exponent */
-  dh_generate_secret(self->params, connection->ctx->random,
-		     handler->dh.secret, handler->dh.e);
+  dh_generate_secret(self->params, handler->dh.secret, handler->dh.e);
 
   /* Send client's message */
   transport_send_packet(connection, 1,
