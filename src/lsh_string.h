@@ -167,11 +167,11 @@ lsh_string_write_hmac(struct lsh_string *s, uint32_t start,
 		      const void *outer, const void *inner, void *state);
 
 void
-lsh_string_write_random(struct lsh_string *s, uint32_t start,
-			struct randomness *r, uint32_t length);
+lsh_string_write_random(struct lsh_string *s,
+			uint32_t start, uint32_t length);
 
 struct lsh_string *
-lsh_string_random(struct randomness *r, uint32_t length);
+lsh_string_random(uint32_t length);
 
 struct lsh_string *
 lsh_string_ntop(int family, uint32_t length, const void *addr);

@@ -42,46 +42,26 @@ enum random_source_type
     RANDOM_NSOURCES
   };
 
-/* Randomness that is for "pad only" should be used only for iv:s and
- * random padding. */
-enum randomness_quality { RANDOM_GOOD, RANDOM_PAD_ONLY };
+void
+random_generate(uint32_t length, uint8_t *dst);
 
-#define GABA_DECLARE
-#include "randomness.h.x"
-#undef GABA_DECLARE
-
-/* GABA:
-   (class
-     (name randomness)
-     (vars
-       (quality . "enum randomness_quality")
-       (random method void "uint32_t length" "uint8_t *dst")
-       ; To be used only for SOURCE_REMOTE and SOURCE_SECRET
-       (add method void "enum random_source_type"
-                        "uint32_t length" "const uint8_t *data")))
-*/
-
-#define RANDOM(r, length, dst) ((r)->random((r), (length), (dst)))
-#define RANDOM_ADD(r, t, length, data) ((r)->add((r), (t), (length), (dst)))
+void
+random_add(enum random_source_type type, uint32_t length,
+	   const uint8_t *data);
 
 /* This is not really a constructor, as the randomness collector uses
  * global state. */
-struct randomness *
-random_init(struct lsh_string *seed_file_name);
+int
+random_init(const struct lsh_string *seed_file_name);
 
-/* Creates a more efficient but less secure generator by buffering
- * another generator. */
-struct randomness *
-make_buffered_random(struct randomness *);
+int
+random_init_user(const char *home);
 
-struct randomness *
-make_user_random(const char *home);
-
-struct randomness *
-make_system_random(void);
+int
+random_init_system(void);
 
 /* Randomness function matching nettle's expectations. */
 void
-lsh_random(void *x, unsigned length, uint8_t *data);
+lsh_random(void *ctx, unsigned length, uint8_t *data);
 
 #endif /* LSH_RANDOMNESS_H_INCLUDED */

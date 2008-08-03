@@ -87,10 +87,10 @@ lsh_string_write_string(struct lsh_string *s, uint32_t pos,
 
 #ifndef LSH_MINIMAL
 struct lsh_string *
-lsh_string_random(struct randomness *r, uint32_t length)
+lsh_string_random(uint32_t length)
 {
   struct lsh_string *s = lsh_string_alloc(length);
-  lsh_string_write_random(s, 0, r, length);
+  lsh_string_write_random(s, 0, length);
 
   return s;
 }
@@ -528,11 +528,11 @@ lsh_string_write_hmac(struct lsh_string *s, uint32_t start,
 }
 
 void
-lsh_string_write_random(struct lsh_string *s, uint32_t start,
-			struct randomness *r, uint32_t length)
+lsh_string_write_random(struct lsh_string *s,
+			uint32_t start, uint32_t length)
 {
   ASSERT_ROOM(s, start, length);
-  RANDOM(r, length, s->data + start);
+  random_generate(length, s->data + start);
   assert(!s->data[s->length]);
 }
 

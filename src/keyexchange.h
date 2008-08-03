@@ -139,14 +139,14 @@ handle_kexinit(struct kexinit_state *self,
  *
  * If a speculative packet follows, it is stored in the last field. */
 
+/* FIXME: We don't need this abstract class, merge with simple_kexinit
+   and a plain function for generating kexinits. */
 /* GABA:
    (class
      (name make_kexinit)
      (vars
-       (make method (object kexinit) "struct randomness *random")))
+       (make method (object kexinit))))
 */
-
-#define MAKE_KEXINIT(s, r) ((s)->make((s), (r)))
 
 struct make_kexinit *
 make_simple_kexinit(struct int_list *kex_algorithms,

@@ -31,7 +31,6 @@
 #include "keyexchange.h"
 
 #include "alist.h"
-#include "command.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
@@ -299,13 +298,12 @@ handle_kexinit(struct kexinit_state *self,
 */
 
 static struct kexinit *
-do_make_simple_kexinit(struct make_kexinit *c, struct randomness *random)
+do_make_simple_kexinit(struct make_kexinit *c)
 {
   CAST(simple_kexinit, closure, c);
   NEW(kexinit, kex);
 
-  assert(random->quality == RANDOM_GOOD);
-  RANDOM(random, sizeof(kex->cookie), kex->cookie);
+  random_generate(sizeof(kex->cookie), kex->cookie);
 
   kex->kex_algorithms = closure->kex_algorithms;
   kex->server_hostkey_algorithms = closure->hostkey_algorithms;
