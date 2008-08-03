@@ -129,7 +129,7 @@ make_gateway_tcpforward_state(struct gateway_tcpforward_handler *handler)
 */
 
 static void
-so_kill_gateway_forward(struct resource *s)
+do_kill_gateway_forward(struct resource *s)
 {
   CAST(gateway_forward_resource, self, s);
 
