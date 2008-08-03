@@ -111,10 +111,10 @@ pty_open_master(struct pty_info *pty)
 
 #endif
 
-  /* FIXME: Traditional BSD-style pty:s not implemented. */
-  /* FIXME: We can't set up correct permissions since we're not root.
-     We need some trick like pty-creation deamon. */
-
+  /* FIXME: Traditional BSD-style pty:s not implemented. Needs to ask
+     the pty_helper process to open the master for us and setup the
+     permissions, and then that procecss must run as root. */
+  
   return 0;
 }
 

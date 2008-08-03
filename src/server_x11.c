@@ -160,9 +160,7 @@ make_x11_listen_port(int dir, const struct lsh_string *name,
 }
 
 /* FIXME: Create the /tmp/.X11-unix directory, if needed. Figure out
- * if and how we should use /tmp/.X17-lock. Consider using display
- * "unix:17" instead of just ":17".
- */
+ * if and how we should use /tmp/.X17-lock. */
 
 /* Creates a socket in tmp. Some duplication with io_bind_local in
    io.c, but sufficiently different that it doesn't seem practical to
