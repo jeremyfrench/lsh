@@ -32,18 +32,12 @@
 #include "tcpforward.h"
 
 #include "channel_forward.h"
-#include "exception.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-/* Forward declarations */
-/* FIXME: Should be static */
-struct command_3 open_forwarded_tcpip_command;
-#define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip_command.super.super)
 
 #include "server_tcpforward.c.x"
 
