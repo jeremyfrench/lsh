@@ -48,6 +48,7 @@
 #include "interact.h"
 #include "io.h"
 #include "lsh_string.h"
+#include "randomness.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
@@ -80,8 +81,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
        (crypto_algorithms object alist)
        (signature_algorithms object alist)
-       ; We use this only for salt and iv generation.
-       (r object randomness)
 
        ; Zero means default, which depends on the --server flag.
        (crypto_name . int)
@@ -105,13 +104,8 @@ make_lsh_writekey_options(void)
   self->iterations = 1500;
 
   self->crypto_algorithms = all_symmetric_algorithms();
+  self->signature_algorithms = all_signature_algorithms();
 
-  /* NOTE: We don't need any randomness here, as we won't be signing
-   * anything. */
-  self->signature_algorithms = all_signature_algorithms(NULL);
-
-  self->r = NULL;
-  
   self->crypto_name = 0;
   self->crypto = NULL;
   
@@ -198,6 +192,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       if (self->crypto)
 	{
+	  int res;
+
 	  if (!self->label)
 	    {
 #ifndef MAXHOSTNAMELEN
@@ -222,12 +218,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      
 	      self->label = ssh_format("%lz@%lz", name, host);
 	    }
-	  self->r = (self->server
-		     ? make_system_random()
-		     : make_user_random(getenv(ENV_HOME)));
-	  if (!self->r)
+	  
+	  res = (self->server
+		 ? random_init_system()
+		 : random_init_user(getenv(ENV_HOME)));
+	  if (!res)
 	    argp_failure(state, EXIT_FAILURE, 0, 
-			 "Failed to initialize randomness generator.");
+			   "Failed to initialize randomness generator.");
 	}
       break;
       
@@ -375,8 +372,7 @@ process_private(const struct lsh_string *key,
 	  lsh_string_free(again);
 	}
 
-      return spki_pkcs5_encrypt(options->r,
-				options->label,
+      return spki_pkcs5_encrypt(options->label,
 				ATOM_HMAC_SHA1,
 				hmac,
 				options->crypto_name,
@@ -425,7 +421,7 @@ main(int argc, char **argv)
   if (! (check_file(options->private_file)
 	 && check_file(options->public_file)))
     return EXIT_FAILURE;
-  
+
   private = io_read_file_raw(STDIN_FILENO, 2000);
 
   if (!private)
