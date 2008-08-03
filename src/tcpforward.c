@@ -68,7 +68,7 @@ tcpforward_remove(struct object_queue *q,
 {
   FOR_OBJECT_QUEUE(q, n)
     {
-      CAST(forwarded_port, p, n);
+      CAST_SUBTYPE(forwarded_port, p, n);
 
       if ( (port == p->address->port)
 	   && lsh_string_eq_l(p->address->ip, length, ip) )
