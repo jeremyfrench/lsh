@@ -52,7 +52,6 @@
 
 #include "io.h"
 
-#include "command.h"
 #include "format.h"
 #include "lsh_string.h"
 #include "werror.h"

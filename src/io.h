@@ -120,14 +120,6 @@ io_lookup_address(const char *ip, const char *service);
 struct sockaddr *
 io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port);
 
-#if 0
-struct sockaddr *
-address_info2sockaddr(socklen_t *length,
-		      struct address_info *a,
-		      const int *preference,
-		      int lookup);
-#endif
-
 unsigned
 io_resolv_address(const char *host, const char *service,
 		  unsigned default_port,
