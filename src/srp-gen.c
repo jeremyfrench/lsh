@@ -1,6 +1,6 @@
 /* srp-gen.c
  *
- * Create an SRP verifier
+ * Create an SRP verifier. NOTE: Not in working shape.
  *
  */
 
@@ -77,8 +77,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (dest . int)
 
        (name . "const char *")
-       (passwd string)
-       (r object randomness)))
+       (passwd string)))
 */
 
 static struct srp_gen_options *
