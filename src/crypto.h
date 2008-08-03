@@ -114,6 +114,8 @@ hash_digest_string(struct hash_instance *self);
 struct hash_instance *
 hash_copy(struct hash_instance *self);
 
+/* FIXME: We don't need a class for this, we can just pass around a
+   pointer to the corresponding nettle_hash. */
 /* GABA:
    (class
      (name hash_algorithm)
@@ -242,8 +244,7 @@ make_ssh_rsa_verifier(uint32_t length, const uint8_t *key);
 
 /* DSA signatures */
 
-struct signature_algorithm *
-make_dsa_algorithm(struct randomness *random);
+extern struct signature_algorithm dsa_algorithm;
 
 /* Non spki keys */
 struct verifier *
@@ -323,7 +324,6 @@ dh_hash_update(struct dh_state *self,
 
 void
 dh_generate_secret(const struct dh_params *self,
-		   struct randomness *random, 
 		   mpz_t r, mpz_t v);
 
 void
@@ -366,6 +366,6 @@ struct compress_instance;
 struct lsh_string *
 encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
 	       struct crypto_instance *crypt, struct mac_instance *mac,
-	       struct randomness *random, uint32_t seqno);
+	       uint32_t seqno);
 
 #endif /* LSH_CRYPTO_H_INCLUDED */

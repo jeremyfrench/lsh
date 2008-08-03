@@ -143,18 +143,14 @@ init_dh_state(struct dh_state *self,
 
 /* R is set to a random, secret, exponent, and V set to is g^r */
 void
-dh_generate_secret(const struct dh_params *self,
-		   struct randomness *random, 
-		   mpz_t r, mpz_t v)
+dh_generate_secret(const struct dh_params *self, mpz_t r, mpz_t v)
 {
   mpz_t tmp;
 
-  assert(random->quality == RANDOM_GOOD);
-  
   /* Generate a random number, 1 < x < O(G) = (p-1)/2 */
   mpz_init_set(tmp, self->modulo);  
   mpz_sub_ui(tmp, tmp, 2);
-  nettle_mpz_random(r, random, lsh_random, tmp);
+  nettle_mpz_random(r, NULL, lsh_random, tmp);
   mpz_add_ui(r, r, 1);
   mpz_clear(tmp);
 

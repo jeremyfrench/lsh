@@ -36,7 +36,7 @@
 struct lsh_string *
 encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
 	       struct crypto_instance *crypt, struct mac_instance *mac,
-	       struct randomness *random, uint32_t seqno)
+	       uint32_t seqno)
 {
   uint32_t block_size;
   uint32_t new_size;
@@ -83,7 +83,7 @@ encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
 
   assert(new_size + mac_length == lsh_string_length(packet));
 
-  lsh_string_write_random(packet, padding, random, padding_length);
+  lsh_string_write_random(packet, padding, padding_length);
 
   if (mac)
     {
