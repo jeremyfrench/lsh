@@ -28,7 +28,6 @@
 #include <assert.h>
 
 #include "atoms.h"
-#include "command.h"
 #include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
@@ -143,8 +142,7 @@ server_dh_init(struct keyexchange_algorithm *s,
       handler->key = key;
 
       /* Generate server's secret exponent */
-      dh_generate_secret(self->params, connection->ctx->random,
-			 handler->dh.secret, handler->dh.f);
+      dh_generate_secret(self->params, handler->dh.secret, handler->dh.f);
   
       /* Return handler */
       return &handler->super;
