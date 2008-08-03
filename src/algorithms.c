@@ -73,12 +73,12 @@ all_symmetric_algorithms()
 /* This is used for spki operations, and should therefore use spki names.
  * Note that md5 signatures are not currently supported. */
 struct alist *
-all_signature_algorithms(struct randomness *r)
+all_signature_algorithms(void)
 {
   return make_alist(3,
-		    ATOM_DSA, make_dsa_algorithm(r),
-		    ATOM_RSA_PKCS1, &rsa_sha1_algorithm.super,
-		    ATOM_RSA_PKCS1_SHA1, &rsa_sha1_algorithm.super,
+		    ATOM_DSA, &dsa_algorithm,
+		    ATOM_RSA_PKCS1, &rsa_sha1_algorithm,
+		    ATOM_RSA_PKCS1_SHA1, &rsa_sha1_algorithm,
 		    -1);
 }
 
