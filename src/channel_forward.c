@@ -221,23 +221,3 @@ make_channel_forward(int socket, uint32_t write_buffer_size)
 
   return self;
 }
-
-/* Used by the party requesting tcp forwarding, i.e. when a socket is
- * already open, and we have asked the other end to forward it. Takes
- * a channel as argument, and connects it to the socket. Returns the
- * channel. */
-
-DEFINE_COMMAND(forward_start_io_command)
-     (struct command *s UNUSED,
-      struct lsh_object *x,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(channel_forward, channel, x);
-
-  assert(channel);
-  
-  channel_forward_start_io(channel);
-
-  COMMAND_RETURN(c, channel);  
-}
