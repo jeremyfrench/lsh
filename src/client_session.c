@@ -242,10 +242,8 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       break;
 
     case CHANNEL_EVENT_DENY:
-      /* FIXME: Do we really need an exception handler for this? */
-      EXCEPTION_RAISE(session->e,
-		      make_exception(EXC_CHANNEL_OPEN, 0,
-				     "Failed to open session channel."));
+      /* FIXME: Do we need any additional error handling? */
+      werror("Failed to open session channel.\n");
       break;
     case CHANNEL_EVENT_EOF:
       if (!session->out.state->length)
@@ -375,7 +373,6 @@ DEFINE_CHANNEL_REQUEST(handle_exit_signal)
 struct client_session *
 make_client_session_channel(int in, int out, int err,
 			    struct object_list *actions,
-			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status)
@@ -412,8 +409,6 @@ make_client_session_channel(int in, int out, int err,
   self->actions = actions;
   self->action_next = 0;
   self->action_done = 0;
-
-  self->e = e;
 
   self->escape = escape;
   self->escape_state = ESCAPE_GOT_NONE;
