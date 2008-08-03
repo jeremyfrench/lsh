@@ -57,8 +57,8 @@
 #include "environ.h"
 #include "format.h"
 #include "io.h"
-#include "lock_file.h"
 #include "lsh_string.h"
+#include "seed_file.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -216,8 +216,6 @@ enum source_type
   {
     /* Data from /dev/random, if available */
     SOURCE_DEV_RANDOM,
-    /* Data from /dev/mem, if we have permissions */
-    SOURCE_DEV_MEM,
     /* Output from miscellaneous commands */
     SOURCE_SYSTEM,
     /* As a last resort, ask the user to type on the keyboard. */
@@ -1036,7 +1034,6 @@ int
 main(int argc, char **argv)
 {
   struct lsh_make_seed_options *options = make_options();
-  struct lsh_file_lock_info *lock_info;
 
   int overwrite = 0;
   
@@ -1062,16 +1059,7 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  lock_info = make_lsh_file_lock_info(ssh_format("%lS.lock",
-						 options->filename));
-
   /* Try to fail early. */
-  if (LSH_FILE_LOCK_P(lock_info))
-    {
-      werror("File `%S' is locked\n", options->filename);
-      return EXIT_FAILURE;
-    }
-
   if (!options->force)
     {
       struct stat sbuf;
@@ -1110,13 +1098,6 @@ main(int argc, char **argv)
 
   yarrow256_force_reseed(&yarrow);
 
-  lock = LSH_FILE_LOCK(lock_info, 5);
-
-  if (!lock)
-    {
-      werror("Failed to lock file `%S'\n", options->filename);
-      return EXIT_FAILURE;
-    }
 
   /* Create file, readable only be the user. */
   fd = open(lsh_get_cstring(options->filename),
@@ -1141,7 +1122,13 @@ main(int argc, char **argv)
       werror("Failed to open file `%S' %e\n",
 	     options->filename, errno);
 
-      KILL_RESOURCE(lock);
+      return EXIT_FAILURE;
+    }
+
+  if (!seed_file_lock(fd, 1))
+    {
+      werror("Failed to lock file `%S'\n", options->filename);
+      close(fd);
       return EXIT_FAILURE;
     }
 
@@ -1150,37 +1137,12 @@ main(int argc, char **argv)
       /* If we're overwriting an existing file, make sure it has
        * reasonable permissions */
 
-      struct stat sbuf;
-      if (fstat(fd, &sbuf) < 0)
+      if (!seed_file_check_permissions(fd, options->filename))
 	{
-	  werror("Failed to stat file `%S' %e\n",
-		 options->filename, errno);
-
+	error:
+	  seed_file_unlock(fd);
 	  close(fd);
-	  KILL_RESOURCE(lock);
 	  return EXIT_FAILURE;
-	}
-
-      if (sbuf.st_uid != getuid())
-	{
-	  werror("The file `%S' is owned by somebody else.\n");
-
-	  close(fd);
-	  KILL_RESOURCE(lock);
-	  return EXIT_FAILURE;
-	}
-
-      if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
-	{
-	  werror("Too permissive permissions on `%S', trying to fix it.\n",
-		 options->filename);
-	  if (fchmod(fd, sbuf.st_mode & ~(S_IRWXG | S_IRWXO)) < 0)
-	    {
-	      werror("Failed to change permissions %e\n", errno);
-	      close(fd);
-	      KILL_RESOURCE(lock);
-	      return EXIT_FAILURE;
-	    }
 	}
 
       /* FIXME: Use O_TRUNC instead? */
@@ -1188,27 +1150,20 @@ main(int argc, char **argv)
 	{
 	  werror("Failed to truncate file `%S' %e\n",
 		 options->filename, errno);
-
-	  close(fd);
-	  KILL_RESOURCE(lock);
-	  return EXIT_FAILURE;
+	  goto error;
 	}
     }
   
-  if (!write_raw(fd, sizeof(yarrow.seed_file), yarrow.seed_file))
+  if (!seed_file_write(fd, &yarrow))
     {
-      werror("Writing seed file failed: %e\n", errno);
-
       /* If we're overwriting the file, it's already truncated now,
        * we can't leave it unmodified. So just delete it. */
 
       unlink(lsh_get_cstring(options->filename));
-      close(fd);
-      KILL_RESOURCE(lock);
-      return EXIT_FAILURE;
+      goto error;
     }
-  
-  KILL_RESOURCE(lock);
+
+  seed_file_unlock(fd);
   close(fd);
   
   return EXIT_SUCCESS;
