@@ -44,7 +44,6 @@
 #include "list.h"
 #include "lsh_string.h"
 #include "parse.h"
-#include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -369,8 +368,7 @@ make_spki_context(struct alist *algorithms)
 
 /* Frees input string. */
 struct lsh_string *
-spki_pkcs5_encrypt(struct randomness *r,
-                   struct lsh_string *label,
+spki_pkcs5_encrypt(struct lsh_string *label,
 		   uint32_t prf_name,
 		   struct mac_algorithm *prf,
 		   int crypto_name,
@@ -390,14 +388,14 @@ spki_pkcs5_encrypt(struct randomness *r,
   assert(prf);
 
   /* NOTE: Allows random to be of bad quality */
-  salt = lsh_string_random(r, salt_length);
+  salt = lsh_string_random(salt_length);
 
   key = pkcs5_derive_key(prf,
 			 password, salt, iterations,
 			 crypto->key_size);
 
   if (crypto->iv_size)
-    iv = lsh_string_random(r, crypto->iv_size);
+    iv = lsh_string_random(crypto->iv_size);
   else
     iv = NULL;
 

@@ -123,8 +123,7 @@ spki_add_acls(struct spki_context *ctx,
 
 
 struct lsh_string *
-spki_pkcs5_encrypt(struct randomness *r,
-                   struct lsh_string *label,
+spki_pkcs5_encrypt(struct lsh_string *label,
 		   uint32_t prf_name,
 		   struct mac_algorithm *prf,
 		   int crypto_name,
