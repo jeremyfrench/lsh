@@ -35,7 +35,7 @@
 
 #include "nettle/macros.h"
 #include "channel_forward.h"
-#include "command.h"
+#include "client.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
@@ -103,9 +103,6 @@ enum socks_state {
   /* Waiting for an error reply to be written, before closing. */
   SOCKS_CLOSE
 };
-
-struct command_2 socks_handshake;
-#define SOCKS_HANDSHAKE (&socks_handshake.super.super)
 
 #include "socks.c.x"
 
@@ -584,7 +581,7 @@ do_socks_channel_event(struct ssh_channel *s, enum channel_event event)
       socks_reply(self, SOCKS_ERROR_CONNECTION_REFUSED,
 		  SOCKS_NOADDR, 0);
 
-      /* FIXME: When we return, the channel will be killed by
+      /* NOTE: When we return, the channel will be killed by
 	 channel_finished, and any buffered data will be discarded. We
 	 don't try to ensure that the final reply is delivered
 	 properly. */
@@ -698,45 +695,42 @@ make_socks_listen_port(struct ssh_connection *connection,
 
 /* GABA:
    (class
-     (name make_socks_server_command)
-     (super command)
+     (name make_socks_server_action)
+     (super client_connection_action)
      (vars
        (local const object address_info)))
 */
 
 static void
-do_make_socks_server(struct command *s,
-		     struct lsh_object *a,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
+do_make_socks_server(struct client_connection_action *s,
+		     struct ssh_connection *connection)
 {
-  CAST(make_socks_server_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, a);
+  CAST(make_socks_server_action, self, s);
   struct io_listen_port *port;
 
   port = make_socks_listen_port(connection, self->local);
   if (!port)
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_RESOLVE, 0, "invalid address"));
-      return;
+      werror("Invalid local port %S:%i.\n",
+	     self->local->ip, self->local->port);
     }
   else if (!io_listen(port))
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_IO_ERROR, errno, "listen failed"));
+      werror("Listening on local port %S:%i failed: %e\n",
+	     self->local->ip, self->local->port, errno);
       KILL_RESOURCE(&port->super);
     }
   else
     {
       remember_resource(connection->resources, &port->super);
-      COMMAND_RETURN(c, port);
     }
 }
   
-struct command *
+struct client_connection_action *
 make_socks_server(const struct address_info *local)
 {
-  NEW(make_socks_server_command, self);
-  self->super.call = do_make_socks_server;
+  NEW(make_socks_server_action, self);
+  self->super.action = do_make_socks_server;
   self->local = local;
 
   return &self->super;
