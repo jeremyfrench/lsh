@@ -121,10 +121,15 @@ client_escape_process(const struct escape_info *info, enum escape_state state,
 		      uint32_t length, const uint8_t *data,
 		      uint32_t *copy, uint32_t *done);
 
-struct command *make_open_session_command(struct ssh_channel *session);
+/* GABA:
+   (class
+     (name client_connection_action)
+     (vars
+       (action method void "struct ssh_connection *connection")))
+*/
 
-struct command *make_background_process(int write_pid);
-
+struct client_connection_action *
+make_open_session_action(struct ssh_channel *channel);
 
 /* GABA:
    (class
@@ -205,11 +210,6 @@ channel_open_x11;
        ; message corresponds to.
        (action_done . unsigned)
 
-       ; For errors when opening the channel, or when sending the
-       ; channel requests. It's not clear what's the proper place for
-       ; the error handling.
-       (e object exception_handler)
-
        ; Escape char handling
        (escape const object escape_info)
        (escape_state . "enum escape_state")
@@ -221,7 +221,6 @@ channel_open_x11;
 struct client_session *
 make_client_session_channel(int in, int out, int err,
 			    struct object_list *actions,
-			    struct exception_handler *e,
 			    struct escape_info *escape,
 			    uint32_t initial_window,
 			    int *exit_status);
