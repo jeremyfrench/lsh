@@ -513,8 +513,8 @@ make_detach_callback(int *exit_status)
 
 /* GABA:
    (class
-     (name session_open_command)
-     (super command)
+     (name session_open_action)
+     (super client_connection_action)
      (vars
        ; This command can only be executed once,
        ; so we can allocate the session object in advance.
@@ -522,30 +522,26 @@ make_detach_callback(int *exit_status)
 */
 
 static void
-do_open_session_command(struct command *s,
-			struct lsh_object *a,
-			struct command_continuation *c UNUSED,
-			struct exception_handler *e)
+do_open_session_action(struct client_connection_action *s,
+		       struct ssh_connection *connection)
 {
-  CAST(session_open_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, a);
+  CAST(session_open_action, self, s);
   
   if (!channel_open_new_type(connection, self->channel,
 			     ATOM_LD(ATOM_SESSION), ""))
     {
-      EXCEPTION_RAISE(e, make_exception(EXC_CHANNEL_OPEN, SSH_OPEN_RESOURCE_SHORTAGE,
-					"Allocating a local channel number failed."));
+      werror("Allocating a local channel number for session failed.\n");
       KILL_RESOURCE(&self->channel->super);
     }
 }
 
-struct command *
-make_open_session_command(struct ssh_channel *channel)
+struct client_connection_action *
+make_open_session_action(struct ssh_channel *channel)
 {
   if (channel)
     {
-      NEW(session_open_command, self);
-      self->super.call = do_open_session_command;
+      NEW(session_open_action, self);
+      self->super.action = do_open_session_action;
       self->channel = channel;
 
       return &self->super;
@@ -629,63 +625,6 @@ DEFINE_ESCAPE(trace_callback, "Toggle trace messages.")
 DEFINE_ESCAPE(debug_callback, "Toggle trace messages.")
 {
   toggle_trace();
-}
-
-/* GABA:
-   (class
-     (name background_process_command)
-     (super command)
-     (vars
-       (write_pid . int)))
-*/
-
-static void
-do_background_process(struct command *s,
-		      struct lsh_object *a,
-		      struct command_continuation *c,
-		      struct exception_handler *e UNUSED)
-{
-  CAST(background_process_command, self, s);
-  pid_t pid;
-  
-  trace("do_background_process\n");
-  
-  pid = fork();
-  
-  switch (pid)
-    {
-    case 0:
-      /* Child */
-      /* FIXME: Should we create a new process group, close our tty
-       * and stdio, etc? */
-      COMMAND_RETURN(c, a);
-      break;
-    case -1:
-      /* Error */
-      werror("background_process: fork failed %e\n", errno);
-      COMMAND_RETURN(c, a);
-      break;
-    default:
-      /* Parent */
-      if (self->write_pid)
-	{
-	  struct lsh_string *msg = ssh_format("%di\n", pid);
-	  if (!write_raw (STDOUT_FILENO, STRING_LD(msg)))
-	    werror ("Write to stdout failed!?: %e\n", errno);
-	}
-      _exit(EXIT_SUCCESS);
-    }
-}
-
-struct command *
-make_background_process(int write_pid)
-{
-  NEW(background_process_command, self);
-
-  self->super.call = do_background_process;
-  self->write_pid = write_pid;
-
-  return &self->super;
 }
 
 struct escape_info *
