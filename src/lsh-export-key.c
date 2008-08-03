@@ -283,7 +283,7 @@ make_options(void)
   self->subject = NULL;
   self->comment = NULL;
   self->mode = OUTPUT_STANDARD;
-  self->algorithms = all_signature_algorithms(NULL);
+  self->algorithms = all_signature_algorithms();
 
   return self;
 }
