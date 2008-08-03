@@ -142,20 +142,13 @@ make_lsh_transport_config(void)
       werror("No home directory. Please set HOME in the environment.");
       return NULL;
     }
-  
-  self->super.random = make_user_random(self->home);
-  if (!self->super.random)
-    {
-      werror("No randomness generator available.\n");
-      return NULL;
-    }
-  
+
   self->super.algorithms = all_symmetric_algorithms();
   self->algorithms = make_algorithms_options(self->super.algorithms);
 
   self->werror_config = make_werror_config();
 
-  self->signature_algorithms = all_signature_algorithms(self->super.random);
+  self->signature_algorithms = all_signature_algorithms();
 
   self->host_db = make_lsh_transport_lookup_verifier(self);
 
@@ -261,7 +254,7 @@ lsh_transport_service_packet_handler(struct transport_forward *self,
 	    random_length = RANDOM_REQUEST_MAX;
 
 	  response = ssh_format("%c%r", SSH_LSH_RANDOM_REPLY, random_length, &pos);
-	  lsh_string_write_random(response, pos, self->super.ctx->random, random_length);
+	  lsh_string_write_random(response, pos, random_length);
 
 	  /* Note: Bogus sequence number. */
 	  transport_forward_service_packet(self, 0, STRING_LD(response));
@@ -539,6 +532,8 @@ try_password_auth(struct lsh_transport_connection *self)
 	  return 0;
 	}
     }
+
+  random_add(RANDOM_SOURCE_SECRET, STRING_LD(password));
 
   verbose("Requesting authentication using the `password' method.\n");
 
@@ -850,6 +845,8 @@ read_user_key(struct lsh_transport_config *config)
 
   /* FIXME: We should read the public key somehow, and decrypt the
      private key only if it is needed. */
+  /* FIXME: Mix in the passphrase using
+     random_add(RANDOM_SOURCE_SECRET, ...) */
   contents
     = spki_pkcs5_decrypt(alist_select_l(config->super.algorithms,
 					2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1),
@@ -1360,6 +1357,12 @@ main(int argc, char **argv)
   config = make_lsh_transport_config();
   if (!config)
     return EXIT_FAILURE;
+
+  if (!random_init_user(config->home))
+    {
+      werror("No randomness generator available.\n");
+      return EXIT_FAILURE;
+    }
   
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
