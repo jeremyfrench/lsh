@@ -438,7 +438,6 @@ make_lshd_context(void)
   services[2] = NULL;
 
   self->super.is_server = 1;
-  self->super.random = make_system_random();
   self->super.algorithms = all_symmetric_algorithms();
 
   self->keys = make_alist(0, -1);
@@ -804,7 +803,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 
 	if (!read_host_key((self->hostkey ? lsh_get_cstring(self->hostkey)
 			    : SYSCONFDIR "/lshd/host-key"),
-			   all_signature_algorithms(ctx->super.random),
+			   all_signature_algorithms(),
 			   ctx->keys))
 	  {
 	    werror("No hostkey.\n");
@@ -914,12 +913,9 @@ main(int argc, char **argv)
 
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
-  /* FIXME: Missing: setrlimit(RLIMIT_NOFILE, &r), setlocale,
-     set_local_charset, daemonization */ 
-
   /* Put this check after argument parsing, to make the --help option
      work. */
-  if (!config->ctx->super.random)
+  if (!random_init_system())
     {
       werror("No randomness generator available.\n");
       exit(EXIT_FAILURE);
