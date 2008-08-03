@@ -30,7 +30,6 @@
 #include "connection.h"
 
 #include "alist.h"
-#include "command.h"
 #include "werror.h"
 #include "xalloc.h"
 

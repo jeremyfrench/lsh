@@ -24,7 +24,6 @@
 #ifndef LSH_CONNECTION_H_INCLUDED
 #define LSH_CONNECTION_H_INCLUDED
 
-#include "exception.h"
 #include "parse.h"
 #include "queue.h"
 #include "resource.h"
