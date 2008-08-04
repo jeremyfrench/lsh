@@ -13,14 +13,11 @@ dist_classes = \
     client_session.c.x \
     client_tcpforward.c.x \
     client_x11.c.x \
-    command.c.x \
-    command.h.x \
     compress.h.x \
     connection.h.x \
     crypto.c.x \
     crypto.h.x \
     dsa.c.x \
-    exception.h.x \
     gateway.c.x \
     gateway.h.x \
     gateway_tcpforward.c.x \
@@ -30,8 +27,6 @@ dist_classes = \
     keyexchange.c.x \
     keyexchange.h.x \
     list.h.x \
-    lock_file.c.x \
-    lock_file.h.x \
     lsh-decode-key.c.x \
     lsh-decrypt-key.c.x \
     lsh-export-key.c.x \
@@ -46,7 +41,6 @@ dist_classes = \
     lshd.c.x \
     parse_config.c.x \
     queue.h.x \
-    randomness.h.x \
     reaper.c.x \
     reaper.h.x \
     resource.h.x \
@@ -70,6 +64,5 @@ dist_classes = \
     transport_read.c.x \
     unix_interact.c.x \
     unix_process.c.x \
-    unix_random.c.x \
     werror.h.x \
     zlib.c.x
