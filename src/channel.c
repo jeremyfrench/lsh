@@ -71,27 +71,6 @@
       CHANNEL_OPEN_FAILURE message is sent.
 */
 
-struct exception *
-make_channel_open_exception(uint32_t error_code, const char *msg)
-{
-#define MAX_ERROR 4
-  static const char *msgs[MAX_ERROR + 1] = {
-    "",
-    "Administratively prohibited",
-    "Connect failed",
-    "Unknown channel type",
-    "Resource shortage"
-  };
-
-  assert(error_code > 0);
-  assert(error_code <= MAX_ERROR);
-#undef MAX_ERROR
-
-  return make_exception(EXC_CHANNEL_OPEN, error_code,
-			msg ? msg : msgs[error_code]);
-}
-
-
 static struct lsh_string *
 format_global_failure(void)
 {
@@ -474,7 +453,7 @@ channel_open_confirm(const struct channel_open_info *info,
   ssh_connection_activate_channel(info->connection,
 				  info->local_channel_number);
 
-  /* FIXME: Doesn't support sending extra arguments with the
+  /* NOTE: Doesn't support sending extra arguments with the
    * confirmation message. */
 
   SSH_CONNECTION_WRITE(info->connection,
@@ -933,8 +912,8 @@ handle_open_failure(struct ssh_connection *connection,
 
       if (channel)
 	{
-	  /* FIXME: It would be nice to pass the message on. */
-	  werror("Channel open for channel %i failed: %ps\n", channel_number, length, msg);
+	  werror("Channel open for channel %i failed: %ps\n",
+		 channel_number, length, msg);
 
 	  CHANNEL_EVENT(channel, CHANNEL_EVENT_DENY);
 	  channel_finished(channel);
@@ -1334,9 +1313,8 @@ ssh_connection_register_channel(struct ssh_connection *connection,
 
   connection->channels[local_channel_number] = channel;
   channel->connection = connection;
-  /* FIXME: If we keep the local_channel_number attribute,
-     we can probably use it in more places. */
   channel->local_channel_number = local_channel_number;
+
   remember_resource(connection->resources, &channel->super);  
 }
 

@@ -27,7 +27,6 @@
 #define LSH_CHANNEL_H_INCLUDED
 
 #include "alist.h"
-#include "command.h"
 #include "connection.h"
 #include "parse.h"
 #include "server_pty.h"
@@ -199,9 +198,6 @@ channel_open_new_type(struct ssh_connection *connection,
 		      struct ssh_channel *channel,
 		      uint32_t type_length, const uint8_t *type,
 		      const char *format, ...);
-
-struct exception *
-make_channel_open_exception(uint32_t error_code, const char *msg);
 
 int
 channel_send_request(struct ssh_channel *channel,
