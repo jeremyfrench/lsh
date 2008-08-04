@@ -1,3 +1,8 @@
+2008-08-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_x11.c (x11_connect_error): Fixed call to
+	channel_open_deny.
+
 2008-07-27  Niels Möller  <nisse@lysator.liu.se>
 
 	Merged lsh-writekey into lsh-keygen. Old lsh-keygen behavior is
