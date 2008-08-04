@@ -20,6 +20,7 @@ type_p () {
 : ${SEXP_CONV:="`PATH="../nettle_builddir/tools:$PATH" type_p sexp-conv`"}
 
 : ${LSH_TRANSPORT:="`cd .. && pwd`/lsh-transport"}
+LSH_MAKE_SEED=/bin/false
 : ${LSHD_CONNECTION:="`cd .. && pwd`/lshd-connection"}
 : ${LSHD_PTY_HELPER:="`cd .. && pwd`/lshd-pty-helper"}
 : ${LSHD_USERAUTH:="`cd .. && pwd`/lshd-userauth"}
