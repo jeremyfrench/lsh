@@ -96,30 +96,15 @@ struct ssh_channel;
 /* client_x11.c */
 struct client_x11_display;
 
-/* command.h */
-struct command_continuation;
-struct command;
-struct command_2;
-struct command_3;
-struct command_4;
-
 /* connection.h */
 struct ssh_connection;
 
-/* interact.h */
-struct interact;
-
 /* io.h */
 struct address_info;
-struct listen_value;
-struct lsh_fd;
 
 /* list.h */
 struct int_list;
 struct object_list;
-
-/* randomness.h */
-struct randomness;
 
 /* reaper.h */
 struct exit_callback;
