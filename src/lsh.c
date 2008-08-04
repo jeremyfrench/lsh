@@ -56,7 +56,6 @@
 #include "interact.h"
 #include "gateway.h"
 #include "lsh_string.h"
-#include "randomness.h"
 #include "reaper.h"
 #include "sexp.h"
 #include "ssh.h"
@@ -103,8 +102,6 @@
        ; -1 means default.
        (escape . int)
        
-       (handler object exception_handler)
-
        (exit_code . "int *")
 
        (not . int)
@@ -130,6 +127,7 @@
        (used_stdin . int)
        (used_pty . int)
 
+       (detach . int)
        ; Should -B write the pid to stdout?
        (write_pid . int)
        
@@ -161,8 +159,7 @@
 
 
 static struct lsh_options *
-make_options(struct exception_handler *handler,
-	     int *exit_code)
+make_options(int *exit_code)
 {
   NEW(lsh_options, self);
   const char *home = getenv(ENV_HOME);
@@ -173,8 +170,6 @@ make_options(struct exception_handler *handler,
   self->home = home;
 
   self->escape = -1;
-
-  self->handler = handler;
 
   self->exit_code = exit_code;
 
@@ -196,6 +191,7 @@ make_options(struct exception_handler *handler,
   self->used_stdin = 0;
   self->used_pty = 0;
 
+  self->detach = 0;
   self->detach_end = 0;
   self->write_pid = 0;
 
@@ -226,7 +222,7 @@ make_options(struct exception_handler *handler,
 
 static void
 add_action(struct lsh_options *options,
-	   struct command *action)
+	   struct client_connection_action *action)
 {
   assert(action);
   object_queue_add_tail(&options->actions, &action->super);
@@ -327,7 +323,6 @@ make_client_session(struct lsh_options *options,
 
   session = make_client_session_channel(in, out, err,
 					session_actions,
-					options->handler,
 					escape,
 					WINDOW_SIZE,
 					options->exit_code);
@@ -395,7 +390,7 @@ maybe_x11(struct lsh_options *options)
 }
 
 /* Create an interactive session */
-static struct command *
+static struct client_connection_action *
 client_shell_session(struct lsh_options *options)
 {  
   struct client_session_action *pty = maybe_pty(options, 1);
@@ -412,12 +407,12 @@ client_shell_session(struct lsh_options *options)
 
   assert(i == LIST_LENGTH(session_actions));
   
-  return make_open_session_command(
+  return make_open_session_action(
 	   &make_client_session(options, session_actions)->super);
 }
 
 /* Create a session for a subsystem */
-static struct command *
+static struct client_connection_action *
 client_subsystem_session(struct lsh_options *options,
 			 struct lsh_string *subsystem)
 {
@@ -425,12 +420,12 @@ client_subsystem_session(struct lsh_options *options,
     = make_object_list(1, make_subsystem_action(subsystem),
 		       -1);
 
-  return make_open_session_command(
+  return make_open_session_action(
 	   &make_client_session(options, session_actions)->super);
 }
 
 /* Create a session executing a command line */
-static struct command *
+static struct client_connection_action *
 client_command_session(struct lsh_options *options,
 		       struct lsh_string *command)
 {
@@ -447,7 +442,7 @@ client_command_session(struct lsh_options *options,
   LIST(session_actions)[i++] = &make_exec_action(command)->super;
 
   assert(i == LIST_LENGTH(session_actions));
-  return make_open_session_command(
+  return make_open_session_action(
 	   &make_client_session(options, session_actions)->super);
 }
 
@@ -857,7 +852,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'B':
       self->start_shell = 0;
-      add_action(self, make_background_process(self->write_pid));
+      self->detach = 1;
       break;
 
       /* FIXME: Doesn't yet work over the gateway. */
@@ -985,45 +980,6 @@ main_argp =
   main_argp_children,
   NULL, NULL
 };
-
-/* GABA:
-   (class
-     (name lsh_default_handler)
-     (super exception_handler)
-     (vars
-       (status . "int *")))
-*/
-
-static void
-do_lsh_default_handler(struct exception_handler *s,
-		       const struct exception *e)
-{
-  CAST(lsh_default_handler, self, s);
-
-  if (e->type == EXC_IO_ERROR)
-    werror("%z, %e\n", e->msg, e->subtype);
-
-  else
-    werror("%z\n", e->msg);
-
-  /* For essential requests, like "shell" and "exec", the channel is
-     just closed on errors. The channel request that we get exceptions
-     for are the ones that are not essential. */
-  if (e->type != EXC_CHANNEL_REQUEST)
-    *self->status = EXIT_FAILURE;
-}
-
-static struct exception_handler *
-make_lsh_default_handler(int *status, const char *context)
-{
-  NEW(lsh_default_handler, self);
-  self->super.raise = do_lsh_default_handler;
-  self->super.context = context;
-
-  self->status = status;
-
-  return &self->super;
-}
 
 static void
 transport_exit_callback(struct exit_callback *s UNUSED,
@@ -1169,9 +1125,6 @@ main(int argc, char **argv)
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
 
-  struct exception_handler *handler
-    = make_lsh_default_handler(&lsh_exit_code, HANDLER_CONTEXT);
-
   if (!unix_interact_init(1))
     return EXIT_FAILURE;
 
@@ -1185,7 +1138,7 @@ main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  options = make_options(handler, &lsh_exit_code);
+  options = make_options(&lsh_exit_code);
 
   if (!options)
     return EXIT_FAILURE;
@@ -1283,11 +1236,36 @@ main(int argc, char **argv)
 
   while (!object_queue_is_empty(&options->actions))
     {
-      CAST_SUBTYPE(command, action,
+      CAST_SUBTYPE(client_connection_action, action,
 		   object_queue_remove_head(&options->actions));
-	COMMAND_CALL(action, connection, &discard_continuation, handler);
+      action->action(action, &connection->super);
     }
-  
+
+  if (options->detach)
+    {
+      pid_t pid = fork();
+      switch (pid)
+	{
+	case 0:
+	  /* Child. Just go on. */
+	  /* FIXME: Should we create a new process group, close our tty
+	   * and stdio, etc? */	 
+	  break;
+	case -1:
+	  /* Error */
+	  werror("fork failed when detaching: %e\n", errno);
+	  break;
+	default:
+	  /* Parent */
+	  if (options->write_pid)
+	    {
+	      struct lsh_string *msg = ssh_format("%di\n", pid);
+	      if (!write_raw (STDOUT_FILENO, STRING_LD(msg)))
+		werror ("Write to stdout failed!?: %e\n", errno);
+	    }
+	  _exit(EXIT_SUCCESS);
+	}
+    }
   io_run();
   
   /* FIXME: Perhaps we have to reset the stdio file descriptors to
