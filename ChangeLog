@@ -1,3 +1,244 @@
+2008-07-27  Niels Möller  <nisse@lysator.liu.se>
+
+	Merged lsh-writekey into lsh-keygen. Old lsh-keygen behavior is
+	enabled with --write-raw, old lsh-writekey behaviour is enabled by
+	--read-raw.	
+	
+	* src/testsuite/write-key-1-test: Use lsh-keygen --write-raw.
+	* src/testsuite/write-key-2-test: Likewise.
+
+	* src/testsuite/rapid7-lsh-test: Silence output.
+
+	* src/testsuite/lsh-decrypt-key-test: Use the --read-raw and
+	--write-raw flags to lsh-keygen.
+
+	* src/testsuite/keygen-1-test: Don't use lsh-writekey.
+	* src/testsuite/keygen-2-test: Likewise.
+	* src/testsuite/lsh-encrypted-key-test: Likewise.
+	* src/testsuite/setup-env: Likewise.
+
+	* src/Makefile.in (BIN_PROGRAMS): Removed lsh-writekey.
+	(INTERACT_RANDOM_SOURCES): New variable.
+	(CRYPTO_SOURCES): Removed lock_file.c and randomness.c. Added
+	seed_file.c.
+	(CONNECTION_SOURCES): Removed command.c and exception.c.
+	(lsh_SOURCES): Removed xauth.c.
+	(lsh_writekey_SOURCES): Deleted.
+	(lsh_writekey_OBJS): Deleted.
+	(lsh-writekey$(EXEEXT)): Deleted target.
+	(lsh_transport_OBJS): Added $(INTERACT_RANDOM_OBJS).
+	(lsh_keygen_OBJS): Likewise.
+
+	* src/lsh-keygen.c: New constants OPT_READ_RAW, OPT_WRITE_RAW,
+	OPT_LABEL and OPT_PASSPHRASE.
+	(class lsh_keygen_options): New flags read_raw and write_raw.
+	Merged configuration attributes from lsh-writekey.
+	(make_lsh_keygen_options): Initialize new attributes.
+	(main_options): Merged lsh-writekey options.
+	(main_argp_parser): Merged option handling from lsh-writekey.
+	(main_argp): New shorter description.
+	(dsa_generate_key): Adapted to new randomness interface. Deleted
+	randomness argument.
+	(rsa_generate_key): Likewise.
+	(check_file): Moved from lsh-writekey.c.
+	(open_file): Likewise.
+	(process_private): Likewise.
+	(process_public): Likewise.
+	(main): Adapted to new randomness interface. Aded code to split
+	key into private and public parts, stored in different files.
+
+2008-07-07  Niels Möller  <nisse@lysator.liu.se>
+
+	Reorganized client actions.
+	
+	* src/lsh.h: Deleted forward declarations of obsolete classes.
+
+	* src/channel.c (make_channel_open_exception): Deleted function.
+
+	* src/command.c: Deleted file.
+	* src/command.h: Deleted file.
+	* src/exception.c: Deleted file.
+	* src/exception.h: Deleted file.
+
+	* src/lsh.c (class lsh_options): Deleted handler attribute. Added
+	detach flag.
+	(make_options): Deleted handler argrment.
+	(add_action): Changed argument type to client_connection_action.
+	(make_client_session): Deleted handler argument in call to
+	make_client_session_channel.
+	(client_shell_session): Changed return type to
+	client_connection_action. Use make_open_session_action.
+	(client_subsystem_session): Likewise.
+	(client_command_session): Likewise.
+	(main_argp_parser): Changeed handling of -B, just set detach flag.
+	(class lsh_default_handler): Deleted class.
+	(do_lsh_default_handler): Deleted function.
+	(make_lsh_default_handler): Deleted function.
+	(main): Actions are now handled using the client_connection_action
+	class, not as commands. This was the last use of the command and
+	exception abstractions.
+	(main): Handle detach (-B flag) here.
+
+	* src/tcpforward.c (tcpforward_remove): Use CAST_SUBTYPE.
+
+	* src/socks.c (SOCKS_HANDSHAKE): Deleted macro.
+	(class make_socks_server_action): Replaces class
+	make_socks_server_command.
+	(make_socks_server): Changed return type to
+	client_connection_action.
+
+	* src/channel_forward.c (forward_start_io_command): Deleted unused
+	command.
+
+	* src/client_tcpforward.c (class forward_local_port_action):
+	Replaces class forward_local_port_command.
+	(class request_tcpip_forward_action): Replaces class
+	request_tcpip_forward_command. 
+	(forward_local_port): Changed return type to
+	client_connection_action.
+	(forward_remote_port): Likewise.
+
+	* src/client_session.c (do_client_session_event): No special error
+	handling for CHANNEL_EVENT_DENY.
+	(make_client_session_channel): Deleted exception handler argument.
+
+	* src/client.c (class session_open_action): Replaces class
+	session_open_command.
+	(class background_process_command): Deleted class.
+
+	* src/client.h (class client_connection_action): New class.
+	(class client_session): Deleted exception handler attribute.
+
+	* src/server_tcpforward.c (OPEN_FORWARDED_TCPIP): Deleted unused
+	macro.
+	
+2008-07-06  Niels Möller  <nisse@lysator.liu.se>
+
+	Simplified interface to the randomness generator.
+
+	* src/testsuite/Makefile.in (TEST_OBJS): Removed lock_file.o,
+	randomness.o and unix_random.o.
+
+	* src/testsuite/testutils.c (bad_random): New global variable.
+	(random_generate): New fake randomness generator, replacing the
+	real generator for the testcases.
+	(lsh_random): Likewise.
+	(test_sign): Initialize the fake randomness generator.
+
+	* src/testsuite/functions.sh: Set $LSH_MAKE_SEED to /bin/false.
+
+	* src/environ.h.in (FILE_LSH_MAKE_SEED): New macro.
+	(ENV_LSH_MAKE_SEED): Likewise.
+
+	* src/unix_random_user.c: New file.
+	(random_init_user): New function. Replaces make_user_random. Tries
+	to create the seed file automatically, if missing.
+
+	* src/unix_random.c: Use globals for the generator state.
+	(unix_random): Deleted class.
+	(read_initial_seed_file): Simplified. Permission check moved to
+	random_init. Seeking is done by read_seed_file.
+	(update_seed_file): Deleted argument. Use seed_file.h interface.
+	(trivia_source): Renamed from do_trivia_source. Use globals.
+	(device_source): Renamed from do_device_source. Use globals.
+	(random_generate): Replaces method do_unix_random.
+	(random_add): Replaces method do_unix_random_add.
+	(random_init): Use seed_file.h interface. Initialize all globals,
+	including the sources'.
+	(make_user_random): Deleted, replaced by random_init_user in
+	unix_random_user.c. 
+	(random_init_system): Replaces make_system_random.
+	(lsh_random): Moved definition here, from randomness.c.
+
+	* src/lsh-make-seed.c (enum source_type): Deleted type
+	SOURCE_DEV_MEM.
+	(main): Use seed_file.h interface for locking and writing to the
+	seed file.
+
+	* src/lsh-writekey.c: Adapted to new randomness interface.
+
+	* src/lsh-transport.c (make_lsh_transport_config): No argument to
+	all_signature_algorithms. Deleted call to make_user_random.
+	(lsh_transport_service_packet_handler): No randomness argument to
+	lsh_string_write_random.
+	(try_password_auth): Use random_add to mix the secret password
+	into the randomness generator.
+	(main): Use random_init_user.
+
+	* src/lsh-export-key.c: No argument to all_signature_algorithms.
+
+	* src/client_x11.c (channel_open_x11): Deleted old #if:ed out
+	code.
+	(xauth_lookup): Function moved here, from xauth.c.
+	* xauth.c, xauth.h: Deleted files.
+
+	* src/gateway_tcpforward.c (do_kill_gateway_forward): Fixed typo
+	in prototype.
+
+	* src/client_keyexchange.c (client_dh_init): Updated for new
+	dh_generate_secret, with no randomness argument.
+	* src/server_keyexchange.c (server_dh_init): Likewise.
+
+	* src/lock_file.c, src/lock_file.h: Deleted, replaced by
+	seed_file.c and seed_file.h
+	* src/seed_file.h: New file.
+	* src/seed_file.c: New file.
+
+	* src/transport.c (oop_write_ssh): Updated call to
+	transport_write_flush.
+	(transport_send_packet): Updated calls to transport_write_packet
+	and transport_write_flush.
+	(transport_send_kexinit): Updated to new make_kexinit interface.
+
+	* src/transport_write.c (make_ignore_packet): Deleted randomness
+	argument.
+	(transport_write_packet): Likewise.
+	(transport_write_flush): Likewise.
+
+	* src/transport_read.c (decode_packet): Use random_add, to mix the
+	received random padding into the pool.
+
+	* src/transport.h (class transport_context): Deleted randomness
+	attribute.
+
+	* src/spki.c (spki_pkcs5_encrypt): Deleted randomness argument.
+
+	* src/lshd.c (make_lshd_context): No randomness attribute.
+	(lshd_config_handler): Adapted to new randomness interface.
+	(main): Likewise.
+
+	* src/dsa.c (class dsa_algorithm): Deleted class, randomness
+	attribute no longer needed. 
+	(class dsa_signer): Deleted randomness attribute.
+	(do_dsa_sign): Adapted to new randomness interface.
+	(make_dsa_signer): No randomness attribute.
+	(make_dsa_algorithm): Deleted function. Replaced by...
+	(dsa_algorithm): New static object.
+
+	* src/encrypt.c (encrypt_packet): Deleted randomness argument.
+
+	* src/dh_exchange.c (dh_generate_secret): Deleted randomness
+	argument.
+
+	* src/algorithms.c (all_signature_algorithms): Deleted randomness
+	argument.
+
+	* src/randomness.c: Deleted file.
+
+	* src/lsh_string.c (lsh_string_random): Adapted to new randomness
+	interface, and deleted randomness argument.
+	(lsh_string_write_random): Likewise.
+
+	* src/keyexchange.h (class make_kexinit): Deleted randomness
+	argument from the make method.
+	(MAKE_KEXINIT): Deleted macro.
+
+	* src/keyexchange.c (do_make_simple_kexinit): Adapted to new
+	randomness interface, and deleted randomness argument.
+
+	* src/randomness.h: Deleted randomness class. New interface using
+	plain functions random_generate and random_add.
+	
 2008-06-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes (dist_classes): Deleted channel.c.x,
