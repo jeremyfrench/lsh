@@ -39,16 +39,24 @@
 #include <unistd.h>
 #endif
 
+#include <fcntl.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "nettle/dsa.h"
 #include "nettle/rsa.h"
 
+#include "algorithms.h"
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
+#include "interact.h"
 #include "io.h"
 #include "lsh_string.h"
 #include "randomness.h"
 #include "sexp.h"
+#include "spki.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -67,17 +75,42 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
-#define OPT_SERVER 0x200
+enum {
+  OPT_SERVER = 0x200,
+  OPT_READ_RAW,
+  OPT_WRITE_RAW,
+  OPT_LABEL,
+  OPT_PASSPHRASE,
+};
 
 /* GABA:
    (class
      (name lsh_keygen_options)
      (super werror_config)     
      (vars
+       ; Mode of operation. 
+       (read_raw . int)
+       (write_raw . int)
        (server . int)
+
+       ; Key generation options
        ; 'd' means dsa, 'r' rsa
        (algorithm . int)
-       (level . int)))
+       (level . int)
+
+       ; Output options
+       (public_file string)
+       (private_file string)
+       (label string)
+       (passphrase string)
+
+       (crypto_algorithms object alist)
+       (signature_algorithms object alist)
+
+       ; Zero means default, which depends on the --server flag.
+       (crypto_name . int)
+       (crypto object crypto_algorithm)
+       (iterations . uint32_t)))
 */
 
 static struct lsh_keygen_options *
@@ -85,10 +118,28 @@ make_lsh_keygen_options(void)
 {
   NEW(lsh_keygen_options, self);
   init_werror_config(&self->super);
-  
+
+  self->read_raw = 0;
+  self->write_raw = 0;
   self->server = 0;
+
   self->level = -1;
   self->algorithm = 'r';
+
+  self->public_file = NULL;
+  self->private_file = NULL;
+
+  self->label = NULL;
+
+  self->passphrase = NULL;
+  self->iterations = 1500;
+
+  self->crypto_algorithms = all_symmetric_algorithms();
+  self->signature_algorithms = all_signature_algorithms();
+
+  self->crypto_name = 0;
+  self->crypto = NULL;
+  
   return self;
 }
 
@@ -98,11 +149,26 @@ main_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "algorithm", 'a', "Algorithm", 0, "DSA or RSA. "
     "Default is to generate RSA keys", 0 },
-  { "server", OPT_SERVER, NULL, 0, "Use the server's seed-file", 0 },
+  { "server", OPT_SERVER, NULL, 0,
+    "Use the server's seed-file, and change the default output file "
+    "to /etc/lsh_host_key.", 0 },
+  { "write-raw", OPT_WRITE_RAW, NULL, 0,
+    "Write unencrypted private key to stdout, with no splitting "
+    "into private and public key files.", 0 },
+  { "read-raw", OPT_READ_RAW, NULL, 0,
+    "Don't generate a new key, instead read an unencrypted private key from stdin.", 0 },
+  /* FIXME: Split into two options, --length to specify bit size, and
+     --nist-level for dsa and backwards compatibility. */
+
   { "nist-level", 'l', "Security level", 0, "For DSA keys, this is the "
     "NIST security level: Level 0 uses 512-bit primes, level 8 uses "
     "1024 bit primes, and the default is 8. For RSA keys, it's the "
     "bit length of the modulus, and the default is 2048 bits.", 0 },
+  { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/identity", 0 },
+  { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
+  { "label", OPT_LABEL, "Text", 0, "Unencrypted label for the key.", 0 },
+  { "passphrase", OPT_PASSPHRASE, "Passphrase. This option intended for testing only.", 0, NULL, 0 },
+  
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -143,13 +209,91 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  if (self->level < 0)
 	    self->level = 2048;
 	  else if (self->level < 512)
-	    argp_error(state, "RSA keys should be at least 512 bits.");
+	    argp_error(state, "RSA keys should be at the very least 512 bits.");
 	  break;
 	default:
 	  fatal("Internal error!\n");
 	}
+
+      if (!self->private_file)
+	{
+	  if (self->server)
+	    self->private_file = make_string("/etc/lsh_host_key");
+	  else
+	    {
+	      char *home = getenv(ENV_HOME);
+	  
+	      if (!home)
+		{
+		  argp_failure(state, EXIT_FAILURE, 0, "$HOME not set.");
+		  return EINVAL;
+		}
+	      else
+		{
+		  /* Some duplication with unix_random_user */
+		  struct lsh_string *s = ssh_format("%lz/.lsh", home);
+		  const char *cs = lsh_get_cstring(s);
+		  if (mkdir(cs, 0755) < 0)
+		    {
+		      if (errno != EEXIST)
+			argp_failure(state, EXIT_FAILURE, errno,
+				     "Creating directory %s failed.", cs);
+		    }
+		  lsh_string_free(s);
+		  self->private_file = ssh_format("%lz/.lsh/identity", home);
+		}
+	    }
+	}
+      self->public_file = ssh_format("%lS.pub", self->private_file);
+
+      /* Default behaviour is to encrypt the key unless running in
+	 server mode. */
+      if (!self->crypto_name && !self->server)
+	{
+	  self->crypto_name = ATOM_AES256_CBC;
+	  self->crypto = &crypto_aes256_cbc_algorithm;	 
+	}
+      if (!self->write_raw && self->crypto)
+	{
+	  if (!self->label)
+	    {
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 300
+#endif
+	      char host[MAXHOSTNAMELEN];
+	      const char *name;
+	  
+	      USER_NAME_FROM_ENV(name);
+
+	      if (!name)
+		{
+		  argp_failure(state, EXIT_FAILURE, 0,
+			       "LOGNAME not set. Please use the -l option.");
+		  return EINVAL;
+		}
+
+	      if ( (gethostname(host, sizeof(host)) < 0)
+		   && (errno != ENAMETOOLONG) )
+		argp_failure(state, EXIT_FAILURE, errno,
+			     "Can't get the host name. Please use the -l option.");
+	      
+	      self->label = ssh_format("%lz@%lz", name, host);
+	    }
+	}
       break;
 	  
+    case OPT_SERVER:
+      self->server = 1;
+      break;
+
+    case OPT_READ_RAW:
+      self->read_raw = 1;
+      break;
+
+    case OPT_WRITE_RAW:
+      self->write_raw = 1;
+      break;
+
     case 'l':
 	{
 	  char *end;
@@ -179,21 +323,66 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		   "RSA and DSA.");
       
       break;
-    case OPT_SERVER:
-      self->server = 1;
+
+    case 'i':
+      {
+	long i;
+	char *end;
+	i = strtol(arg, &end, 0);
+
+	if ((end == arg) || *end || (i < 1))
+	  {
+	    argp_failure(state, EXIT_FAILURE, 0, "Invalid iteration count.");
+	    return EINVAL;
+	  }
+	else if (i > PKCS5_MAX_ITERATIONS)
+	  {
+	    argp_error(state, "Iteration count ridiculously large (> %d).",
+		       PKCS5_MAX_ITERATIONS);
+	    return EINVAL;
+	  }
+	else
+	  self->iterations = i;
+
+	break;
+      }
+
+    case 'o':
+      self->private_file = make_string(arg);
+      break;
+
+    case 'c':
+      {
+	int name = lookup_crypto(self->crypto_algorithms, arg, &self->crypto);
+
+	if (name)
+	  self->crypto_name = name;
+	else
+	  {
+	    list_crypto_algorithms(state, self->crypto_algorithms);
+	    argp_error(state, "Unknown crypto algorithm '%s'.", arg);
+	  }
+	break;
+      }
+      
+    case OPT_LABEL:
+      self->label = ssh_format("%lz", arg);
+      break;
+      
+    case OPT_PASSPHRASE:
+      self->passphrase = ssh_format("%lz", arg);
       break;
     }
+
   return 0;
 }
 
 static const struct argp
 main_argp =
 { main_options, main_argp_parser, 
-  "[-l LEVEL] [-a ALGORITHM]",
-  ( "Generates a new private key for the given algorithm and security level.\v"
-    "You will usually want to pipe the new key into a program like lsh-writekey, "
-    "to split it into its private and public parts, and optionally encrypt "
-    "the private information."),
+  NULL,
+  ( "Generates a new key pair, splits it into a private and a public key file, "
+    "with the private key protected by a passphrase."),
   main_argp_children,
   NULL, NULL
 };
@@ -208,7 +397,7 @@ progress(void *ctx UNUSED, int c)
 }
 
 static struct lsh_string *
-dsa_generate_key(struct randomness *r, unsigned level)
+dsa_generate_key(unsigned level)
 {
   struct dsa_public_key public;
   struct dsa_private_key private;
@@ -217,10 +406,8 @@ dsa_generate_key(struct randomness *r, unsigned level)
   dsa_public_key_init(&public);
   dsa_private_key_init(&private);
 
-  assert(r->quality == RANDOM_GOOD);
-  
   if (dsa_generate_keypair(&public, &private,
-			   r, lsh_random,
+			   NULL, lsh_random,
 			   NULL, progress,
 			   512 + 64 * level))
     {
@@ -237,7 +424,7 @@ dsa_generate_key(struct randomness *r, unsigned level)
 }
 
 static struct lsh_string *
-rsa_generate_key(struct randomness *r, uint32_t bits)
+rsa_generate_key(uint32_t bits)
 {
   struct rsa_public_key public;
   struct rsa_private_key private;
@@ -246,10 +433,8 @@ rsa_generate_key(struct randomness *r, uint32_t bits)
   rsa_public_key_init(&public);
   rsa_private_key_init(&private);
 
-  assert(r->quality == RANDOM_GOOD);
-  
   if (rsa_generate_keypair(&public, &private,
-			   r, lsh_random,
+			   NULL, lsh_random,
 			   NULL, progress,
 			   bits, E_SIZE))
     {
@@ -266,22 +451,141 @@ rsa_generate_key(struct randomness *r, uint32_t bits)
   rsa_private_key_clear(&private);
   return key;
 }
+
+
+/* Returns 1 for success, 0 for errors. */
+static int
+check_file(const struct lsh_string *file)
+{
+  struct stat sbuf;
+
+  if (stat(lsh_get_cstring(file), &sbuf) == 0
+      || errno != ENOENT)
+    {
+      werror("File `%S' already exists.\n"
+	     "lsh-keygen doesn't overwrite existing key files.\n"
+	     "If you really want to do that, you should delete\n"
+	     "the existing files first\n",
+	     file);
+      return 0;
+    }
+  return 1;
+}
+
+static int
+open_file(const struct lsh_string *file)
+{
+  int fd = open(lsh_get_cstring(file),
+                O_CREAT | O_EXCL | O_WRONLY,
+                0600);
+
+  if (fd < 0)
+    werror("Failed to open `%S'for writing %e\n", file, errno);
+
+  return fd;
+}
+
+static const struct lsh_string *
+process_private(const struct lsh_string *key,
+                struct lsh_keygen_options *options)
+{
+  if (options->crypto)
+    {
+      CAST_SUBTYPE(mac_algorithm, hmac,
+                   ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
+      assert(hmac);
+      
+      while (!options->passphrase)
+	{
+	  struct lsh_string *pw;
+	  struct lsh_string *again;
+	  
+	  pw = interact_read_password(ssh_format("Enter new passphrase: "));
+	  if (!pw)
+	    {
+	      werror("Aborted.");
+	      return NULL;
+	    }
+
+	  
+	  again = interact_read_password(ssh_format("Again: "));
+	  if (!again)
+	    {
+	      werror("Aborted.");
+	      lsh_string_free(pw);
+	      return NULL;
+	    }
+
+	  if (lsh_string_eq(pw, again))
+	    options->passphrase = pw;
+	  else
+	    lsh_string_free(pw);
+	  
+	  lsh_string_free(again);
+	}
+
+      return spki_pkcs5_encrypt(options->label,
+				ATOM_HMAC_SHA1,
+				hmac,
+				options->crypto_name,
+				options->crypto,
+				10, /* Salt length */
+				options->passphrase,
+				options->iterations,
+				key);
+    }
+  else
+    return key;
+}
+
+static struct lsh_string *
+process_public(const struct lsh_string *key,
+               struct lsh_keygen_options *options)
+{
+  struct signer *s;
+  struct verifier *v;
+
+  /* In the common case that the key was generated (the --read-raw
+     option not used), we do a lot of unnecessary work here. But on
+     the other hand, we get a check that the generated key is
+     syntactically valid. */
+  s = spki_make_signer(options->signature_algorithms, key, NULL);
+  
+  if (!s)
+    return NULL;
+
+  v = SIGNER_GET_VERIFIER(s);
+  assert(v);
+
+  return PUBLIC_SPKI_KEY(v, 1);
+}
+
 int
 main(int argc, char **argv)
 {
-  struct lsh_keygen_options * options
-    = make_lsh_keygen_options();
+  struct lsh_keygen_options *options = make_lsh_keygen_options();
 
-  struct lsh_string *key;
-  struct randomness *r;
+  const struct lsh_string *private;
+  int private_fd;
+  int res;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  r = (options->server
-       ? make_system_random()
-       : make_user_random(getenv(ENV_HOME)));
+  /* Try to fail early. */
+  if (!options->write_raw)
+    if (!(check_file(options->private_file)
+	  && check_file(options->public_file)))
+      return EXIT_FAILURE;
   
-  if (!r)
+  if (options->server)
+    res = random_init_system();
+  else
+    {
+      unix_interact_init(0);
+      res = random_init_user(getenv(ENV_HOME));
+    }
+
+  if (!res)
     {
       werror("Failed to initialize randomness generator.\n");
       return EXIT_FAILURE;
@@ -289,27 +593,69 @@ main(int argc, char **argv)
 
   /* FIXME: Optionally use interactive keyboard input to get some more
    * entropy */
-  assert(r->quality == RANDOM_GOOD);
-  
-  switch (options->algorithm)
+
+  if (options->read_raw)
     {
-    case 'd':
-      key = dsa_generate_key(r, options->level);
-      break;
-    case 'r':
-      key = rsa_generate_key(r, options->level);
-      break;
-    default:
-      fatal("Internal error!\n");
+      private = io_read_file_raw(STDIN_FILENO, 2000);
+      if (!private)
+	{
+	  werror("Failed to read key from stdin %e\n", errno);
+	  return EXIT_FAILURE;
+	}
+    }
+  else
+    switch (options->algorithm)
+      {
+      case 'd':
+	private = dsa_generate_key(options->level);
+	break;
+      case 'r':
+	private = rsa_generate_key(options->level);
+	break;
+      default:
+	fatal("Internal error!\n");
+      }
+
+  if (options->write_raw)
+    private_fd = STDOUT_FILENO;
+
+  else
+    {
+      const struct lsh_string *public;
+      int public_fd;
+
+      public = process_public(private, options);
+      if (!public)
+	return EXIT_FAILURE;
+
+      private = process_private(private, options);
+      if (!private)
+	return EXIT_FAILURE;
+
+      public_fd = open_file(options->public_file);
+      if (public_fd < 0)
+	return EXIT_FAILURE;
+
+      if (!write_raw(public_fd, STRING_LD(public)))
+	{
+	  werror("Writing public key failed: %e\n", errno);
+	  return EXIT_FAILURE;
+	}
+      lsh_string_free(public);
+
+      private_fd = open_file(options->private_file);
+      if (private_fd < 0)
+	return EXIT_FAILURE;
+
     }
 
-  /* Now, output a private key spki structure. */
-
-  if (!write_raw(STDOUT_FILENO, STRING_LD(key)))
+  if (!write_raw(private_fd, STRING_LD(private)))
     {
-      werror("Write failed: %e\n", errno);
+      werror("Writing private key failed: %e\n", errno);
       return EXIT_FAILURE;
     }
-  
+
+  lsh_string_free(private);
+
   return EXIT_SUCCESS;
 }
