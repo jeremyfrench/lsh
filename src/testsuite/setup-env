@@ -17,7 +17,7 @@ echo "Creating seed file"
 ../lsh-make-seed -q --sloppy
 
 echo "Creating identity.pub for tests"
-../lsh-keygen -a dsa -l2 | ../lsh-writekey -c none
+../lsh-keygen -a dsa -l2 -c none
 
 echo "Authorizing key for login"
 "$srcdir/../lsh-authorize" "$HOME/.lsh/identity.pub"

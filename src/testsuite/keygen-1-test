@@ -11,7 +11,7 @@ fi
 . $srcdir/functions.sh
 
 rm -f foo foo.pub
-../lsh-keygen -a dsa -l2 | ../lsh-writekey -c none -o foo \
+../lsh-keygen -a dsa -l2 -c none -o foo \
   && "$SEXP_CONV" < foo && [ -s foo -a -s foo.pub ] && test_success
 
 test_done
