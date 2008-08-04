@@ -2,7 +2,7 @@
 
 # Tests the key generation programs
 
-echo Testing lsh-writekey
+echo Testing lsh-keygen --read-raw
 
 if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
@@ -11,6 +11,6 @@ fi
 . $srcdir/functions.sh
 
 rm -f foo foo.pub
-../lsh-writekey -c none -o foo < $srcdir/key-1.private && [ -s foo -a -s foo.pub ] && test_success
+../lsh-keygen --read-raw -c none -o foo < $srcdir/key-1.private && [ -s foo -a -s foo.pub ] && test_success
 
 test_done
