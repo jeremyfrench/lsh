@@ -1,5 +1,7 @@
 2008-08-04  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lsh-writekey.c: Deleted program.
+
 	* src/client_x11.c (x11_connect_error): Fixed call to
 	channel_open_deny.
 
