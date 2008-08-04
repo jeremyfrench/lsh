@@ -377,7 +377,7 @@ x11_connect_error(struct io_connect_state *s, int error)
   
   werror("Connection failed, socket error %i\n", error);
   channel_open_deny(self->info,
-		    EXC_CHANNEL_OPEN, "Connection failed");
+		    SSH_OPEN_CONNECT_FAILED, "Connection failed");
 }
 
 static struct resource *
