@@ -54,18 +54,15 @@ TEST_OBJS = testutils.$(OBJEXT) \
 	    ../format.$(OBJEXT) \
 	    ../gc.$(OBJEXT) \
 	    ../io.$(OBJEXT) \
-	    ../lock_file.$(OBJEXT) \
 	    ../lsh_string.$(OBJEXT) \
 	    ../parse.$(OBJEXT) \
 	    ../pkcs5.$(OBJEXT) \
-	    ../randomness.$(OBJEXT) \
 	    ../resource.$(OBJEXT) \
 	    ../rsa.$(OBJEXT) \
 	    ../server_config.$(OBJEXT) \
 	    ../sexp.$(OBJEXT) \
 	    ../spki.$(OBJEXT) \
 	    ../tokenize_config.$(OBJEXT) \
-	    ../unix_random.$(OBJEXT) \
 	    ../werror.$(OBJEXT) \
 	    ../xalloc.$(OBJEXT)
 
