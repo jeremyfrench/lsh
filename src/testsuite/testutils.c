@@ -166,17 +166,19 @@ test_mac(const char *name,
     FAIL();
 }
 
-struct bad_random
-{
-  struct randomness super;
-  struct knuth_lfib_ctx *ctx;
-};
+/* Bous randomness generator, for testing */ 
+struct knuth_lfib_ctx bad_random;
 
-static void
-do_bad_random(struct randomness *r, uint32_t length, uint8_t *dst)
+void
+random_generate(uint32_t length, uint8_t *dst)
 {
-  struct bad_random *self = (struct bad_random *) r;
-  knuth_lfib_random(self->ctx, length, dst);
+  knuth_lfib_random(&bad_random, length, dst);
+}
+
+void
+lsh_random(void *ctx UNUSED, unsigned length, uint8_t *dst)
+{
+  knuth_lfib_random(&bad_random, length, dst);
 }
 
 void
@@ -193,14 +195,9 @@ test_sign(const char *name,
   uint8_t *decoded;  
   uint32_t key_length;
   
-  struct knuth_lfib_ctx ctx;
-  struct bad_random r = { { STATIC_HEADER, RANDOM_GOOD /* a lie */,
-			    do_bad_random, NULL },
-			  &ctx
-			  };
-  knuth_lfib_init(&ctx, time(NULL));
+  knuth_lfib_init(&bad_random, time(NULL));
 
-  algorithms = all_signature_algorithms(&r.super);
+  algorithms = all_signature_algorithms();
   (void) name;
 
   key_length = lsh_string_length(key);
