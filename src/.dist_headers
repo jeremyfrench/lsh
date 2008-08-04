@@ -8,12 +8,10 @@ dist_headers = \
     channel_io.h \
     charset.h \
     client.h \
-    command.h \
     compress.h \
     connection.h \
     crypto.h \
     daemon.h \
-    exception.h \
     format.h \
     gateway.h \
     gc.h \
@@ -21,7 +19,6 @@ dist_headers = \
     io.h \
     keyexchange.h \
     list.h \
-    lock_file.h \
     lsh.h \
     lsh_argp.h \
     lsh_process.h \
@@ -53,5 +50,4 @@ dist_headers = \
     tty.h \
     version.h \
     werror.h \
-    xalloc.h \
-    xauth.h
+    xalloc.h
