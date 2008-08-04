@@ -33,8 +33,9 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 # Missing: @KRB_PROGRAM@ @PAM_PROGRAM@
 
 BIN_PROGRAMS = lsh$(EXEEXT) lsh-transport$(EXEEXT) \
-	       lsh-keygen$(EXEEXT) lsh-writekey$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
+	       lsh-keygen$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
 	       lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT)
+
 SBIN_PROGRAMS = lshd$(EXEEXT) lshd-userauth$(EXEEXT) lshd-connection$(EXEEXT) \
 		lshd-pty-helper$(EXEEXT)
 
@@ -79,6 +80,7 @@ COMMON_SOURCES = atoms.c \
 		 xalloc.c
 
 INTERACT_SOURCES = interact.c unix_interact.c
+INTERACT_RANDOM_SOURCES = unix_random_user.c
 
 TTY_SOURCES = tty.c
 
@@ -88,10 +90,9 @@ CRYPTO_SOURCES = algorithms.c \
 		 compress.c \
 		 crypto.c \
 		 dsa.c \
-		 lock_file.c \
 		 pkcs5.c \
-		 randomness.c \
 		 rsa.c \
+		 seed_file.c \
 		 sexp.c \
 		 spki.c \
 		 unix_random.c \
@@ -111,8 +112,6 @@ CONNECTION_SOURCES = channel.c \
 		     channel_forward.c \
 		     channel_io.c \
 		     connection.c \
-		     command.c \
-		     exception.c \
 		     queue.c \
 		     reaper.c \
 		     tcpforward.c
@@ -135,15 +134,12 @@ lsh_SOURCES = arglist.c \
 	      gateway_tcpforward.c \
 	      gateway_x11.c \
 	      lsh.c \
-	      socks.c \
-	      xauth.c
+	      socks.c
 
 lsh_transport_SOURCES = client_keyexchange.c \
 			lsh-transport.c
 
 lsh_keygen_SOURCES = lsh-keygen.c
-
-lsh_writekey_SOURCES = lsh-writekey.c
 
 lsh_decrypt_key_SOURCES = lsh-decrypt-key.c
 
@@ -174,9 +170,10 @@ SPECIAL_SOURCES = format.c lsh_string.c parse.c werror.c
 SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) \
 	  $(CRYPTO_SOURCES) $(CRYPTO_CLIENT_SOURCES) \
 	  $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
-	  $(SERVER_SOURCES) $(INTERACT_SOURCES) $(TTY_SOURCES) \
+	  $(SERVER_SOURCES) $(INTERACT_SOURCES) $(INTERACT_RANDOM_SOURCES) \
+	  $(TTY_SOURCES) \
 	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
-	  $(lsh_keygen_SOURCES) $(lsh_writekey_SOURCES) $(lsh_decrypt_key_SOURCES) \
+	  $(lsh_keygen_SOURCES) $(lsh_decrypt_key_SOURCES) \
 	  $(lsh_decode_key_SOURCES) $(lsh_export_key_SOURCES) $(lsh_make_seed_SOURCES) \
 	  $(lshd_SOURCES) $(lshd_userauth_SOURCES) $(lshd_connection_SOURCES) \
 	  $(pty_helper_SOURCES) $(lshd_pty_helper_SOURCES)
@@ -191,6 +188,7 @@ MINIMAL_OBJS = $(SPECIAL_SOURCES:.c=.m$(OBJEXT))
 
 COMMON_OBJS = $(COMMON_SOURCES:.c=.$(OBJEXT))
 INTERACT_OBJS = $(INTERACT_SOURCES:.c=.$(OBJEXT))
+INTERACT_RANDOM_OBJS = $(INTERACT_RANDOM_SOURCES:.c=.$(OBJEXT))
 TTY_OBJS = $(TTY_SOURCES:.c=.$(OBJEXT))
 CRYPTO_OBJS = $(CRYPTO_SOURCES:.c=.$(OBJEXT))
 CRYPTO_CLIENT_OBJS = $(CRYPTO_CLIENT_SOURCES:.c=.$(OBJEXT))
@@ -203,15 +201,14 @@ lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
 	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
 
 lsh_transport_OBJS = $(lsh_transport_SOURCES:.c=.$(OBJEXT)) \
-		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) \
+		     $(COMMON_OBJS) $(SPECIAL_OBJS) \
+		     $(INTERACT_OBJS) $(INTERACT_RANDOM_OBJS) \
 		     $(CRYPTO_OBJS) $(CRYPTO_CLIENT_OBJS) $(TRANSPORT_OBJS)
 
 lsh_keygen_OBJS = $(lsh_keygen_SOURCES:.c=.$(OBJEXT)) \
-		  $(COMMON_OBJS) $(SPECIAL_OBJS) $(CRYPTO_OBJS)
-
-lsh_writekey_OBJS = $(lsh_writekey_SOURCES:.c=.$(OBJEXT)) \
-		    $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) \
-		    $(CRYPTO_OBJS)
+		  $(COMMON_OBJS) $(SPECIAL_OBJS) \
+		  $(INTERACT_OBJS) $(INTERACT_RANDOM_OBJS) \
+		  $(CRYPTO_OBJS)
 
 lsh_decrypt_key_OBJS = $(lsh_decrypt_key_SOURCES:.c=.$(OBJEXT)) \
 		       $(COMMON_OBJS) $(SPECIAL_OBJS) $(INTERACT_OBJS) \
@@ -300,9 +297,6 @@ lsh-transport$(EXEEXT): $(lsh_transport_OBJS)
 
 lsh-keygen$(EXEEXT): $(lsh_keygen_OBJS)
 	$(LINK) $(lsh_keygen_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
-
-lsh-writekey$(EXEEXT): $(lsh_writekey_OBJS)
-	$(LINK) $(lsh_writekey_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lsh-decrypt-key$(EXEEXT): $(lsh_decrypt_key_OBJS)
 	$(LINK) $(lsh_decrypt_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
