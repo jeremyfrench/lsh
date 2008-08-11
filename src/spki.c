@@ -381,9 +381,10 @@ spki_pkcs5_encrypt(struct lsh_string *label,
   struct lsh_string *key;
   struct lsh_string *salt;
   struct lsh_string *iv;
+  const uint8_t *iv_data;
   struct lsh_string *encrypted;
   struct lsh_string *value;
-  
+
   assert(crypto);
   assert(prf);
 
@@ -395,16 +396,20 @@ spki_pkcs5_encrypt(struct lsh_string *label,
 			 crypto->key_size);
 
   if (crypto->iv_size)
-    iv = lsh_string_random(crypto->iv_size);
+    {
+      iv = lsh_string_random(crypto->iv_size);
+      iv_data = lsh_string_data(iv);
+    }
   else
-    iv = NULL;
-
+    {
+      iv = NULL;
+      iv_data = NULL;
+    }
   encrypted = crypt_string_pad(MAKE_ENCRYPT(crypto,
 					    lsh_string_data(key),
-					    iv ? lsh_string_data(iv) : NULL),
+					    iv_data),
 			       data);
   
-  /* FIXME: Handle iv == NULL. */
   value = lsh_string_format_sexp(0, "(password-encrypted%s(Xpkcs5v2%0s"
 				 "(iterations%i)(salt%s))"
 				 "(%0s(iv%s)(data%s)))",
@@ -413,7 +418,7 @@ spki_pkcs5_encrypt(struct lsh_string *label,
 				 iterations,
 				 STRING_LD(salt),
 				 get_atom_name(crypto_name),
-				 STRING_LD(iv),
+				 crypto->iv_size, iv_data,
 				 STRING_LD(encrypted));
 
   lsh_string_free(key);
