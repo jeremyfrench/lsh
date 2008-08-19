@@ -71,11 +71,11 @@ do_forward_local_port(struct client_connection_action *s,
     {
       werror("Listening on local port %S:%i failed: %e\n",
 	     self->local->ip, self->local->port, errno);
-      KILL_RESOURCE(&port->super);
-    }
+      KILL_RESOURCE(&port->super.super);
+     }
   else
     {
-      remember_resource(connection->resources, &port->super);
+      remember_resource(connection->resources, &port->super.super);
     }
 }
 
@@ -226,7 +226,6 @@ make_remote_port_state(struct remote_port *port)
        (target const object address_info)))
 */
 
-/* FIXME: Turn into an ordinary function. */
 static void
 do_request_tcpip_forward(struct client_connection_action *s,
 			 struct ssh_connection *connection)
