@@ -718,11 +718,11 @@ do_make_socks_server(struct client_connection_action *s,
     {
       werror("Listening on local port %S:%i failed: %e\n",
 	     self->local->ip, self->local->port, errno);
-      KILL_RESOURCE(&port->super);
+      KILL_RESOURCE(&port->super.super);
     }
   else
     {
-      remember_resource(connection->resources, &port->super);
+      remember_resource(connection->resources, &port->super.super);
     }
 }
   

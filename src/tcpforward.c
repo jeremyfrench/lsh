@@ -224,6 +224,6 @@ tcpforward_connect(const struct address_info *a,
 	channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(res));
 	return NULL;
       }
-    return &self->super.super;
+    return &self->super.super.super;
   }
 }

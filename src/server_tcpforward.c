@@ -64,7 +64,7 @@ make_server_forward(struct ssh_connection *connection,
 
   if (!io_listen(port))
     {
-      KILL_RESOURCE(&port->super);
+      KILL_RESOURCE(&port->super.super);
       return NULL;
     }
   else
@@ -72,7 +72,7 @@ make_server_forward(struct ssh_connection *connection,
       NEW(server_forward, self);
 
       self->super.address = address;
-      self->port = &port->super;
+      self->port = &port->super.super;
 
       remember_resource(connection->resources, self->port);
       

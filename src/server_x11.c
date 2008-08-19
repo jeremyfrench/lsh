@@ -82,10 +82,10 @@ do_kill_x11_listen_port(struct resource *s)
   CAST(x11_listen_port, self, s);
   int old_cd;
 
-  if (self->super.super.alive)
+  if (self->super.super.super.alive)
     {
-      self->super.super.alive = 0;
-      io_close_fd(self->super.fd);
+      self->super.super.super.alive = 0;
+      io_close_fd(self->super.super.fd);
 
       assert(self->dir >= 0);
 
@@ -118,7 +118,7 @@ do_x11_listen_port_accept(struct io_listen_port *s,
 
   io_register_fd(fd, "forwarded X11 socket");
   if (self->single)
-    KILL_RESOURCE(&self->super.super);
+    KILL_RESOURCE(&self->super.super.super);
 
   channel = &make_channel_forward(fd, X11_WINDOW_SIZE)->super;
 
@@ -144,7 +144,7 @@ make_x11_listen_port(int dir, const struct lsh_string *name,
 {
   NEW(x11_listen_port, self);
   init_io_listen_port(&self->super, fd, do_x11_listen_port_accept);
-  self->super.super.kill = do_kill_x11_listen_port;
+  self->super.super.super.kill = do_kill_x11_listen_port;
 
   self->display = NULL;
   self->xauthority = NULL;
@@ -315,12 +315,12 @@ server_x11_setup(struct ssh_channel *channel,
 
   if (!create_xauth(lsh_get_cstring(port->xauthority), &xa))
     {
-      KILL_RESOURCE(&port->super.super);
+      KILL_RESOURCE(&port->super.super.super);
       return NULL;
     }
   else if (!io_listen(&port->super))
     {
-      KILL_RESOURCE(&port->super.super);
+      KILL_RESOURCE(&port->super.super.super);
       return NULL;
     }
   else
