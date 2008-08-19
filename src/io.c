@@ -381,9 +381,9 @@ io_callout(struct lsh_callback *action, unsigned seconds)
 }
 
 static void
-kill_io_connect_state(struct resource *s)
+kill_io_fd_resource(struct resource *s)
 {
-  CAST_SUBTYPE(io_connect_state, self, s);
+  CAST_SUBTYPE(io_fd_resource, self, s);
   if (self->super.alive)
     {
       self->super.alive = 0;
@@ -398,8 +398,8 @@ init_io_connect_state(struct io_connect_state *self,
 		      void (*done)(struct io_connect_state *self, int fd),
 		      void (*error)(struct io_connect_state *self, int err))
 {
-  init_resource(&self->super, kill_io_connect_state);
-  self->fd = -1;
+  init_resource(&self->super.super, kill_io_fd_resource);
+  self->super.fd = -1;
   self->done = done;
   self->error = error;
 }
@@ -412,7 +412,7 @@ oop_io_connect(oop_source *source UNUSED,
   int socket_error = 0;
   socklen_t len = sizeof(socket_error);
 
-  assert(self->fd == fd);
+  assert(self->super.fd == fd);
   assert(event == OOP_WRITE);
 
   global_oop_source->cancel_fd(global_oop_source, fd, OOP_WRITE);
@@ -425,11 +425,11 @@ oop_io_connect(oop_source *source UNUSED,
     }
   else
     {
-      self->fd = -1;
+      self->super.fd = -1;
       self->done(self, fd);
     }
 
-  KILL_RESOURCE(&self->super);
+  KILL_RESOURCE(&self->super.super);
   return OOP_CONTINUE;
 }
 
@@ -438,45 +438,31 @@ io_connect(struct io_connect_state *self,
 	   socklen_t addr_length,
 	   struct sockaddr *addr)
 {
-  assert(self->fd < 0);
-  self->fd = socket(addr->sa_family, SOCK_STREAM, 0);
+  assert(self->super.fd < 0);
+  self->super.fd = socket(addr->sa_family, SOCK_STREAM, 0);
 
-  if (self->fd < 0)
+  if (self->super.fd < 0)
     return 0;
 
-  io_register_fd(self->fd, "connect fd");
+  io_register_fd(self->super.fd, "connect fd");
   
-  if (connect(self->fd, addr, addr_length) < 0 && errno != EINPROGRESS)
+  if (connect(self->super.fd, addr, addr_length) < 0 && errno != EINPROGRESS)
     {
       int saved_errno = errno;
 
-      KILL_RESOURCE(&self->super);
+      KILL_RESOURCE(&self->super.super);
       errno = saved_errno;
 
       return 0;
     }
 
-  global_oop_source->on_fd(global_oop_source, self->fd, OOP_WRITE, oop_io_connect, self);
-  gc_global(&self->super);
+  global_oop_source->on_fd(global_oop_source, self->super.fd, OOP_WRITE, oop_io_connect, self);
+  gc_global(&self->super.super);
   return 1;
 }
 
 
 /* Listening */
-/* FIXME: Duplicates kill_io_connect_state */
-static void
-kill_io_listen_port(struct resource *s)
-{
-  CAST_SUBTYPE(io_listen_port, self, s);
-  if (self->super.alive)
-    {
-      self->super.alive = 0;
-
-      io_close_fd(self->fd);
-      self->fd = -1;
-    }
-}
-
 void
 init_io_listen_port(struct io_listen_port *self, int fd,
 		    void (*accept)(struct io_listen_port *self,
@@ -484,11 +470,11 @@ init_io_listen_port(struct io_listen_port *self, int fd,
 				   socklen_t addr_len,
 				   const struct sockaddr *addr))
 {
-  init_resource(&self->super, kill_io_listen_port);
+  init_resource(&self->super.super, kill_io_fd_resource);
 
   io_register_fd(fd, "listen port");
 
-  self->fd = fd;
+  self->super.fd = fd;
   self->accept = accept;  
 }
 
@@ -508,11 +494,11 @@ oop_io_accept(oop_source *source UNUSED,
   int s;
   
   assert(event == OOP_READ);
-  assert(self->fd == fd);
+  assert(self->super.fd == fd);
 
-  s = accept(self->fd, (struct sockaddr *) &peer, &peer_length);
+  s = accept(fd, (struct sockaddr *) &peer, &peer_length);
   if (s < 0)
-    werror("accept failed, fd = %i: %e\n", self->fd, errno);
+    werror("accept failed, fd = %i: %e\n", fd, errno);
 
   else
     self->accept(self, s, peer_length, (struct sockaddr *) &peer);
@@ -523,10 +509,10 @@ oop_io_accept(oop_source *source UNUSED,
 int
 io_listen(struct io_listen_port *self)
 {
-  if (listen(self->fd, 256) < 0)
+  if (listen(self->super.fd, 256) < 0)
     return 0;
 
-  global_oop_source->on_fd(global_oop_source, self->fd, OOP_READ,
+  global_oop_source->on_fd(global_oop_source, self->super.fd, OOP_READ,
 			   oop_io_accept, self);
 
   return 1;
