@@ -106,7 +106,7 @@ do_kill_server_session(struct resource *s)
 	KILL_RESOURCE(&self->pty->super);
 
       if (self->x11)
-	KILL_RESOURCE(&self->x11->super.super);
+	KILL_RESOURCE(&self->x11->super.super.super);
 
       /* Doesn't use channel_write_state_close, since the channel is
 	 supposedly dead already. */
