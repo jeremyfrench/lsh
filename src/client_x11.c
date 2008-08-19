@@ -57,8 +57,6 @@
 
 #include "client_x11.c.x"
 
-/* FIXME: There are currently no testcase for this code. */
-
 /* First port number for X, according to RFC 1013 */
 #define X11_BASE_PORT 6000
 
@@ -171,9 +169,6 @@ do {						\
   (p)[0] = (i) & 0xff;				\
 } while(0)
 
-/* FIXME: This function is a little ugly. It would get cleaner if we
- * just replaced the channel's receive function pointer with NULL on
- * failure and do_channel_forward_receive on success. */
 static void
 do_client_channel_x11_receive(struct ssh_channel *s,
                               int type,
@@ -283,9 +278,9 @@ do_client_channel_x11_receive(struct ssh_channel *s,
 		    WRITE_UINT16(lengths + 2, alength);
 		  }
 
-		/* FIXME: Perhaps it would be easier to build the
-		 * message by hand than using ssh_format? */
-		/* Construct the real setup message. */
+		/* Construct the real setup message. (Perhaps it would
+		 * be easier to build the message by hand than using
+		 * ssh_format?) */
 		msg = ssh_format("%ls%ls%c%c%lS%ls%lS%ls",
 				 X11_SETUP_VERSION_LENGTH, buffer,
 				 4, lengths,
@@ -336,7 +331,6 @@ make_client_x11_channel(int fd,
   NEW(client_x11_channel, self);
 
   /* Use a limited window size for the setup */
-  /* FIXME: Do we need any x11 specific event handler? */
   init_channel_forward(&self->super, fd, X11_WINDOW_SIZE, NULL);
 
   self->super.super.rec_window_size = X11_SETUP_MAX_LENGTH;
@@ -398,7 +392,7 @@ x11_connect(struct client_x11_display *display,
       werror("Connecting to X11 server failed %e\n", errno);
       return NULL;
     }
-  return &self->super.super;
+  return &self->super.super.super;
 }
 
 DEFINE_CHANNEL_OPEN(channel_open_x11)
