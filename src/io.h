@@ -142,10 +142,17 @@ void io_set_close_on_exec(int fd);
 
 /* GABA:
    (class
-     (name io_connect_state)
+     (name io_fd_resource)
      (super resource)
      (vars
-       (fd . int)
+       (fd . int)))
+*/
+   
+/* GABA:
+   (class
+     (name io_connect_state)
+     (super io_fd_resource)
+     (vars
        (done method void "int fd")
        ; The argument is a socket failure value.
        (error method void "int err")))
@@ -168,9 +175,8 @@ io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length);
 /* GABA:
    (class
      (name io_listen_port)
-     (super resource)
+     (super io_fd_resource)
      (vars
-       (fd . int)
        (accept method void "int fd"
                             "socklen_t addr_len"
 			    "const struct sockaddr *addr")))
