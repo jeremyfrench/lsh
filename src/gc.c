@@ -82,7 +82,9 @@ static void gc_mark(struct lsh_object *o)
       /* Fall through */
     case LSH_ALLOC_STATIC:
       /* Can't use mark bit on static objects, as there's no way to
-       * reset all the bits */
+       * reset all the bits. FIXME: Check if any static object ever
+       * points to a non-static one. If they don't, there's no need to
+       * process them at all. */
       assert(!o->dead);
       {
 	struct lsh_class *class;

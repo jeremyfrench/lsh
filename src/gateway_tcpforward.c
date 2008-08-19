@@ -222,7 +222,8 @@ struct global_request
 gateway_tcpip_forward_handler =
   { STATIC_HEADER, do_gateway_tcpip_forward_handler };
 
-/* FIXME: Implement cancelling? */
+/* Not implemented. The client never sends CANCEL_TCPIP_FORWARD to a
+   gateway. */
 #if 0
 static void
 do_gateway_cancel_tcpip_forward_handler(struct global_request *s UNUSED,

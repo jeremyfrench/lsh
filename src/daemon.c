@@ -132,8 +132,6 @@ daemon_started_by_init(void)
    Closing stdin and stdout. We also wouldn't need to fork(2) and
    exec(2) because there isn't a controlling terminal in sight. */
 
-/* FIXME: Do we need to detect if the socket is listening or connected
- * to a peer? */
 static int
 daemon_started_by_inetd(void)
 {

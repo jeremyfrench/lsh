@@ -183,9 +183,8 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
       
     case CHANNEL_EVENT_STOP:
     case CHANNEL_EVENT_START:
-      /* FIXME: Ignore? The entire gateway has to be stopped and
-         started anyway. Or do we need to buffer one window of
-         data? */
+      /* Ignore. The channel doesn't do any i/o of its own, so flow
+	 control must be handled elsewhere. */
       break;
     }      
 }  

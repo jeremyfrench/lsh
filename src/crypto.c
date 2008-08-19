@@ -743,8 +743,7 @@ crypt_string(struct crypto_instance *c,
   return out;
 }
 
-/* FIXME: Missing testcases. This is only used for encrypted private
- * keys. */
+/* This is only used for encrypted private keys. */
 /* Consumes input string. */
 struct lsh_string *
 crypt_string_pad(struct crypto_instance *c,

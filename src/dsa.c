@@ -186,8 +186,6 @@ do_dsa_public_spki_key(struct verifier *s, int transport)
 static void
 init_dsa_verifier(struct dsa_verifier *self)
 {
-  /* FIXME: The allocator could do this kind of initialization
-   * automatically. */
   dsa_public_key_init(&self->key);
 
   self->super.verify = do_dsa_verify;

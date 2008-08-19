@@ -289,7 +289,6 @@ random_init(const struct lsh_string *seed_file_name)
   seed_file_fd = open(lsh_get_cstring(seed_file_name), O_RDWR);
   if (seed_file_fd < 0)
     {
-      /* FIXME: Offer to create seed file for the user. */
       werror("No seed file. Please create one by running\n");
       werror("lsh-make-seed -o \"%S\".\n", seed_file_name);
 

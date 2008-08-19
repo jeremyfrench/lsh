@@ -388,7 +388,6 @@ spki_pkcs5_encrypt(struct lsh_string *label,
   assert(crypto);
   assert(prf);
 
-  /* NOTE: Allows random to be of bad quality */
   salt = lsh_string_random(salt_length);
 
   key = pkcs5_derive_key(prf,
