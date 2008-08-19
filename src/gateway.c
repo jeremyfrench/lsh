@@ -272,8 +272,8 @@ gateway_disconnect(struct gateway_connection *connection,
   gateway_write_packet(connection,
 		       format_disconnect(reason, msg, ""));
 
-  /* FIXME: If the disconnect message could not be written
-     immediately, it will be lost. */
+  /* NOTE: If the disconnect message could not be written immediately,
+     it will be lost. */
   KILL_RESOURCE(&connection->super.super);
 }
 
@@ -348,7 +348,6 @@ oop_read_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state
 	  msg = packet[0];
 
 	  if (msg < SSH_FIRST_CONNECTION_GENERIC)
-	    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
 	    gateway_disconnect(self, SSH_DISCONNECT_BY_APPLICATION,
 			       "lsh received a transport or userauth layer packet from a gateway");
 
@@ -446,7 +445,7 @@ do_gateway_port_accept(struct io_listen_port *s,
   
   struct gateway_connection *gateway
     = make_gateway_connection(self->connection,
-			      &self->super.super, fd);
+			      &self->super.super.super, fd);
 
   int error = gateway_write_data (gateway, sizeof(hello), hello);
   if (error)
@@ -483,10 +482,10 @@ make_gateway_port(const struct local_info *local,
 
       self->connection = connection;
       if (io_listen(&self->super))
-	return &self->super.super;
+	return &self->super.super.super;
       else
 	{
-	  KILL_RESOURCE(&self->super.super);
+	  KILL_RESOURCE(&self->super.super.super);
 	  return NULL;
 	}
     }
