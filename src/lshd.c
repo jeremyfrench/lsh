@@ -281,66 +281,63 @@ lshd_packet_handler(struct transport_connection *connection,
 /* GABA:
    (class
      (name lshd_port)
-     (super resource)
+     (super io_listen_port)
      (vars
-       (ctx object lshd_context)
-       (fd . int)))
+       (ctx object lshd_context)))
 */
 
 static void
-kill_port(struct resource *s)
+lshd_port_accept(struct io_listen_port *s,
+		 int fd,
+		 socklen_t addr_len, const struct sockaddr *addr)
 {
   CAST(lshd_port, self, s);
-  if (self->super.alive)
-    {
-      self->super.alive = 0;
-      io_close_fd(self->fd);
-      self->fd = -1;
-    }
-};
-
-static struct lshd_port *
-make_lshd_port(struct lshd_context *ctx, int fd)
-{
-  NEW(lshd_port, self);
-  init_resource(&self->super, kill_port);
-
-  io_register_fd(fd, "lshd listen port");
-  self->ctx = ctx;
-  self->fd = fd;
-
-  return self;
-}
-
-static void *
-lshd_port_accept(oop_source *source UNUSED,
-		 int fd, oop_event event, void *state)
-{
-  CAST(lshd_port, self, (struct lsh_object *) state);
   struct transport_forward *connection;
-  struct sockaddr_in peer;
-  socklen_t peer_length = sizeof(peer);
-  int s;
 
-  assert(event == OOP_READ);
-  assert(self->fd == fd);
-
-  s = accept(self->fd, (struct sockaddr *) &peer, &peer_length);
-  if (s < 0)
-    {
-      werror("accept failed: %e\n", errno);
-      return OOP_CONTINUE;
-    }
-
+  /* FIXME: Use the provided address, for logging or tcpwrappers. */
   connection = make_transport_forward(kill_lshd_connection,
-				      &self->ctx->super, s, s,
+				      &self->ctx->super, fd, fd,
 				      lshd_event_handler);
   gc_global(&connection->super.super);
 
-  transport_handshake(&connection->super, make_string("SSH-2.0-lshd-ng"),
+  transport_handshake(&connection->super, make_string(SERVER_VERSION_LINE),
 		      lshd_line_handler);
+}
 
-  return OOP_CONTINUE;
+static struct resource *
+make_lshd_port(struct lshd_context *ctx, socklen_t addr_len, struct sockaddr *addr)
+{
+  NEW(lshd_port, self);
+  int yes = 1;  
+  int fd = socket(addr->sa_family, SOCK_STREAM, 0);
+
+  init_io_listen_port(&self->super, fd, lshd_port_accept);
+  self->ctx = ctx;
+
+  if (fd < 0)
+    {
+      werror("socket failed: %e\n", errno);
+    fail:
+      KILL_RESOURCE(&self->super.super.super);
+      return NULL;
+    }
+
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
+    werror("setsockopt SO_REUSEADDR failed: %e\n", errno);
+
+  if (bind(fd, addr, addr_len) < 0)
+    {
+      werror("bind failed: %e\n", errno);
+      goto fail;
+    }
+
+  if (!io_listen(&self->super))
+    {
+      werror("listen failed: %e\n", errno);
+      goto fail;
+    }
+
+  return &self->super.super.super;
 }
 
 /* FIXME: Should use getaddrinfo, and should allow multiple ports and
@@ -351,10 +348,8 @@ open_ports(struct lshd_context *ctx, struct resource_list *resources,
 	   const char *portid)
 {
   struct sockaddr_in sin;
-  struct lshd_port *port;
+  struct resource *port;
 
-  int yes = 1;
-  int s;
   /* In network byte order */
   short port_number;
 
@@ -389,42 +384,19 @@ open_ports(struct lshd_context *ctx, struct resource_list *resources,
 	}
     }
 
-  s = socket(AF_INET, SOCK_STREAM, 0);
-  if (s < 0)
-    {
-      werror("socket failed: %e\n", errno);
-      return 0;
-    }
-
-  io_set_nonblocking(s);
-  io_set_close_on_exec(s);
-
-  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
-    werror("setsockopt SO_REUSEADDR failed: %e\n", errno);
-
   memset(&sin, 0, sizeof(sin));
   sin.sin_family = AF_INET;
   sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   sin.sin_port = port_number;
-
-  if (bind(s, (struct sockaddr *) &sin, sizeof(sin)) < 0)
+  
+  port = make_lshd_port(ctx, sizeof(sin), (struct sockaddr *) &sin);
+  if (port)
     {
-      werror("bind failed: %e\n", errno);
-      return 0;
+      remember_resource(resources, port);
+      return 1;
     }
-
-  if (listen(s, 256) < 0)
-    {
-      werror("listen failed: %e\n", errno);
-      return 0;
-    }
-  port = make_lshd_port(ctx, s);
-  remember_resource(resources, &port->super);
-
-  global_oop_source->on_fd(global_oop_source, s,
-			   OOP_READ, lshd_port_accept, port);
-
-  return 1;
+  else
+    return 0;
 }
 
 static struct lshd_context *
@@ -639,7 +611,7 @@ read_host_key(const char *file,
 }
 
 const char *argp_program_version
-= "lshd (" PACKAGE_STRING "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+= "lshd (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
@@ -930,8 +902,7 @@ main(int argc, char **argv)
 	  werror("Spawning from inetd not yet supported.\n");
 	  return EXIT_FAILURE;
 	}
-
-      if (mode != DAEMON_INETD)
+      else
 	{
 	  if (!daemon_dup_null(STDIN_FILENO)
 	      || !daemon_dup_null(STDOUT_FILENO))
