@@ -448,8 +448,7 @@ client_command_session(struct lsh_options *options,
 
 /* Option parsing */
 
-const char *argp_program_version
-= "lsh (" PACKAGE_STRING "), secsh protocol version " CLIENT_PROTOCOL_VERSION;
+const char *argp_program_version = "lsh (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

@@ -290,7 +290,7 @@ make_lshd_connection(struct lshd_connection_config *config)
 /* Option parsing */
 
 const char *argp_program_version
-= "lshd-connection (" PACKAGE_STRING "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+= "lshd-connection (" PACKAGE_STRING ")";
 
 static struct lshd_connection_config *
 make_lshd_connection_config(void)

@@ -788,7 +788,7 @@ lsh_connect(struct lsh_transport_config *config)
   gc_global(&connection->super.super.super);
 
   transport_handshake(&connection->super.super,
-		      make_string("SSH-2.0-lsh-transport"),
+		      make_string(CLIENT_VERSION_LINE),
 		      lsh_transport_line_handler);
 
   return 1;
@@ -1153,7 +1153,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
 /* Option parsing */
 
 const char *argp_program_version
-= "lsh-transport (" PACKAGE_STRING "), secsh protocol version " CLIENT_PROTOCOL_VERSION;
+= "lsh-transport (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 

@@ -649,7 +649,7 @@ enum {
 };  
 
 const char *argp_program_version
-= "lshd-userauth (" PACKAGE_STRING "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+= "lshd-userauth (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
