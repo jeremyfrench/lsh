@@ -506,6 +506,7 @@ oop_io_accept(oop_source *source UNUSED,
   return OOP_CONTINUE;
 }
 
+/* FIXME: Can this be merged with init_io_listen_port? Or are the calls ever separated? */
 int
 io_listen(struct io_listen_port *self)
 {
