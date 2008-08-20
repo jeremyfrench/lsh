@@ -180,7 +180,7 @@ transport_write_flush(struct transport_write_state *self,
        (kexinit object make_kexinit)))
 */
 
-/* Use primarily for the key exchange method */
+/* Uses for the key exchange method */
 
 /* GABA:
    (class

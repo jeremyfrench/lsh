@@ -59,6 +59,9 @@ forward_start_write(struct transport_forward *self);
 static void
 forward_stop_write(struct transport_forward *self);
 
+/* FIXME: Let a NULL kill imply a kill method equivalent to
+   transport_forward_kill (like it's set up in
+   lshd.c:kill_lshd_connection. */
 void
 init_transport_forward(struct transport_forward *self,
 		       void (*kill)(struct resource *s),
@@ -189,6 +192,12 @@ forward_start_read(struct transport_forward *self)
   if (!self->service_read_active)
     {
       self->service_read_active = 1;
+
+      /* FIXME: Must also arrange so that buffered data is read. Set
+	 up an OOP_TIME_NOW callback, and have it loop around
+	 service_read_packet in a similar way as
+	 transport.c:transport_start_read. */
+      
       global_oop_source->on_fd(global_oop_source, self->service_in,
 			       OOP_READ, oop_read_service, self);
     }
@@ -267,9 +276,6 @@ forward_event_handler(struct transport_connection *connection,
   switch (event)
     {
     case TRANSPORT_EVENT_START_APPLICATION:
-      /* FIXME: Must also arrange so that buffered data is read. Set
-	 up an OOP_TIME_NOW callback, and have it loop around
-	 service_read_packet in a similar way as oop_read_service. */
       forward_start_read(self);
       break;
 

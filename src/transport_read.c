@@ -343,7 +343,7 @@ transport_read_packet(struct transport_read_state *self, int fd,
 	}
       
       /* Approximate test, to avoid overflow when computing the total
-	 size. Precice comparison to available buffer space comes
+	 size. Precise comparison to available buffer space comes
 	 later. */
       if (packet_length > (SSH_MAX_PACKET + SSH_MAX_PACKET_FUZZ))
 	{
