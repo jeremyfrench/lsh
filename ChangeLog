@@ -1,5 +1,10 @@
 2008-08-20  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/transport.c (transport_connection_kill): Cancel
+	oop_timer_retry. 
+	(transport_stop_read): Likewise.
+	(oop_timer_retry): Assert that the connection is alive.
+
 	* src/lshd.c (class lshd_port): Inherit io_listen_port.
 	(kill_port): Deleted function, it was identical with
 	kill_io_fd_resource.
