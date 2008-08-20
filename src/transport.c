@@ -55,6 +55,10 @@
 /* Time to wait for write buffer to drain after disconnect */
 #define TRANSPORT_TIMEOUT_CLOSE (5 * 60)
 
+/* Forward declaration. */
+static void *
+oop_timer_retry(oop_source *oop, struct timeval tv, void *state);
+
 void
 init_transport_connection(struct transport_connection *self,
 			  void (*kill)(struct resource *s),
@@ -138,7 +142,10 @@ transport_connection_kill(struct transport_connection *connection)
       KILL_RESOURCE(connection->expire);
       connection->expire = NULL;
     }
-      
+
+  global_oop_source->cancel_time(global_oop_source,
+				 OOP_TIME_NOW, oop_timer_retry, connection);
+
   io_close_fd(connection->ssh_input);
 
   if (connection->ssh_output != connection->ssh_input)
@@ -441,8 +448,13 @@ oop_timer_retry(oop_source *oop UNUSED,
 		struct timeval tv UNUSED, void *state)
 {
   CAST_SUBTYPE(transport_connection, connection, (struct lsh_object *) state);
-  uint32_t length = connection->retry_length;
-  uint32_t seqno = connection->retry_seqno;
+  uint32_t length;
+  uint32_t seqno;
+
+  assert(connection->super.alive);
+  
+  length = connection->retry_length;
+  seqno = connection->retry_seqno;
   
   assert(length);
 
@@ -516,6 +528,9 @@ transport_start_read(struct transport_connection *connection)
       if (connection->retry_length)
 	/* Arrange to have the packet handler called from the main
 	   event loop. */
+	/* Note: To protect connection from gc, it is essential that
+	   the timer is cancelled when the connection is killed.
+	   FIXME: Use io_callout instead? */
 	global_oop_source->on_time(global_oop_source,
 				   OOP_TIME_NOW, oop_timer_retry, connection);
       else
@@ -528,6 +543,8 @@ void
 transport_stop_read(struct transport_connection *connection)
 {
   connection->read_active = 0;
+  global_oop_source->cancel_time(global_oop_source,
+				 OOP_TIME_NOW, oop_timer_retry, connection);
   global_oop_source->cancel_fd(global_oop_source,
 			       connection->ssh_input, OOP_READ);  
 }
