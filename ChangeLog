@@ -1,3 +1,53 @@
+2008-08-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (class lshd_port): Inherit io_listen_port.
+	(kill_port): Deleted function, it was identical with
+	kill_io_fd_resource.
+	(lshd_port_accept): Converted from an oop callback to an accept
+	method for the io_listen_port class. Use SERVER_VERSION_LINE.
+	(make_lshd_port): Changed return type to struct resource *. Take a
+	sockaddr as argument, rather than an fd. Create and initialize the
+	socket. Use io_listen.
+	(open_ports): Creation of socket moved to make_lshd_port. 
+	(main): Simplified logic slightly for the daemon mode.
+
+	* src/version.h (SERVER_PROTOCOL_VERSION): Deleted constant.
+	(CLIENT_PROTOCOL_VERSION): Likewise.
+	(SERVER_VERSION_LINE): New constant.
+	(CLIENT_VERSION_LINE): Likewise.
+	Updated all users.
+
+2008-08-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (class lshd_port): Inherit io_listen_port.
+	(kill_port): Deleted function.	
+
+	* src/io.c (kill_io_fd_resource): New function, replacing
+	kill_io_connect_state and kill_io_listen_port.
+	(init_io_connect_state): Updated for new super class
+	io_fd_resource.
+	(oop_io_connect): Likewise.
+	(io_connect): Likewise.
+	(init_io_listen_port): Likewise.
+	(oop_io_accept): Likewise.
+	(io_listen): Likewise.
+	* src/client_tcpforward.c (do_forward_local_port): Likewise.
+	* src/client_x11.c (x11_connect): Likewise.
+	* src/gateway.c (do_gateway_port_accept): Likewise.
+	(make_gateway_port): Likewise.
+	* src/server_session.c (do_kill_server_session): Likewise.
+	* src/server_tcpforward.c (make_server_forward): Likewise.
+	* src/server_x11.c (do_kill_x11_listen_port): Likewise.
+	(do_x11_listen_port_accept): Likewise.
+	(make_x11_listen_port): Likewise.
+	(server_x11_setup): Likewise.
+	* src/socks.c (do_make_socks_server): Likewise.
+	* src/tcpforward.c (tcpforward_connect): Likewise.
+
+	* src/io.h (class io_fd_resource): New class.
+	(class io_connect_state): Inherit io_fd_resource.
+	(class io_listen_port): Likewise.
+
 2008-08-11  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/spki.c (spki_pkcs5_encrypt): Handle the case of no IV.
