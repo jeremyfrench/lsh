@@ -214,7 +214,7 @@ maintainer-clean-here:
 	-rm -f spki-types.h spki-gperf.h spki-type-names.h
 
 tags-here:	
-	etags $(srcdir)/*.c $(srcdir)/*.h
+	etags -o $(srcdir)/TAGS $(srcdir)/*.c $(srcdir)/*.h
 
 parse.$(OBJEXT): spki-gperf.h
 names.$(OBJEXT): spki-type-names.h

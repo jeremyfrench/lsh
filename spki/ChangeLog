@@ -1,3 +1,9 @@
+2008-08-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.in (tags-here): Put TAGS file in the source directory.
+	* testsuite/Makefile.in (tags): Likewise.
+	* tools/Makefile.in (tags): Likewise.
+
 2007-09-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* tools/Makefile.in: Added dummy check target.
