@@ -53,8 +53,8 @@ distclean: clean
 maintainer-clean-here: distclean-here
 	true
 
-tags-here:	
-	etags $(srcdir)/*.c $(srcdir)/*.h
+tags:	
+	etags -o $(srcdir)/TAGS $(srcdir)/*.c $(srcdir)/*.h
 
 DEP_FILES = $(SOURCES:.c=.$(OBJEXT).d)
 @DEP_INCLUDE@ $(DEP_FILES)
