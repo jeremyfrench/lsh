@@ -110,3 +110,6 @@ distclean: clean
 
 maintainer-clean: distclean
 	-rm -f $(TARGETS)
+
+tags:
+	true
