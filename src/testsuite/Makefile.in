@@ -130,6 +130,9 @@ distclean: clean
 	-rm -f Makefile *.d
 	rm -rf temphome home *.pid yarrow-seed-file
 
+tags:
+	etags -o $(srcdir)/TAGS --include $(srcdir)/.. $(srcdir)/*.c $(srcdir)/*.h
+
 # Standard targets
 Makefile: $(srcdir)/Makefile.in ../../config.status
 	cd ../.. && $(SHELL) ./config.status src/testsuite/Makefile
