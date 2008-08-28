@@ -1,3 +1,52 @@
+2008-08-28  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_random.c (random_add): Don't associate any entropy with
+	input of type RANDOM_SOURCE_SECRET.
+	(random_init_system): Use GET_FILE_ENV, which uses FILE_SEED_FILE.
+
+	* src/seed_file.c (seed_file_lock): Compare return value from
+	fcntl to -1; according to the Solaris 10 man page, the return
+	value on success not -1 but otherwise not specified at all.
+
+	* src/lshd.c (lshd_config_handler): Use FILE_LSHD_PID and
+	FILE_LSHD_HOST_KEY.
+
+	* src/lsh-make-seed.c (main_argp_parser): Use FILE_SEED_FILE_DIR
+	and FILE_SEED_FILE.
+
+	* src/lsh-keygen.c (main_argp_parser): Use FILE_LSHD_CONFIG_DIR
+	and FILE_LSHD_HOST_KEY. Create FILE_LSHD_CONFIG_DIR if it doesn't
+	exist.
+
+	* src/Makefile.in (LIBEXEC_PROGRAMS): New variable, listing
+	programs that are moved to libexec, lsh-transport, lshd-userauth,
+	lshd-connection and lshd-pty-helper.
+	(environ.h): Substitute localstatedir.
+	(install): Install $(LIBEXEC_PROGRAMS).
+	(tags-here): Put TAGS file in source directory.
+
+	* src/config.make.in (libexecdir): New variable.
+	(sysconfdir): Likewise.
+	(localstatedir): Likewise.
+
+	* src/environ.h.in (LOCALSTATEDIR): New macro.
+	(FILE_LSHD_HOST_KEY): New macro.
+	(FILE_LSHD_PID): New macro.
+	(FILE_SEED_FILE_DIR): New macro.
+	(FILE_SEED_FILE): New macro.
+	(FILE_LSHD_CONNECTION): Use LIBEXECDIR.
+	(FILE_LSHD_PTY_HELPER): Likewise.
+	(FILE_LSHD_USERAUTH): Likewise.
+	(FILE_LSH_TRANSPORT): Likewise.
+
+	* src/daemon.c (PID_DIR, PID_SUFFIX): Deleted unused macros.
+
+2008-08-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (tags): New target.
+
+	* doc/Makefile.in (tags): New do nothing target.
+
 2008-08-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport.c (transport_connection_kill): Cancel
@@ -1985,7 +2034,7 @@
 	earlier change.
 
 	* src/lshd-userauth.c (main): Display a warning if the name of the
-	lshd-connectiion executable doesn't start with a "/".
+	lshd-connection executable doesn't start with a "/".
 	(canonicalize_file_name): Deleted function, reverting earlier
 	change.
 	(start_service): For simplicity, removed special handling of
