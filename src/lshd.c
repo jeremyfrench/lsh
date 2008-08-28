@@ -636,9 +636,9 @@ main_options[] =
   { "host-key", 'h', "FILE", 0, "Location of the server's private key.", 0},
 
   { NULL, 0, NULL, 0, "Daemonic behaviour:", 0 },
-  { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, and redirect stdio to /dev/null, chdir to /, and use syslog.", 0 },
+  { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, chdir to /, and use syslog.", 0 },
   { "pid-file", OPT_PIDFILE, "FILE", 0, "Create a pid file. When running in daemonic mode, "
-    "the default is /var/run/lshd.pid.", 0 },
+    "the default is " FILE_LSHD_PID ".", 0 },
   { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
   { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
   { "no-setsid", OPT_NO_SETSID, NULL, 0, "Don't start a new session.", 0 },
@@ -767,14 +767,14 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	  self->use_pid_file = 0;
 
 	if (self->use_pid_file && ! self->pid_file)
-	  /* FIXME: Make the default a configure time option. */
-	  self->pid_file = make_string("/var/run/lshd.pid");
+	  self->pid_file = make_string(FILE_LSHD_PID);
 
 	if (self->corefile < 0)
 	  self->corefile = 1;
 
-	if (!read_host_key((self->hostkey ? lsh_get_cstring(self->hostkey)
-			    : SYSCONFDIR "/lshd/host-key"),
+	if (!read_host_key((self->hostkey
+			    ? lsh_get_cstring(self->hostkey)
+			    : FILE_LSHD_HOST_KEY),
 			   all_signature_algorithms(),
 			   ctx->keys))
 	  {
