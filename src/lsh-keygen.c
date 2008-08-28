@@ -218,7 +218,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->private_file)
 	{
 	  if (self->server)
-	    self->private_file = make_string("/etc/lsh_host_key");
+	    {
+	      if (mkdir(FILE_LSHD_CONFIG_DIR, 0755) < 0
+		  && errno != EEXIST)
+		argp_failure(state, EXIT_FAILURE, errno,
+			     "Creating directory %s failed.", FILE_LSHD_CONFIG_DIR);
+
+	      self->private_file = make_string(FILE_LSHD_HOST_KEY);
+	    }	    
 	  else
 	    {
 	      char *home = getenv(ENV_HOME);
@@ -233,12 +240,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		  /* Some duplication with unix_random_user */
 		  struct lsh_string *s = ssh_format("%lz/.lsh", home);
 		  const char *cs = lsh_get_cstring(s);
-		  if (mkdir(cs, 0755) < 0)
-		    {
-		      if (errno != EEXIST)
-			argp_failure(state, EXIT_FAILURE, errno,
-				     "Creating directory %s failed.", cs);
-		    }
+		  if (mkdir(cs, 0755) < 0
+		      && errno != EEXIST)
+		    argp_failure(state, EXIT_FAILURE, errno,
+				 "Creating directory %s failed.", cs);
+
 		  lsh_string_free(s);
 		  self->private_file = ssh_format("%lz/.lsh/identity", home);
 		}
@@ -507,7 +513,6 @@ process_private(const struct lsh_string *key,
 	      return NULL;
 	    }
 
-	  
 	  again = interact_read_password(ssh_format("Again: "));
 	  if (!again)
 	    {
