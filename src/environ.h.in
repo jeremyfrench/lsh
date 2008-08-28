@@ -11,6 +11,7 @@
 #define BINDIR "@bindir@"
 #define SBINDIR "@sbindir@"
 #define LIBEXECDIR "@libexecdir@"
+#define LOCALSTATEDIR "@localstatedir@"
 #define SYSCONFDIR "@sysconfdir@"
 
 /* Filenames of installed lsh programs. Names of external programs, in
@@ -20,20 +21,25 @@
 #define FILE_KERBEROS_HELPER	SBINDIR "/lsh-krb-checkpw"
 
 #define FILE_LSHD_CONFIG_DIR	SYSCONFDIR "/lshd"
-#define FILE_LSHD_CONNECTION	SBINDIR "/lshd-connection"
-#define FILE_LSHD_PTY_HELPER	SBINDIR "/lshd-pty-helper"
-#define FILE_LSHD_USERAUTH	SBINDIR "/lshd-userauth"
-#define FILE_LSH_TRANSPORT	BINDIR "/lsh-transport"
+#define FILE_LSHD_HOST_KEY	FILE_LSHD_CONFIG_DIR "/host-key"
+#define FILE_LSHD_PID		LOCALSTATEDIR "/run/lshd.pid"
+#define FILE_SEED_FILE_DIR	LOCALSTATEDIR "/spool/lsh"
+#define FILE_SEED_FILE		LOCALSTATEDIR "/spool/lsh/yarrow-seed-file"
+
+#define FILE_LSHD_CONNECTION	LIBEXECDIR "/lshd-connection"
+#define FILE_LSHD_PTY_HELPER	LIBEXECDIR "/lshd-pty-helper"
+#define FILE_LSHD_USERAUTH	LIBEXECDIR "/lshd-userauth"
+#define FILE_LSH_TRANSPORT	LIBEXECDIR "/lsh-transport"
 #define FILE_LSH_MAKE_SEED	BINDIR "/lsh-make-seed"
 
 #define FILE_LSHD_CONF		"lshd.conf"
 #define FILE_LSHD_USERAUTH_CONF	"lshd-userauth.conf"
 #define FILE_LSHD_CONNECTION_CONF "lshd-connection.conf"
 
+
 /* Some other files: /dev/null, /tmp/.X11-unix..., /var/run, /, /tmp,
- * /var/spool/lsh/yarrow-seed-file, /etc/lsh_host_key,
- * /var/run/lsh_proxy.pid, /var/run/lshd.pid, /dev/ptmx, /dev/ptyxx,
- * /dev/ttyxx, /tmp/.X11-unix, /var/adm/wtmp, /var/adm/wtmpx,
+ * /dev/ptmx, /dev/ptyxx,
+ * /dev/ttyxx, /var/adm/wtmp, /var/adm/wtmpx,
  * /bin/sh. */
 
 /* Environment variables. These definitions serve mostly as a way to
