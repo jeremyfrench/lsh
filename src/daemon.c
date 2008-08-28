@@ -54,17 +54,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
-
-#ifndef PID_DIR
-#define PID_DIR "/var/run"
-#endif
-
 #ifndef ROOT_DIR
 #define ROOT_DIR "/"
-#endif
-
-#ifndef PID_SUFFIX
-#define PID_SUFFIX ".pid"
 #endif
 
 /* Creates a pid file for a daemon. For now, only O_EXCL style
