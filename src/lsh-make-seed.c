@@ -171,8 +171,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	argp_error(state, "You can use at most one -o or --server option.");
       else
 	{
-	  self->directory = make_string("/var/spool/lsh");
-	  self->filename =  make_string("/var/spool/lsh/yarrow-seed-file");
+	  self->directory = make_string(FILE_SEED_FILE_DIR);
+	  self->filename =  make_string(FILE_SEED_FILE);
 	}
       break;
       
