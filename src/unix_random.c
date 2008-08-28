@@ -258,9 +258,12 @@ random_add(enum random_source_type type,
   switch(type)
     {
     case RANDOM_SOURCE_SECRET:
-      /* Count one bit of entropy per character in a password or
-       * key */
-      entropy = length;
+      /* It's important that we don't pretend there's any entropy in
+	 passwords. Assume an attacker knows the current state of the
+	 generator. If we would reseed after adding only passwords
+	 into the pool, that attacker could mount a dictionary attack
+	 based on observed generator output. */	 
+      entropy = 0;
       break;
     case RANDOM_SOURCE_REMOTE:
       /* Count one bit of entropy if we have two bytes of padding. */
@@ -359,14 +362,12 @@ int
 random_init_system(void)
 {
   struct lsh_string *file_name;
-  const char *env_name;
+  const char *name;
   int res;
-  
-  env_name = getenv(ENV_SEED_FILE);
 
-  file_name = make_string(env_name ? env_name
-			  : "/var/spool/lsh/yarrow-seed-file");
+  GET_FILE_ENV(name, SEED_FILE);
 
+  file_name = make_string(name);
   res = random_init(file_name);
   
   lsh_string_free(file_name);
