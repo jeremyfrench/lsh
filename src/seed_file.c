@@ -62,13 +62,13 @@ seed_file_lock(int fd, int wait)
   fl.l_start = 0;
   fl.l_len = 0; /* Means entire file. */
 
-  if (fcntl(fd, F_SETLK, &fl) == 0)
+  if (fcntl(fd, F_SETLK, &fl) != -1)
     return 1;
 
   if (wait)
     {
       werror("Waiting for seed file lock...\n");
-      return (fcntl(fd, F_SETLKW, &fl) == 0);
+      return (fcntl(fd, F_SETLKW, &fl) != -1);
     }
   return 0;
 }
