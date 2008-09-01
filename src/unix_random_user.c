@@ -72,7 +72,7 @@ random_init_user(const char *home)
 	  werror("Seedfile for pseudo-randomness generator '%S' does not exist.\n"
 		 "It should be created by running the lsh-make-seed program.\n",
 		 file_name);
-	  if (interact_yes_or_no(ssh_format("Create seed file now? "), 0, 1))
+	  if (interact_yes_or_no(ssh_format("Create seed file now? "), 0))
 	    {
 	      const char *program;
 	      int pid;
