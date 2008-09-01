@@ -993,6 +993,8 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
   else
     {
       struct lsh_string *acl;
+      struct lsh_string *fingerprint;
+      struct lsh_string *babble;
       
       verbose("SPKI authorization failed.\n");
       if (!self->config->sloppy)
@@ -1000,18 +1002,8 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 	  werror("Server's hostkey is not trusted. Disconnecting.\n");
 	  return NULL;
 	}
-      
-      /* Ok, let's see if we want to use this untrusted key. */
-      if (!werror_quiet_p())
-	{
-	  /* Display fingerprint */
-	  /* FIXME: Rewrite to use libspki subject */
-#if 0
-	  struct lsh_string *spki_fingerprint = 
-	    hash_string(self->hash, subject->key, 0);
-#endif
-	  
-	  struct lsh_string *fingerprint = 
+
+      fingerprint = 
 	    lsh_string_colonize( 
 				ssh_format( "%lfxS", 
 					    hash_string_l(&crypto_md5_algorithm,
@@ -1021,21 +1013,26 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 				1  
 				);
 
-	  struct lsh_string *babble = 
+      babble = 
 	    lsh_string_bubblebabble( 
 				    hash_string_l(&crypto_sha1_algorithm,
 						  key_length, key),
 				    1 
 				    );
-	  
-	  if (!interact_yes_or_no
-	      (ssh_format("Received unauthenticated key for host %lz\n"
+
+      /* Ok, let's see if we want to use this untrusted key. Display
+	 fingerprint. */
+      if (!interact_yes_or_no(
+	       ssh_format("Received unauthenticated key for host %lz\n"
 			  "Key details:\n"
-			  "Bubble Babble: %lfS\n"
-			  "Fingerprint:   %lfS\n"
+			  "Bubble Babble: %lS\n"
+			  "Fingerprint:   %lS\n"
 			  "Do you trust this key? (y/n) ",
-			  self->config->target, babble, fingerprint), 0, 1))
-	    return NULL;
+			  self->config->target, babble, fingerprint), 0))
+	{
+	  lsh_string_free(fingerprint);
+	  lsh_string_free(babble);
+	  return NULL;
 	}
 
       acl = lsh_string_format_sexp(0, "(acl(entry(subject%l)%l))",
@@ -1047,22 +1044,37 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
       /* Remember this key. We don't want to ask again for key re-exchange */
       spki_add_acls(self->db, STRING_LD(acl));
 
-      /* Write an ACL to disk. */
-      if (self->config->capture_fd >= 0)
+      if (self->config->capture_fd >= 0
+	  && interact_yes_or_no(ssh_format("Remember key and trust it in the future? (y/n) "),
+				0))
 	{
-	  struct lsh_string *entry
-	    = ssh_format("\n; ACL for host %lz\n"
-			 "%lfS\n",
-			 self->config->target,
-			 lsh_string_format_sexp(1, "%l", STRING_LD(acl)));
-	  if (!write_raw(self->config->capture_fd, STRING_LD(entry)))
-		werror("Writing acl entry failed: %e\n", errno);
+	  /* Write an ACL to disk. */
+	  if (self->config->capture_fd >= 0)
+	    {
+	      time_t now = time(NULL);
+	      const char *sexp_conv;
+	      const char *args[] = { "sexp-conv", "-s", "advanced", "--lock", NULL };
 
-	  lsh_string_free(entry);
+	      struct lsh_string *entry
+		= ssh_format("\n; ACL for host %lz\n"
+			     "; Date: %lz\n",
+			     "; Fingerprint: %lS\n"
+			     "; Bubble-babble: %lS\n"
+			     "%lS\n",
+			     self->config->target, ctime(&now), fingerprint, babble, acl);
+
+	      GET_FILE_ENV(sexp_conv, SEXP_CONV);
+
+	      if (!lsh_popen_write(sexp_conv, args, self->config->capture_fd, STRING_LD(entry)))
+		werror("Writing acl entry failed.\n");
+
+	      lsh_string_free(entry);
+	    }
+	  lsh_string_free(fingerprint);
+	  lsh_string_free(babble);
+	  lsh_string_free(acl);
 	}
-      lsh_string_free(acl);
-    }
-  
+    } 
   return subject->verifier;
 }
 
@@ -1082,7 +1094,8 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config)
 /* Initialize the spki database and the access tag. Called after
    options parsing. */
 static void
-read_host_acls(struct lsh_transport_lookup_verifier *self)
+read_host_acls(struct lsh_transport_lookup_verifier *self,
+	       const char *file)
 {
   struct lsh_string *contents;
   int fd;
@@ -1094,41 +1107,33 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
   self->access = make_ssh_hostkey_tag(self->config->target);
   self->db = make_spki_context(self->config->signature_algorithms);
   
-  if (self->config->host_acls)
+  fd = open(file, O_RDONLY);
+  if (fd < 0)
     {
-      fd = open(self->config->host_acls, O_RDONLY);
-      if (fd < 0)
+      if (errno == ENOENT)
 	{
-	  werror("Failed to open `%z' for reading: %e\n",
-		 self->config->host_acls, errno);
-	  return;
-	}
-    }
-  else
-    {
-      struct lsh_string *tmp = ssh_format("%lz/.lsh/host-acls", self->config->home);
-      fd = open(lsh_get_cstring(tmp), O_RDONLY);
-      
-      if (fd < 0)
-	{
-	  struct stat sbuf;
-	  struct lsh_string *known_hosts;
-
-	  verbose("Failed to open `%S' for reading: %e\n", tmp, errno);
-	  known_hosts = ssh_format("%lz/.lsh/known_hosts", self->config->home);
-
-	  if (stat(lsh_get_cstring(known_hosts), &sbuf) == 0)
+	  verbose("Failed to open `%z' for reading: %e\n", file, errno);
+	  if (!self->config->host_acls)
 	    {
-	      werror("You have an old known-hosts file `%S'.\n"
-		     "To work with lsh-2.0, run the lsh-upgrade script,\n"
-		     "which will convert that to a new host-acls file.\n",
-		     known_hosts);
+	      struct stat sbuf;
+	      struct lsh_string *known_hosts;
+
+	      known_hosts = ssh_format("%lz/.lsh/known_hosts", self->config->home);
+
+	      if (stat(lsh_get_cstring(known_hosts), &sbuf) == 0)
+		{
+		  werror("You have an old known-hosts file `%S'.\n"
+			 "To work with lsh-2.0 and alter, run the lsh-upgrade script,\n"
+			 "which will convert that to a new host-acls file.\n",
+			 known_hosts);
+		}
+	      lsh_string_free(known_hosts);
 	    }
-	  lsh_string_free(known_hosts);
-	  lsh_string_free(tmp);
-	  return;
 	}
-      lsh_string_free(tmp);
+      else
+	werror("Failed to open `%z' for reading: %e\n",
+	       file, errno);
+      return;
     }
 
   GET_FILE_ENV(sexp_conv, SEXP_CONV);
@@ -1137,7 +1142,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self)
   
   if (!contents)
     {
-      werror("Failed to read host-acls file: %e\n", errno);
+      werror("Failed to read host-acls file `%z': %e\n", errno);
       close(fd);
       return;
     }
@@ -1190,9 +1195,9 @@ main_options[] =
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
     "Never, never, ever trust an unknown hostkey. (default)", 0 },
-  { "capture-to", OPT_CAPTURE, "File", 0,
-    "When a new untrusted hostkey is received, append an ACL expressing trust in the key. "
-    "The default is ~/.lsh/captured_keys.", 0 },
+  { "host-db-update", OPT_CAPTURE, "Filename", 0,
+    "File that ACLs for new keys are appended to. "
+    "The default is ~/.lsh/host-acls.", 0 },
   
   /* User authentication */
   { "user", 'l', "NAME", 0, "Login as this user.", 0 },
@@ -1253,29 +1258,35 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->requested_service
 	= self->userauth ? "ssh-userauth" : self->service;
 
-      read_host_acls(self->host_db);
+      {
+	struct lsh_string *host_acls;
+	const char *host_db_update;
 
+	if (self->host_acls)
+	  host_acls = make_string(self->host_acls);
+	else
+	  host_acls = ssh_format("%lz/.lsh/host-acls", self->home);
+
+	read_host_acls(self->host_db, lsh_get_cstring(host_acls));
+
+	if (self->sloppy)
+	  {
+	    if (self->capture_file)
+	      host_db_update = self->capture_file;
+	    else
+	      host_db_update = lsh_get_cstring(host_acls);
+	
+	    self->capture_fd = open(host_db_update,
+				    O_WRONLY | O_APPEND | O_CREAT, 0600);
+	    if (self->capture_fd < 0)
+	      werror("Opening `%z' for writing failed: %e\n",
+		     host_db_update, errno);
+	  }
+	lsh_string_free(host_acls);
+      }
+      
       self->keypair = read_user_key(self);
       
-      if (self->capture_file)
-	{
-	  self->capture_fd = open(self->capture_file,
-				  O_RDWR | O_APPEND | O_CREAT, 0600);
-	  if (self->capture_fd < 0)
-	    werror("Opening `%z' for writing failed: %e\n",
-		   self->capture_file, errno);
-	}
-      else if (self->sloppy)
-	{
-	  struct lsh_string *s = ssh_format("%lz/.lsh/captured-keys", self->home);
-	  self->capture_fd = open(lsh_get_cstring(s),
-				  O_RDWR | O_APPEND | O_CREAT, 0600);
-	  if (self->capture_fd < 0)
-	    werror("Opening `%S' for writing failed: %e\n",
-		   s, errno);
-	  
-	  lsh_string_free(s);
-	}
       break;
       
     case 'p':
