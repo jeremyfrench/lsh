@@ -149,19 +149,19 @@ run_lsh () {
     shift
     echo "$cmd" | HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
 	--no-use-gateway --sloppy-host-authentication \
-	--capture-to /dev/null -p $PORT "$@" localhost
+	--host-db-update /dev/null -p $PORT "$@" localhost
 }
 
 stdin_lsh () {
     HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
 	--no-use-gateway --sloppy-host-authentication \
-	--capture-to /dev/null -p $PORT "$@" localhost
+	--host-db-update /dev/null -p $PORT "$@" localhost
 }
 
 exec_lsh () {
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS --sloppy-host-authentication \
 	--no-use-gateway \
-	--capture-to /dev/null -z -p $PORT localhost "$@"
+	--host-db-update /dev/null -z -p $PORT localhost "$@"
 }
 
 # FIXME: Use -B
@@ -169,7 +169,7 @@ spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--no-use-gateway \
-	--capture-to /dev/null -z -p $PORT "$@" --write-pid -B localhost > "$LSH_PIDFILE"
+	--host-db-update /dev/null -z -p $PORT "$@" --write-pid -B localhost > "$LSH_PIDFILE"
 
     at_exit 'kill `cat $LSH_PIDFILE`'
 }

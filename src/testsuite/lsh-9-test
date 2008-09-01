@@ -8,7 +8,7 @@ fi
 
 . $srcdir/functions.sh
 
-LSHFLAGS="-nt -p $PORT --sloppy-host-authentication --capture-to /dev/null  $LSH_FLAGS"
+LSHFLAGS="-nt -p $PORT --sloppy-host-authentication --host-db-update /dev/null  $LSH_FLAGS"
 export LSHFLAGS
 
 spawn_lshd && HOME=$TEST_HOME  ../lsh localhost true && test_success
