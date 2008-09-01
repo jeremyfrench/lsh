@@ -204,14 +204,13 @@ io_connect_local(const struct local_info *info);
 int
 lsh_make_pipe(int *fds);
 
-int
-lsh_popen(const char *program, const char **argv, int in,
-	  pid_t *child);
-
 struct lsh_string *
 lsh_popen_read(const char *program, const char **argv, int in,
 	       unsigned guess);
 
+int
+lsh_popen_write(const char *program, const char **argv, int out,
+		uint32_t length, const uint8_t *data);
 
 /* Temporarily changing the current directory. */
 

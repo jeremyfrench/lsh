@@ -1256,18 +1256,18 @@ lsh_make_pipe(int *fds)
 
 /* Forks a filtering process, and reads the output. Always closes
    the IN fd. */
-int
-lsh_popen(const char *program, const char **argv, int in,
-	  pid_t *child)
+struct lsh_string *
+lsh_popen_read(const char *program, const char **argv, int in,
+	       unsigned guess)
 {
-  /* 0 for read, 1, for write */
+  /* 0 for read, 1 for write */
   int out[2];
   pid_t pid;
   
   if (!lsh_make_pipe(out))
     {
       close(in);
-      return -1;
+      return NULL;
     }
   pid = fork();
 
@@ -1276,7 +1276,7 @@ lsh_popen(const char *program, const char **argv, int in,
       close(in);
       close(out[0]);
       close(out[1]);
-      return -1;
+      return NULL;
     }
   else if (!pid)
     {
@@ -1299,52 +1299,128 @@ lsh_popen(const char *program, const char **argv, int in,
       /* The execv prototype uses const in the wrong way */
       execv(program, (char **) argv);
 
-      werror("lsh_popen: execv `%z' failed %e.\n", program, errno);
+      werror("lsh_popen_read: execv `%z' failed %e.\n", program, errno);
 
       _exit(EXIT_FAILURE);
     }
   else
     {
       /* Parent process */
+      struct lsh_string *s;
+      int status;
+      
       close(in);
       close(out[1]);
-      *child = pid;
-      return out[0];
-    }
-}
 
-struct lsh_string *
-lsh_popen_read(const char *program, const char **argv, int in,
-	       unsigned guess)
-{
-  pid_t pid;
-  int status;
-  int fd = lsh_popen(program, argv, in, &pid);
-  struct lsh_string *s = io_read_file_raw(fd, guess);
-  
-  if (waitpid(pid, &status, 0) < 0)
-    {
-      werror("lsh_popen_read: waitpid failed: %e\n", errno);
+      s = io_read_file_raw(out[0], guess);
+
+      if (waitpid(pid, &status, 0) < 0)
+	{
+	  werror("lsh_popen_read: waitpid failed: %e\n", errno);
+	  lsh_string_free(s);
+	  return NULL;
+	}
+
+      if (!s)
+	return NULL;
+
+      if (WIFEXITED(status))
+	{
+	  if (!WEXITSTATUS(status))
+	    /* Success. */
+	    return s;
+
+	  werror("Program `%z' exited with status %i.\n",
+		 program, WEXITSTATUS(status));
+	}
+      else
+	werror("Program `%z' terminated by signal %i (%z).\n",
+	       program, WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
+
       lsh_string_free(s);
       return NULL;
     }
+}
 
-  if (!s)
-    return NULL;
+/* Forks a filtering process. Writes DATA as the filter's stdin, and
+   redirects stdout to OUT. The OUT fd is not closed. */
+int
+lsh_popen_write(const char *program, const char **argv, int out,
+		uint32_t length, const uint8_t *data)
+{
+  /* 0 for read, 1 for write */
+  int fds[2];
+  pid_t pid;
+  
+  if (!lsh_make_pipe(fds))
+    return 0;
 
-  if (WIFEXITED(status))
+  pid = fork();
+
+  if (pid < 0)
     {
-      if (!WEXITSTATUS(status))
-	/* Success. */
-	return s;
+      close(fds[0]);
+      close(fds[1]);
+      return 0;
+    }
 
-      werror("Program `%z' exited with status %i.\n",
-	     program, WEXITSTATUS(status));
+  else if (!pid)
+    {
+      /* Child */
+      if (dup2(fds[0], STDIN_FILENO) < 0)
+	{
+	  werror("lsh_popen: dup2 for stdin failed %e.\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+      if (dup2(out, STDOUT_FILENO) < 0)
+	{
+	  werror("lsh_popen: dup2 for stdout failed %e.\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+
+      close(out);
+      close(fds[0]);
+      close(fds[1]);
+
+      /* The execv prototype uses const in the wrong way */
+      execv(program, (char **) argv);
+
+      werror("lsh_popen_write: execv `%z' failed %e.\n", program, errno);
+
+      _exit(EXIT_FAILURE);
     }
   else
-    werror("Program `%z' terminated by signal %i (%z).\n",
-	   program, WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
+    {
+      /* Parent process */
+      int status;
+      int res;
+      
+      close(fds[0]);
 
-  lsh_string_free(s);
-  return NULL;
+      res = write_raw(fds[1], length, data);
+
+      if (waitpid(pid, &status, 0) < 0)
+	{
+	  werror("lsh_popen_write: waitpid failed: %e\n", errno);
+	  return 0;
+	}
+
+      if (!res)
+	return 0;
+
+      if (WIFEXITED(status))
+	{
+	  if (!WEXITSTATUS(status))
+	    /* Success. */
+	    return 1;
+
+	  werror("Program `%z' exited with status %i.\n",
+		 program, WEXITSTATUS(status));
+	}
+      else
+	werror("Program `%z' terminated by signal %i (%z).\n",
+	       program, WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
+
+      return 0;
+    }
 }
