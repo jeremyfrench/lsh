@@ -1,3 +1,32 @@
+2008-09-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh: --capture-to option renamed to
+	--host-db-update.
+	* src/testsuite/lsh-9-test: Likewise.
+	* src/testsuite/rapid7-lsh-test: Likewise.
+
+	* src/lsh.c (main_options): --capture-to option renamed to
+	--host-db-update. For backwards compatibility, old name kept as a
+	hidden alias.
+	(main_argp_parser): Pass on --host-db-update.
+
+	* src/lsh-transport.c (lsh_transport_lookup_verifier): Ask before
+	writing ACL. Add more details in the ACL comments. Use
+	lsh_popen_write to pipe data through sexp-conv --lock.
+	(read_host_acls): Added file name argument.
+	(main_options): Renamed option --capture-to to --host-db-update.
+	(main_argp_parser): Pass file name to read_host_acls. Make the
+	--host-db-update option default to the file used for --host-db, by
+	default ~/.lsh/host-acls.
+
+	* src/unix_interact.c (interact_yes_or_no): Deleted argument free.
+	Use werror_quiet_p and return default answer in quiet mode.
+	Updated callers.
+
+	* src/io.c (lsh_popen): Removed function, merged with
+	lsh_popen_read.
+	(lsh_popen_write): New function.
+
 2008-08-28  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (random_add): Don't associate any entropy with
