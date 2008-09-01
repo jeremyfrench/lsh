@@ -67,7 +67,7 @@ void
 interact_set_askpass(const char *askpass);
 
 int
-interact_yes_or_no(const struct lsh_string *prompt, int def, int free);
+interact_yes_or_no(const struct lsh_string *prompt, int def);
 
 struct lsh_string *
 interact_read_password(const struct lsh_string *prompt);

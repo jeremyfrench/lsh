@@ -240,15 +240,15 @@ read_line(uint32_t size, uint8_t *buffer)
 #undef BUFSIZE
 }
 
+/* Consumes prompt string. */
 int
-interact_yes_or_no(const struct lsh_string *prompt, int def, int free)
+interact_yes_or_no(const struct lsh_string *prompt, int def)
 {
 #define TTY_BUFSIZE 10
 
-  if (!IS_TTY())
+  if (!IS_TTY() || werror_quiet_p())
     {
-      if (free)
-	lsh_string_free(prompt);
+      lsh_string_free(prompt);
       return def;
     }
   else
@@ -259,8 +259,7 @@ interact_yes_or_no(const struct lsh_string *prompt, int def, int free)
       
 	res = write_raw(tty_fd, STRING_LD(prompt));
 
-	if (free)
-	  lsh_string_free(prompt);
+	lsh_string_free(prompt);
 
 	if (!res)
 	  return def;
