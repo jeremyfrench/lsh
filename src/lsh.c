@@ -562,9 +562,10 @@ main_options[] =
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
     "Never, never, ever trust an unknown hostkey. (default)", 0 },
-  { "capture-to", OPT_CAPTURE, "File", 0,
-    "When a new hostkey is received, append an ACL expressing trust in the key. "
-    "In sloppy mode, the default is ~/.lsh/captured_keys.", 0 },
+  { "host-db-update", OPT_CAPTURE, "Filename", 0,
+    "File that ACLs for new keys are appended to. "
+    "The default is ~/.lsh/host-acls.", 0 },
+  { "capture-to", 0, NULL, OPTION_ALIAS | OPTION_HIDDEN, NULL, 0 },
 #if 0
 #if WITH_SRP
   { "srp-keyexchange", OPT_SRP, NULL, 0, "Enable experimental SRP support.", 0 },
@@ -913,7 +914,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_CAPTURE:
-      arglist_push(&self->transport_args, "--capture-to");
+      arglist_push(&self->transport_args, "--host-db-update");
       arglist_push(&self->transport_args, arg);
       break;
 
