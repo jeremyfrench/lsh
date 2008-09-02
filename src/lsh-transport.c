@@ -1022,7 +1022,7 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 
       /* Ok, let's see if we want to use this untrusted key. Display
 	 fingerprint. */
-      if (!interact_yes_or_no(
+      if (!werror_quiet_p() && !interact_yes_or_no(
 	       ssh_format("Received unauthenticated key for host %lz\n"
 			  "Key details:\n"
 			  "Bubble Babble: %lS\n"
