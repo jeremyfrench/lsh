@@ -1,3 +1,12 @@
+2008-09-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (lsh_transport_lookup_verifier):
+	Reintroduced call to werror_quiet_p. --sloppy --quiet means that
+	keys are accepted (but not stored in .lsh/host-acls), with no
+	question asked.
+
+	* src/atoms.in: Commented out or deleted unused symbols.
+
 2008-09-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh: --capture-to option renamed to
