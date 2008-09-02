@@ -41,7 +41,7 @@ cast128-ctr      OPTIONAL          CAST-128 in SDCTR mode,
 hmac-sha1         REQUIRED         HMAC-SHA1 (length = 20)
 hmac-sha1-96      RECOMMENDED      first 96 bits of HMAC-SHA1 (length = 12)
 hmac-md5          OPTIONAL         HMAC-MD5 (length = 16)
-hmac-md5-96       OPTIONAL         first 96 bits of HMAC-MD5 (length = 12)
+# hmac-md5-96       OPTIONAL         first 96 bits of HMAC-MD5 (length = 12)
 # none            OPTIONAL         no MAC; NOT RECOMMENDED
 
 # Key exchange methods
@@ -54,26 +54,19 @@ diffie-hellman-group14-sha1      (to be REQUIRED?)
 ssh-dss              REQUIRED     sign      Simple DSS
 ssh-rsa              RECOMMENDED  sign      Simple RSA
 
-x509v3-sign-rsa      RECOMMENDED  sign    X.509 certificates (RSA key)
-x509v3-sign-dss      RECOMMENDED  sign    X.509 certificates (DSS key)
+# x509v3-sign-rsa      RECOMMENDED  sign    X.509 certificates (RSA key)
+# x509v3-sign-dss      RECOMMENDED  sign    X.509 certificates (DSS key)
 spki-sign-rsa        OPTIONAL     sign    SPKI certificates (RSA key)
 spki-sign-dss        OPTIONAL     sign    SPKI certificates (DSS key)
-pgp-sign-rsa         OPTIONAL     sign    OpenPGP certificates (RSA key)
-pgp-sign-dss         OPTIONAL     sign    OpenPGP certificates (DSS key)
+# pgp-sign-rsa         OPTIONAL     sign    OpenPGP certificates (RSA key)
+# pgp-sign-dss         OPTIONAL     sign    OpenPGP certificates (DSS key)
 
 # Generic spki, for now used only by the testsuite
 spki
- 
-# Old variants
-
-# x509v3               RECOMMENDED  sign      X.509 certificates
-# spki                 OPTIONAL     sign      SPKI certificates
-# spki-rsa@lysator.liu.se 
-# pgp                  OPTIONAL     sign      OpenPGP certificates
 
 # Services
 
-ssh-userauth
+# ssh-userauth
 ssh-connection
 
 # User authentication
@@ -127,8 +120,6 @@ USR2
 signal-unknown@lysator.liu.se
  
 # Used in spki keys
-private-key
-public-key
 dsa
 
 # For use in spki keys
@@ -142,6 +133,5 @@ rsa-pkcs1-md5
 Xpkcs5v2
 
 # SRP related
-srp-ring1-sha1@lysator.liu.se
-srp-verifier
-ssh-ring1
+# srp-ring1-sha1@lysator.liu.se
+# srp-verifier
