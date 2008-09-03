@@ -1049,31 +1049,28 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 				0))
 	{
 	  /* Write an ACL to disk. */
-	  if (self->config->capture_fd >= 0)
-	    {
-	      time_t now = time(NULL);
-	      const char *sexp_conv;
-	      const char *args[] = { "sexp-conv", "-s", "advanced", "--lock", NULL };
+	  time_t now = time(NULL);
+	  const char *sexp_conv;
+	  const char *args[] = { "sexp-conv", "-s", "advanced", "--lock", NULL };
 
-	      struct lsh_string *entry
-		= ssh_format("\n; ACL for host %lz\n"
-			     "; Date: %lz\n",
-			     "; Fingerprint: %lS\n"
-			     "; Bubble-babble: %lS\n"
-			     "%lS\n",
-			     self->config->target, ctime(&now), fingerprint, babble, acl);
+	  struct lsh_string *entry
+	    = ssh_format("\n; ACL for host %lz\n"
+			 "; Date: %lz\n"
+			 "; Fingerprint: %lS\n"
+			 "; Bubble-babble: %lS\n"
+			 "%lS\n",
+			 self->config->target, ctime(&now), fingerprint, babble, acl);
+	  
+	  GET_FILE_ENV(sexp_conv, SEXP_CONV);
 
-	      GET_FILE_ENV(sexp_conv, SEXP_CONV);
+	  if (!lsh_popen_write(sexp_conv, args, self->config->capture_fd, STRING_LD(entry)))
+	    werror("Writing acl entry failed.\n");
 
-	      if (!lsh_popen_write(sexp_conv, args, self->config->capture_fd, STRING_LD(entry)))
-		werror("Writing acl entry failed.\n");
-
-	      lsh_string_free(entry);
-	    }
-	  lsh_string_free(fingerprint);
-	  lsh_string_free(babble);
-	  lsh_string_free(acl);
+	  lsh_string_free(entry);
 	}
+      lsh_string_free(fingerprint);
+      lsh_string_free(babble);
+      lsh_string_free(acl);
     } 
   return subject->verifier;
 }
@@ -1142,7 +1139,8 @@ read_host_acls(struct lsh_transport_lookup_verifier *self,
   
   if (!contents)
     {
-      werror("Failed to read host-acls file `%z': %e\n", errno);
+      werror("Failed to read host-acls file `%z': %e\n",
+	     file, errno);
       close(fd);
       return;
     }
