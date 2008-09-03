@@ -1398,6 +1398,7 @@ lsh_popen_write(const char *program, const char **argv, int out,
       close(fds[0]);
 
       res = write_raw(fds[1], length, data);
+      close(fds[1]);
 
       if (waitpid(pid, &status, 0) < 0)
 	{
