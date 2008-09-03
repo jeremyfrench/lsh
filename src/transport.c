@@ -31,6 +31,7 @@
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
+#include "parse.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -283,7 +284,26 @@ transport_process_packet(struct transport_connection *connection,
     }
   else if (msg == SSH_MSG_DISCONNECT)
     {
-      verbose("Received disconnect message.\n");
+      struct simple_buffer buffer;
+      uint32_t reason;
+
+      uint32_t description_length;
+      const uint8_t *description;
+
+      uint32_t language_length;
+      const uint8_t *language;
+      
+      simple_buffer_init(&buffer, length - 1, data + 1);
+
+      if ((parse_uint32(&buffer, &reason))
+	  && (parse_string(&buffer, &description_length, &description))
+	  && (parse_string(&buffer, &language_length, &language))
+	  && parse_eod(&buffer))
+	verbose("Received disconnect message (%i): %ups\n",
+		reason, description_length, description);
+      else
+	werror("Received malformed disconnect message.\n");
+
       transport_close(connection, 0);
     }
   else if (msg == SSH_MSG_DEBUG)
