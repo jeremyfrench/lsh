@@ -70,6 +70,7 @@ bootstrap: $(generated_sources) $(dist_classes)
 # created by the bootstrap target.
 all-here: bootstrap environ.h $(TARGETS)
 
+# queue.c not really used by all programs
 COMMON_SOURCES = atoms.c \
 		 alist.c \
 		 charset.c \
@@ -80,6 +81,7 @@ COMMON_SOURCES = atoms.c \
 		 service_read.c \
 		 ssh_read.c \
 		 ssh_write.c \
+		 queue.c \
 		 xalloc.c
 
 INTERACT_SOURCES = interact.c unix_interact.c
@@ -115,7 +117,6 @@ CONNECTION_SOURCES = channel.c \
 		     channel_forward.c \
 		     channel_io.c \
 		     connection.c \
-		     queue.c \
 		     reaper.c \
 		     tcpforward.c
 
