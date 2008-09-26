@@ -340,65 +340,6 @@ make_lshd_port(struct lshd_context *ctx, socklen_t addr_len, struct sockaddr *ad
   return &self->super.super.super;
 }
 
-/* FIXME: Should use getaddrinfo, and should allow multiple ports and
-   services. At the UI, given interfaces can include explicit port,
-   and the -p options gives one or more default ports. */
-static int
-open_ports(struct lshd_context *ctx, struct resource_list *resources,
-	   const char *portid)
-{
-  struct sockaddr_in sin;
-  struct resource *port;
-
-  /* In network byte order */
-  short port_number;
-
-  if (!portid)
-    {
-      struct servent *se = getservbyname("ssh", "tcp");
-      port_number = se ? se->s_port : htons(SSH_DEFAULT_PORT);
-    }
-  else
-    {
-      char *end;
-      unsigned long n;
-
-      if (!portid[0])
-	{
-	  werror("Port number is empty.\n");
-	  return 0;
-	}
-      n = strtoul(portid, &end, 10);
-      if (end[0] == '\0')
-	port_number = htons(n);
-      else
-	{
-	  struct servent *se = getservbyname(portid, "tcp");
-	  if (!se)
-	    {
-	      werror("Port `%s' not found.\n", portid);
-	      return 0;
-	    }
-
-	  port_number = se->s_port;
-	}
-    }
-
-  memset(&sin, 0, sizeof(sin));
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  sin.sin_port = port_number;
-  
-  port = make_lshd_port(ctx, sizeof(sin), (struct sockaddr *) &sin);
-  if (port)
-    {
-      remember_resource(resources, port);
-      return 1;
-    }
-  else
-    return 0;
-}
-
 static struct lshd_context *
 make_lshd_context(void)
 {
@@ -481,6 +422,14 @@ make_sighup_close_callback(struct resource *resource)
 
 /* GABA:
    (class
+     (name lshd_interface)
+     (vars
+       (name const string)
+       (port const string)))
+*/
+   
+/* GABA:
+   (class
      (name lshd_config)
      (super server_config)
      (vars
@@ -490,11 +439,9 @@ make_sighup_close_callback(struct resource *resource)
 
        (ctx object lshd_context)
 
-       ;; (config_file . "const char *")
-       ;; (print_example . int)
-       ;; (use_example . int)
+       (ports struct string_queue)
+       (interfaces struct object_queue)
 
-       (port string)
        (hostkey string)
 
        (daemonic . int)
@@ -526,7 +473,8 @@ make_lshd_config(struct lshd_context *ctx)
 
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
-  self->port = NULL;
+  string_queue_init(&self->ports);
+  object_queue_init(&self->interfaces);
 
   self->hostkey = NULL;
   self->daemonic = 0;
@@ -537,6 +485,103 @@ make_lshd_config(struct lshd_context *ctx)
   self->corefile = -1;
   
   return self;
+}
+
+/* Look up a port using getaddrinfo, and bind one or more sockets. */
+static unsigned
+open_port (struct lshd_context *ctx, struct resource_list *resources,
+	   const struct lsh_string *interface, const struct lsh_string *port)
+{
+#if HAVE_GETADDRINFO
+  struct addrinfo hints;
+  struct addrinfo *list;
+  struct addrinfo *p;
+  int err;
+
+  const char *node;
+  unsigned done = 0;
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = PF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+
+  node = interface ? lsh_get_cstring(interface) : NULL;
+
+  if (node && !node[0])
+    node = NULL;
+
+  debug("open_port: node = %z, port = %S\n",
+	node ? node : "ANY", port);
+
+  if (!node)
+    hints.ai_flags = AI_PASSIVE;
+
+  err = getaddrinfo(node, lsh_get_cstring(port), &hints, &list);
+  if (err)
+    werror ("getaddrinfo failed: %z\n", gai_strerror(err));
+  else
+    {
+      for (p = list; p; p = p->ai_next)
+	{
+	  if (p->ai_family == AF_INET || p->ai_family == AF_INET6)
+	    {
+	      struct resource *port = 
+		make_lshd_port (ctx, p->ai_addrlen, p->ai_addr);
+	      if (port)
+		{
+		  remember_resource(resources, port);
+		  done++;
+		}
+	    }
+	}
+      freeaddrinfo(list);
+    }
+  return done;
+#else /* !HAVE_GETADDRINFO */
+#error Not yet supported */
+#endif /* !HAVE_GETADDRINFO */
+}
+
+/* Bind all appropriate ports for a given interface. */
+static unsigned
+open_interface(struct lshd_context *ctx, struct resource_list *resources,
+	       struct lshd_interface *interface, struct string_queue *ports)
+{
+  debug("open_interface: name = %z, port = %z\n",
+	interface && interface->name ? lsh_get_cstring(interface->name) : "ANY",
+	interface && interface->port ? lsh_get_cstring(interface->port) : "DEFAULT");
+
+  if (interface && interface->port)
+    return open_port(ctx, resources, interface->name, interface->port);
+  else
+    {
+      unsigned done = 0;
+
+      FOR_STRING_QUEUE(ports, port)
+	done += open_port(ctx, resources, interface->name, port);
+
+      return done;
+    }
+}
+
+/* Open all configured ports on all interfaces. */
+static unsigned
+open_all_ports(struct lshd_context *ctx, struct resource_list *resources,
+	       struct object_queue *interfaces, struct string_queue *ports)
+{
+  if (object_queue_is_empty (interfaces))
+    return open_interface(ctx, resources, NULL, ports);
+  else
+    {
+      unsigned done = 0;
+
+      FOR_OBJECT_QUEUE(interfaces, o)
+	{
+	  CAST(lshd_interface, interface, o);
+	  done += open_interface(ctx, resources, interface, ports);
+	}
+      return done;
+    }
 }
 
 /* Read server's private key */
@@ -653,6 +698,35 @@ main_argp_children[] =
   { NULL, 0, NULL, 0}
 };
 
+static struct lshd_interface *
+parse_interface(size_t length, const char *arg)
+{
+  const char *sep = memchr(arg, ':', length);
+
+  if (sep)
+    {
+      size_t name_length = sep - arg;
+      if (name_length + 1 == length)
+	return NULL;
+      else
+	{
+	  NEW(lshd_interface, self);
+
+	  self->name = ssh_format("%ls", name_length, arg);
+	  self->port = ssh_format("%ls", length - name_length - 1, sep + 1);
+	  return self;
+	}
+    }
+  else
+    {
+      NEW(lshd_interface, self);
+
+      self->name = ssh_format("%ls", length, arg);
+      self->port = NULL;
+      return self;
+    }
+}
+
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
 {
@@ -671,13 +745,17 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_INTERFACE:
-      werror("Ignoring --interface option; using localhost only.\n");
-      break;
+      {
+	struct lshd_interface *interface = parse_interface(strlen(arg), arg);
+	if (!interface)
+	  argp_error(state, "Invalid interface `%s'\n", arg);
 
+	object_queue_add_tail(&self->interfaces, &interface->super);
+
+	break;
+      }
     case 'p':
-      /* FIXME: Interpret multiple -p:s as a request to listen on
-       * several ports. */
-      self->port = make_string(arg);
+      string_queue_add_tail(&self->ports, make_string(arg));
       break;
 
     case 'h':
@@ -754,6 +832,9 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	struct int_list *hostkey_algorithms;
 	struct lshd_context *ctx = self->ctx;
 
+	if (string_queue_is_empty (&self->ports))
+	  string_queue_add_tail(&self->ports, make_string("22"));
+
 	if (self->daemonic > 0)
 	  {
 	    if (self->werror_config->syslog < 0)
@@ -812,13 +893,23 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
       if (!self->hostkey)
 	self->hostkey = ssh_format("%ls", value, data);
       break;
+
+      /* FIXME: Interface and port options should be disabled, if
+	 given on the command line. */
     case OPT_INTERFACE:
-      werror("Ignoring interface config file option; using localhost only.\n");
-      break;
+      {
+	struct lshd_interface *interface = parse_interface(value, data);
+	if (!interface)
+	  /* FIXME: Abort config parsing somehow? */
+	  werror("Invalid interface `%s'\n", value, data);
+	else
+	  object_queue_add_tail(&self->interfaces, &interface->super);
+
+	break;
+      }
 
     case 'p':
-      if (!self->port)
-	self->port = ssh_format("%ls", value, data);
+      string_queue_add_tail(&self->ports, ssh_format("%ls", value, data));
       break;
 
     case OPT_CORE:
@@ -918,10 +1009,13 @@ main(int argc, char **argv)
 
   io_init();
   
-  if (!open_ports(config->ctx, resources,
-		  lsh_get_cstring(config->port)))
-    return EXIT_FAILURE;
-  
+  if (!open_all_ports(config->ctx, resources,
+		      &config->interfaces,
+		      &config->ports))
+    {
+      werror("Could not open any listen ports.\n");
+      return EXIT_FAILURE;
+    }
   if (config->daemonic)
     {
       if (!daemon_init(mode, config->daemon_flags))
