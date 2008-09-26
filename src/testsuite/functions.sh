@@ -41,6 +41,7 @@ export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
+: ${INTERFACE:=localhost}
 
 unset DISPLAY
 TEST_DISPLAY=:17
