@@ -1147,19 +1147,24 @@ channel_transmit_extended(struct ssh_channel *channel,
 			 type, length, data));
 }
 
-/* FIXME: Merge into channel_open_new_type? */
 int
-channel_open_new_v(struct ssh_connection *connection,
-		   struct ssh_channel *channel,
-		   uint32_t type_length, const uint8_t *type,
-		   const char *format, va_list args)
+channel_open_new_type(struct ssh_connection *connection,
+		      struct ssh_channel *channel,
+		      uint32_t type_length, const uint8_t *type,
+		      const char *format, ...)
 {
   struct lsh_string *request;
   uint32_t l1, l2;
+  va_list args;
   va_list args_copy;
+  int index;
 
-  int index
-    = ssh_connection_alloc_channel(connection, CHANNEL_ALLOC_SENT_OPEN);
+#define OPEN_FORMAT "%c%s%i%i%i"
+#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type_length, type, \
+  channel->local_channel_number, \
+  channel->rec_window_size, channel->rec_max_packet
+
+  index = ssh_connection_alloc_channel(connection, CHANNEL_ALLOC_SENT_OPEN);
   if (index < 0)
     {
       /* We have run out of channel numbers. */
@@ -1171,11 +1176,7 @@ channel_open_new_v(struct ssh_connection *connection,
   
   check_rec_max_packet(channel);
   
-#define OPEN_FORMAT "%c%s%i%i%i"
-#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type_length, type, \
-  channel->local_channel_number, \
-  channel->rec_window_size, channel->rec_max_packet
-
+  va_start(args, format);
   va_copy(args_copy, args);
 
   l1 = ssh_format_length(OPEN_FORMAT, OPEN_ARGS);
@@ -1187,31 +1188,16 @@ channel_open_new_v(struct ssh_connection *connection,
   ssh_format_write(OPEN_FORMAT, request, 0, OPEN_ARGS);
 
   ssh_vformat_write(format, request, l1, args_copy);
+
+  va_end(args);
   va_end(args_copy);
 
-#undef OPEN_FORMAT
-#undef OPEN_ARGS
-  
   SSH_CONNECTION_WRITE(connection, request);
   
   return 1;
-}
 
-int
-channel_open_new_type(struct ssh_connection *connection,
-		      struct ssh_channel *channel,
-		      uint32_t type_length, const uint8_t *type,
-		      const char *format, ...)
-{
-  va_list args;
-  int res;
-  
-  va_start(args, format);
-  res = channel_open_new_v(connection, channel,
-			   type_length, type,
-			   format, args);
-  va_end(args);
-  return res;
+#undef OPEN_FORMAT
+#undef OPEN_ARGS
 }
 
 int

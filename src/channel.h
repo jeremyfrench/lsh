@@ -188,12 +188,6 @@ channel_start_receive(struct ssh_channel *channel,
 		      uint32_t initial_window_size);
 
 int
-channel_open_new_v(struct ssh_connection *connection,
-		   struct ssh_channel *channel,
-		   uint32_t type_length, const uint8_t *type,
-		   const char *format, va_list args);
-
-int
 channel_open_new_type(struct ssh_connection *connection,
 		      struct ssh_channel *channel,
 		      uint32_t type_length, const uint8_t *type,
