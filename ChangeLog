@@ -1,3 +1,31 @@
+2008-09-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.in (COMMON_SOURCES): Moved queue.c here, from
+	CONNECTION_SOURCES.
+
+	* src/lshd.c (open_ports): Replaced by three new functions, to
+	support multiple listen ports.
+	(open_port): Look up a port using getaddrinfo, and bind one or
+	more sockets.
+	(open_interface): Bind all appropriate ports for a given
+	interface.
+	(open_all_ports): Open all configured ports on all interfaces.
+	(class lshd_interface): New class.
+	(class lshd_config): Use queues to handle multiple ports and
+	interfaces.
+	(parse_interface): New function.
+	(main_argp_parser): Handle --interface option. Accept multiple -p
+	options.
+	(lshd_config_handler): Likewise. Added default port logic.
+
+	* src/testsuite/config/lshd.conf: Removed interface option, it is
+	set to localhost on the command line.
+
+	* src/testsuite/functions.sh: Set $INTERFACE.
+
+	* src/channel.c (channel_open_new_v): Removed function, merged
+	into channel_open_new_type.
+
 2008-09-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_lookup_verifier):
