@@ -1246,12 +1246,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
 
       self->super.kexinit
-	= make_simple_kexinit(self->kex_algorithms,
-			      self->algorithms->hostkey_algorithms,
-			      self->algorithms->crypto_algorithms,
-			      self->algorithms->mac_algorithms,
-			      self->algorithms->compression_algorithms,
-			      make_int_list(0, -1));
+	= make_kexinit_info(self->kex_algorithms,
+			    self->algorithms->hostkey_algorithms,
+			    self->algorithms->crypto_algorithms,
+			    self->algorithms->mac_algorithms,
+			    self->algorithms->compression_algorithms,
+			    make_int_list(0, -1));
 
       self->requested_service
 	= self->userauth ? "ssh-userauth" : self->service;

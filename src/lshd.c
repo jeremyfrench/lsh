@@ -879,12 +879,12 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	  }
 	  
 	ctx->super.kexinit
-	  = make_simple_kexinit(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
-				hostkey_algorithms,
-				self->algorithms->crypto_algorithms,
-				self->algorithms->mac_algorithms,
-				self->algorithms->compression_algorithms,
-				make_int_list(0, -1));
+	  = make_kexinit_info(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
+			      hostkey_algorithms,
+			      self->algorithms->crypto_algorithms,
+			      self->algorithms->mac_algorithms,
+			      self->algorithms->compression_algorithms,
+			      make_int_list(0, -1));
 	
 	break;
       }
