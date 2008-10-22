@@ -134,27 +134,21 @@ handle_kexinit(struct kexinit_state *self,
        ; May be NULL. Used only for sending.
        (first_kex_packet string)))
 */
-     
-/* This function generates a new kexinit message.
- *
- * If a speculative packet follows, it is stored in the last field. */
 
-/* FIXME: We don't need this abstract class, merge with simple_kexinit
-   and a plain function for generating kexinits. */
-/* GABA:
-   (class
-     (name make_kexinit)
-     (vars
-       (make method (object kexinit))))
-*/
+struct kexinit_info;
 
-struct make_kexinit *
-make_simple_kexinit(struct int_list *kex_algorithms,
-		    struct int_list *hostkey_algorithms,
-		    struct int_list *crypto_algorithms,
-		    struct int_list *mac_algorithms,
-		    struct int_list *compression_algorithms,
-		    struct int_list *languages);
+struct kexinit_info *
+make_kexinit_info(struct int_list *kex_algorithms,
+		  struct int_list *hostkey_algorithms,
+		  struct int_list *crypto_algorithms,
+		  struct int_list *mac_algorithms,
+		  struct int_list *compression_algorithms,
+		  struct int_list *languages);
+
+/* This function generates a new kexinit message. If a speculative
+ * packet follows, it is stored in the last field. */
+struct kexinit *
+make_kexinit(struct kexinit_info *self);
 
 struct keyexchange_algorithm *
 make_server_dh_exchange(const struct dh_params *params,

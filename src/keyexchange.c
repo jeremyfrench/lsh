@@ -286,8 +286,7 @@ handle_kexinit(struct kexinit_state *self,
 /* Uses the same algorithms for both directions */
 /* GABA:
    (class
-     (name simple_kexinit)
-     (super make_kexinit)
+     (name kexinit_info)
      (vars
        (kex_algorithms object int_list)
        (hostkey_algorithms object int_list)
@@ -297,45 +296,15 @@ handle_kexinit(struct kexinit_state *self,
        (languages object int_list)))
 */
 
-static struct kexinit *
-do_make_simple_kexinit(struct make_kexinit *c)
+struct kexinit_info *
+make_kexinit_info(struct int_list *kex_algorithms,
+		  struct int_list *hostkey_algorithms,
+		  struct int_list *crypto_algorithms,
+		  struct int_list *mac_algorithms,
+		  struct int_list *compression_algorithms,
+		  struct int_list *languages)
 {
-  CAST(simple_kexinit, closure, c);
-  NEW(kexinit, kex);
-
-  random_generate(sizeof(kex->cookie), kex->cookie);
-
-  kex->kex_algorithms = closure->kex_algorithms;
-  kex->server_hostkey_algorithms = closure->hostkey_algorithms;
-  kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER]
-    = closure->crypto_algorithms;
-  kex->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT]
-    = closure->crypto_algorithms;
-  kex->parameters[KEX_MAC_CLIENT_TO_SERVER] = closure->mac_algorithms;
-  kex->parameters[KEX_MAC_SERVER_TO_CLIENT] = closure->mac_algorithms;
-  kex->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER]
-    = closure->compression_algorithms;
-  kex->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT]
-    = closure->compression_algorithms;
-  kex->languages_client_to_server = closure->languages;
-  kex->languages_server_to_client = closure->languages;
-  kex->first_kex_packet_follows = 0;
-
-  kex->first_kex_packet = NULL;
-
-  return kex;
-}
-
-struct make_kexinit *
-make_simple_kexinit(struct int_list *kex_algorithms,
-		    struct int_list *hostkey_algorithms,
-		    struct int_list *crypto_algorithms,
-		    struct int_list *mac_algorithms,
-		    struct int_list *compression_algorithms,
-		    struct int_list *languages)
-{
-  NEW(simple_kexinit, self);
-  self->super.make = do_make_simple_kexinit;
+  NEW(kexinit_info, self);
   
   self->kex_algorithms = kex_algorithms;
   self->hostkey_algorithms = hostkey_algorithms;
@@ -344,9 +313,36 @@ make_simple_kexinit(struct int_list *kex_algorithms,
   self->compression_algorithms = compression_algorithms;
   self->languages = languages;
 
-  return &self->super;
+  return self;
 }
 
+struct kexinit *
+make_kexinit(struct kexinit_info *self)
+{
+  NEW(kexinit, kex);
+
+  random_generate(sizeof(kex->cookie), kex->cookie);
+
+  kex->kex_algorithms = self->kex_algorithms;
+  kex->server_hostkey_algorithms = self->hostkey_algorithms;
+  kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER]
+    = self->crypto_algorithms;
+  kex->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT]
+    = self->crypto_algorithms;
+  kex->parameters[KEX_MAC_CLIENT_TO_SERVER] = self->mac_algorithms;
+  kex->parameters[KEX_MAC_SERVER_TO_CLIENT] = self->mac_algorithms;
+  kex->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER]
+    = self->compression_algorithms;
+  kex->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT]
+    = self->compression_algorithms;
+  kex->languages_client_to_server = self->languages;
+  kex->languages_server_to_client = self->languages;
+  kex->first_kex_packet_follows = 0;
+
+  kex->first_kex_packet = NULL;
+
+  return kex;
+}
 
 /* Taking keys into use */
 /* Returns a hash instance for generating various session keys. Consumes K. */
