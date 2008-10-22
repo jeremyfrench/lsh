@@ -163,8 +163,6 @@ ssh_connection_start_channels(struct ssh_connection *connection);
 
 /* SSH_MSG_GLOBAL_REQUEST */
 
-/* FIXME: Does this really need a class, are there any subclasses with
-   instance variables? */
 /* GABA:
    (class
      (name global_request)
