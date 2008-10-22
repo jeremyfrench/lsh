@@ -743,7 +743,7 @@ transport_send_kexinit(struct transport_connection *connection)
     /* This is a reexchange; no more data can be sent */
     connection->event_handler(connection, TRANSPORT_EVENT_STOP_APPLICATION);
   
-  kex = connection->ctx->kexinit->make(connection->ctx->kexinit);
+  kex = make_kexinit(connection->ctx->kexinit);
   connection->kex.kexinit[is_server] = kex;
 
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);

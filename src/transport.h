@@ -177,7 +177,7 @@ transport_write_flush(struct transport_write_state *self,
      (vars
        (is_server . int)
        (algorithms object alist)
-       (kexinit object make_kexinit)))
+       (kexinit object kexinit_info)))
 */
 
 /* Uses for the key exchange method */
