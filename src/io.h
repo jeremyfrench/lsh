@@ -52,9 +52,10 @@ io_close_fd(int fd);
 #undef GABA_DECLARE
 
 
-/* FIXME: Get rid of this class. Used by escape_callback (client.h)
-   and for io_callout. For the latter, add a method to the lsh_callout
-   class with the corresponding action. */
+/* FIXME: Get rid of this class. Used by escape_callback (client.h),
+   reaper_callback, transport_timeout, and a few others, and for
+   io_callout. For the latter, add a method to the lsh_callout class
+   with the corresponding action. */
 /* GABA:
    (class
      (name lsh_callback)
