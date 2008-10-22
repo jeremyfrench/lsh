@@ -93,7 +93,7 @@ server_dh_handler(struct transport_handler *s,
 
       debug("Session key: %xS\n", self->dh.K);
 
-      dh_hash_update(&self->dh, ssh_format("%S", self->key->public), 1);
+      dh_hash_update(&self->dh, ssh_format("%S", self->key->public));
       dh_hash_digest(&self->dh);
 
       debug("Exchange hash: %xS\n", self->dh.exchange_hash);

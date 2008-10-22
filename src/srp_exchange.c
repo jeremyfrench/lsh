@@ -170,7 +170,7 @@ struct lsh_string *
 srp_make_init_msg(struct dh_instance *dh, struct lsh_string *name)
 {
   dh_generate_secret(dh->method, dh->secret, dh->e);
-  dh_hash_update(dh, ssh_format("%S", name), 1);
+  dh_hash_update(dh, ssh_format("%S", name));
 
   debug("srp_make_init_msg: e = %xn\n", dh->e);
   return ssh_format("%c%S%n", SSH_MSG_KEXSRP_INIT, name, dh->e);
@@ -266,7 +266,7 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
   
   /* Update the exchange hash */
   
-  dh_hash_update(dh, ssh_format("%S%S", entry->name, entry->salt), 1);
+  dh_hash_update(dh, ssh_format("%S%S", entry->name, entry->salt));
   dh_hash_digest(dh);
   
   return ssh_format("%c%S%n", SSH_MSG_KEXSRP_REPLY, entry->salt, dh->f);
@@ -301,7 +301,7 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet)
 	  lsh_string_free(salt);
 	  return NULL;
 	}
-      dh_hash_update(dh, ssh_format("%S", salt), 1);      
+      dh_hash_update(dh, ssh_format("%S", salt));
       return salt;
     }
   else

@@ -88,15 +88,15 @@ make_dh_group14(const struct hash_algorithm *H)
 			2, H);
 }
 
+/* Consumes the input string. FIXME: Allocating, hashing, and freeing
+   the string is somewhat unnecessary. It might make sense with a hash
+   update function that takes the same kind of format string as
+   ssh_format. */
 void
-dh_hash_update(struct dh_state *self,
-	       struct lsh_string *s, int free)
+dh_hash_update(struct dh_state *self, struct lsh_string *s)
 {
-  debug("dh_hash_update: %xS\n", s);
-  
   hash_update(self->hash, STRING_LD(s));
-  if (free)
-    lsh_string_free(s);
+  lsh_string_free(s);
 }
 
 /* Hashes e, f, and the shared secret key */
@@ -105,10 +105,8 @@ dh_hash_digest(struct dh_state *self)
 {
   dh_hash_update(self, ssh_format("%n%n%S",
 				  self->e, self->f,
-				  self->K), 1);
+				  self->K));
   self->exchange_hash = hash_digest_string(self->hash);
-
-  debug("dh_hash_digest: %xS\n", self->exchange_hash);  
 }
 
 void
@@ -126,19 +124,12 @@ init_dh_state(struct dh_state *self,
   self->hash = make_hash(params->H);
   self->exchange_hash = NULL;
 
-  debug("init_dh_state\n"
-	" V_C: %pS\n", kex->version[0]);
-  debug(" V_S: %pS\n", kex->version[1]);
-  debug(" I_C: %xS\n", kex->literal_kexinit[0]);
-  debug(" I_S: %xS\n", kex->literal_kexinit[1]);
-
   dh_hash_update(self,
 		 ssh_format("%S%S%S%S",
 			    kex->version[0],
 			    kex->version[1],
 			    kex->literal_kexinit[0],
-			    kex->literal_kexinit[1]),
-		 1);
+			    kex->literal_kexinit[1]));
 }
 
 /* R is set to a random, secret, exponent, and V set to is g^r */

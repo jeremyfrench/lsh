@@ -111,7 +111,7 @@ client_dh_handler(struct transport_handler *s,
 
       debug("Session key: %xS\n", self->dh.K);
 
-      dh_hash_update(&self->dh, ssh_format("%s", key_length, key), 1);
+      dh_hash_update(&self->dh, ssh_format("%s", key_length, key));
       dh_hash_digest(&self->dh);
 
       debug("Exchange hash: %xS\n", self->dh.exchange_hash);
