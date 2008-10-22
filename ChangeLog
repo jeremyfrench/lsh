@@ -1,3 +1,24 @@
+2008-10-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport.c (transport_send_kexinit): Use make_kexinit
+	function.
+	* src/transport.h (class transport_context): Type of kexinit
+	attribute changed to struct kexinit_info *.
+
+	* src/lsh-transport.c (main_argp_parser): Use make_kexinit_info.
+	* src/lshd.c (lshd_config_handler): Likewise.
+
+	* src/keyexchange.c (class kexinit_info): Renamed from
+	simple_kexinit. Don't inherit make_kexinit.
+	(make_kexinit_info): Renamed from make_simple_kexinit.
+	(make_kexinit): New function, replacing the make method of
+	the make_kexinit class.
+
+	* src/keyexchange.h (class make_kexinit): Deleted abstract class.
+
+	* src/dh_exchange.c (dh_hash_update): Deleted free argument.
+	Updated all callers.
+
 2008-09-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.in (COMMON_SOURCES): Moved queue.c here, from
