@@ -1,3 +1,8 @@
+2008-10-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (main_argp_parser): Support user@host notation.
+	(main_argp_parser): Count self->start_gateway as an action.
+
 2008-10-22  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport.c (transport_send_kexinit): Use make_kexinit
@@ -46,6 +51,18 @@
 
 	* src/channel.c (channel_open_new_v): Removed function, merged
 	into channel_open_new_type.
+
+2008-09-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport.c (transport_process_packet): Parse SSH_DISCONNECT
+	message and display the description and reason code.
+
+	* src/lsh-transport.c (lsh_transport_lookup_verifier): Fixed the
+	code for writing out the ACL entry.
+	(read_host_acls): Fixed error message for read errors.
+
+	* src/io.c (lsh_popen_write): Close the pipe to the spawned
+	process after the data is written.
 
 2008-09-02  Niels Möller  <nisse@lysator.liu.se>
 
