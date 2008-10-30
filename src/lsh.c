@@ -698,8 +698,18 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
     case ARGP_KEY_ARG:
       if (!state->arg_num)
-	self->target = arg;
-      
+	{
+	  /* Support user@host notation */
+	  char *at = strchr(arg, '@');
+	  if (at)
+	    {
+	      self->target = at + 1;
+	      *at = '\0';
+	      self->user = arg;
+	    }
+	  else
+	    self->target = arg;
+	}
       else
 	/* Let the next case parse it.  */
 	return ARGP_ERR_UNKNOWN;
@@ -761,7 +771,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (self->start_shell)
 	add_action(self, client_shell_session(self));
 
-      if (object_queue_is_empty(&self->actions) && !self->stop_gateway)
+      if (object_queue_is_empty(&self->actions)
+	  && !self->stop_gateway && !self->start_gateway)
 	{
 	  argp_error(state, "No actions given.");
 	  break;
