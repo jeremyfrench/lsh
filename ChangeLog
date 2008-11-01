@@ -1,3 +1,18 @@
+2008-11-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_random.c (update_seed_file): Mix in current seed file
+	before overwriting it.
+	(random_init): yarrow256_force_reseed replaced by
+	yarrow256_slow_reseed.
+
+	* src/lsh-make-seed.c (main): Updated for new yarrow interface in
+	nettle-2.0. 
+	* src/seed_file.c (seed_file_write): Likewise, generate seed file
+	with yarrow256_random.
+
+	* src/crypto.c: Updated (nettle_crypt_func *) casts, for
+	nettle-2.0.
+
 2008-10-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (main_argp_parser): Support user@host notation.
