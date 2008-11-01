@@ -121,23 +121,21 @@ update_seed_file(void)
   else
     {
       struct lsh_string *s = read_seed_file(seed_file_fd);
-      
-      seed_file_write(seed_file_fd, &yarrow);
-      seed_file_unlock(seed_file_fd);
 
-      /* Mix in the old seed file, it might have picked up
-       * some randomness. */
-
-      /* FIXME: Ideally, this should be mixed in *before* generating
-	 the new seed file. To mix using yarrow, yarrow256_fast_reseed must be
-	 made non-static. Or, alternatively, we could manually xor
-	 the new seed file on top of the old one. */
       if (s)
 	{
+	  /* Mix in the new seed, it might have picked up some
+	     randomness. We mix it into the fast pool *before*
+	     generating the new one. */
+	  yarrow.sources[RANDOM_SOURCE_NEW_SEED].next = YARROW_FAST;
 	  yarrow256_update(&yarrow, RANDOM_SOURCE_NEW_SEED,
 			   0, STRING_LD(s));
 	  lsh_string_free(s);
+	  yarrow256_fast_reseed(&yarrow);
 	}
+      
+      seed_file_write(seed_file_fd, &yarrow);
+      seed_file_unlock(seed_file_fd);
     }
 }
 
@@ -342,7 +340,7 @@ random_init(const struct lsh_string *seed_file_name)
   trivia_source();
 
   /* Mix that data in before generating any output. */
-  yarrow256_force_reseed(&yarrow);
+  yarrow256_slow_reseed(&yarrow);
 
   /* Overwrite seed file. */
   if (!seed_file_write(seed_file_fd, &yarrow))
