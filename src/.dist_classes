@@ -33,7 +33,6 @@ dist_classes = \
     lsh-keygen.c.x \
     lsh-make-seed.c.x \
     lsh-transport.c.x \
-    lsh-writekey.c.x \
     lsh.c.x \
     lsh_process.h.x \
     lshd-connection.c.x \
