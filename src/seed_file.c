@@ -119,13 +119,16 @@ seed_file_check_permissions(int fd, const struct lsh_string *filename)
 int
 seed_file_write(int fd, struct yarrow256_ctx *ctx)
 {
+  uint8_t buffer[YARROW256_SEED_FILE_SIZE];
+  
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
       werror("Seeking to beginning of seed file failed!? %e\n", errno);
       return 0;
     }
 
-  if (!write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file))
+  yarrow256_random (ctx, sizeof(buffer), buffer);
+  if (!write_raw(fd, sizeof(buffer), buffer))
     {
       werror("Overwriting seed file failed: %e\n", errno);
       return 0;

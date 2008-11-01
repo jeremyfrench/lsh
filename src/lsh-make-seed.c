@@ -1089,16 +1089,19 @@ main(int argc, char **argv)
 	get_interact(&yarrow, SOURCE_USER);
     }
 
-  if (!options->sloppy && !yarrow256_is_seeded(&yarrow))
+  if (!yarrow256_is_seeded(&yarrow))
     {
       werror("Couldn't get enough randomness from the environment.\n");
 
-      return EXIT_FAILURE;
+      if (options->sloppy)
+	/* Pretend there's no problem. */
+	yarrow.seeded = 1;
+      else
+	return EXIT_FAILURE;
     }
 
-  yarrow256_force_reseed(&yarrow);
-
-
+  yarrow256_slow_reseed(&yarrow);
+  
   /* Create file, readable only be the user. */
   fd = open(lsh_get_cstring(options->filename),
 	    O_EXCL | O_CREAT | O_WRONLY,
