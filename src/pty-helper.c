@@ -36,11 +36,11 @@
 /* Only for debugging */
 #include <stdio.h>
 
-/* Linux: For struct ucred */
+/* Linux: SCM_CREDENTIALS, struct ucred. BSD: SCM_CREDS, struct cmsgcred.  */
 #include <sys/types.h>
 #include <sys/socket.h>
 
-/* Solaris ucred support */
+/* Solaris ucred support, SCM_UCRED, ucred_t. */
 #if HAVE_UCRED_H
 #include <ucred.h>
 #endif
@@ -76,8 +76,10 @@ pty_send_message(int socket, const struct pty_message *message)
   io.iov_base = (void *) &message->header;
   io.iov_len = sizeof(message->header);
 
-#ifdef SCM_CREDENTIALS
+#if defined (SCM_CREDENTIALS)
   creds_size = sizeof(struct ucred);
+#elif defined (SCM_CREDS)
+  creds_size = sizeof (struct cmsgcred);
 #else
   creds_size = 0;
 #endif
@@ -92,9 +94,9 @@ pty_send_message(int socket, const struct pty_message *message)
   cmsg = NULL;
   controllen = 0;
 
-#ifdef SCM_CREDENTIALS
   if (message->has_creds)
     {
+#if defined (SCM_CREDENTIALS)
       /* Linux style credentials */
       struct ucred *creds;
 
@@ -110,8 +112,18 @@ pty_send_message(int socket, const struct pty_message *message)
       creds->gid = message->creds.gid;
 	
       controllen += CMSG_SPACE(sizeof(*creds));
-    }
+#elif defined (SCM_CREDS)
+      /* BSD style credentials */
+      cmsg = cmsg ? CMSG_NXTHDR(&hdr, cmsg) : CMSG_FIRSTHDR(&hdr);
+
+      cmsg->cmsg_level = SOL_SOCKET;
+      cmsg->cmsg_type = SCM_CREDS;
+      cmsg->cmsg_len = CMSG_LEN(sizeof(struct cmsgcred));
+
+      /* Data filled in by the kernel */
+      controllen += CMSG_SPACE(sizeof(struct cmsgcred));      
 #endif
+    }
 
   if (message->fd != -1)
     {
@@ -172,6 +184,8 @@ pty_recv_message(int socket, struct pty_message *message)
 
 #if defined (SCM_CREDENTIALS)
   creds_size = sizeof(struct ucred);
+#elif defined (SCM_CREDS)
+  creds_size = sizeof(struct cmsgcred);
 #elif defined (SCM_UCRED)
   creds_size = ucred_size();
 #else
@@ -228,6 +242,27 @@ pty_recv_message(int socket, struct pty_message *message)
 	    
 	    message->has_creds = 1;
 
+	    break;
+	  }
+#elif defined (SCM_CREDS)
+	case SCM_CREDS:
+	  {
+	    struct cmsgcred *creds;
+	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
+	      continue;
+
+	    if (message->has_creds)
+	      /* Shouldn't be multiple credentials, but if there are,
+		 ignore all but the first. */
+	      continue;
+
+	    creds = (struct cmsgcred *) CMSG_DATA(cmsg);
+	    message->creds.pid = creds->cmcred_pid;
+	    message->creds.uid = creds->cmcred_uid;
+	    message->creds.gid = creds->cmcred_gid;
+	    
+	    message->has_creds = 1;
+	    
 	    break;
 	  }
 #elif defined (SCM_UCRED)
