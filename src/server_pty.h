@@ -32,6 +32,8 @@
 
 /* For struct winsize */
 #include <sys/ioctl.h>
+/* struct winsize on Solaris (according to 5.8 man termio) */
+#include <sys/termios.h>
 
 #define MAX_TTY_NAME	32
 
