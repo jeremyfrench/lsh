@@ -19,10 +19,10 @@
 
 @set AUTHOR Niels Möller
 @ifinfo
-Draft manual for LSH. This manual corresponds to @command{lsh} version
+Manual for LSH. This manual corresponds to @command{lsh} version
 @value{UPDATED-FOR}. 
 
-Copyright 2000, 2004 @value{AUTHOR}
+Copyright 2000, 2004, 2008 @value{AUTHOR}
 
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
@@ -306,15 +306,14 @@ functionality.
 
 @command{lsh} can also be used in something called gateway mode, in
 which you can authenticate once and set up a connection that can
-later be used for quickly setting up new sessions with @command{lshg} 
-(@pxref{Invoking lshg}).
+later be reused for quickly setting up new sessions.
 
 @command{lsh} can be configured to allow login based on a personal
 key-pair consisting of a private and a public key, so that you can
-execute remote commands without typing your password every time. There
-is also experimental support for Thomas Wu's Secure Remote Password
-Protocol (@acronym{SRP}). Kerberos support is on the wish list but not
-yet supported (@pxref{Kerberos}).
+execute remote commands without typing your password every time.
+Kerberos support and support for Thomas Wu's Secure Remote Password
+Protocol (@acronym{SRP}) is on the wish list but not yet supported
+(@pxref{Kerberos}).
 
 The public-key authentication methods should also be extended to support
 Simple Public Key Infrastructure (@acronym{SPKI}) certificates,
@@ -324,23 +323,22 @@ Forwarding of arbitrary @acronym{TCP/IP} connections is provided. This
 is useful for tunneling otherwise insecure protocols, like telnet and
 pop, through an encrypted @command{lsh} connection.
 
-@command{lsh} also features a @acronym{SOCKS}-proxy which also
-provides tunneling of @acronym{TCP/IP} connections, but can be easily
-used, e.g.  from within popular web browsers like Mozilla and Firefox
-for tunneling web traffic. There are also programs like
-@command{tsocks} that performs transparent redirection of network
-access through a @acronym{SOCKS} proxy.
+@command{lsh} also features a @acronym{SOCKS}-proxy which also provides
+tunneling of @acronym{TCP/IP} connections, but without specifying the
+remote targets in advance. E.g., web browsers like Firefox can be
+configured to use @acronym{SOCKS} for tunneling web traffic. There are
+also programs like @command{tsocks} that performs transparent
+redirection of network access through a @acronym{SOCKS} proxy.
 
 Convenient tunneling of @acronym{X} was one of the most impressive
 features of the original @command{ssh} programs. Both @command{lsh} and
-@command{lshd} support @acronym{X}-forwarding, although @command{lshg}
-does not.
+@command{lshd} support @acronym{X}-forwarding.
 
 Whan @acronym{X} forwarding is in effect, the remote process is started
 in an environment where the @env{DISPLAY} variable in the environment
 points to a fake @acronym{X} server, connections to which are forwarded
 to the @acronym{X} server in your local environment. @command{lsh} also
-creates a new ``fake'' @samp{MIT-MAGIC-COOKIE-1} for controlling access
+creates a new ``fake'' @samp{MIT-MAGIC-COOKIE-1} for access
 control. Your real @acronym{X} authentication data is never sent to the
 remote machine.
 
@@ -441,7 +439,7 @@ assumptions you have to trust in order to be safe from a
 man-in-the-middle attack.
 
 I think the main advantage of @command{lsh} over Kerberos is that it is
-easier to install and use for on ordinary mortal user. In order to set
+easier to install and use for an ordinary mortal user. In order to set
 up key exchange between two different Kerberos systems (or @dfn{Kerberos
 realms}), the respective system operators need to exchange keys. In the
 case of two random users at two random sites, setting up @command{lsh} or
@@ -497,8 +495,19 @@ make install}. For a full listing of the options you can give to
 The most commonly used option is @option{--prefix}, which tells
 configure where lsh should be installed. Default prefix is
 @file{/usr/local}. The @command{lshd} server is installed in
-@file{$prefix/sbin}, all other programs and scripts are installed in
-@file{$prefix/bin}. 
+@file{$prefix/sbin}, various helper programs are installed in
+@file{$prefix/libexec}, and all other programs and scripts are
+installed in @file{$prefix/bin}.
+
+Note that by default, all lsh-related files are stored under
+@file{prefix}@, including configuration files, and the host key and
+seed file used by the server. You may want to use
+@example
+./configure --sysconfdir=/etc --localstatedir=/var
+@end example
+
+@noindent
+to place these files on the root and @file{/var} partitions.
 
 The configure script tries to figure out if the linker needs any special
 flags specifying where to find dynamically linked libraries at run time
@@ -540,14 +549,16 @@ possibilities.
 
 Several of the lsh programs requires a good pseudorandomness generator
 for secure operation. The first thing you need to do is to create a
-seed file for the generator. To create a personal seed file, stored as
-@file{~/.lsh/yarrow-seed-file}, run
+seed file for the generator. The personal seed file, stored as
+@file{~/.lsh/yarrow-seed-file}, is created by
 
 @example
 lsh-make-seed
 @end example
 
-To create a seed file for use by @command{lshd}, run
+Client programs that need the pseudorandomness generator will offer to
+run this command for you, if the seed file doesn't exist. To create a
+seed file for use by @command{lshd}, run
 
 @example
 lsh-make-seed --server
@@ -588,6 +599,8 @@ To make lsh less paranoid, use
 @example
 lsh --sloppy-host-authentication sara.lysator.liu.se
 @end example
+
+@comment XXX 
 
 @noindent
 Then @command{lsh} will display a @dfn{fingerprint} of the host key of
