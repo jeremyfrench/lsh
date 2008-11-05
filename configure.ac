@@ -430,7 +430,7 @@ else
 fi
 
 
-# X11 stuff. We only need libXau.
+# X11 stuff. We only need Xauth, usually located in libXau.
 # FIXME: Use AC_PATH_XTRA instead? 
 AC_PATH_X
 
@@ -444,21 +444,11 @@ if test -z "$no_x" ; then
   fi
 fi
 
+# On Solaris 5.8, it seams Xauth-related functions are in libX11, not
+# libXau.
 AC_CHECK_HEADERS(X11/Xauth.h)
-AC_CHECK_LIB(Xau, XauGetAuthByAddr)
+AC_SEARCH_LIBS(XauGetAuthByAddr, Xau, X11)
 LSH_RPATH_FIX
-
-AC_ARG_VAR(XAUTH_PROGRAM, Program used to handle .Xauthority-files by lshd)
-
-if test -z "$XAUTH_PROGRAM"; then
-  AC_PATH_PROG(XAUTH_PROGRAM, xauth,, /usr/X11R6/bin:/usr/openwin/bin:/usr/X/bin:/usr/X11/bin:/usr/bin:/usr/bin/X:/usr/bin/X11)
-fi
-
-if test -z "$XAUTH_PROGRAM"; then
-  AC_MSG_WARN(Couldn't find xauth, try passing XAUTH_PROGRAM=/path/to/xauth to configure)
-else
-  AC_DEFINE_UNQUOTED(XAUTH_PROGRAM, "$XAUTH_PROGRAM", Program used by lshd to handle .Xauthority-files)
-fi
 
 # Move these checks for system libraries earlier, before checks for
 # gmp, liboop etc
