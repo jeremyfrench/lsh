@@ -1,3 +1,9 @@
+2008-11-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Check for XauGetAuthByAddr in both libXau and
+	libX11.
+	(XAUTH_PROGRAM): Deleted check and configure option.
+
 2008-11-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_pty.h: Include <sys/termios.h>.
