@@ -1,5 +1,8 @@
 2008-11-06  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Moved checks for -lnsl and -lsocket earlier.
+	Updated GMP URL.
+
 	* configure.ac: Fixed spurious # in include section i test for
 	utmp members.
 

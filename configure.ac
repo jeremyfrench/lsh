@@ -387,9 +387,18 @@ LSH_TYPE_SOCKLEN_T
 
 # Checks for libraries
 
+# System libraries first. E.g., X11 libraries depend on gethostbyname,
+# which on Solaris is in nsl.
+
+# glibc has a nis-library "libnsl", which we don't need. So use
+# AC_SEARCH_LIBS rather than AC_CHECK_LIB.
+AC_SEARCH_LIBS(gethostbyname, nsl)
+AC_SEARCH_LIBS(inet_ntop, nsl)
+AC_CHECK_LIB(socket, setsockopt)
+
 AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
     [AC_MSG_ERROR(
-    [GNU MP not found, or not 3.1 or up, see http://www.swox.com/gmp.])])
+    [GNU MP not found, or not 3.1 or up, see http://gmplib.org/.])])
 
 LSH_RPATH_FIX
 
@@ -449,15 +458,6 @@ fi
 AC_CHECK_HEADERS(X11/Xauth.h)
 AC_SEARCH_LIBS(XauGetAuthByAddr, Xau, X11)
 LSH_RPATH_FIX
-
-# Move these checks for system libraries earlier, before checks for
-# gmp, liboop etc
-
-# glibc has a nis-library "libnsl", which we don't need. So use
-# AC_SEARCH_LIBS rather than AC_CHECK_LIB.
-AC_SEARCH_LIBS(gethostbyname, nsl)
-AC_SEARCH_LIBS(inet_ntop, nsl)
-AC_CHECK_LIB(socket, setsockopt)
 
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
