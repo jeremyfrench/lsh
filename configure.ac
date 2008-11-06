@@ -304,7 +304,7 @@ if test x$have_utmp_h = xyes; then
 		    struct utmp.ut_addr_v6],,,
 [# if HAVE_SYS_TYPES_H
 #  include <sys/types.h>
-# #endif
+# endif
 # if HAVE_UTMP_H
 #  include <utmp.h>
 # endif

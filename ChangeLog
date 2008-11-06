@@ -1,3 +1,8 @@
+2008-11-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Fixed spurious # in include section i test for
+	utmp members.
+
 2008-11-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Check for XauGetAuthByAddr in both libXau and
