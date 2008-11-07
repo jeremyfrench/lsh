@@ -1,5 +1,8 @@
 2008-11-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Try a different workaround for libXau on
+	Solaris-5.8.
+
 	* src/pty-helper.c (pty_send_message): Set msg_control to NULL if
 	controllen is 0, to make FreeBSD happy.
 

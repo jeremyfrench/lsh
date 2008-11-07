@@ -440,7 +440,8 @@ fi
 
 
 # X11 stuff. We only need Xauth, usually located in libXau.
-# FIXME: Use AC_PATH_XTRA instead? 
+# FIXME: Use AC_PATH_XTRA instead?
+
 AC_PATH_X
 
 if test -z "$no_x" ; then
@@ -448,15 +449,23 @@ if test -z "$no_x" ; then
     CPPFLAGS="$CPPFLAGS -I$x_includes"
   fi
   if test -n "$x_libraries" ; then
+    # Kludge for On Solaris-5.8, AC_PATH_X seems to pick up headers
+    # and libraries i /usr/include and /usr/lib, which doesn't work
+    # because /usr/lib contains symlinks to most libraries, but not
+    # for libXau which is the one we need.
+    if test x$x_libraries = x/usr/lib ; then
+      if test -f /usr/openwin/lib/libXau.so ; then
+        x_libraries=/usr/openwin/lib
+      fi
+    fi
+    
     LDFLAGS="$LDFLAGS -L$x_libraries"
     LSH_RPATH_ADD($x_libraries)
   fi
 fi
 
-# On Solaris 5.8, it seams Xauth-related functions are in libX11, not
-# libXau.
 AC_CHECK_HEADERS(X11/Xauth.h)
-AC_SEARCH_LIBS(XauGetAuthByAddr, Xau X11)
+AC_SEARCH_LIBS(XauGetAuthByAddr, Xau)
 
 LSH_RPATH_FIX
 
