@@ -1,5 +1,11 @@
 2008-11-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/pty-helper.c (pty_send_message): Set msg_control to NULL if
+	controllen is 0, to make FreeBSD happy.
+
+	* src/lshd-pty-helper.c (main): Fixed error message when
+	pty_send_message fails.
+
 	* configure.ac: Fixed check for credentials passing to work on
 	FreeBSD.
 
