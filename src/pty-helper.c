@@ -138,6 +138,10 @@ pty_send_message(int socket, const struct pty_message *message)
     }
   hdr.msg_controllen = controllen;
 
+  /* Needed to make FreeBSB happy. */
+  if (!controllen)
+    hdr.msg_control = NULL;
+
   do
     res = sendmsg(socket, &hdr, 0);
   while (res < 0 && errno == EINTR);
