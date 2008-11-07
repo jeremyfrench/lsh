@@ -456,7 +456,8 @@ fi
 # On Solaris 5.8, it seams Xauth-related functions are in libX11, not
 # libXau.
 AC_CHECK_HEADERS(X11/Xauth.h)
-AC_SEARCH_LIBS(XauGetAuthByAddr, Xau, X11)
+AC_SEARCH_LIBS(XauGetAuthByAddr, Xau X11)
+
 LSH_RPATH_FIX
 
 AC_CHECK_LIB(crypt, crypt)
