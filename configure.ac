@@ -845,6 +845,7 @@ AC_CACHE_CHECK(
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* Linux: For struct ucred */
@@ -866,7 +867,6 @@ int main (int argc, char **argv)
   void *creds_buf;
   size_t creds_size;
   size_t creds_space;
-  int controllen;
   char buf[3];
   int res;
   int yes = 1;
@@ -886,7 +886,7 @@ int main (int argc, char **argv)
 #if defined (SO_PASSCRED)
   /* For Linux */
   if (setsockopt(pipe[1], SOL_SOCKET, SO_PASSCRED,
-  		   &yes, sizeof(yes)) < 0)
+		 &yes, sizeof(yes)) < 0)
     {
       printf("setsockopt SO_PASSCRED failed: %d.\n", errno);
       return 1;
@@ -901,18 +901,31 @@ int main (int argc, char **argv)
     }
 #endif
 
-#ifdef SCM_CREDENTIALS
+#if defined (SCM_CREDENTIALS)
   creds_size = sizeof(struct ucred);
+#elif defined (SCM_CREDS)
+  creds_size = sizeof(struct cmsgcred);
 #else
   creds_size = 0;
 #endif
 
-  creds_space = CMSG_SPACE(creds_size);
-  creds_buf = malloc(creds_space);
-  if (creds_space && !creds_buf)
+  /* Appearantly, on FreeBSD-6.3, sendmsg requires that if
+     msg_controllen == 0, then one *must* also have msg_control == NULL. */
+  
+  if (creds_size)
     {
-      printf("malloc failed\n");
-      return 1;
+      creds_space = CMSG_SPACE(creds_size);
+      creds_buf = malloc(creds_space);
+      if (!creds_buf)
+	{
+	  printf("malloc failed\n");
+	  return 1;
+	}
+    }
+  else
+    {
+      creds_space = 0;
+      creds_buf = NULL;
     }
 
   io.iov_base = (void *) "foo";
@@ -925,13 +938,13 @@ int main (int argc, char **argv)
   hdr.msg_controllen = creds_space;
   hdr.msg_control = creds_buf;
 
-#ifdef SCM_CREDENTIALS
+#if defined (SCM_CREDENTIALS)
   /* Linux style credentials */
-  cmsg = CMSG_FIRSTHDR(&hdr);
   
   {
     struct ucred *creds;
 
+    cmsg = CMSG_FIRSTHDR(&hdr);
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_CREDENTIALS;
     cmsg->cmsg_len = CMSG_LEN(sizeof(*creds));
@@ -942,6 +955,17 @@ int main (int argc, char **argv)
     creds->gid = getgid();
 
     hdr.msg_controllen = CMSG_SPACE(sizeof(*creds));
+  }
+#elif defined (SCM_CREDS)
+  {
+    cmsg = CMSG_FIRSTHDR(&hdr);
+
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_CREDS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(struct cmsgcred));
+
+    /* Data filled in by the kernel */
+    hdr.msg_controllen = CMSG_SPACE(sizeof(struct cmsgcred));      
   }
 #else
   hdr.msg_controllen = 0;
@@ -1004,18 +1028,6 @@ int main (int argc, char **argv)
 	continue;
       switch (cmsg->cmsg_type)
 	{
-#if defined (SCM_CREDENTIALS)
-	case SCM_CREDENTIALS:
-	  {
-	    struct ucred *creds;
-	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
-	      continue;
-
-	    creds = (struct ucred *) CMSG_DATA(cmsg);
-	    pid = creds->pid;
-	    uid = creds->uid;
-	    gid = creds->gid;
-
 	  got_creds:
 	    if (pid != getpid())
 	      {
@@ -1034,7 +1046,35 @@ int main (int argc, char **argv)
 	      }
 	    /* Success! */
 	    return 0;
+
+#if defined (SCM_CREDENTIALS)
+	case SCM_CREDENTIALS:
+	  {
+	    struct ucred *creds;
+	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
+	      continue;
+
+	    creds = (struct ucred *) CMSG_DATA(cmsg);
+	    pid = creds->pid;
+	    uid = creds->uid;
+	    gid = creds->gid;
+
+	    goto got_creds;
 	  }
+#elif defined (SCM_CREDS)
+	case SCM_CREDS:
+	  {
+	    struct cmsgcred *creds;
+	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
+	      continue;
+
+	    creds = (struct cmsgcred *) CMSG_DATA(cmsg);
+	    pid = creds->cmcred_pid;
+	    uid = creds->cmcred_uid;
+	    gid = creds->cmcred_gid;
+
+	    goto got_creds;
+	  }	  
 #elif defined (SCM_UCRED)
 	case SCM_UCRED:
 	  {
