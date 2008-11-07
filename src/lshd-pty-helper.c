@@ -733,7 +733,7 @@ main (int argc UNUSED, char **argv UNUSED)
 	close(response.fd);
       
       if (err)
-	die("pty_recv_message failed: %s.\n", strerror(err));
+	die("pty_send_message failed: %s.\n", strerror(err));
     }
   return EXIT_SUCCESS;
 }
