@@ -453,8 +453,9 @@ if test -z "$no_x" ; then
     # and libraries i /usr/include and /usr/lib, which doesn't work
     # because /usr/lib contains symlinks to most libraries, but not
     # for libXau which is the one we need.
-    if test x$x_libraries = x/usr/lib ; then
+    if test "x$x_libraries" = xNONE; then
       if test -f /usr/openwin/lib/libXau.so ; then
+        AC_MSG_WARN([Using X11 libraries in /usr/openwin/lib.])
         x_libraries=/usr/openwin/lib
       fi
     fi
