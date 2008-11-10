@@ -1,5 +1,7 @@
 2008-11-10  Niels Möller  <nisse@lysator.liu.se>
 
+	* doc/Makefile.in (DISTFILES): Added srp-spec.txt.
+
 	* src/lshd-connection.c (make_lshd_connection): Condition X11
 	support on WITH_X11_FORWARD and HAVE_LIBXAU.
 	* src/server_session.c (x11_request_handler): Likewise.
