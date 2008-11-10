@@ -44,6 +44,10 @@ export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 : ${INTERFACE:=localhost}
 
 unset DISPLAY
+# Needed on BSD; otherwise DISPLAY is lost in the invocation
+# DISPLAY=... exec_lsh.
+export DISPLAY
+
 TEST_DISPLAY=:17
 export XAUTHORITY="`pwd`/xauthority"
 
