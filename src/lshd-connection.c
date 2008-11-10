@@ -272,7 +272,7 @@ make_lshd_connection(struct lshd_connection_config *config)
 			ATOM_EXEC, &exec_request_handler,
 			ATOM_PTY_REQ, &pty_request_handler,
 			ATOM_WINDOW_CHANGE, &window_change_request_handler, -1);
-#if defined (WITH_X11_FORWARD) && defined (HAVE_LIBXAU)
+#if WITH_X11_FORWARD
   ALIST_SET (requests, ATOM_X11_REQ, &x11_request_handler.super);
 #endif
     
