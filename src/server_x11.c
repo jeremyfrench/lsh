@@ -35,6 +35,8 @@
 #include <X11/Xauth.h>
 #endif
 
+#undef HAVE_LIBXAU
+
 #include <sys/types.h>
 
 #include <sys/socket.h>
@@ -60,11 +62,7 @@
 #include "server_x11.h.x"
 #undef GABA_DEFINE
 
-/* FIXME: Use some fallback if libXau is missing? It shouldn't be too
-   difficult to manually craft an xauthority file with a single
-   entry. */
 #if WITH_X11_FORWARD
-#if HAVE_LIBXAU
 
 #ifndef SUN_LEN
 # define SUN_LEN(x) \
@@ -102,10 +100,15 @@ do_kill_x11_listen_port(struct resource *s)
       self->dir = -1;
 
       if (unlink(lsh_get_cstring(self->name)) < 0)
-	werror("Failed to delete x11 socket %S: %e\n",
+	werror("Failed to delete x11 socket %S%e\n",
 	       self->name, errno);
 
       lsh_popd(old_cd, X11_SOCKET_DIR);
+
+      if (unlink(lsh_get_cstring(self->xauthority)) < 0)
+	werror("Failed to delete xauthority file %S%e\n",
+	       self->xauthority, errno);
+	
     }
 }
 
@@ -236,17 +239,44 @@ open_x11_socket(struct ssh_connection *connection,
 }
 
 static int
-create_xauth(const char *file, Xauth *xa)
+create_xauth(struct x11_listen_port *port, const char *hostname,
+	     uint32_t protocol_length, const uint8_t *protocol,
+	     uint32_t cookie_length, const uint8_t *cookie)
 {
-  FILE *f;
+  size_t hostname_length;
+  char number[10];
+  size_t number_length;
+  const char *file;
   int fd;
   int res;
+  
+  snprintf(number, sizeof(number), "%d", port->display_number);
+  number_length = strlen(number);
+  hostname_length = strlen(hostname);
+  file = lsh_get_cstring(port->xauthority);
+  {
+#if HAVE_LIBXAU
+  Xauth xa;
+  FILE *f;
+
+  /* Casts needed since the Xauth pointers are non-const. */
+  xa.family = FamilyLocal;
+  xa.address_length = hostname_length;
+  xa.address = (char *) hostname;
+  xa.number_length = number_length;
+  xa.number = number;
+  xa.name_length = protocol_length;
+  xa.name = (char *) protocol;
+  xa.data_length = cookie_length;
+  xa.data = (char *) cookie;
 
   /* Is locking overkill? */
   if (XauLockAuth(file, 1, 1, 0) != LOCK_SUCCESS)
     return 0;
 
-  fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  /* Use O_EXCL rather than O_TRUNC, since we create the file directly
+     under /tmp, and may be subject to symlink attacks. */
+  fd = open(file, O_WRONLY | O_CREAT | O_EXCL, 0600);
   if (fd < 0)
     {
       werror("Opening xauth file %z failed %e\n", file, errno);
@@ -262,13 +292,52 @@ create_xauth(const char *file, Xauth *xa)
       close(fd);
       goto fail;
     }
-  res = XauWriteAuth(f, xa);
+  res = XauWriteAuth(f, &xa);
 
   if (fclose(f) != 0)
     res = 0;
 
   XauUnlockAuth(file);
   return res;
+#else /* !HAVE_LIBXAU */
+  /* The xauth file is a sequence of entries of the following format:
+   *
+   * uint16_t                family
+   * uint16_t                address_length
+   * uint8_t[address_length] address
+   * uint16_t                display_length
+   * uint8_t[display_length] display  (a number, formatted as ascii digits)
+   * uint16_t                name_length
+   * uint8_t[name_length]    name  (e.g "MIT-MAGIC-COOKIE-1")
+   * uint16_t                data_length
+   * uint8_t[data_length]    data
+   *
+   * All uint16_t are in network byte order.
+   */
+  struct lsh_string *xa;
+
+  fd = open(file, O_WRONLY | O_CREAT | O_EXCL, 0600);
+  if (fd < 0)
+    {
+      werror("Opening xauth file %z failed%e\n", file, errno);
+      return 0;
+    }
+
+#define XAUTH_STRING(l, p) ((l) >> 8), (l) & 0xff, l, p
+
+  xa = ssh_format("%c%c%c%c%ls%c%c%ls%c%c%ls%c%c%ls",
+		  1, 0, /* FamilyLocal = 256 */
+		  XAUTH_STRING(hostname_length, hostname),
+		  XAUTH_STRING(number_length, number),
+		  XAUTH_STRING(protocol_length, protocol),
+		  XAUTH_STRING(cookie_length, cookie));
+  res = write_raw(fd, STRING_LD(xa));
+  lsh_string_free(xa);
+  close(fd);
+
+  return res;
+#endif /* !HAVE_LIBXAU */
+  }
 }
 
 struct x11_listen_port *
@@ -279,11 +348,9 @@ server_x11_setup(struct ssh_channel *channel,
 		 uint32_t screen)
 {
   struct x11_listen_port *port;
-  Xauth xa;  
   const char *tmp;
 #define HOST_MAX 200
   char host[HOST_MAX];
-  char number[10];
 
   if (cookie_length < X11_MIN_COOKIE_LENGTH)
     {
@@ -305,19 +372,8 @@ server_x11_setup(struct ssh_channel *channel,
 
   port->xauthority = ssh_format("%lz/.lshd.%di.Xauthority", tmp, port->display_number);
 
-  snprintf(number, sizeof(number), "%d", port->display_number);
-  xa.family = FamilyLocal;
-  xa.address_length = strlen(host);
-  xa.address = host;
-  xa.number_length = strlen(number);
-  xa.number = number;
-  xa.name_length = protocol_length;
-  /* Casts needed since the Xauth pointers are non-const. */
-  xa.name = (char *) protocol;
-  xa.data_length = cookie_length;
-  xa.data = (char *) cookie;
-
-  if (!create_xauth(lsh_get_cstring(port->xauthority), &xa))
+  if (!create_xauth(port, host, protocol_length, protocol,
+		    cookie_length, cookie))
     {
       KILL_RESOURCE(&port->super.super.super);
       return NULL;
@@ -335,5 +391,4 @@ server_x11_setup(struct ssh_channel *channel,
     }
 }
 
-#endif /* HAVE_LIBXAU */
 #endif /* WITH_X11_FORWARD */
