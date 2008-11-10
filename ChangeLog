@@ -1,3 +1,7 @@
+2008-11-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Use AC_CHECK_LIB to check for libXau.
+
 2008-11-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh: Explicitly export DISPLAY.

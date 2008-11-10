@@ -448,25 +448,14 @@ if test -z "$no_x" ; then
   if test -n "$x_includes" ; then
     CPPFLAGS="$CPPFLAGS -I$x_includes"
   fi
-  if test -n "$x_libraries" ; then
-    # Kludge for On Solaris-5.8, AC_PATH_X seems to pick up headers
-    # and libraries i /usr/include and /usr/lib, which doesn't work
-    # because /usr/lib contains symlinks to most libraries, but not
-    # for libXau which is the one we need.
-    if test "x$x_libraries" = xNONE; then
-      if test -f /usr/openwin/lib/libXau.so ; then
-        AC_MSG_WARN([Using X11 libraries in /usr/openwin/lib.])
-        x_libraries=/usr/openwin/lib
-      fi
-    fi
-    
+  if test -n "$x_libraries" ; then    
     LDFLAGS="$LDFLAGS -L$x_libraries"
     LSH_RPATH_ADD($x_libraries)
   fi
 fi
 
 AC_CHECK_HEADERS(X11/Xauth.h)
-AC_SEARCH_LIBS(XauGetAuthByAddr, Xau)
+AC_CHECK_LIB([Xau], [XauGetAuthByAddr])
 
 LSH_RPATH_FIX
 
