@@ -60,7 +60,11 @@
 #include "server_x11.h.x"
 #undef GABA_DEFINE
 
+/* FIXME: Use some fallback if libXau is missing? It shouldn't be too
+   difficult to manually craft an xauthority file with a single
+   entry. */
 #if WITH_X11_FORWARD
+#if HAVE_LIBXAU
 
 #ifndef SUN_LEN
 # define SUN_LEN(x) \
@@ -331,4 +335,5 @@ server_x11_setup(struct ssh_channel *channel,
     }
 }
 
+#endif /* HAVE_LIBXAU */
 #endif /* WITH_X11_FORWARD */

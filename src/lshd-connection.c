@@ -258,6 +258,7 @@ make_lshd_connection(struct lshd_connection_config *config)
 {
   NEW(lshd_connection, self);
   init_ssh_connection(&self->super, kill_lshd_connection, do_write_packet, do_disconnect);
+  struct alist *requests;
   
   io_register_fd(STDIN_FILENO, "transport read fd");
 
@@ -265,16 +266,19 @@ make_lshd_connection(struct lshd_connection_config *config)
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  /* FIXME: Make pty and x11 support configurable. */
+  /* FIXME: Make pty and x11 support configurable. */  
+  requests = make_alist(4,
+			ATOM_SHELL, &shell_request_handler,
+			ATOM_EXEC, &exec_request_handler,
+			ATOM_PTY_REQ, &pty_request_handler,
+			ATOM_WINDOW_CHANGE, &window_change_request_handler, -1);
+#if defined (WITH_X11_FORWARD) && defined (HAVE_LIBXAU)
+  ALIST_SET (requests, ATOM_X11_REQ, &x11_request_handler.super);
+#endif
+    
   ALIST_SET(self->super.channel_types, ATOM_SESSION,
-	    &make_open_session(
-	      make_alist(5,
-			 ATOM_SHELL, &shell_request_handler,
-			 ATOM_EXEC, &exec_request_handler,
-			 ATOM_PTY_REQ, &pty_request_handler,
-			 ATOM_WINDOW_CHANGE, &window_change_request_handler,
-			 ATOM_X11_REQ, &x11_request_handler, -1),
-	      self->config->helper_fd)->super);
+	    &make_open_session(requests,
+			       self->config->helper_fd)->super);
 
   /* FIXME: Make tcpip forwarding optional */
   ALIST_SET(self->super.channel_types, ATOM_DIRECT_TCPIP, &channel_open_direct_tcpip.super);

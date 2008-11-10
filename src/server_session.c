@@ -886,7 +886,7 @@ DEFINE_CHANNEL_REQUEST(window_change_request_handler)
 }
 #endif /* WITH_PTY_SUPPORT */
 
-#if WITH_X11_FORWARD
+#if defined (WITH_X11_FORWARD) && defined (HAVE_LIBXAU)
 
 DEFINE_CHANNEL_REQUEST(x11_request_handler)
      (struct channel_request *s UNUSED,
