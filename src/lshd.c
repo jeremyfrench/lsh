@@ -316,7 +316,7 @@ make_lshd_port(struct lshd_context *ctx, socklen_t addr_len, struct sockaddr *ad
 
   if (fd < 0)
     {
-      werror("socket failed: %e\n", errno);
+      werror("socket failed%e\n", errno);
     fail:
       KILL_RESOURCE(&self->super.super.super);
       return NULL;
