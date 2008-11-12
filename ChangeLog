@@ -1,3 +1,8 @@
+2008-11-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh (XAUTHORITY): Use a separate export
+	statement for XAUTHORITY.
+
 2008-11-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_x11.c (create_xauth): Added fallback when libXau is
