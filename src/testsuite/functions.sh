@@ -49,7 +49,8 @@ unset DISPLAY
 export DISPLAY
 
 TEST_DISPLAY=:17
-export XAUTHORITY="`pwd`/xauthority"
+XAUTHORITY="`pwd`/xauthority"
+export XAUTHORITY
 
 # FIXME: Are these flags obsolete?
 
