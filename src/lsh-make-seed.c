@@ -1089,15 +1089,11 @@ main(int argc, char **argv)
 	get_interact(&yarrow, SOURCE_USER);
     }
 
-  if (!yarrow256_is_seeded(&yarrow))
+  if (!options->sloppy && !yarrow256_is_seeded(&yarrow))
     {
       werror("Couldn't get enough randomness from the environment.\n");
 
-      if (options->sloppy)
-	/* Pretend there's no problem. */
-	yarrow.seeded = 1;
-      else
-	return EXIT_FAILURE;
+      return EXIT_FAILURE;
     }
 
   yarrow256_slow_reseed(&yarrow);

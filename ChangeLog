@@ -1,3 +1,10 @@
+2008-11-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-make-seed.c (main): Reverted part of change from
+	2008-11-01. Don't explicitly set the seeded flag in the yarrow
+	ctx, as that results in calls to aes_encrypt before
+	aes_set_encrypt_key.
+
 2008-11-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (XAUTHORITY): Use a separate export
