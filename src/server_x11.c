@@ -166,8 +166,7 @@ make_x11_listen_port(int dir, const struct lsh_string *name,
   return self;
 }
 
-/* FIXME: Create the /tmp/.X11-unix directory, if needed. Figure out
- * if and how we should use /tmp/.X17-lock. */
+/* FIXME: Figure out if and how we should use /tmp/.X11-lock. */
 
 /* Creates a socket in tmp. Some duplication with io_bind_local in
    io.c, but sufficiently different that it doesn't seem practical to
@@ -188,6 +187,9 @@ open_x11_socket(struct ssh_connection *connection,
   int number;
   int s;
   struct lsh_string *name = NULL;
+
+  if (mkdir(X11_SOCKET_DIR, 01777) < 0 && errno != EEXIST)
+    werror("Failed to create `%z' %e\n", X11_SOCKET_DIR, errno);
 
   /* We have to change the umask, as that's the only way to control
    * the permissions that bind uses. */
