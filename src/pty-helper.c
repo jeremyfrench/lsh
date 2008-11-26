@@ -47,8 +47,8 @@
 
 /* At least Solaris 5.8 lacks CMSG_LEN and CMSG_SPACE. */
 #ifndef CMSG_LEN
-/* The safest way seems to be to extract the offset of the data */
-# define CMSG_LEN(l) ((size_t) CMSG_DATA((struct cmsghdr *) 0) + (l))
+# define CMSG_LEN(l) \
+   (((sizeof(struct cmsghdr) + sizeof(int) - 1) & ~(sizeof(int) - 1)) + (l))
 #endif
 
 #ifndef CMSG_SPACE
@@ -221,30 +221,33 @@ pty_recv_message(int socket, struct pty_message *message)
     return -1;
 
   /* Process any ancillary data before examining the regular data */
-  for (cmsg = CMSG_FIRSTHDR(&hdr); cmsg; cmsg = CMSG_NXTHDR(&hdr, cmsg))
-    {
-      if (cmsg->cmsg_level != SOL_SOCKET)
-	continue;
-      switch (cmsg->cmsg_type)
-	{
-#if defined (SCM_CREDENTIALS)
-	case SCM_CREDENTIALS:
+
+  /* On SunOS 5.8, CMSG_FIRSTHDR doesn't handle empty lists correctly */
+  if (hdr.msg_controllen >= sizeof(struct cmsghdr))
+    for (cmsg = CMSG_FIRSTHDR(&hdr); cmsg; cmsg = CMSG_NXTHDR(&hdr, cmsg))
+      {
+	if (cmsg->cmsg_level != SOL_SOCKET)
+	  continue;
+	switch (cmsg->cmsg_type)
 	  {
-	    struct ucred *creds;
-	    if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
-	      continue;
+#if defined (SCM_CREDENTIALS)
+	  case SCM_CREDENTIALS:
+	    {
+	      struct ucred *creds;
+	      if (cmsg->cmsg_len != CMSG_LEN(sizeof(*creds)))
+		continue;
 
-	    if (message->has_creds)
-	      /* Shouldn't be multiple credentials, but if there are,
-		 ignore all but the first. */
-	      continue;
+	      if (message->has_creds)
+		/* Shouldn't be multiple credentials, but if there are,
+		   ignore all but the first. */
+		continue;
 
-	    creds = (struct ucred *) CMSG_DATA(cmsg);
-	    message->creds.pid = creds->pid;
-	    message->creds.uid = creds->uid;
-	    message->creds.gid = creds->gid;
+	      creds = (struct ucred *) CMSG_DATA(cmsg);
+	      message->creds.pid = creds->pid;
+	      message->creds.uid = creds->uid;
+	      message->creds.gid = creds->gid;
 	    
-	    message->has_creds = 1;
+	      message->has_creds = 1;
 
 	    break;
 	  }
@@ -270,52 +273,52 @@ pty_recv_message(int socket, struct pty_message *message)
 	    break;
 	  }
 #elif defined (SCM_UCRED)
-	case SCM_UCRED:
-	  {
-	    ucred_t *creds;
+	  case SCM_UCRED:
+	    {
+	      ucred_t *creds;
 
-	    if (message->has_creds)
-	      /* Shouldn't be multiple credentials, but if there are,
-		 ignore all but the first. */
-	      continue;
+	      if (message->has_creds)
+		/* Shouldn't be multiple credentials, but if there are,
+		   ignore all but the first. */
+		continue;
 
-	    creds = (ucred_t *) CMSG_DATA(cmsg);
-	    message->creds.pid = ucred_getpid(creds);
-	    message->creds.uid = ucred_geteuid(creds);
-	    message->creds.gid = ucred_getegid(creds);
+	      creds = (ucred_t *) CMSG_DATA(cmsg);
+	      message->creds.pid = ucred_getpid(creds);
+	      message->creds.uid = ucred_geteuid(creds);
+	      message->creds.gid = ucred_getegid(creds);
 
-	    message->has_creds = 1;
+	      message->has_creds = 1;
 
-	    break;
-	  }
+	      break;
+	    }
 #endif
-	case SCM_RIGHTS:
-	  {
-	    int *fd = (int *) CMSG_DATA(cmsg);
-	    int i = 0;
+	  case SCM_RIGHTS:
+	    {
+	      int *fd = (int *) CMSG_DATA(cmsg);
+	      int i = 0;
 
-	    /* Is there any simple and portable way to get the number
-	       of fd:s? */
+	      /* Is there any simple and portable way to get the number
+		 of fd:s? */
 	    
-	    if (message->fd == -1 && CMSG_LEN(message->fd) <= cmsg->cmsg_len)
-	      {
-		message->fd = fd[i++];
-		fprintf(stderr, "Got fd %d\n", message->fd);
-	      }
-	    /* We want only one fd; if we receive any more, close
-	       them */
-	    for (; CMSG_LEN( (i+1) * sizeof(message->fd)) <= cmsg->cmsg_len; i++)
-	      {
-		fprintf(stderr, "Got unwanted fd %d, closing\n", fd[i]);
+	      if (message->fd == -1 && CMSG_LEN(message->fd) <= cmsg->cmsg_len)
+		{
+		  message->fd = fd[i++];
+		  fprintf(stderr, "Got fd %d\n", message->fd);
+		}
+	      /* We want only one fd; if we receive any more, close
+		 them */
+	      for (; CMSG_LEN( (i+1) * sizeof(message->fd)) <= cmsg->cmsg_len; i++)
+		{
+		  fprintf(stderr, "Got unwanted fd %d, closing\n", fd[i]);
 		
-		close(fd[i]);
-	      }
+		  close(fd[i]);
+		}
+	    }
+	  default:
+	    /* Ignore */
+	    ;
 	  }
-	default:
-	  /* Ignore */
-	  ;
-	}
-    }
+      }
   if (res != sizeof(message->header))
     {
       if (message->fd != -1)
