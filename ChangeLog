@@ -1,3 +1,8 @@
+2008-11-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/x11-1-test: Set $DISPLAY and $LSH_FLAGS at
+	top-level, not just locally for exec_lsh function.
+
 2008-11-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (CMSG_LEN): Fallback definition now includes
