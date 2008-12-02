@@ -555,10 +555,11 @@ open_interface(struct lshd_context *ctx, struct resource_list *resources,
     return open_port(ctx, resources, interface->name, interface->port);
   else
     {
+      const struct lsh_string *name = interface ? interface->name : NULL;
       unsigned done = 0;
 
       FOR_STRING_QUEUE(ports, port)
-	done += open_port(ctx, resources, interface->name, port);
+	done += open_port(ctx, resources, name, port);
 
       return done;
     }
@@ -802,7 +803,7 @@ main_argp =
 static const struct config_option
 lshd_config_options[] = {
   { 'h', "hostkey", CONFIG_TYPE_STRING,
-    "Location of server's private host key", "/etc/lshd/hostkey" },
+    "Location of server's private host key", FILE_LSHD_HOST_KEY },
   { OPT_INTERFACE, "interface", CONFIG_TYPE_STRING,
     "Interface to listen to.", NULL },
   { 'p', "port", CONFIG_TYPE_STRING,
