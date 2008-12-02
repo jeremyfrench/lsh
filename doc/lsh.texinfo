@@ -500,7 +500,7 @@ configure where lsh should be installed. Default prefix is
 installed in @file{$prefix/bin}.
 
 Note that by default, all lsh-related files are stored under
-@file{prefix}@, including configuration files, and the host key and
+@file{prefix}, including configuration files, and the host key and
 seed file used by the server. You may want to use
 @example
 ./configure --sysconfdir=/etc --localstatedir=/var
