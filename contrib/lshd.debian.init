@@ -24,8 +24,8 @@ PORT=22
 set -e
 
 if [ ! -x $DAEMON \
-     -o ! -f /etc/lsh_host_key  \
-     -o ! -f /etc/lsh_host_key.pub \
+     -o ! -f /etc/lshd/host-key  \
+     -o ! -f /etc/lshd/host-key.pub \
      -o ! -f /var/spool/lsh/yarrow-seed-file ]
 then
 	echo "lshd not installed properly" >&2
@@ -42,7 +42,7 @@ case "$1" in
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	start-stop-daemon --stop --quiet --pidfile $PIDFILE \
+	start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE \
 		--exec $DAEMON
 	echo "$NAME."
 	;;
