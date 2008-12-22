@@ -1,3 +1,11 @@
+2008-12-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* contrib/lshd.debian.init: Updated file names for host key. Use
+	SIGHUP when stopping daemon.
+
+	* src/lshd.c (lshd_config_options): Use FILE_LSHD_HOST_KEY.
+	(open_interface): Fixed handling of default (NULL) interface.
+
 2008-11-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-1-test: Set $DISPLAY and $LSH_FLAGS at
