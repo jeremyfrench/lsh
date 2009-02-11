@@ -84,13 +84,17 @@ pty_send_message(int socket, const struct pty_message *message)
   creds_size = 0;
 #endif
 
-  hdr.msg_name = NULL;
-  hdr.msg_namelen = 0;
+  memset(&hdr, 0, sizeof(hdr));
   hdr.msg_iov = &io;
   hdr.msg_iovlen = 1;
   hdr.msg_controllen = CMSG_SPACE(creds_size) + CMSG_SPACE(sizeof(message->fd));
   hdr.msg_control = alloca(hdr.msg_controllen);
 
+  /* Work around a problem with CMSG_NXTHDR, at least on glibc, where
+     it accesses cmsg_len of the next, not yet initialized, control
+     message. */ 
+  memset(hdr.msg_control, 0, hdr.msg_controllen);
+  
   cmsg = NULL;
   controllen = 0;
 
@@ -203,8 +207,7 @@ pty_recv_message(int socket, struct pty_message *message)
   io.iov_base = &message->header;
   io.iov_len = sizeof(message->header);
 
-  hdr.msg_name = NULL;
-  hdr.msg_namelen = 0;
+  memset(&hdr, 0, sizeof(hdr));
   hdr.msg_iov = &io;
   hdr.msg_iovlen = 1;
   hdr.msg_controllen = CMSG_SPACE(creds_size) + CMSG_SPACE(sizeof(message->fd));
