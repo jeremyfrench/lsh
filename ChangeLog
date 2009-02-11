@@ -1,3 +1,11 @@
+2009-02-11  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/pty-helper.c (pty_send_message): Clear the control area, to
+	work around overly strict length validation in CMSG_NXTHDR.
+	Problem present at least in glibc.
+	(pty_send_message, pty_recv_message): Also clear the entire msghdr
+	struct.
+
 2008-12-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* contrib/lshd.debian.init: Updated file names for host key. Use
