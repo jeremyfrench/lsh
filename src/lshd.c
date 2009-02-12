@@ -181,7 +181,7 @@ lshd_service_request_handler(struct transport_forward *self,
 
 	  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
 	    {
-	      werror("lshd_service_request_handler: socketpair failed: %e\n",
+	      werror("lshd_service_request_handler: socketpair failed: %e.\n",
 		     errno);
 	      transport_disconnect(&self->super,
 				   SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
@@ -191,7 +191,7 @@ lshd_service_request_handler(struct transport_forward *self,
 	  child = fork();
 	  if (child < 0)
 	    {
-	      werror("lshd_service_request_handler: fork failed: %e\n",
+	      werror("lshd_service_request_handler: fork failed: %e.\n",
 		     errno);
 	      close(pipe[0]);
 	      close(pipe[1]);
@@ -227,7 +227,7 @@ lshd_service_request_handler(struct transport_forward *self,
 		 $SSH_CLIENT can be set properly. */
 	      execl(program, program, "--session-id", lsh_string_data(hex), NULL);
 
-	      werror("lshd_service_request_handler: exec failed: %e\n", errno);
+	      werror("lshd_service_request_handler: exec failed: %e.\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	}
@@ -316,24 +316,24 @@ make_lshd_port(struct lshd_context *ctx, socklen_t addr_len, struct sockaddr *ad
 
   if (fd < 0)
     {
-      werror("socket failed%e\n", errno);
+      werror("socket failed: %e.\n", errno);
     fail:
       KILL_RESOURCE(&self->super.super.super);
       return NULL;
     }
 
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
-    werror("setsockopt SO_REUSEADDR failed: %e\n", errno);
+    werror("setsockopt SO_REUSEADDR failed: %e.\n", errno);
 
   if (bind(fd, addr, addr_len) < 0)
     {
-      werror("bind failed: %e\n", errno);
+      werror("bind failed: %e.\n", errno);
       goto fail;
     }
 
   if (!io_listen(&self->super))
     {
-      werror("listen failed: %e\n", errno);
+      werror("listen failed: %e.\n", errno);
       goto fail;
     }
 
@@ -376,7 +376,7 @@ do_kill_pid_file(struct resource *s)
     {
       self->super.alive = 0;
       if (unlink(lsh_get_cstring(self->file)) < 0)
-	werror("Unlinking pidfile failed %e\n", errno);
+	werror("Unlinking pidfile failed: %e.\n", errno);
     }
 }
 
@@ -610,14 +610,14 @@ read_host_key(const char *file,
 
   if (fd < 0)
     {
-      werror("Failed to open `%z' for reading %e\n", file, errno);
+      werror("Failed to open `%z' for reading: %e.\n", file, errno);
       return 0;
     }
   
   contents = io_read_file_raw(fd, 5000);
   if (!contents)
     {
-      werror("Failed to read host key file `%z': %e\n", file, errno);
+      werror("Failed to read host key file `%z': %e.\n", file, errno);
       close(fd);
       return 0;
     }

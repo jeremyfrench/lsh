@@ -69,7 +69,7 @@ do_forward_local_port(struct client_connection_action *s,
     }
   else if (!io_listen(port))
     {
-      werror("Listening on local port %S:%i failed: %e\n",
+      werror("Listening on local port %S:%i failed: %e.\n",
 	     self->local->ip, self->local->port, errno);
       KILL_RESOURCE(&port->super.super);
      }

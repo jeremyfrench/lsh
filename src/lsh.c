@@ -266,7 +266,7 @@ make_client_session(struct lsh_options *options,
 
   if (in < 0)
     {
-      werror("Can't open stdin %e\n", errno);
+      werror("Can't open stdin: %e.\n", errno);
       return NULL;
     }
 
@@ -294,7 +294,7 @@ make_client_session(struct lsh_options *options,
 
   if (out < 0)
     {
-      werror("Can't open stdout %e\n", errno);
+      werror("Can't open stdout: %e.\n", errno);
       close(in);
       return NULL;
     }
@@ -1031,13 +1031,13 @@ fork_lsh_transport(struct lsh_options *options)
 
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
     {
-      werror("fork_lsh_transport: socketpair failed: %e\n", errno);
+      werror("fork_lsh_transport: socketpair failed: %e.\n", errno);
       return -1;
     }
   child = fork();
   if (child < 0)
     {
-      werror("fork_lsh_transport: fork failed: %e\n", errno);
+      werror("fork_lsh_transport: fork failed: %e.\n", errno);
       close(pipe[0]);
       close(pipe[1]);
       return -1;
@@ -1087,7 +1087,7 @@ fork_lsh_transport(struct lsh_options *options)
 
       verbose("Starting %z.\n", argv[0]);
       execv(argv[0], argv);
-      werror("fork_lsh_transport: exec failed: %e\n", errno);
+      werror("fork_lsh_transport: exec failed: %e.\n", errno);
       _exit(EXIT_FAILURE);
     }
 }
@@ -1101,7 +1101,7 @@ process_hello_message(int fd)
   int res = lsh_string_read (buf, 0, fd, LSH_HELLO_LINE_LENGTH);
   if (res < 0)
     {
-      werror ("Reading local hello message failed: %e\n", errno);
+      werror ("Reading local hello message failed: %e.\n", errno);
     fail:
       lsh_string_free (buf);
       return 0;
@@ -1173,7 +1173,7 @@ main(int argc, char **argv)
       fd = io_connect_local(options->gateway);
       if (fd < 0)
 	{
-	  werror("Could not open gateway: %e\n", errno);
+	  werror("Could not open gateway: %e.\n", errno);
 	  if (!options->start_gateway)
 	    return EXIT_FAILURE;
 	}
@@ -1198,7 +1198,7 @@ main(int argc, char **argv)
       fd = io_connect_local(options->gateway);
       if (fd < 0)
 	{
-	  werror("Could not open gateway: %e\n", errno);
+	  werror("Could not open gateway: %e.\n", errno);
 	  if (options->start_gateway < 0)
 	    options->start_gateway = 1;
 	}
@@ -1264,7 +1264,7 @@ main(int argc, char **argv)
 	  break;
 	case -1:
 	  /* Error */
-	  werror("fork failed when detaching: %e\n", errno);
+	  werror("fork failed when detaching: %e.\n", errno);
 	  break;
 	default:
 	  /* Parent */
@@ -1272,7 +1272,7 @@ main(int argc, char **argv)
 	    {
 	      struct lsh_string *msg = ssh_format("%di\n", pid);
 	      if (!write_raw (STDOUT_FILENO, STRING_LD(msg)))
-		werror ("Write to stdout failed!?: %e\n", errno);
+		werror ("Write to stdout failed!?: %e.\n", errno);
 	    }
 	  _exit(EXIT_SUCCESS);
 	}

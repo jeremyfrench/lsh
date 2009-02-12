@@ -74,7 +74,7 @@ daemon_pidfile(const char *name)
     {
       if (errno != EEXIST)
 	{
-	  werror("Failed to open pid file '%z' %e\n",
+	  werror("Failed to open pid file '%z': %e.\n",
 		 name, errno);
 	  return 0;
 	}
@@ -96,11 +96,11 @@ daemon_pidfile(const char *name)
 	  lsh_string_free(pid);
 	  return 1;
 	}
-      werror("Writing pid file '%z' failed %e\n", name, errno);
+      werror("Writing pid file '%z' failed: %e.\n", name, errno);
 
       /* Attempt unlinking file */
       if (unlink(name) < 0)
-	werror("Unlinking pid file '%z' failed %e\n",
+	werror("Unlinking pid file '%z' failed: %e.\n",
 	       name, errno);
       
       lsh_string_free(pid);
@@ -171,12 +171,12 @@ daemon_dup_null(int fd)
   int null = open("/dev/null", O_RDWR);
   if (null < 0)
     {
-      werror("Opening /dev/null failed: %e\n", errno);
+      werror("Opening /dev/null failed: %e.\n", errno);
       return 0;
     }
   if (dup2(null, fd) < 0)
     {
-      werror("Failed to redirect fd %i to /dev/null: %e\n", errno);
+      werror("Failed to redirect fd %i to /dev/null: %e.\n", errno);
       close(null);
       return 0;
     }
@@ -221,7 +221,7 @@ daemon_close_fds(void)
       if (res == 0)
 	werror("Closed spurious fd %i\n", fd);
       else if (errno != EBADF)
-	werror("Closing spurious fd %i failed: %e\n", fd, errno);
+	werror("Closing spurious fd %i failed: %e.\n", fd, errno);
     }
 }
 
@@ -310,7 +310,7 @@ daemon_close(const char *name)
 {
   if (unlink(name) < 0)
     {
-      werror("daemon_close: Unlink of pid file '%z' failed %e\n",
+      werror("daemon_close: Unlink of pid file '%z' failed: %e.\n",
 	     name, errno);
       return 0;
     }

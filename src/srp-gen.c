@@ -249,7 +249,7 @@ int main(int argc, char **argv)
   
   if (!write_raw(options->dest, STRING_LD(generator)))
     {
-      werror("Write failed: %e\n", errno);
+      werror("Write failed: %e.\n", errno);
       return EXIT_FAILURE;
     }    
   

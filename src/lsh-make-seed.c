@@ -260,7 +260,7 @@ get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
   while ( (res < 0) && (errno == EINTR));
   
   if (res < 0)
-    werror("Reading from %z failed %e\n",
+    werror("Reading from %z failed: %e.\n",
 	   names[i], errno);
 
   else if (res > 0)
@@ -453,7 +453,7 @@ spawn_source_process(unsigned *index,
     {
       if (access(system_sources[i].path, X_OK) < 0)
 	{
-	  debug("unix_random.c: spawn_source_process: Skipping '%z'; not executable %e\n",
+	  debug("unix_random.c: spawn_source_process: Skipping '%z'; not executable: %e.\n",
 		system_sources[i].path, errno);
 	  i++;
 	}
@@ -469,7 +469,7 @@ spawn_source_process(unsigned *index,
   
   if (!lsh_make_pipe(output))
     {
-      werror("spawn_source_process: Can't create pipe %e\n", errno);
+      werror("spawn_source_process: Can't create pipe: %e.\n", errno);
       return 0;
     }
   
@@ -519,32 +519,32 @@ spawn_source_process(unsigned *index,
 	{
 	  if (setgroups(0, NULL) < 0)
 	    {
-	      werror("Failed to clear supplimentary groups list %e\n", errno);
+	      werror("Failed to clear supplimentary groups list: %e.\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	      
 	  if (setgid(gid) < 0)
 	    {
-	      werror("Failed to change gid %e\n", errno);
+	      werror("Failed to change gid: %e.\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	  if (setuid(uid) < 0)
 	    {
-	      werror("Failed to change uid %e\n", errno);
+	      werror("Failed to change uid: %e.\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	}
 	  
       if (dup2(output[1], STDOUT_FILENO) < 0)
 	{
-	  werror("spawn_source_process: dup2 for stdout failed %e\n", errno);
+	  werror("spawn_source_process: dup2 for stdout failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
 
       /* Ignore stderr. */
       if (dup2(dev_null, STDERR_FILENO) < 0)
 	{
-	  werror("spawn_source_process: dup2 for stderr failed %e\n", errno);
+	  werror("spawn_source_process: dup2 for stderr failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
 	
@@ -556,7 +556,7 @@ spawn_source_process(unsigned *index,
       execl(state->source->path, state->source->path,
 	    state->source->arg, NULL);
       
-      werror("spawn_source_process: execl '%z' failed %e\n",
+      werror("spawn_source_process: execl '%z' failed: %e.\n",
 	     state->source->path, errno);
       
       _exit(EXIT_FAILURE);
@@ -661,7 +661,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 
   if (dev_null < 0)
     {
-      werror("Failed to open /dev/null %e\n", errno);
+      werror("Failed to open /dev/null: %e.\n", errno);
       return;
     }
 
@@ -669,7 +669,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
   unique.pid = getpid();
   if (gettimeofday(&unique.now, NULL) < 0)
     {
-      werror("getimeofday failed %e\n", errno);
+      werror("getimeofday failed: %e.\n", errno);
       return;
     }
 
@@ -716,7 +716,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	
       if (res < 0)
 	{
-	  werror("get_system: select failed %e\n", errno);
+	  werror("get_system: select failed: %e.\n", errno);
 	  break;
 	}
 
@@ -765,7 +765,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	    
 		if (res < 0)
 		  {
-		    werror("get_system: read failed %e\n", errno);
+		    werror("get_system: read failed: %e.\n", errno);
 		    return;
 		  }
 		else if (res > 0)
@@ -811,7 +811,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 		  
 		    if (waitpid(state[i].pid, &status, 0) < 0)
 		      {
-			werror("waitpid failed %e\n", errno);
+			werror("waitpid failed: %e.\n", errno);
 			return;
 		      }
 		    if (WIFEXITED(status))
@@ -853,7 +853,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	  while (res < 0 && errno == EINTR);
 
 	  if (res < 0)
-	    werror("Reading %z failed %e\n",
+	    werror("Reading %z failed: %e.\n",
 		   linux_proc_sources[i].name, errno);
 	  else
 	    {
@@ -891,14 +891,14 @@ get_time_accuracy(void)
   
   if (gettimeofday(&start, NULL))
     {
-      werror("gettimeofday failed %e\n", errno);
+      werror("gettimeofday failed: %e.\n", errno);
       return 0;
     }
 
   do
     if (gettimeofday(&next, NULL))
       {
-	werror("gettimeofday failed %e\n", errno);
+	werror("gettimeofday failed: %e.\n", errno);
 	return 0;
       }
   
@@ -976,7 +976,7 @@ get_interact(struct yarrow256_ctx *ctx, enum source_type source)
       event.c = getchar();
       if (gettimeofday(&event.now, NULL) < 0)
 	{
-	  werror("gettimeofday failed %e\n", errno);
+	  werror("gettimeofday failed: %e.\n", errno);
 	  return;
 	}
 
@@ -1054,7 +1054,7 @@ main(int argc, char **argv)
       && (mkdir(lsh_get_cstring(options->directory), 0755) < 0)
       && (errno != EEXIST) )
     {
-      werror("Creating `%S' failed %e.\n",
+      werror("Creating `%S' failed: %e.\n",
 	     options->directory, errno);
       return EXIT_FAILURE;
     }
@@ -1118,7 +1118,7 @@ main(int argc, char **argv)
   
   if (fd < 0)
     {
-      werror("Failed to open file `%S' %e\n",
+      werror("Failed to open file `%S': %e.\n",
 	     options->filename, errno);
 
       return EXIT_FAILURE;
@@ -1147,7 +1147,7 @@ main(int argc, char **argv)
       /* FIXME: Use O_TRUNC instead? */
       if (ftruncate(fd, 0) < 0)
 	{
-	  werror("Failed to truncate file `%S' %e\n",
+	  werror("Failed to truncate file `%S': %e.\n",
 		 options->filename, errno);
 	  goto error;
 	}

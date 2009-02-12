@@ -389,7 +389,7 @@ x11_connect(struct client_x11_display *display,
   
   if (!io_connect(&self->super, display->address_length, display->address))
     {
-      werror("Connecting to X11 server failed %e\n", errno);
+      werror("Connecting to X11 server failed: %e.\n", errno);
       return NULL;
     }
   return &self->super.super.super;

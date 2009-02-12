@@ -177,7 +177,7 @@ socks_write(struct socks_channel *self, struct lsh_string *data)
     }
   else
     {
-      werror("socks server: write failed: %e\n", errno);
+      werror("socks server: write failed: %e.\n", errno);
       socks_fail(self);      
     }
 }
@@ -193,7 +193,7 @@ oop_write_socks(oop_source *source UNUSED,
 
   if (!ssh_write_flush(self->super.write.state, self->super.write.fd, 0))
     {
-      werror("socks server: write failed: %e\n", errno);
+      werror("socks server: write failed: %e.\n", errno);
       socks_fail(self);
     }
   else if (!self->super.write.state->length)
@@ -716,7 +716,7 @@ do_make_socks_server(struct client_connection_action *s,
     }
   else if (!io_listen(port))
     {
-      werror("Listening on local port %S:%i failed: %e\n",
+      werror("Listening on local port %S:%i failed: %e.\n",
 	     self->local->ip, self->local->port, errno);
       KILL_RESOURCE(&port->super.super);
     }

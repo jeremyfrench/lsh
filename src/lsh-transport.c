@@ -722,7 +722,7 @@ start_service(struct lsh_transport_connection *self UNUSED)
   /* Write hello message */
   if (!write_raw (STDOUT_FILENO, sizeof(hello), hello))
     {
-      werror ("Writing local hello message failed: %e\n", errno);
+      werror ("Writing local hello message failed: %e.\n", errno);
       exit (EXIT_FAILURE);
     }
 
@@ -815,7 +815,7 @@ read_user_key(struct lsh_transport_config *config)
     {
       fd = open(config->identity, O_RDONLY);
       if (fd < 0)
-	verbose("Failed to open `%z' for reading %e\n",
+	verbose("Failed to open `%z' for reading: %e.\n",
 		config->identity, errno);
     }
   else
@@ -823,7 +823,7 @@ read_user_key(struct lsh_transport_config *config)
       tmp = ssh_format("%lz/.lsh/identity", config->home);
       fd = open(lsh_get_cstring(tmp), O_RDONLY);
       if (fd < 0)
-	werror("Failed to open `%S' for reading %e\n",
+	werror("Failed to open `%S' for reading: %e.\n",
 		tmp, errno);
       lsh_string_free(tmp);
     }
@@ -835,7 +835,7 @@ read_user_key(struct lsh_transport_config *config)
 
   if (!contents)
     {
-      werror("Failed to read private key file: %e\n", errno);
+      werror("Failed to read private key file: %e.\n", errno);
       close(fd);
 
       return NULL;
@@ -1109,7 +1109,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self,
     {
       if (errno == ENOENT)
 	{
-	  verbose("Failed to open `%z' for reading: %e\n", file, errno);
+	  verbose("Failed to open `%z' for reading: %e.\n", file, errno);
 	  if (!self->config->host_acls)
 	    {
 	      struct stat sbuf;
@@ -1128,7 +1128,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self,
 	    }
 	}
       else
-	werror("Failed to open `%z' for reading: %e\n",
+	werror("Failed to open `%z' for reading: %e.\n",
 	       file, errno);
       return;
     }
@@ -1139,7 +1139,7 @@ read_host_acls(struct lsh_transport_lookup_verifier *self,
   
   if (!contents)
     {
-      werror("Failed to read host-acls file `%z': %e\n",
+      werror("Failed to read host-acls file `%z': %e.\n",
 	     file, errno);
       close(fd);
       return;
@@ -1277,7 +1277,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    self->capture_fd = open(host_db_update,
 				    O_WRONLY | O_APPEND | O_CREAT, 0600);
 	    if (self->capture_fd < 0)
-	      werror("Opening `%z' for writing failed: %e\n",
+	      werror("Opening `%z' for writing failed: %e.\n",
 		     host_db_update, errno);
 	  }
 	lsh_string_free(host_acls);

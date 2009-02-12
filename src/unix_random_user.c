@@ -78,13 +78,13 @@ random_init_user(const char *home)
 	      int pid;
 	      pid = fork();
 	      if (pid < 0)
-		werror("fork failed: %e\n", errno);
+		werror("fork failed: %e.\n", errno);
 	      else if (pid)
 		{
 		  /* Parent */
 		  int status;
 		  if (waitpid(pid, &status, 0) == -1)
-		    werror("waitpid failed: %e\n", errno);
+		    werror("waitpid failed: %e.\n", errno);
 		  else if (WIFSIGNALED(status))
 		    werror("lsh-make-seed terminated by signal %z\n",
 			   STRSIGNAL(WTERMSIG(status)));
@@ -97,7 +97,7 @@ random_init_user(const char *home)
 		  /* Child process */
 		  GET_FILE_ENV(program, LSH_MAKE_SEED);
 		  execl(program, program, NULL);
-		  werror("exec of %z failed: %e\n");
+		  werror("exec of %z failed: %e.\n");
 		  _exit(EXIT_FAILURE);
 		}
 	    }

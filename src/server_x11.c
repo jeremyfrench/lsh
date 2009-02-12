@@ -100,13 +100,13 @@ do_kill_x11_listen_port(struct resource *s)
       self->dir = -1;
 
       if (unlink(lsh_get_cstring(self->name)) < 0)
-	werror("Failed to delete x11 socket %S%e\n",
+	werror("Failed to delete x11 socket %S: %e.\n",
 	       self->name, errno);
 
       lsh_popd(old_cd, X11_SOCKET_DIR);
 
       if (unlink(lsh_get_cstring(self->xauthority)) < 0)
-	werror("Failed to delete xauthority file %S%e\n",
+	werror("Failed to delete xauthority file %S: %e.\n",
 	       self->xauthority, errno);
 	
     }
@@ -189,7 +189,7 @@ open_x11_socket(struct ssh_connection *connection,
   struct lsh_string *name = NULL;
 
   if (mkdir(X11_SOCKET_DIR, 01777) < 0 && errno != EEXIST)
-    werror("Failed to create `%z' %e\n", X11_SOCKET_DIR, errno);
+    werror("Failed to create `%z': %e.\n", X11_SOCKET_DIR, errno);
 
   /* We have to change the umask, as that's the only way to control
    * the permissions that bind uses. */
@@ -199,7 +199,7 @@ open_x11_socket(struct ssh_connection *connection,
   old_cd = lsh_pushd(X11_SOCKET_DIR, &dir, 0, 0);
   if (old_cd < 0)
     {
-      werror("Failed to cd to `%z' %e\n", X11_SOCKET_DIR, errno);
+      werror("Failed to cd to `%z': %e.\n", X11_SOCKET_DIR, errno);
 
       umask(old_umask);
       return NULL;
@@ -281,7 +281,7 @@ create_xauth(struct x11_listen_port *port, const char *hostname,
   fd = open(file, O_WRONLY | O_CREAT | O_EXCL, 0600);
   if (fd < 0)
     {
-      werror("Opening xauth file %z failed %e\n", file, errno);
+      werror("Opening xauth file %z failed: %e.\n", file, errno);
     fail:
       XauUnlockAuth(file);
       return 0;
@@ -321,7 +321,7 @@ create_xauth(struct x11_listen_port *port, const char *hostname,
   fd = open(file, O_WRONLY | O_CREAT | O_EXCL, 0600);
   if (fd < 0)
     {
-      werror("Opening xauth file %z failed%e\n", file, errno);
+      werror("Opening xauth file %z failed: %e.\n", file, errno);
       return 0;
     }
 

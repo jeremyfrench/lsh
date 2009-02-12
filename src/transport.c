@@ -400,7 +400,7 @@ oop_read_ssh(oop_source *source UNUSED,
 	  return OOP_CONTINUE;
 
 	case SSH_READ_IO_ERROR:
-	  werror("Read error: %e\n", error);
+	  werror("Read error: %e.\n", error);
 	  transport_close(connection, 0);
 	  break;
 
@@ -430,7 +430,7 @@ oop_read_ssh(oop_source *source UNUSED,
       switch (status)
 	{
 	case SSH_READ_IO_ERROR:
-	  werror("Read error: %e\n", error);
+	  werror("Read error: %e.\n", error);
 	  transport_close(connection, 0);
 	  break;
 
@@ -504,7 +504,7 @@ oop_timer_retry(oop_source *oop UNUSED,
       switch (status)
 	{
 	case SSH_READ_IO_ERROR:
-	  werror("Read error: %e\n", error);
+	  werror("Read error: %e.\n", error);
 	  transport_close(connection, 0);
 	  break;
 
@@ -606,7 +606,7 @@ oop_write_ssh(oop_source *source UNUSED,
     case TRANSPORT_WRITE_IO_ERROR:
       if (errno != EWOULDBLOCK)
 	{
-	  werror("Write failed: %e\n", errno);
+	  werror("Write failed: %e.\n", errno);
 	  transport_close(connection, 0);
 	}
       break;
@@ -694,7 +694,7 @@ transport_send_packet(struct transport_connection *connection,
       transport_close(connection, 0);
       break;
     case TRANSPORT_WRITE_IO_ERROR:
-      werror("Write failed: %e\n", errno);
+      werror("Write failed: %e.\n", errno);
       transport_close(connection, 0);
       break;
     case TRANSPORT_WRITE_PENDING:
@@ -819,7 +819,7 @@ transport_handshake(struct transport_connection *connection,
 
   if (status < 0)
     {
-      werror("Writing version string failed: %e\n", errno);
+      werror("Writing version string failed: %e.\n", errno);
       transport_close(connection, 0);
     }
 

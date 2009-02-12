@@ -271,7 +271,7 @@ io_run(void)
   /* We need liboop-0.8, OOP_ERROR is not defined in liboop-0.7. */
 
   if (res == OOP_ERROR)
-    werror("oop_sys_run %e\n", errno);
+    werror("oop_sys_run: %e.\n", errno);
 
   trace("io_run: Cleaning up\n");
 
@@ -498,7 +498,7 @@ oop_io_accept(oop_source *source UNUSED,
 
   s = accept(fd, (struct sockaddr *) &peer, &peer_length);
   if (s < 0)
-    werror("accept failed, fd = %i: %e\n", fd, errno);
+    werror("accept failed, fd = %i: %e.\n", fd, errno);
 
   else
     self->accept(self, s, peer_length, (struct sockaddr *) &peer);
@@ -589,7 +589,7 @@ io_readable_p(int fd)
   int nbytes = 0;
   if (ioctl(fd, FIONREAD, &nbytes) < 0)
     {
-      debug("ioctl FIONREAD failed: %e\n", errno);
+      debug("ioctl FIONREAD failed: %e.\n", errno);
       return 0;
     }
   return nbytes != 0;
@@ -867,9 +867,9 @@ handle_nonblock_error(const char *msg)
    * and where it occurs.
    */
   if (errno == ENODEV || errno == ENOTTY)
-    werror("%z %e\n", msg, errno);
+    werror("%z: %e.\n", msg, errno);
   else
-    fatal("%z %e\n", msg, errno);
+    fatal("%z: %e.\n", msg, errno);
 }
 
 void
@@ -878,7 +878,7 @@ io_set_nonblocking(int fd)
   int old = fcntl(fd, F_GETFL);
 
   if (old < 0)
-    fatal("io_set_nonblocking: fcntl(F_GETFL) failed: %e\n", errno);
+    fatal("io_set_nonblocking: fcntl(F_GETFL) failed: %e.\n", errno);
   
   if (fcntl(fd, F_SETFL, old | O_NONBLOCK) < 0)
     handle_nonblock_error("io_set_nonblocking: fcntl(F_SETFL) failed");
@@ -893,10 +893,10 @@ io_set_close_on_exec(int fd)
   int old = fcntl(fd, F_GETFD);
 
   if (old < 0)
-    fatal("io_set_close_on_exec: fcntl(F_GETFD) failed %e\n", errno);
+    fatal("io_set_close_on_exec: fcntl(F_GETFD) failed: %e.\n", errno);
   
   if (fcntl(fd, F_SETFD, old | 1) < 0)
-    fatal("Can't set close-on-exec flag for fd %i %e\n", fd, errno);
+    fatal("Can't set close-on-exec flag for fd %i: %e.\n", fd, errno);
 }
 
 
@@ -926,7 +926,7 @@ lsh_popd(int old_cd, const char *directory)
 {
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
-      fatal("io.c: Failed to cd back from %z %e\n",
+      fatal("io.c: Failed to cd back from %z: %e.\n",
 	    directory, errno);
       
   close(old_cd);
@@ -952,7 +952,7 @@ lsh_pushd_fd(int dir)
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
       {
-	werror("io.c: fchdir(`.') failed %e\n", errno);
+	werror("io.c: fchdir(`.') failed: %e.\n", errno);
 	close(old_cd);
 	return -1;
       }
@@ -991,8 +991,8 @@ lsh_pushd(const char *directory,
       if ( (mkdir(directory, 0700) < 0)
 	   && (errno != EEXIST) )
 	{
-	  werror("io.c: Creating directory %z failed "
-		 "%e\n", directory, errno);
+	  werror("io.c: Creating directory %z failed: %e.\n",
+		 directory, errno);
 	}
     }
 
@@ -1004,8 +1004,8 @@ lsh_pushd(const char *directory,
   
   if (fstat(fd, &sbuf) < 0)
     {
-      werror("io.c: Failed to stat `%z'.\n"
-	     "  %e\n", directory, errno);
+      werror("io.c: Failed to stat `%z': %e.\n",
+	     directory, errno);
       close(fd);
       return -1;
     }
@@ -1053,7 +1053,7 @@ lsh_pushd(const char *directory,
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
       {
-	werror("io.c: fchdir(\".\") failed %e\n", errno);
+	werror("io.c: fchdir(\".\") failed: %e.\n", errno);
 	close(fd);
 	close(old_cd);
 	return -1;
@@ -1091,7 +1091,7 @@ io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length)
     return -1;
 
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes)) < 0)
-    werror("setsockopt failed: %e\n", errno);
+    werror("setsockopt failed: %e.\n", errno);
 
   if (bind(fd, addr, addr_length) < 0)
     {
@@ -1144,7 +1144,7 @@ io_bind_local(const struct local_info *info)
   if ( (unlink(cname) < 0)
        && (errno != ENOENT))
     {
-      werror("io.c: unlink '%S'/'%S' failed %e\n",
+      werror("io.c: unlink '%S'/'%S' failed: %e.\n",
 	     info->directory, info->name, errno);
       lsh_popd(old_cd, cdir);
       return -1;
@@ -1233,12 +1233,12 @@ lsh_make_pipe(int *fds)
 
   if (SHUTDOWN_UNIX(fds[0], SHUT_WR) < 0)
     {
-      werror("shutdown(%i, SHUT_WR) failed %e\n", fds[0], errno);
+      werror("shutdown(%i, SHUT_WR) failed: %e.\n", fds[0], errno);
       goto fail;
     }
   if (SHUTDOWN_UNIX(fds[1], SHUT_RD) < 0)
     {
-      werror("shutdown(%i, SHUT_RD) failed %e\n", fds[0], errno);
+      werror("shutdown(%i, SHUT_RD) failed: %e.\n", fds[0], errno);
     fail:
       {
 	int saved_errno = errno;
@@ -1283,12 +1283,12 @@ lsh_popen_read(const char *program, const char **argv, int in,
       /* Child */
       if (dup2(in, STDIN_FILENO) < 0)
 	{
-	  werror("lsh_popen: dup2 for stdin failed %e.\n", errno);
+	  werror("lsh_popen: dup2 for stdin failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
       if (dup2(out[1], STDOUT_FILENO) < 0)
 	{
-	  werror("lsh_popen: dup2 for stdout failed %e.\n", errno);
+	  werror("lsh_popen: dup2 for stdout failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
 
@@ -1299,7 +1299,7 @@ lsh_popen_read(const char *program, const char **argv, int in,
       /* The execv prototype uses const in the wrong way */
       execv(program, (char **) argv);
 
-      werror("lsh_popen_read: execv `%z' failed %e.\n", program, errno);
+      werror("lsh_popen_read: execv `%z' failed: %e.\n", program, errno);
 
       _exit(EXIT_FAILURE);
     }
@@ -1316,7 +1316,7 @@ lsh_popen_read(const char *program, const char **argv, int in,
 
       if (waitpid(pid, &status, 0) < 0)
 	{
-	  werror("lsh_popen_read: waitpid failed: %e\n", errno);
+	  werror("lsh_popen_read: waitpid failed: %e.\n", errno);
 	  lsh_string_free(s);
 	  return NULL;
 	}
@@ -1369,12 +1369,12 @@ lsh_popen_write(const char *program, const char **argv, int out,
       /* Child */
       if (dup2(fds[0], STDIN_FILENO) < 0)
 	{
-	  werror("lsh_popen: dup2 for stdin failed %e.\n", errno);
+	  werror("lsh_popen: dup2 for stdin failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
       if (dup2(out, STDOUT_FILENO) < 0)
 	{
-	  werror("lsh_popen: dup2 for stdout failed %e.\n", errno);
+	  werror("lsh_popen: dup2 for stdout failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
 
@@ -1385,7 +1385,7 @@ lsh_popen_write(const char *program, const char **argv, int out,
       /* The execv prototype uses const in the wrong way */
       execv(program, (char **) argv);
 
-      werror("lsh_popen_write: execv `%z' failed %e.\n", program, errno);
+      werror("lsh_popen_write: execv `%z' failed: %e.\n", program, errno);
 
       _exit(EXIT_FAILURE);
     }
@@ -1402,7 +1402,7 @@ lsh_popen_write(const char *program, const char **argv, int out,
 
       if (waitpid(pid, &status, 0) < 0)
 	{
-	  werror("lsh_popen_write: waitpid failed: %e\n", errno);
+	  werror("lsh_popen_write: waitpid failed: %e.\n", errno);
 	  return 0;
 	}
 

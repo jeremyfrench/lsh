@@ -103,7 +103,7 @@ make_resolver(void)
   
   if ( (res = adns_init(&self->adns, flags, NULL)) )
     {
-      werror("adns_init failed %e\n", res);
+      werror("adns_init failed: %e.\n", res);
       KILL(self);
       return NULL;
     }

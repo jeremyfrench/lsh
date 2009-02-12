@@ -105,7 +105,7 @@ read_packet(uint32_t *seqno)
 	    die("read_packet: End of file after %i header octets.\n",
 		done);
 	  else
-	    die("read_packet: read failed after %i header octets: %e\n",
+	    die("read_packet: read failed after %i header octets: %e.\n",
 		   done, errno);
 	}
       done += res;
@@ -131,7 +131,7 @@ read_packet(uint32_t *seqno)
 	    die("read_packet: End of file after %i data octets.\n",
 		done);
 	  else
-	    die("read_packet: read failed after %i data octets: %e\n",
+	    die("read_packet: read failed after %i data octets: %e.\n",
 		done, errno);
 	}
       done += res;
@@ -146,7 +146,7 @@ write_packet(struct lsh_string *packet)
   packet = ssh_format("%i%fS", 0, packet);
 
   if (!write_raw(STDOUT_FILENO, STRING_LD(packet)))
-    die("write_packet: write failed: %e\n", errno);
+    die("write_packet: write failed: %e.\n", errno);
 
   lsh_string_free(packet);
 }
@@ -588,7 +588,7 @@ start_service(struct lshd_user *user, char **argv)
     {
       if (initgroups(cname, user->gid) < 0)
 	{
-	  werror("start_service: initgroups failed: %e\n", errno);
+	  werror("start_service: initgroups failed: %e.\n", errno);
 	  service_error("Failed to start service process");
 	}
       if (setgid(user->gid) < 0)
@@ -603,7 +603,7 @@ start_service(struct lshd_user *user, char **argv)
 
       if (setuid(user->uid) < 0)
 	{
-	  werror("start_service: setuid failed: %e", errno);
+	  werror("start_service: setuid failed: %e.\n", errno);
 	  service_error("Failed to start service process");
 	}
     }
@@ -614,12 +614,12 @@ start_service(struct lshd_user *user, char **argv)
 
   if (chdir(user->home) < 0)
     {
-      werror("chdir to home directory `%z' failed %e\n", user->home, errno);
+      werror("chdir to home directory `%z' failed: %e.\n", user->home, errno);
 
     cd_root:
       if (chdir("/") < 0)
 	{
-	  werror("chdir to `/' failed %e.\n", errno);
+	  werror("chdir to `/' failed: %e.\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
     }
@@ -638,7 +638,7 @@ start_service(struct lshd_user *user, char **argv)
      to the user's home directory. */
   execve(argv[0], (char **) argv, (char **) env);
 
-  werror("start_service: exec failed: %e.", errno);
+  werror("start_service: exec failed: %e.\n", errno);
 }
 
 

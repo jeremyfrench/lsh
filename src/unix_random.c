@@ -76,13 +76,13 @@ read_seed_file(int fd)
   
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      werror("Seeking to beginning of seed file failed!? %e\n", errno);
+      werror("Seeking to beginning of seed file failed: %e.\n", errno);
       return NULL;
     }
 
   seed = io_read_file_raw(fd, YARROW256_SEED_FILE_SIZE + 1);
   if (!seed)
-    werror("Couldn't read seed file %e\n", errno);
+    werror("Couldn't read seed file: %e.\n", errno);
   return seed;
 }
 
@@ -154,10 +154,10 @@ trivia_source(void)
   unsigned entropy = 0;
 
   if (gettimeofday(&event.now, NULL) < 0)
-    fatal("gettimeofday failed %e\n", errno);
+    fatal("gettimeofday failed: %e.\n", errno);
 #if HAVE_GETRUSAGE
   if (getrusage(RUSAGE_SELF, &event.rusage) < 0)
-    fatal("getrusage failed %e\n", errno);
+    fatal("getrusage failed: %e.\n", errno);
 #endif
 
   event.count = trivia_time_count++;
@@ -204,7 +204,7 @@ device_source(void)
 
 	  if (res < 0)
 	    {
-	      werror("Failed to read /dev/urandom %e\n", errno);
+	      werror("Failed to read /dev/urandom: %e.\n", errno);
 	      return 0;
 	    }
 	  else if (res == 0)

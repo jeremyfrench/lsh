@@ -82,7 +82,7 @@ do_kill_process(struct resource *r)
 
       if (kill(self->pid, self->signal) < 0)
 	{
-	  werror("do_kill_process: kill failed %e\n", errno);
+	  werror("do_kill_process: kill failed: %e.\n", errno);
 	}
     }
 }
@@ -211,7 +211,7 @@ static void
 safe_close(int fd)
 {
   if (fd != -1 && close(fd) < 0)
-    werror("close failed %e\n", errno);
+    werror("close failed: %e.\n", errno);
 }
 
 static const char *
@@ -305,7 +305,7 @@ exec_shell(struct spawn_info *info)
   trace("exec_shell: before exec\n");
   execve(shell, (char **) info->argv, (char**) envp);
 
-  werror("exec_shell: exec of `%z' failed %e\n", shell, errno);
+  werror("exec_shell: exec of `%z' failed: %e.\n", shell, errno);
   return 0;  
 }
 
@@ -385,8 +385,7 @@ spawn_child(struct spawn_info *info, int sync,
   /* We want to be a process group leader */
   if (setsid() < 0)
     {
-      werror("setsid failed, already process group leader?\n"
-	     "   %e\n", errno);
+      werror("setsid failed, already process group leader?: %e.\n", errno);
       _exit(EXIT_FAILURE);
     }
       
@@ -493,7 +492,7 @@ spawn_shell(struct spawn_info *info, int helper_fd,
   child = fork();
   if (child < 0)
     {
-      werror("spawn_shell: fork failed %e\n", errno);
+      werror("spawn_shell: fork failed: %e.\n", errno);
       safe_close(sync[0]); safe_close(sync[1]);
 
       spawn_error(info, helper_fd, helper_ref);

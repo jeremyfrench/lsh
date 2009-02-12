@@ -148,7 +148,7 @@ write_packet(struct lshd_connection *self, struct lsh_string *packet)
 
   if (!blocking_writev(STDOUT_FILENO, iv, 2))
     {
-      werror("write_packet: Write failed: %e\n", errno);
+      werror("write_packet: Write failed: %e.\n", errno);
       KILL_RESOURCE(&self->super.super);
     }
 
@@ -193,7 +193,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
       switch (status)
 	{
 	case SSH_READ_IO_ERROR:
-	  werror("Read failed: %e\n", errno);
+	  werror("Read failed: %e.\n", errno);
 	  exit(EXIT_FAILURE);
 	  break;
 	case SSH_READ_PROTOCOL_ERROR:

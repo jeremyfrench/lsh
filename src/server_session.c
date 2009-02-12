@@ -476,13 +476,13 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
       in[0] = -1;
       if ((in[1] = dup(pty->master)) < 0)
         {
-          werror("make_pty: duping master pty for stdin failed %e.\n", errno);
+          werror("make_pty: duping master pty for stdin failed: %e.\n", errno);
 
           return 0;
         }      
       if ((out[0] = dup(pty->master)) < 0)
         {
-          werror("make_pty: duping master pty for stdout failed %e.\n", errno);
+          werror("make_pty: duping master pty for stdout failed: %e.\n", errno);
 
           return 0;
         }
@@ -877,7 +877,7 @@ DEFINE_CHANNEL_REQUEST(window_change_request_handler)
       /* On success, rely on the terminal driver sending SIGWINCH */
       if (session->pty && session->in.fd >= 0
 	  && ioctl(session->in.fd, TIOCSWINSZ, &dims) == -1)
-	werror("window_change_request_handler: ioctl TIOCSWINSZ failed: %e\n",
+	werror("window_change_request_handler: ioctl TIOCSWINSZ failed: %e.\n",
 	       errno);
     }
   else

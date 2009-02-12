@@ -64,7 +64,7 @@ do_kill_pty_info(struct resource *r)
     {
       pty->super.alive = 0;
       if ( (pty->master >= 0) && (close(pty->master) < 0) )
-	werror("do_kill_pty_info: closing master failed %e\n", errno);
+	werror("do_kill_pty_info: closing master failed: %e.\n", errno);
     }
 }
 
@@ -86,13 +86,13 @@ pty_open_master(struct pty_info *pty)
 #if HAVE_UNIX98_PTYS
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
-      werror("pty_open_master: Opening /dev/ptmx failed %e\n", errno);
+      werror("pty_open_master: Opening /dev/ptmx failed: %e.\n", errno);
       return 0;
     }
 
   if (grantpt(pty->master) < 0)
     {
-      werror ("grantpt failed: %e\n", errno);
+      werror ("grantpt failed: %e.\n", errno);
       
     error:
       close (pty->master); pty->master = -1;
@@ -100,7 +100,7 @@ pty_open_master(struct pty_info *pty)
     }
   if (unlockpt(pty->master) < 0)
     {
-      werror ("unlockpt failed: %e\n", errno);
+      werror ("unlockpt failed: %e.\n", errno);
       goto error;
     }
 
@@ -137,8 +137,7 @@ pty_open_slave(struct pty_info *pty)
 
   if (fd < 0)
     {
-      werror("pty_open_slave: open(\"%S\") failed,\n"
-	     "   %e\n",
+      werror("pty_open_slave: open(\"%S\") failed: %e.\n",
 	     pty->tty_name, errno);
       return -1;
     }
@@ -153,16 +152,14 @@ pty_open_slave(struct pty_info *pty)
     {
       if (ioctl(fd, I_PUSH, "ptem") < 0)
 	{
-	  werror("pty_open_slave: Failed to push streams module `ptem'.\n"
-		 "   %e\n", errno);
+	  werror("pty_open_slave: Failed to push streams module `ptem': %e.\n", errno);
 	
 	  close(fd);
 	  return -1;
 	}
       if (ioctl(fd, I_PUSH, "ldterm") < 0)
 	{
-	  werror("pty_open_slave: Failed to push streams module `ldterm'.\n"
-		 "   %e\n", errno);
+	  werror("pty_open_slave: Failed to push streams module `ldterm': %e.\n", errno);
 	
 	  close(fd);
 	  return -1;
@@ -175,8 +172,7 @@ pty_open_slave(struct pty_info *pty)
 #ifdef TIOCSCTTY
   if (ioctl(fd, TIOCSCTTY, NULL) < 0)
     {
-      werror("pty_open_slave: Failed to set the controlling tty.\n"
-	     "   %e\n", errno);
+      werror("pty_open_slave: Failed to set the controlling tty: %e.\n", errno);
       close(fd);
       return -1;
     }
@@ -185,8 +181,7 @@ pty_open_slave(struct pty_info *pty)
   /* Set terminal modes */
   if (!tcgetattr(fd, &ios) == -1)
     {
-      werror("pty_open_slave: Failed to get tty attributes.\n"
-	     "   %e\n", errno);
+      werror("pty_open_slave: Failed to get tty attributes: %e.\n", errno);
       close(fd);
       return -1;
     }
@@ -200,16 +195,14 @@ pty_open_slave(struct pty_info *pty)
 
   if (!tcsetattr(fd, TCSADRAIN, &ios) == -1)
     {
-      werror("pty_open_slave: Failed to set tty attributes.\n"
-	     "   %e\n", errno);
+      werror("pty_open_slave: Failed to set tty attributes: %e.\n", errno);
       close(fd);
       return -1;
     }
 
   if (ioctl(fd, TIOCSWINSZ, &pty->dims) == -1)  
     {
-      werror("pty_open_slave: Failed to set tty window size.\n"
-	     "   %e\n", errno);
+      werror("pty_open_slave: Failed to set tty window size: %e.\n", errno);
       close(fd);
       return -1;
     }

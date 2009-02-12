@@ -486,7 +486,7 @@ open_file(const struct lsh_string *file)
                 0600);
 
   if (fd < 0)
-    werror("Failed to open `%S'for writing %e\n", file, errno);
+    werror("Failed to open `%S'for writing: %e.\n", file, errno);
 
   return fd;
 }
@@ -604,7 +604,7 @@ main(int argc, char **argv)
       private = io_read_file_raw(STDIN_FILENO, 2000);
       if (!private)
 	{
-	  werror("Failed to read key from stdin %e\n", errno);
+	  werror("Failed to read key from stdin: %e.\n", errno);
 	  return EXIT_FAILURE;
 	}
     }
@@ -643,7 +643,7 @@ main(int argc, char **argv)
 
       if (!write_raw(public_fd, STRING_LD(public)))
 	{
-	  werror("Writing public key failed: %e\n", errno);
+	  werror("Writing public key failed: %e.\n", errno);
 	  return EXIT_FAILURE;
 	}
       lsh_string_free(public);
@@ -656,7 +656,7 @@ main(int argc, char **argv)
 
   if (!write_raw(private_fd, STRING_LD(private)))
     {
-      werror("Writing private key failed: %e\n", errno);
+      werror("Writing private key failed: %e.\n", errno);
       return EXIT_FAILURE;
     }
 

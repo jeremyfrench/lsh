@@ -94,7 +94,7 @@ seed_file_check_permissions(int fd, const struct lsh_string *filename)
   struct stat sbuf;
   if (fstat(fd, &sbuf) < 0)
     {
-      werror("Failed to stat file `%S' %e\n",
+      werror("Failed to stat file `%S': %e.\n",
 	     filename, errno);
 
       return 0;
@@ -123,14 +123,14 @@ seed_file_write(int fd, struct yarrow256_ctx *ctx)
   
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      werror("Seeking to beginning of seed file failed!? %e\n", errno);
+      werror("Seeking to beginning of seed file failed: %e.\n", errno);
       return 0;
     }
 
   yarrow256_random (ctx, sizeof(buffer), buffer);
   if (!write_raw(fd, sizeof(buffer), buffer))
     {
-      werror("Overwriting seed file failed: %e\n", errno);
+      werror("Overwriting seed file failed: %e.\n", errno);
       return 0;
     }
 

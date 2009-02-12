@@ -121,7 +121,7 @@ unix_interact_init(int prepare_raw_mode)
 	{
 	  if (GET_ATTR(&original_mode) == -1)
 	    {
-	      werror("interact_init: tty_getattr failed %e\n", errno);
+	      werror("interact_init: tty_getattr failed: %e.\n", errno);
 	      return 0;
 	    }
 	  else
@@ -133,7 +133,7 @@ unix_interact_init(int prepare_raw_mode)
 
 	      if (sigaction(SIGTSTP, &stop, NULL) < 0)
 		{
-		  werror("interact_init: Failed to install SIGTSTP handler %e\n", errno);
+		  werror("interact_init: Failed to install SIGTSTP handler: %e.\n", errno);
 		  return 0;
 		}
 	      raw_mode = original_mode;
@@ -198,7 +198,7 @@ read_line(uint32_t size, uint8_t *buffer)
 	    break;
 	  default:
 	    /* I/O error */
-	    werror("unix_interact.c: read_line, %e\n", errno);
+	    werror("unix_interact.c: read_line: %e.\n", errno);
 	    return 0;
 	  }
       else
@@ -226,7 +226,7 @@ read_line(uint32_t size, uint8_t *buffer)
 	    break;
 	  default:
 	    /* I/O error */
-	    werror("tty_read_line %e\n", errno);
+	    werror("tty_read_line: %e.\n", errno);
 	    return 0;
 	  }
       else

@@ -188,7 +188,7 @@ main(int argc, char **argv)
 
   if (!input)
     {
-      werror("Failed to read key %e\n", errno);
+      werror("Failed to read key: %e.\n", errno);
       return EXIT_FAILURE;
     }
 
@@ -207,7 +207,7 @@ main(int argc, char **argv)
     
   if (!write_raw(options->out_fd, STRING_LD(output)))
     {
-      werror("Writing decrypted key failed: %e\n", errno);
+      werror("Writing decrypted key failed: %e.\n", errno);
       return EXIT_FAILURE;
     }
   lsh_string_free(output);

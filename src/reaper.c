@@ -127,7 +127,7 @@ do_reaper_callback(struct lsh_callback *s)
 	  /* No more child processes */
 	  return;
 	default:
-	  fatal("reaper.c: waitpid failed %e\n", errno);
+	  fatal("reaper.c: waitpid failed: %e.\n", errno);
 	}
     }
 }

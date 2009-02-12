@@ -189,7 +189,7 @@ oop_write_gateway(oop_source *source UNUSED, int fd, oop_event event, void *stat
     }
   else if (errno != EWOULDBLOCK)
     {
-      werror("oop_write_gateway: Write failed: %e\n", errno);
+      werror("oop_write_gateway: Write failed: %e.\n", errno);
       KILL_RESOURCE(&self->super.super);
     }
   return OOP_CONTINUE;
@@ -258,7 +258,7 @@ gateway_write_packet(struct gateway_connection *connection,
 
   if (error)
     {
-      werror("gateway_write_packet: Write failed: %e\n", errno);
+      werror("gateway_write_packet: Write failed: %e.\n", errno);
       KILL_RESOURCE(&connection->super.super);
     }
 }
@@ -324,7 +324,7 @@ oop_read_gateway(oop_source *source UNUSED, int fd, oop_event event, void *state
       switch (status)
 	{
 	case SSH_READ_IO_ERROR:
-	  werror("Read from gateway failed: %e\n", errno);
+	  werror("Read from gateway failed: %e.\n", errno);
 	  KILL_RESOURCE(&self->super.super);
 	  break;
 	case SSH_READ_PROTOCOL_ERROR:
@@ -450,7 +450,7 @@ do_gateway_port_accept(struct io_listen_port *s,
   int error = gateway_write_data (gateway, sizeof(hello), hello);
   if (error)
     {
-      werror ("Sending gateway hello message failed: %e\n", error);
+      werror ("Sending gateway hello message failed: %e.\n", error);
       KILL_RESOURCE (&gateway->super.super);
       return;
     }
@@ -472,7 +472,7 @@ make_gateway_port(const struct local_info *local,
   fd = io_bind_local(local);
   if (fd < 0)
     {
-      werror("Binding local gateway socket failed: %e\n", errno);
+      werror("Binding local gateway socket failed: %e.\n", errno);
       return NULL;
     }
   else

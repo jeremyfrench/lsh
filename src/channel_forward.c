@@ -61,7 +61,7 @@ void
 channel_forward_shutdown(struct channel_forward *self)
 {
   if (shutdown (self->write.fd, SHUT_WR) < 0)
-    werror("close_fd_write, shutdown failed, %e\n", errno);
+    werror("close_fd_write, shutdown failed: %e.\n", errno);
 
   assert(self->super.sinks);
   self->super.sinks--;

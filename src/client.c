@@ -138,7 +138,7 @@ oop_write_service(oop_source *source UNUSED, int fd, oop_event event, void *stat
     }
   else if (errno != EWOULDBLOCK)
     {
-      werror("oop_write_service: Write failed: %e\n", errno);
+      werror("oop_write_service: Write failed: %e.\n", errno);
       exit(EXIT_FAILURE);
     }
   return OOP_CONTINUE;
@@ -204,7 +204,7 @@ write_packet(struct client_connection *connection,
     }
   else
     {
-      werror("write_packet: Write failed: %e\n", errno);
+      werror("write_packet: Write failed: %e.\n", errno);
       exit(EXIT_FAILURE);
     }
 }
@@ -253,7 +253,7 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
       switch (status)
 	{
 	case SSH_READ_IO_ERROR:
-	  werror("Read failed: %e\n", errno);
+	  werror("Read failed: %e.\n", errno);
 	  exit(EXIT_FAILURE);
 	  break;
 	case SSH_READ_PROTOCOL_ERROR:
@@ -604,7 +604,7 @@ DEFINE_ESCAPE(exit_callback, "Exit.")
 DEFINE_ESCAPE(suspend_callback, "Suspend.")
 {
   if (kill(getpid(), SIGTSTP) < 0)
-    werror("do_suspend: kill failed %e\n", errno);
+    werror("do_suspend: kill failed: %e.\n", errno);
 }
 
 DEFINE_ESCAPE(quiet_callback, "Toggle warning messages.")

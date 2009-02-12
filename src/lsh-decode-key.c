@@ -186,7 +186,7 @@ int main(int argc, char **argv)
                  O_WRONLY | O_CREAT, 0666);
       if (out < 0)
         {
-          werror("Failed to open file `%S' for writing %e\n",
+          werror("Failed to open file `%S' for writing: %e.\n",
                  options->file, errno);
           return EXIT_FAILURE;
         }
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
   input = io_read_file_raw(STDIN_FILENO, 3000);
   if (!input)
     {
-      werror("Failed to read stdin %e\n", errno);
+      werror("Failed to read stdin: %e.\n", errno);
       return EXIT_FAILURE;
     }
 
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
     
   if (!write_raw(out, STRING_LD(output)))
     {
-      werror("Write failed: %e\n", errno);
+      werror("Write failed: %e.\n", errno);
       return EXIT_FAILURE;
     }
   lsh_string_free(output);
