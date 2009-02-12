@@ -193,6 +193,7 @@ spawn_lshg () {
 spawn_xvfb () {
     Xvfb -nolisten tcp $TEST_DISPLAY &
     at_exit "kill $!"
+    sleep 3
     xauth generate $TEST_DISPLAY . 
 }
 
