@@ -1,3 +1,8 @@
+2009-02-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/werror.c (werror_vformat): Don't output any punctuation for
+	%e. Changed all callers to use it like "...: %e.\n".
+
 2009-02-11  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (pty_send_message): Clear the control area, to
