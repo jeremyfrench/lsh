@@ -1,5 +1,11 @@
 2009-02-12  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/x11-2-test: Use lshg, and also check that the
+	X-forwarding is removed properly.
+
+	* src/testsuite/functions.sh (test_result): Sleep 3 seconds before
+	trying xauth generate.
+
 	* src/werror.c (werror_vformat): Don't output any punctuation for
 	%e. Changed all callers to use it like "...: %e.\n".
 
