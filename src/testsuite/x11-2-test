@@ -1,6 +1,6 @@
 #! /bin/sh
 
-echo lshd X11, test 2
+echo lsh X11, test 2
 
 if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
@@ -10,8 +10,16 @@ fi
 
 need_xvfb
 
-spawn_lshd && spawn_xvfb \
-  && DISPLAY=$TEST_DISPLAY LSH_FLAGS="$LSH_FLAGS --x11" exec_lsh xmodmap > /dev/null \
+DISPLAY=$TEST_DISPLAY
+export DISPLAY
+
+# Passing variables to an invocation of a shell function seems
+# somewhat flaky, hence the sub-process.
+spawn_xvfb \
+  && spawn_lshd \
+  && spawn_lsh --start-gateway \
+  && (LSHG_FLAGS="$LSHG_FLAGS --x11"; exec_lshg xmodmap > /dev/null) \
+  && if exec_lshg xmodmap > /dev/null ; then false ; else true; fi \
   && test_success
 
 test_done
