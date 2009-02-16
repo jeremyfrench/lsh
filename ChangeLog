@@ -1,3 +1,11 @@
+2009-02-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/x11-5-test: Use $XMODMAP.
+
+	* src/testsuite/functions.sh (XAUTH, XMODMAP, XVFB): New
+	variables.
+	(need_xvfb, spawn_xvfb): Use $XVFB.
+
 2009-02-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-2-test: Use lshg, and also check that the
