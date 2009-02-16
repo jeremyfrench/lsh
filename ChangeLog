@@ -1,5 +1,14 @@
 2009-02-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/x11-2-test: Use lsh, not lshg, for this test. Also
+	export DISPLAY.
+
+	* src/testsuite/x11-1-test: export DISPLAY.
+	* src/testsuite/x11-5-test: Likewise.
+
+	* src/testsuite/functions.sh: Unset DISPLAY, don't export it (the
+	tests that need it should do that).
+
 	* src/testsuite/x11-5-test: Use $XMODMAP.
 
 	* src/testsuite/functions.sh (XAUTH, XMODMAP, XVFB): New
