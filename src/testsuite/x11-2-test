@@ -10,16 +10,17 @@ fi
 
 need_xvfb
 
-DISPLAY=$TEST_DISPLAY
-export DISPLAY
-
 # Passing variables to an invocation of a shell function seems
-# somewhat flaky, hence the sub-process.
+# somewhat flaky, so we use separate commands for setting all
+# variables. The sub-process prevents LSHG_FLAGS to leak to the next
+# command.
 spawn_xvfb \
   && spawn_lshd \
-  && spawn_lsh --start-gateway \
-  && (LSHG_FLAGS="$LSHG_FLAGS --x11"; exec_lshg xmodmap > /dev/null) \
-  && if exec_lshg xmodmap > /dev/null ; then false ; else true; fi \
+  && (DISPLAY=$TEST_DISPLAY;
+      export DISPLAY;
+      LSH_FLAGS="$LSH_FLAGS --x11";
+      exec_lsh "$XMODMAP" > /dev/null) \
+  && if exec_lsh "$XMODMAP" > /dev/null; then false ; else true; fi \
   && test_success
 
 test_done

@@ -10,13 +10,19 @@ fi
 
 need_xvfb
 
-# FIXME: The command DISPLAY= ... is run in a subshell, because
-# otherwise, LSHG_FLAGS leaks to the next command (GNU bash
-# 3.1.17(1)-release). I don't understand why.
+set -x
+
+# Passing variables to an invocation of a shell function seems
+# somewhat flaky, so we use separate commands for setting all
+# variables. The sub-process prevents LSHG_FLAGS to leak to the next
+# command.
 spawn_xvfb \
   && spawn_lshd \
   && spawn_lsh --start-gateway \
-  && ( DISPLAY=$TEST_DISPLAY LSHG_FLAGS="$LSHG_FLAGS --x11" exec_lshg $XMODMAP > /dev/null ) \
+  && (DISPLAY=$TEST_DISPLAY;
+      export DISPLAY;
+      LSHG_FLAGS="$LSHG_FLAGS --x11";
+       exec_lshg $XMODMAP > /dev/null ) \
   && if exec_lshg $XMODMAP > /dev/null ; then false ; else test_success; fi
 
 test_done

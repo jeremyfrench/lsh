@@ -13,7 +13,11 @@ check_x11_support
 # For this test, it doesn't matter at all if we have an X-server listening
 # FIXME: lshd should require the --x11-forward option
 LSH_FLAGS="$LSH_FLAGS --x11"
-DISPLAY=:47
-spawn_lshd && exec_lsh 'test -n "$DISPLAY"' && test_success
+
+spawn_lshd && \
+    (DISPLAY=:47
+    export DISPLAY
+    exec_lsh 'test -n "$DISPLAY"') \
+&& test_success
 
 test_done
