@@ -30,6 +30,10 @@ LSH_MAKE_SEED=/bin/false
 
 : ${LSHD_CONFIG_DIR:="$srcdir/config"}
 
+: ${XAUTH:="`PATH="$PATH:/usr/openwin/bin:/usr/X11R6/bin" type_p xauth`"}
+: ${XMODMAP:="`PATH="$PATH:/usr/openwin/bin:/usr/X11R6/bin" type_p xmodmap`"}
+: ${XVFB:="`PATH="$PATH:/usr/openwin/bin:/usr/X11R6/bin" type_p Xvfb`"}
+
 export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT
 export LSHD_CONNECTION LSHD_PTY_HELPER LSHD_USERAUTH
 export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
@@ -105,7 +109,7 @@ check_x11_support () {
 
 need_xvfb () {
     check_x11_support
-    type Xvfb >/dev/null 2>&1 || test_skip
+    [ -n "$XVFB" ] || test_skip
 }
 
 need_tcputils () {
@@ -191,7 +195,7 @@ spawn_lshg () {
 }
 
 spawn_xvfb () {
-    Xvfb -nolisten tcp $TEST_DISPLAY &
+    $XVFB -nolisten tcp $TEST_DISPLAY &
     at_exit "kill $!"
     sleep 3
     xauth generate $TEST_DISPLAY . 
