@@ -1,3 +1,13 @@
+2009-02-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/x11-4-test: Explicitly start /bin/sh at the remote
+	end. Avoid recursive use of here-documents. Use $XAUTH, $XMODMAP
+	and friends.
+
+	* src/client_x11.c (make_client_x11_display): Use KILL_RESOURCE on failure.
+	(do_client_channel_x11_receive): Send "access denied" message back
+	when a connection is refused.
+
 2009-02-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-2-test: Use lsh, not lshg, for this test. Also
