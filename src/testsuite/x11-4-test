@@ -13,23 +13,33 @@ need_xvfb
 # Note that xauth add replaces any existing data for a given display
 
 spawn_lshd && spawn_xvfb \
-  && ( DISPLAY=$TEST_DISPLAY stdin_lsh --x11 <<'LSHEOF'
-read display protocol cookie <<EOF
-`xauth list`
-EOF
-first=`echo $cookie | cut -c -30`
-last=`echo $cookie | cut -c 31-`
+  && (DISPLAY=$TEST_DISPLAY
+      export DISPLAY
+      # Need sh for the read builtin; e.g., tcsh won't do.
+      exec_lsh --x11 /bin/sh <<LSHEOF
+# echo DISPLAY = \$DISPLAY
+# echo XAUTHORITY = \$XAUTHORITY
+$XAUTH list
+$XAUTH list | (
+read display protocol cookie
 
-echo first = $first, last = $last 1>&2
+# echo display = \$display, protocol = \$protocol, cookie = \$cookie 1>&2
+first=\`echo \$cookie | cut -c -30\`
+last=\`echo \$cookie | cut -c 31-\`
 
-xmodmap > /dev/null || exit 1
+# echo first = \$first, last = \$last 1>&2
 
-xauth add "$display" "$protocol" "$first"
-xmodmap > /dev/null && exit 1
+$XMODMAP  > /dev/null || exit 1
 
-xauth add "$display" "$protocol" "$first`echo "$last" |tr 0-9a-fA-F 1-90b-faB-FA`"
-xmodmap > /dev/null && exit 1
+$XAUTH add "\$display" "\$protocol" "\$first"
+$XMODMAP && exit 1
+
+cookie="\$first\`echo "\$last" |tr 0123456789abcdefABCDEF 1234567890bcdefaBCDEFA\`"
+
+$XAUTH add "\$display" "\$protocol" "\$cookie"
+$XMODMAP && exit 1
 exit 0
+)
 LSHEOF
 ) && test_success
 
