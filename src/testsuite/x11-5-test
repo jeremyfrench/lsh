@@ -10,8 +10,6 @@ fi
 
 need_xvfb
 
-set -x
-
 # Passing variables to an invocation of a shell function seems
 # somewhat flaky, so we use separate commands for setting all
 # variables. The sub-process prevents LSHG_FLAGS to leak to the next
