@@ -1,6 +1,6 @@
 /* client_x11.c
  *
- * Client side of X11 forwaarding.
+ * Client side of X11 forwarding.
  *
  */
 
@@ -183,7 +183,8 @@ do_client_channel_x11_receive(struct ssh_channel *s,
     {
       /* Copy data to buffer */
       const uint8_t *buffer;
-	
+
+      werror("client_x11.c: length = %i\n", length);
       /* The small initial window size should ensure that all the
 	 data fits. */
       lsh_string_write(self->buffer, self->i, length, data);
@@ -313,6 +314,63 @@ do_client_channel_x11_receive(struct ssh_channel *s,
 	    else
 	      {
 		werror("client_x11: X11 connection denied; bad cookie.\n");
+#define X11_ACCESS_DENIED_REASON "Access denied.\n"
+#define X11_ACCESS_DENIED_REASON_WORDS (sizeof(X11_ACCESS_DENIED_REASON + 2)/3)
+#define X11_ACCESS_DENIED_LENGTH 8 + 4 * X11_ACCESS_DENIED_REASON_WORDS
+		
+		if (self->super.super.send_window_size >= X11_ACCESS_DENIED_LENGTH
+		    && self->super.super.send_max_packet >= X11_ACCESS_DENIED_LENGTH)
+		  {
+		    /* Report failure to X client. According to RFC 1013,
+
+		         Received by the client at connection setup:
+			   success: BOOL
+			   protocol-major-version: CARD16
+			   protocol-minor-version: CARD16
+			   length: CARD16
+		     
+			 Additional data received if authorization fails:
+			   reason: STRING8
+
+			 It seems that both the success boolean is
+			 padded to 16 bits, and the reason string is
+			 terminated by newline, with no additional
+			 length field. From strace, using
+			 little-endian byte-order:
+
+			   read(3, "\0\26\v\0\0\0\6\0"..., 8)      = 8
+			   read(3, "No protocol specified\n\27\10"..., 24) = 24
+			   write(2, "No protocol specified\n"..., 22No protocol specified
+
+			 Hence, use the following format:
+
+			 offset name contents
+			 0      success  0, 0
+			 2      major    11 (depending on byte-order)
+			 4      minor    0, 0
+			 6      length   4  (depending on byte-order)
+			 8      reason   "Access denied.\n\0" (16 bytes)
+			 24     end
+		    */
+
+		    uint8_t msg[X11_ACCESS_DENIED_LENGTH];
+		    memset(msg, 0, sizeof(msg));
+
+		    if (self->little_endian)
+		      {
+			LE_WRITE_UINT16(msg + 2, 11);
+			LE_WRITE_UINT16(msg + 4, 4);
+		      }
+		    else
+		      {
+			WRITE_UINT16(msg + 2, 11);
+			WRITE_UINT16(msg + 4, 4);
+		      }
+
+		    memcpy(msg + 8, X11_ACCESS_DENIED_REASON, sizeof(X11_ACCESS_DENIED_REASON) - 1);
+		    channel_transmit_data(&self->super.super, sizeof(msg), msg);
+		    channel_eof(&self->super.super);
+		  }
 	      fail:
 		channel_close(&self->super.super);
 		self->state = CLIENT_X11_CANT_HAPPEN;
@@ -677,6 +735,9 @@ do_client_x11_display_open(struct client_x11_handler *s,
       r = x11_connect(self, info);
       if (r)
 	remember_resource(info->connection->resources, r);
+      else
+	channel_open_deny(info,
+			  SSH_OPEN_CONNECT_FAILED, "Connection failed");	
     }
   else
     {
@@ -699,6 +760,8 @@ make_client_x11_display(const char *display, int single_connection)
   if (!parse_display(self, display))
     {
       werror("Can't parse X11 display: `%z'\n", display);
+
+      KILL_RESOURCE(&self->super.super);
       KILL(self);
       return NULL;
     }
