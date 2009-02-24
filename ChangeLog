@@ -1,5 +1,8 @@
 2009-02-24  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/server_pty.c (pty_open_slave): Work around Solaris problem
+	with bogus definition of TIOCSCTTY.
+
 	* src/lshd-pty-helper.c (die, werror, process_request): Improved
 	error messages.
 
