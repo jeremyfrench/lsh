@@ -1,3 +1,8 @@
+2009-02-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-pty-helper.c (die, werror, process_request): Improved
+	error messages.
+
 2009-02-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-4-test: Explicitly start /bin/sh at the remote
