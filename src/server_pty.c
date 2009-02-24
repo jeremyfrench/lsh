@@ -38,6 +38,16 @@
 # include <stropts.h>  /* isastream() */
 #endif
 
+/* Kludge... On Solaris, including termios.h brings in a compatibility
+   definition of TIOCSCTTY, which doesn't work. So check if it's
+   defined before the includes that bring in termios.h. */
+
+#ifdef TIOCSCTTY
+# define HAVE_TIOCSCTTY 1
+#else
+# define HAVE_TIOCSCTTY 0
+#endif
+
 #include "server_pty.h"
 
 #include "channel.h"
@@ -169,7 +179,7 @@ pty_open_slave(struct pty_info *pty)
 
   /* On BSD systems, use TIOCSCTTY. */
 
-#ifdef TIOCSCTTY
+#if HAVE_TIOCSCTTY
   if (ioctl(fd, TIOCSCTTY, NULL) < 0)
     {
       werror("pty_open_slave: Failed to set the controlling tty: %e.\n", errno);
