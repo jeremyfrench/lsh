@@ -93,6 +93,7 @@ static void
 die(const char *format, ...)
 {
   va_list args;
+  fprintf(stderr, "lshd-pty-helper: ");
   va_start(args, format);
   vfprintf(stderr, format, args);
   va_end(args);
@@ -111,6 +112,7 @@ static void
 werror(const char *format, ...)
 {
   va_list args;
+  fprintf(stderr, "lshd-pty-helper: ");
   va_start(args, format);
   vfprintf(stderr, format, args);
   va_end(args);
@@ -665,7 +667,8 @@ process_request(struct pty_state *state,
       break;
     }
   if (response->header.type)
-    werror ("Request failed: %s\n", STRERROR (response->header.type));
+    werror ("Request of type %d failed: %s\n",
+	    request->header.type, STRERROR (response->header.type));
 }
 
 int
