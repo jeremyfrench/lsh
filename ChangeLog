@@ -1,3 +1,7 @@
+2009-05-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* texinfo.tex: Upgrade to version 2009-03-22.17.
+
 2009-02-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_pty.c (pty_open_slave): Work around Solaris problem
