@@ -48,8 +48,7 @@ check:
 
 # Texinfo rules
 .texinfo.info:
-	cd $(srcdir) && $(MAKEINFO) --no-split --output $@T `basename "$<"` \
-	&& test -s $@T && mv -f $@T $@
+	cd $(srcdir) && $(MAKEINFO) --no-split --output $@ `basename "$<"`
 
 .texinfo.html:
 	cd $(srcdir) && $(MAKEINFO) --html --no-split \
