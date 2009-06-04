@@ -116,7 +116,6 @@ This manual explains how to use and hack @command{lsh}; it corresponds to
 * Invoking lshg::                
 * Invoking lshd::               
 * Files and environment variables::  
-* Terminology::                 
 * Concept Index::               
 
 @detailmenu
@@ -1575,7 +1574,7 @@ Example usage: @samp{--subsystems=sftp=/usr/sbin/sftp-server,foosystem=/usr/bin/
 
 @end table
 
-@node Files and environment variables, Terminology, Invoking lshd, Top
+@node Files and environment variables, Concept Index, Invoking lshd, Top
 @comment  node-name,  next,  previous,  up
 @chapter Files and environment variables
 
@@ -1707,12 +1706,7 @@ If you use the experimental support for @acronym{SRP} (@pxref{srp}),
 the server reads a user's @acronym{SRP} verifier from this file.
 @end table
 
-
-@node Terminology, Concept Index, Files and environment variables, Top
-@comment  node-name,  next,  previous,  up
-@chapter Terminology
-
-@node    Concept Index,  , Terminology, Top
+@node    Concept Index,  , Files and environment variables, Top
 @comment  node-name,  next,  previous,  up
 @unnumbered Concept Index
 
