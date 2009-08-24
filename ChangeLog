@@ -1,3 +1,12 @@
+2009-08-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* .bootstrap, Makefile.in, configure.ac: Reenable building of sftp.
+
+2009-05-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/Makefile.in (.texinfo.info): Don't use a temporary output file
+	$@T, trust makeinfo to not remove output file on errors.
+
 2009-05-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* texinfo.tex: Upgrade to version 2009-03-22.17.

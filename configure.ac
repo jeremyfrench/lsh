@@ -1141,8 +1141,7 @@ if test x$enable_ipv6 = xyes ; then
 fi
 
 # Unconditionally configure nettle; otherwise make dist won't work
-AC_CONFIG_SUBDIRS(argp nettle spki)
-# AC_CONFIG_SUBDIRS(src/sftp)
+AC_CONFIG_SUBDIRS(argp nettle spki sftp)
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then

@@ -11,9 +11,9 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 AUTOCONF = autoconf
 
 # The directories that make all should recurse into
-BUILD_SUBDIRS = @BUILD_SUBDIRS@ src doc
+BUILD_SUBDIRS = @BUILD_SUBDIRS@ src sftp doc
 
-SUBDIRS = argp nettle spki src doc contrib misc
+SUBDIRS = argp nettle spki src sftp doc contrib misc
 
 all check:
 	set -e; for d in $(BUILD_SUBDIRS); do \

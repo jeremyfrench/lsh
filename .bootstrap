@@ -26,16 +26,15 @@ relative_symlink() {
     )
 }
 
-# Missing: sftp
 relative_symlink misc/run-tests \
     argp/testsuite nettle/testsuite nettle/examples \
-    spki/testsuite src/testsuite
+    spki/testsuite sftp/testsuite src/testsuite
 
 relative_symlink aclocal.m4 \
-    argp nettle spki
+    argp nettle spki sftp
 
 relative_symlink misc/vsnprintf.c \
-    argp
+    argp sftp
     
 relative_symlink misc/getopt.c \
     nettle/examples nettle/tools spki/tools
@@ -47,7 +46,7 @@ relative_symlink misc/getopt.h \
 relative_symlink config.guess nettle spki
 relative_symlink config.sub nettle spki
 
-relative_symlink install-sh argp nettle spki
+relative_symlink install-sh argp nettle spki sftp
 relative_symlink texinfo.tex nettle
 
 relative_symlink INSTALL nettle spki
@@ -57,7 +56,7 @@ if [ "$1" = "links" ] ; then
     exit 0;
 fi
 
-for subdir in argp nettle spki ; do
+for subdir in argp nettle spki sftp; do
     (cd $subdir && ./.bootstrap)
 done
 
