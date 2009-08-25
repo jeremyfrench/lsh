@@ -1,0 +1,208 @@
+# sftp Makefile
+
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+INSTALL_STRIP_PROGRAM = $(INSTALL_PROGRAM) -s
+MKDIR_P = @MKDIR_P@
+
+SUBDIRS = testsuite
+
+CC = @CC@
+CFLAGS = @CFLAGS@
+CPPFLAGS = @CPPFLAGS@
+DEFS = @DEFS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+LIBOBJS = @LIBOBJS@
+
+OBJEXT = @OBJEXT@
+EXEEXT = @EXEEXT@
+
+DEP_FLAGS = @DEP_FLAGS@
+DEP_PROCESS = @DEP_PROCESS@
+
+PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
+PACKAGE_NAME = @PACKAGE_NAME@
+PACKAGE_STRING = @PACKAGE_STRING@
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+
+AR = ar
+ARFLAGS = cru
+AUTOCONF = autoconf
+AUTOHEADER = autoheader
+MAKEINFO = makeinfo
+RANLIB = @RANLIB@
+
+prefix	=	@prefix@
+exec_prefix =	@exec_prefix@
+datarootdir =	@datarootdir@
+bindir =	@bindir@
+libdir =	@libdir@
+includedir =	@includedir@
+infodir =	@infodir@
+
+# PRE_CPPFLAGS and PRE_LDFLAGS lets each Makefile.in prepend its own
+# flags before CPPFLAGS and LDFLAGS.
+
+PRE_CPPFLAGS = -I.
+
+COMPILE = $(CC) $(PRE_CPPFLAGS) $(CPPFLAGS) $(DEFS) $(CFLAGS) $(DEP_FLAGS)
+LINK = $(CC) $(CFLAGS) $(PRE_LDFLAGS) $(LDFLAGS)
+
+# For some reason the suffixes list must be set before the rules.
+# Otherwise BSD make won't build binaries e.g. aesdata. On the other
+# hand, AIX make has the opposite idiosyncrasies to BSD, and the AIX
+# compile was broken when .SUFFIXES was moved here from Makefile.in.
+
+.SUFFIXES:
+.SUFFIXES: .c .$(OBJEXT) $(EXEEXT)
+
+# Disable builtin rule
+%$(EXEEXT) : %.c
+.c:
+
+# Keep object files
+.PRECIOUS: %.o
+
+.PHONY: all check install uninstall clean distclean mostlyclean maintainer-clean distdir \
+	all-here check-here install-here clean-here distclean-here mostlyclean-here \
+	maintainer-clean-here distdir-here \
+	install-shared install-info install-headers \
+	uninstall-shared uninstall-info uninstall-headers \
+	dist distcleancheck
+
+BIN_PROGRAMS = lsftp$(EXEEXT)
+SBIN_PROGRAMS = sftp-server$(EXEEXT) 
+TEST_PROGRAMS = sftp-test-client$(EXEEXT) dump-hex$(EXEEXT)
+
+TARGETS = $(BIN_PROGRAMS) $(SBIN_PROGRAMS) $(TEST_PROGRAMS)
+
+all: $(TARGETS)
+
+clean distclean mostlyclean maintainer-clean tags:
+	set -e; for d in $(SUBDIRS); do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+	$(MAKE) $@-here
+
+check:
+	set -e; for d in $(SUBDIRS); do \
+	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
+
+HEADERS = buffer.h io.h werror.h \
+	  commands.h rl.h sftp_c.h sftp.h sftp_bind.h str_utils.h lsftp.h \
+	  dc.h gnu_stuff.h misc_fun.h
+
+COMMON_SOURCES = buffer.c io_input.c io_output.c \
+		 xmalloc.c werror.c
+
+lsftp_SOURCES = commands.c lsftp.c rl.c \
+	sftp_c.c sftp_bind.c \
+	str_utils.c dc.c \
+	gnu_stuff.c misc_fun.c
+
+sftp_server_SOURCES = sftp-server.c filemode.c idcache.c
+sftp_test_client_SOURCES = sftp-test-client.c client.c
+dump_hex_SOURCES = dump-hex.c
+
+SOURCES = $(COMMON_SOURCES) $(lsftp_SOURCES) $(sftp_server_SOURCES) \
+	  $(sftp_test_client_SOURCES) $(dump_hex_SOURCES)
+
+DISTFILES = $(SOURCES) $(HEADERS) .bootstrap aclocal.m4 configure.ac \
+	configure stamp-h.in \
+	config.h.in install-sh Makefile.in
+
+COMMON_OBJS = $(COMMON_SOURCES:.c=.$(OBJEXT))
+
+lsftp_OBJS = $(lsftp_SOURCES:.c=.$(OBJEXT)) $(COMMON_OBJS)
+sftp_server_OBJS = $(sftp_server_SOURCES:.c=.$(OBJEXT)) $(COMMON_OBJS)
+sftp_test_client_OBJS = $(sftp_test_client_SOURCES:.c=.$(OBJEXT)) $(COMMON_OBJS)
+dump_hex_OBJS = $(dump_hex_SOURCES:.c=.$(OBJEXT))
+
+.c.$(OBJEXT):
+	$(COMPILE) -c $< \
+	&& $(DEP_PROCESS)
+
+lsftp$(EXEEXT): $(lsftp_OBJS)
+	$(LINK) $(lsftp_OBJS) $(LIBS) -o $@
+
+sftp-server$(EXEEXT): $(sftp_server_OBJS)
+	$(LINK) $(sftp_server_OBJS) $(LIBS) -o $@
+
+sftp-test-client$(EXEEXT): $(sftp_test_client_OBJS)
+	$(LINK) $(sftp_test_client_OBJS) $(LIBS) -o $@
+
+dump-hex$(EXEEXT): $(dump_hex_OBJS)
+	$(LINK) $(dump_hex_OBJS) $(LIBS) -o $@
+
+# Configure-related rules, mostly copied from the autoconf manual. No
+# $(srcdir) prefixes on the targets, though.
+
+configure: configure.ac aclocal.m4
+	cd $(srcdir) && $(AUTOCONF)
+
+# autoheader might not change config.h.in, so touch a stamp file.
+config.h.in: stamp-h.in
+stamp-h.in: configure.ac aclocal.m4
+	cd $(srcdir) && $(AUTOHEADER)
+	echo timestamp > $(srcdir)/stamp-h.in
+
+config.status: configure
+	./config.status --recheck
+
+config.h: stamp-h
+stamp-h: config.h.in config.status
+	./config.status config.h
+	echo timestamp > stamp-h
+
+Makefile: Makefile.in config.status
+	./config.status $@
+
+install: $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
+	$(MKDIR_P) $(DESTDIR)$(bindir)
+	$(MKDIR_P) $(DESTDIR)$(sbindir)
+	for f in $(BIN_PROGRAMS) ; do \
+	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(bindir) ; \
+	done
+	for f in $(SBIN_PROGRAMS) ; do \
+	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(sbindir) ; \
+	done
+
+uninstall:
+	cd $(DESTDIR)$(bindir) && rm -f $(BIN_PROGRAMS)
+	cd $(DESTDIR)$(sbindir) && rm -f $(SBIN_PROGRAMS)
+
+distdir: $(DISTFILES)
+	set -e; \
+	mkdir "$(distdir)/scm" ; \
+	cp $(srcdir)/scm/*.scm "$(distdir)/scm" ; \
+	for f in $(DISTFILES) ; do \
+	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
+	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
+	  fi ; \
+	done ; \
+	set -e; for d in $(SUBDIRS); do \
+	  sd="$(distdir)/$$d" ; \
+	  mkdir "$$sd" && $(MAKE) -C $$d distdir="`cd $$sd && pwd`" $@ ; \
+	done
+
+clean-here:
+	-rm -f $(TARGETS) *.$(OBJEXT)
+
+distclean-here: clean-here
+	-rm -f config.h stamp-h	Makefile *.d
+
+maintainer-clean-here:
+	true
+
+tags-here:	
+	etags -o $(srcdir)/TAGS $(srcdir)/*.c $(srcdir)/*.h
+
+@DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d) $(SPECIAL_SOURCES:.c=.m$(OBJEXT).d)
