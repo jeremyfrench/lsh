@@ -1,0 +1,33 @@
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+top_srcdir = @top_srcdir@
+
+TS_SH = connect-test get-1-test ls-1-test ls-2-test put-1-test
+
+DISTFILES = Makefile.in common.sh run-tests \
+	    setup-env teardown-env \
+	    $(TS_SH)
+
+all:
+	true
+
+check:
+	srcdir="$(srcdir)" $(srcdir)/run-tests $(TS_SH)
+
+Makefile: $(srcdir)/Makefile.in ../config.status
+	cd .. && $(SHELL) ./config.status testsuite/$@
+
+install uninstall:
+	true
+
+distdir: $(DISTFILES)
+	cp $? $(distdir)
+
+clean:
+	-rm -f $(TARGETS) $(EXTRA_TARGETS) *.o test.in test1.out test2.out
+
+distclean: clean
+	-rm -f Makefile *.d
