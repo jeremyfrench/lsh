@@ -21,7 +21,7 @@ all check:
 
 # Don't install any of the bundled libraries.
 install uninstall:
-	set -e; for d in src doc; do \
+	set -e; for d in src sftp doc; do \
 	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
 
 clean distclean mostlyclean maintainer-clean tags:
