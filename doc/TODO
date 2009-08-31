@@ -1,11 +1,3 @@
-EXCEPTIONS
-
-When using exceptions in commands like do_request_service, when should
-we use the passed in exception handler, and when should we use the
-handler in the connection struct? Perhaps we should not have any
-connection->e handler at all?
-
-  
 S-EXPRESSIONS
 
 Change the format used for encrypted private key to include the public
@@ -13,18 +5,11 @@ key as well. This way, the private key can be decrypted on-demand.
 This seems cleaner than having the client read both identity and
 identity.pub.
 
-After retiring the complex "streamed" parser, sexp-conv can no longer
-handle arbitrarily large files. That should be fixed some time.
-Perhaps sexp-conv could use a parser of it's own, as that is the only
-program for which it would make sense to understand all features of
-the "advanced" syntax.
-
 
 USERS
 
-Use real ACL:s instead of the authorized keys hack. Implement a
-general user-database abstraction. Also have a look at 'Pluggable Non
-Interactive Authentication Modules' at
+Implement a general user-database abstraction. Also have a look at
+'Pluggable Non Interactive Authentication Modules' at
 http://www.msu.ru/pniam/pniam.html.
 
 Log a message if user authentication fails because root is not allowed
@@ -65,16 +50,10 @@ more environment variables when starting user processes.
 
 bash looks at SSH_CLIENT, and reads .bashrc if it is set.
 
-The lshd server should register a signal handler, probably for
-SIGTERM, that causes it to close it's listening socket, and exit after
-current connections are gone (or after a timeout).
-
 
 ALLOCATION
 
 Have the allocator initialize all objects automatically.
-
-Consider adding reference counts to strings.
 
 Unify the debug malloc system to add a magic number to every block
 header, with distinct values for space, strings, objects and lists.
@@ -116,11 +95,6 @@ Looking at the lshg log, the final SSH_MSG_DATA packet(s) is missing,
 so the data is lost either in lsh, or in the remote opensshd.
 
 
-CONTROL LANGUAGE
-
-Improve the tail recursiveness of builtin functions.
-
-
 FORWARDING
 
 Generalize the -L and -R options to
@@ -158,23 +132,12 @@ Encryption of private keys seems broken, decryption gives the error
 
 DENIAL OF SERVICE
 
-Implement some limit on the amount of data that may be buffered for
-write on a connection. When the limit is exceeded, the connection
-should be dropped. The problem: if a client connects and sends a lot
-of packets, without ever reading anything from its socket, the server
-will eventually run out of memory.
-
+Review how much cpu and memory a malicious client can consume at the
+server.
 
 BUILD ISSUES
 
 Have autoconf automatically add -I $prefix/include and -L $prefix/lib ?
-
-Remaking Makefile.am from subdirectories probably cd:s to the wrong
-place, when building outside of the source tree.
-
-Building outside of the source tree creates machine independent
-automatically generated files in the wrong directory (they should be
-in the source tree).
 
 The definition of SBINDIR is broken, in gets the value
 "${exec_prefix}/sbin".
@@ -210,26 +173,16 @@ Implement an escape char, like ~ with rsh.
 The --interface option to lshd can only handle numeric ip addresses.
 
 
-I/O ISSUES
-
-How should we handle POLLERR in io_iter()?
-
-Add a descriptive string to the lsh_fd struct, to aid debugging.
-
-
 TESTING
 
 The testsuite is far from complete. Some parts that it misses are
 
  * Sending and receiving of SSH_MSG_REQUEST_FAILURE and
-   SSH_MSG_CHANNEL_FAILURE, and handling of the corresponding
-   exceptions.
+   SSH_MSG_CHANNEL_FAILURE.
 
  * Same for SSH_MSG_CHANNEL_OPEN_FAILURE.
 
  * All SSH_MSG_CHANNEL_EXTENDED_DATA (i.e. stderr data)
-
- * i/o exceptions on channels.
 
  * Failed key exchanges. SRP key exchange.
 
@@ -251,7 +204,7 @@ The testsuite is far from complete. Some parts that it misses are
 
  * spki, tag prefix and tag any.
 
- * Encrypted provate keys.
+ * Encrypted private keys.
 
  * TCP forwarding: cancel-tcpip-forward, various exception.
 
@@ -261,14 +214,10 @@ The testsuite is far from complete. Some parts that it misses are
 MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
-on sparc-linux, 2.0.33, redhat-5.1, glibc.
-Note: Debian's sparc port uses glibc2.1, rather than 2.0; maybe Red Hat does
-too? Quite a lot of things have changed between 2.0 and 2.1; this might well
-be a documented feature of 2.1.
-
-"lsh" is already used as the name of a shell (included in Debian;
-Description: Baby Shell for Novices with DOS compatible commands). Perhaps
-we need to change our name?
+on sparc-linux, 2.0.33, redhat-5.1, glibc. Note: Debian's sparc port
+uses glibc2.1, rather than 2.0; maybe Red Hat does too? Quite a lot of
+things have changed between 2.0 and 2.1; this might well be a
+documented feature of 2.1.
 
 Make it cleaner wrt. more gcc warnings.
 
@@ -338,11 +287,6 @@ With SPKI, consider whether or not we should require any specific
 order of subexpressions. The most central function for this is
 sexp_get_un. 
 
-Extend the GABA: (expr ...) constructions with a single parameter
-could be used directly as a command_simple. Extend gaba.scm to do that
-automatically. Extend the (exp ...) construction to take a return
-type, and automatically cast the result to that type.
-
 Add -f, to fork and exit when userauthentication is done and any
 tunneling is set up.
 
@@ -360,8 +304,6 @@ extra stack of fds that should be closed?
 If we add the backend field to lsh_fd objects, the code for listen
 could also be simplified, and perhaps we can get rid of the backend
 pointer in some other places as well.
-
-Exceptions from listen are handled badly in several places. 
 
 Should lsh fail if some port forwardings fails? In particular,
 
