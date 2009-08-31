@@ -1,3 +1,9 @@
+2009-08-31  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/Makefile.in (DISTFILES): Distribute TODO file.
+
+	* Makefile.in (install uninstall): Recurse into sftp directory.
+
 2009-08-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* .bootstrap, Makefile.in, configure.ac: Reenable building of sftp.
