@@ -1,5 +1,7 @@
 2009-08-31  Niels Möller  <nisse@lysator.liu.se>
 
+	* Makefile.in: Added make rules for autoheader.
+
 	* doc/Makefile.in (DISTFILES): Distribute TODO file.
 
 	* Makefile.in (install uninstall): Recurse into sftp directory.
