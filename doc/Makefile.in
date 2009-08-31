@@ -29,7 +29,7 @@ MANPAGES = DSA.5 SHA.5 SPKI.5 secsh.5 \
 	   lshd.8
 
 DISTFILES = Makefile.in $(MANPAGES) $(TARGETS) \
-	HACKING NOTES PORTS TASKLIST \
+	HACKING NOTES PORTS TASKLIST TODO \
 	configuration.txt gateway-mode.txt \
 	srp-spec.nroff srp-spec.txt fixff.sh fixff.pl
 
