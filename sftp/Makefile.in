@@ -45,6 +45,8 @@ prefix	=	@prefix@
 exec_prefix =	@exec_prefix@
 datarootdir =	@datarootdir@
 bindir =	@bindir@
+sbindir =	@sbindir@
+libexecdir =	@libexecdir@
 libdir =	@libdir@
 includedir =	@includedir@
 infodir =	@infodir@
@@ -80,10 +82,10 @@ LINK = $(CC) $(CFLAGS) $(PRE_LDFLAGS) $(LDFLAGS)
 	dist distcleancheck
 
 BIN_PROGRAMS = lsftp$(EXEEXT)
-SBIN_PROGRAMS = sftp-server$(EXEEXT) 
+LIBEXEC_PROGRAMS = sftp-server$(EXEEXT) 
 TEST_PROGRAMS = sftp-test-client$(EXEEXT) dump-hex$(EXEEXT)
 
-TARGETS = $(BIN_PROGRAMS) $(SBIN_PROGRAMS) $(TEST_PROGRAMS)
+TARGETS = $(BIN_PROGRAMS) $(LIBEXEC_PROGRAMS) $(TEST_PROGRAMS)
 
 all: $(TARGETS)
 
@@ -96,9 +98,9 @@ check:
 	set -e; for d in $(SUBDIRS); do \
 	  echo "Making $@ in $$d" ; (cd $$d && $(MAKE) $@); done
 
-HEADERS = buffer.h io.h werror.h \
+HEADERS = buffer.h io.h werror.h xmalloc.h filemode.h idcache.h \
 	  commands.h rl.h sftp_c.h sftp.h sftp_bind.h str_utils.h lsftp.h \
-	  dc.h gnu_stuff.h misc_fun.h
+	  dc.h gnu_stuff.h misc_fun.h client.h
 
 COMMON_SOURCES = buffer.c io_input.c io_output.c \
 		 xmalloc.c werror.c
@@ -115,7 +117,9 @@ dump_hex_SOURCES = dump-hex.c
 SOURCES = $(COMMON_SOURCES) $(lsftp_SOURCES) $(sftp_server_SOURCES) \
 	  $(sftp_test_client_SOURCES) $(dump_hex_SOURCES)
 
-DISTFILES = $(SOURCES) $(HEADERS) .bootstrap aclocal.m4 configure.ac \
+MANPAGES = lsftp.1 sftp-server.8
+
+DISTFILES = $(SOURCES) $(HEADERS) $(MANPAGES) .bootstrap aclocal.m4 configure.ac \
 	configure stamp-h.in \
 	config.h.in install-sh Makefile.in
 
@@ -165,24 +169,22 @@ stamp-h: config.h.in config.status
 Makefile: Makefile.in config.status
 	./config.status $@
 
-install: $(BIN_PROGRAMS) $(SBIN_PROGRAMS)
+install: $(BIN_PROGRAMS) $(LIBEXEC_PROGRAMS)
 	$(MKDIR_P) $(DESTDIR)$(bindir)
-	$(MKDIR_P) $(DESTDIR)$(sbindir)
+	$(MKDIR_P) $(DESTDIR)$(libexecdir)
 	for f in $(BIN_PROGRAMS) ; do \
 	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(bindir) ; \
 	done
-	for f in $(SBIN_PROGRAMS) ; do \
-	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(sbindir) ; \
+	for f in $(LIBEXEC_PROGRAMS) ; do \
+	  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(libexecdir) ; \
 	done
 
 uninstall:
 	cd $(DESTDIR)$(bindir) && rm -f $(BIN_PROGRAMS)
-	cd $(DESTDIR)$(sbindir) && rm -f $(SBIN_PROGRAMS)
+	cd $(DESTDIR)$(libexec) && rm -f $(LIBEXEC_PROGRAMS)
 
 distdir: $(DISTFILES)
 	set -e; \
-	mkdir "$(distdir)/scm" ; \
-	cp $(srcdir)/scm/*.scm "$(distdir)/scm" ; \
 	for f in $(DISTFILES) ; do \
 	  if [ -f "$$f" ] ; then cp "$$f" "$(distdir)" ; \
 	  else cp "$(srcdir)/$$f" "$(distdir)" ; \
