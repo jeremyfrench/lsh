@@ -55,7 +55,7 @@ Makefile: Makefile.in config.status
 
 # Distribution
 DISTFILES = .bootstrap aclocal.m4 configure.ac \
-	    configure config.h.in \
+	    configure \
 	    config.guess config.sub install-sh texinfo.tex \
 	    Makefile.in \
 	    ANNOUNCE AUTHORS FAQ README COPYING \
