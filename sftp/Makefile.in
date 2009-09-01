@@ -199,7 +199,7 @@ clean-here:
 	-rm -f $(TARGETS) *.$(OBJEXT)
 
 distclean-here: clean-here
-	-rm -f config.h stamp-h	Makefile *.d
+	-rm -f config.h config.status config.log sftp-stdint.h stamp-h Makefile *.d
 
 maintainer-clean-here:
 	true
