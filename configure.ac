@@ -584,8 +584,13 @@ fi
 
 # Test if the libc includes a good enough argp.
 # FIXME: Doesn't check for the argp-help bug.
-if test x$with_system_argp = xyes ; then
+if test x$with_system_argp != xno ; then
   LSH_LIB_ARGP(,with_system_argp=no)
+fi
+
+AH_TEMPLATE([HAVE_ARGP_PARSE], [Define to use the argp parser in libc])
+if test x$with_system_argp != xno ; then
+  AC_DEFINE(HAVE_ARGP_PARSE)
 fi
 
 BUILD_SUBDIRS=''
