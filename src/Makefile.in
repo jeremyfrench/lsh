@@ -350,6 +350,7 @@ install: $(BIN_PROGRAMS) $(SBIN_PROGRAMS) $(LIBEXEC_PROGRAMS)
 uninstall:
 	cd $(DESTDIR)$(bindir) && rm -f $(BIN_PROGRAMS) $(SCRIPTS)
 	cd $(DESTDIR)$(sbindir) && rm -f $(SBIN_PROGRAMS)
+	cd $(DESTDIR)$(libexecdir) && rm -f $(LIBEXEC_PROGRAMS)
 
 distdir: $(DISTFILES)
 	set -e; \
