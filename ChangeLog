@@ -1,9 +1,17 @@
 2009-09-01  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/functions.sh (XAUTHORITY): Put xauthority file in
+	$TEST_HOME.
+
+	* src/Makefile.in (uninstall): Delete files in $(libexecdir).
+
+	* doc/Makefile.in (DISTFILES): Removed explicit
+	srp-spec.txt (already included via $(TARGETS)).
+
 	* src/Makefile.in: Added make rules for autoheader.
 
 	* configure.ac: Test for $with_system_argp != no, rather than =
-	yes. 
+	yes.
 
 2009-08-31  Niels Möller  <nisse@lysator.liu.se>
 
