@@ -1,6 +1,11 @@
-2009-08-31  Niels Möller  <nisse@lysator.liu.se>
+2009-09-01  Niels Möller  <nisse@lysator.liu.se>
 
-	* Makefile.in: Added make rules for autoheader.
+	* src/Makefile.in: Added make rules for autoheader.
+
+	* configure.ac: Test for $with_system_argp != no, rather than =
+	yes. 
+
+2009-08-31  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Distribute TODO file.
 
