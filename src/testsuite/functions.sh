@@ -50,7 +50,7 @@ export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 unset DISPLAY
 
 TEST_DISPLAY=:17
-XAUTHORITY="`pwd`/xauthority"
+XAUTHORITY="$TEST_HOME/xauthority"
 export XAUTHORITY
 
 # FIXME: Are these flags obsolete?
