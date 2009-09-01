@@ -16,6 +16,8 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = $(INSTALL_PROGRAM) -s
 MKDIR_P = @MKDIR_P@
 
+AUTOHEADER = autoheader
+
 SUBDIRS = testsuite
 
 include config.make
@@ -163,7 +165,7 @@ lshd_connection_SOURCES = lshd-connection.c \
 			  server_pty.c \
 			  server_session.c \
 			  server_tcpforward.c \
- 			  server_x11.c \
+			  server_x11.c \
 			  translate_signal.c \
 			  unix_process.c
 
@@ -185,7 +187,7 @@ SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) \
 DISTFILES = $(SOURCES) $(HEADERS) $(SCRIPTS) \
 	    .dist_headers $(dist_headers) .dist_classes $(dist_classes) \
 	    atoms.in environ.h.in process_atoms invert-defs $(generated_sources) \
-	    config.h.in Makefile.in config.make.in 
+	    config.h.in stamp-h.in Makefile.in config.make.in 
 
 SPECIAL_OBJS = $(SPECIAL_SOURCES:.c=.$(OBJEXT))
 MINIMAL_OBJS = $(SPECIAL_SOURCES:.c=.m$(OBJEXT))
@@ -367,7 +369,7 @@ clean-here:
 	-rm -f $(TARGETS) *.$(OBJEXT) *.m$(OBJEXT)
 
 distclean-here: clean-here
-	-rm -f config.h stamp-h	config.make environ.h Makefile *.d
+	-rm -f config.h stamp-h.in config.make environ.h Makefile *.d
 
 maintainer-clean-here:
 	-rm -f $(generated_sources)
@@ -375,7 +377,13 @@ maintainer-clean-here:
 tags-here:	
 	etags -o $(srcdir)/TAGS $(srcdir)/*.c $(srcdir)/*.h
 
-# Standard targets
+# Autoconf-related targets
+# autoheader might not change config.h.in, so touch a stamp file.
+config.h.in: stamp-h.in
+stamp-h.in: ../configure.ac ../aclocal.m4
+	cd $(top_srcdir) && $(AUTOHEADER)
+	echo timestamp > $(srcdir)/stamp-h.in
+
 Makefile: $(srcdir)/Makefile.in ../config.status
 	cd .. && $(SHELL) ./config.status src/Makefile
 
