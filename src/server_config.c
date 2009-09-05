@@ -348,38 +348,39 @@ server_config_parse_example(const struct config_parser *parser,
       const struct config_option *option;
 
       for (option = parser->options; option->type != CONFIG_TYPE_NONE; option++)
-	{
-	  uint32_t value = 0;
-	  const uint8_t *data = NULL;
+	if (option->example)
+	  {
+	    uint32_t value = 0;
+	    const uint8_t *data = NULL;
 
-	  unsigned length = strlen(option->example);
+	    unsigned length = strlen(option->example);
 
-	  switch (option->type)
-	    {
-	    default:
-	      fatal("Internal error.\n");
+	    switch (option->type)
+	      {
+	      default:
+		fatal("Internal error.\n");
 
-	    case CONFIG_TYPE_BOOL:
-	      err = parse_value_bool(&value, length, option->example);
-	      break;
+	      case CONFIG_TYPE_BOOL:
+		err = parse_value_bool(&value, length, option->example);
+		break;
 
-	    case CONFIG_TYPE_UNSIGNED:
-	      err = parse_value_unsigned(&value, length, option->example);
-	      break;
+	      case CONFIG_TYPE_UNSIGNED:
+		err = parse_value_unsigned(&value, length, option->example);
+		break;
 
-	    case CONFIG_TYPE_STRING:
-	      value = length;
-	      data = option->example;
-	      break;
-	    }
+	      case CONFIG_TYPE_STRING:
+		value = length;
+		data = option->example;
+		break;
+	      }
 	  
-	  if (err)
-	    fatal("Bad example value for configuration option `%z'\n",
-		  option->name);
-	  else
-	    err = group->parser->handler(option->key, value, data, &group->state);
+	    if (err)
+	      fatal("Bad example value for configuration option `%z'\n",
+		    option->name);
+	    else
+	      err = group->parser->handler(option->key, value, data, &group->state);
 
-	}
+	  }
     }
   return parser_finalize(&state, err);
 }
