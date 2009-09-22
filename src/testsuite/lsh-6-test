@@ -10,7 +10,7 @@ fi
 
 OLD_FLAGS="$LSH_FLAGS"
 
-ALGORITHMS="arcfour twofish blowfish 3des aes-cbc aes-ctr rijndael cast128 all"
+ALGORITHMS="arcfour twofish blowfish 3des aes128-cbc aes128-ctr aes256-cbc aes256-ctr cast128 all"
 
 LSHD_FLAGS="$LSHD_FLAGS -c all"
 
