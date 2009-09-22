@@ -1,3 +1,24 @@
+2009-09-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/lsh-6-test (ALGORITHMS): Updated list to include
+	aes128 in cbc and ctr modes.
+
+	* src/testsuite/aes-test.c: Added tests for aes128-cbc, aes128-ctr
+	and aes256-ctr.
+
+	* src/crypto.c (crypto_aes128_cbc_algorithm): New algorithm.
+	(crypto_aes128_ctr_algorithm): Likewise.
+
+	* src/algorithms.c (all_symmetric_algorithms): Added aes128-cbc
+	and aes128-ctr.
+	(all_crypto_algorithms): Likewise.
+	(default_crypto_algorithms): Replaced aes256-cbc by aes128-ctr, as
+	the preferred choice.
+	(lookup_crypto): Added "aes128-cbc" with alias "aes-cbc", added
+	"aes-128-ctr" with aliases "aes", "aes128", "aes-ctr". Removed
+	some aliases for "aes256-cbc" and "aes256-ctr", including the old
+	"rijndael" alias.
+	
 2009-09-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_config.c (server_config_parse_example): Don't use
