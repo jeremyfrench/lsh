@@ -161,13 +161,8 @@ make_aes_cbc_instance(struct crypto_algorithm *algorithm, int mode,
   return(&self->super);
 }
 
-#if 0
 struct crypto_algorithm crypto_aes128_cbc_algorithm =
 { STATIC_HEADER, AES_BLOCK_SIZE, 16, AES_BLOCK_SIZE, make_aes_cbc_instance};
-
-struct crypto_algorithm crypto_aes192_cbc_algorithm =
-{ STATIC_HEADER, AES_BLOCK_SIZE, 24, AES_BLOCK_SIZE, make_aes_cbc_instance};
-#endif
 
 struct crypto_algorithm crypto_aes256_cbc_algorithm =
 { STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_cbc_instance};
@@ -209,6 +204,9 @@ make_aes_ctr_instance(struct crypto_algorithm *algorithm, int mode UNUSED,
   
   return(&self->super);
 }
+
+struct crypto_algorithm crypto_aes128_ctr_algorithm =
+{ STATIC_HEADER, AES_BLOCK_SIZE, 16, AES_BLOCK_SIZE, make_aes_ctr_instance};
 
 struct crypto_algorithm crypto_aes256_ctr_algorithm =
 { STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_ctr_instance};

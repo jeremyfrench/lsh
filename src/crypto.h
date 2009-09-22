@@ -77,6 +77,8 @@ struct kexinit_state;
 #define MAKE_DECRYPT(crypto, key, iv) \
      MAKE_CRYPT((crypto), CRYPTO_DECRYPT, (key), (iv))
 
+extern struct crypto_algorithm crypto_aes128_cbc_algorithm;
+extern struct crypto_algorithm crypto_aes128_ctr_algorithm;
 extern struct crypto_algorithm crypto_aes256_cbc_algorithm;
 extern struct crypto_algorithm crypto_aes256_ctr_algorithm;
 extern struct crypto_algorithm crypto_arcfour_algorithm;
