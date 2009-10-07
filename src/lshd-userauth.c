@@ -36,6 +36,14 @@
 #include <pwd.h>
 #include <grp.h>
 
+#if HAVE_CRYPT_H
+# include <crypt.h>
+#endif
+
+#if HAVE_SHADOW_H
+#include <shadow.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -202,6 +210,44 @@ lshd_user_clear(struct lshd_user *self)
   self->name = NULL;
 }
 
+/* It's somewhat tricky to determine when accounts are disabled. To be
+ * safe, it is recommended that all disabled accounts have a harmless
+ * login-shell, like /bin/false.
+ *
+ * We return NULL for disabled accounts, according to the following
+ * rules:
+ *
+ * If our uid is non-zero, i.e. we're not running as root, then an
+ * account is considered valid if and only if it's uid matches the
+ * server's. We never try checking the shadow record.
+ *
+ * If we're running as root, first check the passwd record.
+ *
+ * o If the uid is zero, consider the account disabled. --root-login
+ *   omits this check.
+ *
+ * o If the passwd equals "x", look up the shadow record, check
+ *   expiration etc, and replace the passwd value with the one from the
+ *   shadow record. If there's no shadow record, consider the account
+ *   disabled.
+ *
+ * o If the passwd field is empty, consider the account disabled (we
+ *   usually don't want remote logins on pasword-less accounts). We may
+ *   need to make this check optional, though.
+ *
+ * o If the passwd entry starts with a "*" and is longer than one
+ *   character, consider the account disabled. (Other bogus values like
+ *   "NP" means that the account is enabled, only password login is
+ *   disabled)
+ *
+ * o Otherwise, the account is active, and a user record is returned.
+ *
+ * FIXME: What about systems that uses a single "*" to disable
+ * accounts?
+ *
+ * FIXME: Check for /etc/nologin ?
+ */
+
 static int
 lookup_user(struct lshd_user *user, uint32_t name_length,
 	    const uint8_t *name_utf8)
@@ -244,7 +290,13 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
       if (user->uid != me)
 	return 0;
 
-      /* Override $HOME */
+      /* Skip all other checks, a non-root user sunning lshd
+	 presumably wants to be able to login to his or her
+	 account. */
+
+      /* NOTE: If we are running as the uid of the user, it seems like
+       * a good idea to let the HOME environment variable override the
+       * passwd-database. I think the testsuite depends on this. */
       home = getenv(ENV_HOME);
       if (home)
 	user->home = home;
@@ -253,17 +305,78 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
     }
   else
     {
-      /* No root login */
+      /* No root login. FIXME: Make configurable.  */
       if (!user->uid)
 	return 0;
 
-      /* FIXME: Handle the shadow database */
-    }
+#if HAVE_GETSPNAM && HAVE_SHADOW_H
 
-  /* A passwd field of more than one character, which starts with a star,
-     indicates a disabled account. */
-  if (user->crypted[0] == '*' && user->crypted[1])
-    return 0;
+      /* FIXME: What's the most portable way to test for shadow
+       * passwords? For now, we look up shadow database if and only if
+       * the passwd field equals "x". If there's no shadow record, we
+       * just keep the value from the passwd-database, the user may be
+       * able to login using a publickey, or the password helper. */
+      if (strcmp(user->crypted, "x") == 0)
+	{
+	  /* Current day number since January 1, 1970.
+	   *
+	   * FIXME: Which timezone is used in the /etc/shadow file? */
+	  long now = time(NULL) / (3600 * 24);
+	  struct spwd *shadowpwd = getspnam(cname);
+	  
+	  if (!shadowpwd)
+	    return 0;
+
+          /* sp_expire == -1 means there is no account expiration date.
+           * although chage(1) claims that sp_expire == 0 does this */
+	  if ( (shadowpwd->sp_expire >= 0)
+	       && (now > shadowpwd->sp_expire))
+	    {
+	      werror("Access denied for user '%pz', account expired.\n", cname); 
+	      return 0;
+	    }
+	  		     
+          /* sp_inact == -1 means expired password doesn't disable account.
+	   *
+	   * During the time
+	   *
+	   *   sp_lstchg + sp_max < now < sp_lstchg + sp_max + sp_inact
+	   *
+	   * the user is allowed to log in only by changing her
+	   * password. As we don't support password change, this
+	   * means that access is denied. */
+
+          if ( (shadowpwd->sp_inact >= 0) &&
+	       (now > (shadowpwd->sp_lstchg + shadowpwd->sp_max)))
+            {
+	      werror("Access denied for user '%pz', password too old.\n", cname);
+	      return 0;
+	    }
+
+	  /* FIXME: We could look at sp_warn and figure out if it is
+	   * appropriate to send a warning about passwords about to
+	   * expire, and possibly also a
+	   * SSH_MSG_USERAUTH_PASSWD_CHANGEREQ message.
+	   *
+	   * A warning is appropriate when
+	   *
+	   *   sp_lstchg + sp_max - sp_warn < now < sp_lstchg + sp_max
+	   *
+	   */
+
+	  user->crypted = shadowpwd->sp_pwdp;
+
+	  /* Check again for empty passwd field. */
+	  if (!user->crypted || !*user->crypted)
+	    return 0;
+	}
+#endif /* HAVE_GETSPNAM */
+
+      /* A passwd field of more than one character, which starts with a star,
+	 indicates a disabled account. */
+      if (user->crypted[0] == '*' && user->crypted[1])
+	return 0;
+    }
 
   /* FIXME: Is it really appropriate to have a default for the login
      shell? */
