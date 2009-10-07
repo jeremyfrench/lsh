@@ -1,3 +1,8 @@
+2009-10-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-userauth.c (lookup_user): Added support for shadow
+	passwords.
+
 2009-09-22  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-6-test (ALGORITHMS): Updated list to include
