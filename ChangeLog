@@ -1,3 +1,8 @@
+2009-10-21  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (make_lshd_port): Set the IPPROTO_IPV6ONLY socket
+	option when listening on an IPv6 socket.
+
 2009-10-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (lookup_user): Added support for shadow
