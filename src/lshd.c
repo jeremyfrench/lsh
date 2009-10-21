@@ -325,6 +325,14 @@ make_lshd_port(struct lshd_context *ctx, socklen_t addr_len, struct sockaddr *ad
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
     werror("setsockopt SO_REUSEADDR failed: %e.\n", errno);
 
+#if WITH_IPV6
+  if (addr->sa_family == AF_INET6)
+    {
+      if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes)) < 0)
+	werror("setsockopt IPV6_V6ONLY failed: %e.\n", errno);
+    }
+#endif
+
   if (bind(fd, addr, addr_len) < 0)
     {
       werror("bind failed: %e.\n", errno);
