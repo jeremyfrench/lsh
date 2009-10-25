@@ -1,3 +1,8 @@
+2009-10-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Updated URL for liboop, it's now
+	http://liboop.ofb.net.
+
 2009-10-21  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (make_lshd_port): Set the IPPROTO_IPV6ONLY socket

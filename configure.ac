@@ -403,7 +403,7 @@ AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
 LSH_RPATH_FIX
 
 AC_CHECK_LIB([oop], [oop_sys_new],,
-  [AC_MSG_ERROR([liboop is missing. Get liboop from http://www.liboop.org])])
+  [AC_MSG_ERROR([liboop is missing. Get liboop from http://liboop.ofb.net])])
 
 LSH_RPATH_FIX
 
