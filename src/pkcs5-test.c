@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   
   key = alloca(length);
   
-  pkcs5_derive_key(make_hmac_algorithm(&crypto_sha1_algorithm),
+  pkcs5_derive_key(make_hmac_algorithm(&nettle_sha1),
 		   strlen(password), password,
 		   strlen(salt), salt,
 		   iterations,

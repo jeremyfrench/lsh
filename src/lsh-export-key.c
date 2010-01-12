@@ -199,14 +199,14 @@ sexp_to_ssh2_key(struct lsh_string *expr,
       {
 	struct lsh_string *hash
 	  = ssh_format("%lfxS", 
-		       hash_string(&crypto_md5_algorithm, key, 0));
+		       hash_string(&nettle_md5, key, 0));
 
 	struct lsh_string *output
 	  = ssh_format("MD5 fingerprint: %lfS\n"
 		       "Bubble Babble: %lfS\n",
 		       lsh_string_colonize(hash, 2, 1),
 		       lsh_string_bubblebabble( 
-			 hash_string(&crypto_sha1_algorithm, key, 0), 1));
+			 hash_string(&nettle_sha1, key, 0), 1));
 	lsh_string_free(key);
 	return output;
       }

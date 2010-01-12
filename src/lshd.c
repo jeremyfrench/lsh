@@ -874,7 +874,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	
 	ALIST_SET(ctx->super.algorithms,
 		  ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-		  &make_server_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
+		  &make_server_dh_exchange(make_dh_group14(&nettle_sha1),
 					   ctx->keys)->super);
 
 	hostkey_algorithms

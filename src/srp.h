@@ -49,14 +49,14 @@ make_srp_entry(const struct lsh_string *name,
 /* Consumes the salt */
 struct lsh_string *
 srp_make_verifier(const struct zn_group *G,
-		  const struct hash_algorithm *H,
+		  const struct nettle_hash *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd);
 
 void
 srp_hash_password(mpz_t x,
-		  const struct hash_algorithm *H,
+		  const struct nettle_hash *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd);

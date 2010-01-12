@@ -4,9 +4,9 @@ int
 test_main(void)
 {
   struct mac_algorithm *hmac
-    = make_hmac_algorithm(&crypto_sha1_algorithm);
+    = make_hmac_algorithm(&nettle_sha1);
   
-  test_hash("SHA1", &crypto_sha1_algorithm,
+  test_hash("SHA1", &nettle_sha1,
 	    S("abc"),
 	    H("A9993E364706816A BA3E25717850C26C 9CD0D89D"));
 

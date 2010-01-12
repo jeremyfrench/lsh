@@ -153,10 +153,10 @@ make_lsh_transport_config(void)
   self->host_db = make_lsh_transport_lookup_verifier(self);
 
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-	    &make_client_dh_exchange(make_dh_group14(&crypto_sha1_algorithm),
+	    &make_client_dh_exchange(make_dh_group14(&nettle_sha1),
 				     &self->host_db->super)->super);
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-	    &make_client_dh_exchange(make_dh_group1(&crypto_sha1_algorithm),
+	    &make_client_dh_exchange(make_dh_group1(&nettle_sha1),
 				     &self->host_db->super)->super);
   self->kex_algorithms =
     make_int_list(2, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
@@ -907,7 +907,7 @@ read_user_key(struct lsh_transport_config *config)
        (db object spki_context)
        (access string)
        ; For fingerprinting
-       (hash const object hash_algorithm)))
+       (hash . "const struct nettle_hash *")))
 */
 
 static struct verifier *
@@ -1006,7 +1006,7 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
       fingerprint = 
 	    lsh_string_colonize( 
 				ssh_format( "%lfxS", 
-					    hash_string_l(&crypto_md5_algorithm,
+					    hash_string_l(&nettle_md5,
 							  key_length, key)
 					    ), 
 				2, 
@@ -1015,7 +1015,7 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 
       babble = 
 	    lsh_string_bubblebabble( 
-				    hash_string_l(&crypto_sha1_algorithm,
+				    hash_string_l(&nettle_sha1,
 						  key_length, key),
 				    1 
 				    );
@@ -1083,7 +1083,7 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config)
   self->config = config;
   self->db = NULL;
   self->access = NULL;
-  self->hash = &crypto_sha1_algorithm;
+  self->hash = &nettle_sha1;
   
   return self;
 }

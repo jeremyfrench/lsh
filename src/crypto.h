@@ -102,7 +102,6 @@ extern struct crypto_algorithm crypto_twofish256_cbc_algorithm;
        (ctx var-array char)))
 */
 
-/* Happens to work for both hash_instance and hash_algorithm. */
 #define HASH_SIZE(h) ((h)->type->digest_size)
 
 void
@@ -116,20 +115,8 @@ hash_digest_string(struct hash_instance *self);
 struct hash_instance *
 hash_copy(struct hash_instance *self);
 
-/* FIXME: We don't need a class for this, we can just pass around a
-   pointer to the corresponding nettle_hash. */
-/* GABA:
-   (class
-     (name hash_algorithm)
-     (vars
-       (type . "const struct nettle_hash *")))
-*/
-
 struct hash_instance *
-make_hash(const struct hash_algorithm *self);
-
-extern const struct hash_algorithm crypto_sha1_algorithm;
-extern const struct hash_algorithm crypto_md5_algorithm;
+make_hash(const struct nettle_hash *algorithm);
 
 /* GABA:
    (class
@@ -165,7 +152,7 @@ MAC_DIGEST((instance), lsh_string_alloc((instance)->mac_size), 0)
 #define MAKE_MAC(m, l, key) ((m)->make_mac((m), (l), (key)))
 
 struct mac_algorithm *
-make_hmac_algorithm(const struct hash_algorithm *h);
+make_hmac_algorithm(const struct nettle_hash *algorithm);
 
 /* 10 million iterations would take 5 hours on my machine */
 #define PKCS5_MAX_ITERATIONS 10000000
@@ -280,18 +267,18 @@ make_keypair(uint32_t type,
        (modulo bignum)
        ; Generator for the multiplicative group of order modulo - 1
        (generator bignum)
-       (H const object hash_algorithm)))
+       (H . "const struct nettle_hash *")))
 */
 
 const struct dh_params *
 make_dh_params(const char *modulo, unsigned generator,
-	       const struct hash_algorithm *H);
+	       const struct nettle_hash *H);
 
 const struct dh_params *
-make_dh_group1(const struct hash_algorithm *H);
+make_dh_group1(const struct nettle_hash *H);
 
 const struct dh_params *
-make_dh_group14(const struct hash_algorithm *H);
+make_dh_group14(const struct nettle_hash *H);
 
 /* State common for both all DH variants, for both client and
    server. */
@@ -330,11 +317,11 @@ dh_hash_digest(struct dh_state *self);
 
 /* Utility functions */
 struct lsh_string *
-hash_string_l(const struct hash_algorithm *a,
+hash_string_l(const struct nettle_hash *a,
 	      uint32_t length, const uint8_t *data);
 
 struct lsh_string *
-hash_string(const struct hash_algorithm *a,
+hash_string(const struct nettle_hash *a,
 	    const struct lsh_string *in,
 	    int free);
 

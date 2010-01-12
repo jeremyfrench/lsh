@@ -42,7 +42,7 @@
 
 const struct dh_params *
 make_dh_params(const char *modulo, unsigned generator,
-	       const struct hash_algorithm *H)
+	       const struct nettle_hash *H)
 {
   NEW(dh_params, self);
   mpz_init_set_str(self->modulo, modulo, 16);
@@ -56,7 +56,7 @@ make_dh_params(const char *modulo, unsigned generator,
 /* The group for diffie-hellman-group1-sha1, also "Well known group 2"
    in RFC 2412. */
 const struct dh_params *
-make_dh_group1(const struct hash_algorithm *H)
+make_dh_group1(const struct nettle_hash *H)
 {
   /* 2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 } */  
   return make_dh_params("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
@@ -71,7 +71,7 @@ make_dh_group1(const struct hash_algorithm *H)
 /* The group for diffie-hellman-group14-sha1, also "Well known group
    14" in RFC 3526. */
 const struct dh_params *
-make_dh_group14(const struct hash_algorithm *H)
+make_dh_group14(const struct nettle_hash *H)
 {
   /* 2^2048 - 2^1984 - 1 + 2^64 * { [2^1918 pi] + 124476 } */
   return make_dh_params("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"

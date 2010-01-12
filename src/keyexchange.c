@@ -347,7 +347,7 @@ make_kexinit(struct kexinit_info *self)
 /* Taking keys into use */
 /* Returns a hash instance for generating various session keys. Consumes K. */
 static struct hash_instance *
-kex_build_secret(const struct hash_algorithm *H,
+kex_build_secret(const struct nettle_hash *H,
 		 struct lsh_string *exchange_hash,
 		 struct lsh_string *K)
 {
@@ -567,7 +567,7 @@ kex_make_inflate(struct object_list *algorithms,
 /* NOTE: Consumes K */
 int
 keyexchange_finish(struct transport_connection *connection,
-		   const struct hash_algorithm *H,
+		   const struct nettle_hash *H,
 		   struct lsh_string *exchange_hash,
 		   struct lsh_string *K)
 {

@@ -99,7 +99,7 @@ make_srp_entry(const struct lsh_string *name,
 /* Consumes the salt */
 struct lsh_string *
 srp_make_verifier(const struct zn_group *G,
-		  const struct hash_algorithm *H,
+		  const struct nettle_hash *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd)
@@ -125,7 +125,7 @@ srp_make_verifier(const struct zn_group *G,
 
 void
 srp_hash_password(mpz_t x,
-		  const struct hash_algorithm *H,
+		  const struct nettle_hash *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd)
@@ -423,7 +423,7 @@ struct dh_method *
 make_srp1(struct randomness *r)
 {
   return make_dh(make_ssh_ring_srp_1(),
-		 &crypto_sha1_algorithm, r);
+		 &nettle_sha1, r);
 }
 
 #endif /* WITH_SRP */

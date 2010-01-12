@@ -63,9 +63,9 @@ all_symmetric_algorithms()
 		    ATOM_3DES_CBC, &crypto_des3_cbc_algorithm,
 		    ATOM_CAST128_CBC, &crypto_cast128_cbc_algorithm,
 		    ATOM_HMAC_SHA1,
-		      make_hmac_algorithm(&crypto_sha1_algorithm),
+		      make_hmac_algorithm(&nettle_sha1),
 		    ATOM_HMAC_MD5,
-		      make_hmac_algorithm(&crypto_md5_algorithm),
+		      make_hmac_algorithm(&nettle_md5),
 #if WITH_ZLIB
 		    ATOM_ZLIB, make_zlib(),
 #endif

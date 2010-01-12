@@ -71,7 +71,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (vars
        (e object exception_handler)
        (G const object zn_group)
-       (H const object hash_algorithm)
+       (H "const struct nettle_hash *")
        
        (file string)
        (dest . int)
@@ -89,7 +89,7 @@ make_srp_gen_options(struct exception_handler *e)
   self->e = e;
 
   self->G = make_ssh_ring_srp_1();
-  self->H = &crypto_sha1_algorithm;
+  self->H = &nettle_sha1;
   self->file = NULL;
   self->dest = -1
 

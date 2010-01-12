@@ -144,7 +144,7 @@ test_cipher(const char *name, struct crypto_algorithm *algorithm,
 
 void
 test_hash(const char *name,
-	  const struct hash_algorithm *algorithm,
+	  const struct nettle_hash *algorithm,
 	  const struct lsh_string *data,
 	  const struct lsh_string *digest)
 {

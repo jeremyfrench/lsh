@@ -563,24 +563,16 @@ hash_copy(struct hash_instance *self)
 }
 
 struct hash_instance *
-make_hash(const struct hash_algorithm *self)
+make_hash(const struct nettle_hash *algorithm)
 {
   NEW_VAR_OBJECT(hash_instance, instance,
-		 HASH_INSTANCE_SIZE(self->type));
+		 HASH_INSTANCE_SIZE(algorithm));
 
-  instance->type = self->type;
-  self->type->init(instance->ctx);
+  instance->type = algorithm;
+  algorithm->init(instance->ctx);
 
   return instance;
 }
-
-const struct hash_algorithm
-crypto_md5_algorithm =
-{ STATIC_HEADER, &nettle_md5 };
-
-const struct hash_algorithm
-crypto_sha1_algorithm =
-{ STATIC_HEADER, &nettle_sha1 };
 
 /* HMAC */
 
@@ -650,17 +642,17 @@ make_hmac_instance(struct mac_algorithm *s,
 }
 
 struct mac_algorithm *
-make_hmac_algorithm(const struct hash_algorithm *h)
+make_hmac_algorithm(const struct nettle_hash *h)
 {
   NEW(hmac_algorithm, self);
 
-  self->super.mac_size = h->type->digest_size;
+  self->super.mac_size = h->digest_size;
 
   /* Recommended in RFC-2104 */
-  self->super.key_size = h->type->digest_size;
+  self->super.key_size = h->digest_size;
   self->super.make_mac = make_hmac_instance;
 
-  self->type = h->type;
+  self->type = h;
 
   return &self->super;
 }
@@ -669,7 +661,7 @@ make_hmac_algorithm(const struct hash_algorithm *h)
 /* Utility functions */
 
 struct lsh_string *
-hash_string_l(const struct hash_algorithm *a,
+hash_string_l(const struct nettle_hash *a,
 	      uint32_t length, const uint8_t *data)
 {
   struct hash_instance *hash = make_hash(a);
@@ -684,7 +676,7 @@ hash_string_l(const struct hash_algorithm *a,
 }
 
 struct lsh_string *
-hash_string(const struct hash_algorithm *a,
+hash_string(const struct nettle_hash *a,
 	    const struct lsh_string *in,
 	    int free)
 {

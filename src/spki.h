@@ -62,7 +62,7 @@ spki_make_signer(struct alist *algorithms,
 		 int *algorithm_name);
 
 struct lsh_string *
-spki_hash_data(const struct hash_algorithm *algorithm,
+spki_hash_data(const struct nettle_hash *algorithm,
 	       int algorithm_name,
 	       uint32_t length, uint8_t *data);
 

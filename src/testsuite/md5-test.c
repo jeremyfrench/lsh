@@ -4,34 +4,34 @@ int
 test_main(void)
 {
   struct mac_algorithm *hmac
-    = make_hmac_algorithm(&crypto_md5_algorithm);
+    = make_hmac_algorithm(&nettle_md5);
   
   /* Test vectors from RFC 1321 */
-  test_hash("MD5-1", &crypto_md5_algorithm,
+  test_hash("MD5-1", &nettle_md5,
 	    S(""),
 	    H("D41D8CD98F00B204 E9800998ECF8427E"));
   
-  test_hash("MD5-2", &crypto_md5_algorithm,
+  test_hash("MD5-2", &nettle_md5,
 	    S("a"),
 	    H("0CC175B9C0F1B6A8 31C399E269772661"));
   
-  test_hash("MD5-3", &crypto_md5_algorithm,
+  test_hash("MD5-3", &nettle_md5,
 	    S("abc"),
 	    H("900150983cd24fb0 D6963F7D28E17F72"));
 
-  test_hash("MD5-4", &crypto_md5_algorithm,
+  test_hash("MD5-4", &nettle_md5,
 	    S("message digest"),
 	    H("F96B697D7CB7938D 525A2F31AAF161D0"));
 
-  test_hash("MD5-5", &crypto_md5_algorithm,
+  test_hash("MD5-5", &nettle_md5,
 	    S("abcdefghijklmnopqrstuvwxyz"),
 	    H("C3FCD3D76192E400 7DFB496CCA67E13B"));
 
-  test_hash("MD5-6", &crypto_md5_algorithm,
+  test_hash("MD5-6", &nettle_md5,
 	    S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
 	    H("D174AB98D277D9F5 A5611C2C9F419D9F"));
 
-  test_hash("MD5-7", &crypto_md5_algorithm,
+  test_hash("MD5-7", &nettle_md5,
 	    S("1234567890123456789012345678901234567890"
 	      "1234567890123456789012345678901234567890"),
 	    H("57EDF4A22BE3C955 AC49DA2E2107B67A"));

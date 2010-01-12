@@ -1,3 +1,11 @@
+2010-01-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-userauth.c (handle_password): New function, currently
+	untested and #if:ed out.
+
+	* src/crypto.h (hash_algorithm): Deleted class, just use the
+	corresponding struct nettle_hash. 
+
 2009-10-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Updated URL for liboop, it's now

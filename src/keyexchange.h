@@ -175,7 +175,7 @@ make_client_dh_exchange(const struct dh_params *params,
 
 int
 keyexchange_finish(struct transport_connection *connection,
-		   const struct hash_algorithm *H,
+		   const struct nettle_hash *H,
 		   struct lsh_string *exchange_hash,
 		   struct lsh_string *K);
 

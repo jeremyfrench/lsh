@@ -770,7 +770,7 @@ transport_send_kexinit(struct transport_connection *connection)
 
 void
 transport_keyexchange_finish(struct transport_connection *connection,
-			     const struct hash_algorithm *H,
+			     const struct nettle_hash *H,
 			     struct lsh_string *exchange_hash,
 			     struct lsh_string *K)
 {
