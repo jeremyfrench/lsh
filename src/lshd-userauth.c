@@ -424,7 +424,7 @@ get_verifier(struct lshd_user *user, enum lsh_atom algorithm,
   /* FIXME: We should have proper spki support */
   file = ssh_format("%lz/.lsh/" AUTHORIZATION_DIR "/%lxfS",
 		    user->home,
-		    hash_string(&crypto_sha1_algorithm,
+		    hash_string(&nettle_sha1,
 				PUBLIC_SPKI_KEY(v, 0),
 				1));
   s = lsh_get_cstring(file);
@@ -498,6 +498,59 @@ handle_publickey(struct simple_buffer *buffer,
   return res;
 }
 
+#if 0
+/* Returns 1 on success, 0 on failure. */
+static int
+handle_password(struct simple_buffer *buffer,
+		struct lshd_user *user,
+		const struct lsh_string *session_id UNUSED)
+{
+  int change_passwd;
+  uint32_t password_length;
+  const uint8_t *password_data;
+  const struct lsh_string *password;
+  const char *cpassword;
+
+  if (!(parse_boolean(buffer, &change_passwd)
+	&& parse_string(buffer, &password_length, &password_data)))
+      protocol_error("Invalid USERAUTH_REQUEST \"password\"");
+
+  if (change_passwd)
+    /* Not supported. */
+    return 0;
+
+  if (!parse_eod (buffer))
+    protocol_error("Invalid USERAUTH_REQUEST \"password\"");
+
+  password = low_utf8_to_local (password_length, password_data, 0);
+  if (!password)
+    return 0;
+
+  cpassword = lsh_get_cstring (password);
+  if (!cpassword)
+    {
+    fail:
+      lsh_string_free (password);
+      return 0;
+    }
+
+  /* FIXME: Currently no support for PAM, kerberos passwords, or
+     password helper process. */
+
+  /* NOTE: Check for accounts with empty passwords, or generally short
+   * passwd fields like "NP" or "x". */
+  if (!user->crypted || (strlen(user->crypted) < 5) )
+    goto fail;
+
+  if (strcmp(crypt(cpassword, user->crypted),
+	     user->crypted))
+    goto fail;
+
+  /* Unix style password authentication succeded. */  
+  lsh_string_free (password);
+  return 1;  
+}
+#endif
 #define MAX_ATTEMPTS 10
 
 static int
@@ -518,7 +571,8 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
 
       enum lsh_atom service;
       enum lsh_atom method;
-      
+      int res;
+
       packet = read_packet(&seqno);
       
       trace("handle_userauth: Received packet.\n");
@@ -549,13 +603,24 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
 	  continue;
 	}
 
-      if (method != ATOM_PUBLICKEY)
-	goto fail;
-      
       if (!lookup_user(user, user_length, user_utf8))
 	goto fail;
 
-      switch (handle_publickey(&buffer, user, session_id))
+      /* FIXME: Needs to check configuration of which methods to support. */
+      switch (method)
+	{
+	default:
+	  goto fail;
+	case ATOM_PUBLICKEY:
+	  res = handle_publickey(&buffer, user, session_id);
+	  break;
+#if 0
+	case ATOM_PASSWORD:
+	  res = handle_password(&buffer, user, session_id);
+	  break;
+#endif
+	}
+      switch (res)
 	{
 	default:
 	  fatal("Internal error!\n");
