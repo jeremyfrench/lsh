@@ -4878,7 +4878,7 @@
 	(connection_send_kex): Trace output for hard_limit changes.
 
 	* Man pages: Applied patch from Stefan Pfetzing, addressing long
-	lines and non-ascii caharacters.
+	lines and non-ascii characters.
 
 2006-05-04  Niels Möller  <niels@s3.kth.se>
 
