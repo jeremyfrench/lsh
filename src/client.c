@@ -82,7 +82,7 @@ kill_client_connection(struct resource *s)
   CAST(client_connection, self, s);
   if (self->super.super.alive)
     {
-      werror("kill_client_connection\n");
+      trace("kill_client_connection\n");
 
       self->super.super.alive = 0;      
 
