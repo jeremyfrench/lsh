@@ -232,7 +232,7 @@ lshd_user_clear(struct lshd_user *self)
  *   disabled.
  *
  * o If the passwd field is empty, consider the account disabled (we
- *   usually don't want remote logins on pasword-less accounts). We may
+ *   usually don't want remote logins on password-less accounts). We may
  *   need to make this check optional, though.
  *
  * o If the passwd entry starts with a "*" and is longer than one
