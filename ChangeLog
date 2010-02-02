@@ -1,5 +1,11 @@
 2010-02-02  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/Makefile.in: Added rules for building
+	getpwnam-wrapper.so. Needs to be configured.
+
+	* src/testsuite/getpwnam-wrapper.c: New file, intended to be used
+	for lshd test cases.
+
 	* src/client.c (kill_client_connection): Use trace rather than
 	werror.
 
