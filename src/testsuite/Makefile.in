@@ -40,7 +40,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 TS_C = $(TS_SOURCES:.c=$(EXEEXT))
 TS_ALL = $(TS_C) $(TS_SH)
 
-TARGETS = $(TS_C) prgrp-timeout$(EXEEXT)
+TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) # getpwnam-wrapper.so
 
 TEST_OBJS = testutils.$(OBJEXT) \
 	    ../algorithms.$(OBJEXT) \
@@ -106,6 +106,14 @@ include $(srcdir)/.test-rules.make
 
 prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT)
 	$(LINK) prgrp-timeout.$(OBJEXT) -o prgrp-timeout 
+
+# FIXME: Make this optional
+getpwnam-wrapper.$(OBJEXT): getpwnam-wrapper.c
+	$(COMPILE) -fPIC -rdynamic -c $< \
+	&& $(DEP_PROCESS)
+
+getpwnam-wrapper.so: getpwnam-wrapper.$(OBJEXT)
+	$(LINK) -shared -Wl,-soname,getpwnam-wrapper.so.1 -o getpwnam-wrapper.so getpwnam-wrapper.$(OBJEXT) -ldl -lc -lcrypt
 
 distdir: $(DISTFILES)
 	set -e; for f in $(DISTFILES) ; do \
