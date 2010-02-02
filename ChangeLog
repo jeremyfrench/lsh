@@ -1,3 +1,8 @@
+2010-02-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (kill_client_connection): Use trace rather than
+	werror.
+
 2010-01-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (handle_password): New function, currently
