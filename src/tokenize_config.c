@@ -47,14 +47,10 @@ config_tokenizer_init(struct config_tokenizer *self,
   self->lineno = 1;
 }
 
-
-enum config_token_type
-config_tokenizer_next(struct config_tokenizer *self)
-{
   static const char char_class[0x100] =
     {
       /* HT, LF, VT, FF, CR */
-      0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,1,4,1,1,1,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
       /* SPACE */
       1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -66,8 +62,13 @@ config_tokenizer_next(struct config_tokenizer *self)
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     };
-#define IS_SPACE(c) (char_class[c] & 1)
-#define IS_SEPARATOR(c) (char_class[c] & 3)
+#define IS_SPACE(c) (char_class[c] & 5)
+#define IS_SPACE_NOT_LF(c) (char_class[c] & 1)
+#define IS_SEPARATOR(c) (char_class[c] & 7)
+
+enum config_token_type
+config_tokenizer_next(struct config_tokenizer *self)
+{
   for (;;)
     {
       while (LEFT && IS_SPACE(*HERE))
@@ -111,6 +112,30 @@ config_tokenizer_next(struct config_tokenizer *self)
   
       return self->type;
     }
+}
+
+/* Skips to end of line, and returns 1 if there's only space and
+   comments, otherwise zero.*/
+int
+config_tokenizer_eolp(struct config_tokenizer *self)
+{
+  int res;
+
+  /* Skip space within the line. */
+  while (LEFT && IS_SPACE_NOT_LF(*HERE))
+    ADVANCE(1);
+
+  /* End of file counts as an end of line */
+  if (!LEFT)
+    return 1;
+
+  res = (*HERE == '\n' || *HERE == '#');
+
+  /* Skip rest of line */
+  while (LEFT && *HERE != '\n')
+    ADVANCE(1);
+
+  return res;
 }
 
 void

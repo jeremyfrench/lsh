@@ -56,6 +56,9 @@ config_tokenizer_init(struct config_tokenizer *self,
 enum config_token_type
 config_tokenizer_next(struct config_tokenizer *self);
 
+int
+config_tokenizer_eolp(struct config_tokenizer *self);
+
 void
 config_tokenizer_error(struct config_tokenizer *self, const char *msg);
 
