@@ -32,8 +32,6 @@ PRE_LDFLAGS = -Largp_builddir -Lnettle_builddir -Lspki_builddir
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-# Missing: @KRB_PROGRAM@ @PAM_PROGRAM@
-
 BIN_PROGRAMS = lsh$(EXEEXT) \
 	       lsh-keygen$(EXEEXT) lsh-decrypt-key$(EXEEXT) \
 	       lsh-decode-key$(EXEEXT) lsh-export-key$(EXEEXT) lsh-make-seed$(EXEEXT)
