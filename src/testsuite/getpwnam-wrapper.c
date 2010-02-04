@@ -27,7 +27,6 @@
 
 #include <unistd.h>
 #include <pwd.h>
-#include <dlfcn.h>
 
 #include "environ.h"
 
