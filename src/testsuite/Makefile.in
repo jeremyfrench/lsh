@@ -10,6 +10,9 @@ include ../config.make
 PRE_CPPFLAGS = -I.. -I$(srcdir)/.. -I../argp_builddir -I../nettle_builddir -I../spki_builddir
 PRE_LDFLAGS = -L../argp_builddir -L../nettle_builddir -L../spki_builddir
 
+# Preload to add to replace the passwd-database with a fake.
+PASSWD_PRELOAD = @IF_LD_PRELOAD@ getpwnam-wrapper.so
+
 # Missing: parse-config-test.c
 TS_SOURCES = arcfour-test.c aes-test.c blowfish-test.c cast128-test.c \
 	     des-test.c \
@@ -40,7 +43,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 TS_C = $(TS_SOURCES:.c=$(EXEEXT))
 TS_ALL = $(TS_C) $(TS_SH)
 
-TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) # getpwnam-wrapper.so
+TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) $(PASSWD_PRELOAD)
 
 TEST_OBJS = testutils.$(OBJEXT) \
 	    ../algorithms.$(OBJEXT) \
@@ -86,7 +89,8 @@ all:
 
 check: $(TARGETS)
 	LD_LIBRARY_PATH="`pwd`/../nettle_builddir/.lib" srcdir=`cd $(srcdir) && pwd` \
-		$(TIMEOUT_PROGRAM) $(srcdir)/run-tests $(TS_ALL)
+	PASSWD_PRELOAD="$(PASSWD_PRELOAD)" \
+	$(TIMEOUT_PROGRAM) $(srcdir)/run-tests $(TS_ALL)
 
 $(TS_C): testutils.$(OBJEXT)
 
@@ -108,12 +112,13 @@ prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT)
 	$(LINK) prgrp-timeout.$(OBJEXT) -o prgrp-timeout 
 
 # FIXME: Make this optional
+# Do we need -rdynamic?
 getpwnam-wrapper.$(OBJEXT): getpwnam-wrapper.c
-	$(COMPILE) -fPIC -rdynamic -c $< \
+	$(COMPILE) $(CCPIC) -c $< \
 	&& $(DEP_PROCESS)
 
 getpwnam-wrapper.so: getpwnam-wrapper.$(OBJEXT)
-	$(LINK) -shared -Wl,-soname,getpwnam-wrapper.so.1 -o getpwnam-wrapper.so getpwnam-wrapper.$(OBJEXT) -ldl -lc -lcrypt
+	$(LINK) -shared -o getpwnam-wrapper.so getpwnam-wrapper.$(OBJEXT) -lc -lcrypt
 
 distdir: $(DISTFILES)
 	set -e; for f in $(DISTFILES) ; do \
