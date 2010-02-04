@@ -230,16 +230,12 @@ parser_parse_option(struct parser_state *state,
      
       for (option = parser->options; option->type != CONFIG_TYPE_NONE; option++)
 	{
-	  if (strlen(option->name) == tokenizer->token_length
-	      && !memcmp(option->name, tokenizer->token, tokenizer->token_length))
+	  if (config_tokenizer_looking_at (tokenizer, option->name))
 	    {
 	      uint32_t value = 0;
 	      const uint8_t *data = NULL;
 
-	      enum config_token_type type;
-		  
-	      type = config_tokenizer_next(tokenizer);
-	      if (type != TOK_STRING)
+	      if (tokenizer->type != TOK_STRING)
 		err = EINVAL;
 
 	      else
@@ -269,6 +265,9 @@ parser_parse_option(struct parser_state *state,
 		      data = arg;
 		      break;
 		    }
+		  if (!config_tokenizer_eolp (tokenizer))
+		    werror("%z:%i: Ignoring spurious data at end of line\n",
+			   tokenizer->file, tokenizer->lineno);			   
 		}
 
 	      if (err)
