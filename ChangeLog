@@ -1,3 +1,18 @@
+2010-02-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (PASSWD_PRELOAD): New variable, set
+	depending on IF_LD_PRELOAD, and passed to the environment of
+	run-tests. 
+	(getpwnam-wrapper): Use $(CCPIC). Deleted -rdynamic when compiling
+	and -Wl,-soname when linking.
+
+	* configure.ac: Use LSH_CCPIC.
+	(IF_LD_PRELOAD): New substituted variable, set if we apepar to
+	use dynamic libraries.
+	(KRB_PROGRAM, PAM_PROGRAM): Deleted.
+
+	* src/config.make.in (CCPIC): New variable.
+
 2010-02-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in: Added rules for building
