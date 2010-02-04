@@ -195,6 +195,8 @@ if test "x$am_cv_prog_cc_stdc" = xno ; then
   AC_MSG_ERROR([the C compiler doesn't handle ANSI-C])
 fi
 
+LSH_CCPIC
+
 AC_PROG_INSTALL
 
 # According to the autoconf manual, needs install-sh from
@@ -249,6 +251,24 @@ if test "x$M4" = x; then
 fi
 AC_ARG_VAR(M4, M4 macro processor)
 
+# Check if we're using dynamic linking. For the getpwnam-wrapper.so
+# hack used by the testsuite, we need LD_PRELOAD and $(CC) -shared.
+# Might need a more sophisticated test.
+
+IF_LD_PRELOAD='#'
+
+if test "x$GCC" = xyes ; then
+  for d in /lib /lib64 /lib/64 ; do
+    for f in $d/libc.so $d/libc-*.so ; do
+      if test -x $f ; then
+        IF_LD_PRELOAD=''
+        break
+      fi
+    done
+  done
+fi
+
+AC_SUBST(IF_LD_PRELOAD)
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -496,11 +516,9 @@ fi
 AH_TEMPLATE([WITH_KERBEROS], [For kerberos])
 if test x$enable_kerberos = xyes; then
   AC_DEFINE(WITH_KERBEROS)
-  KRB_PROGRAM=lsh-krb-checkpw
 fi
 
 AC_SUBST(KRB_LIBS)
-AC_SUBST(KRB_PROGRAM)
 
 AH_TEMPLATE([WITH_PAM], [For PAM])
 if test x$enable_pam = xyes; then
@@ -508,13 +526,10 @@ if test x$enable_pam = xyes; then
 
   if test x$enable_pam = xyes; then
     AC_DEFINE(WITH_PAM)
-    PAM_PROGRAM=lsh-pam-checkpw
   else
     AC_MSG_WARN([pam_start not found in libpam, disabling PAM])
   fi
 fi
-
-AC_SUBST(PAM_PROGRAM)
 
 AH_TEMPLATE([WITH_GCOV], [Use gcov])
 if test "x$enable_gcov" = "xyes"; then
@@ -1176,8 +1191,6 @@ fi
 AC_SUBST(BUILD_ARCH, `uname -p`)
 AC_SUBST(BUILD_OSSYS,`uname -s`)
 AC_SUBST(BUILD_OSREV,`uname -r`)
-
-# Should also generate rsync/Makefile and sftp
 
 AC_CONFIG_FILES([Makefile src/config.make src/Makefile src/testsuite/Makefile
 		 doc/Makefile misc/Makefile
