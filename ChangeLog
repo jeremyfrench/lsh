@@ -1,5 +1,11 @@
 2010-02-04  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/server_config.c (parser_parse_option): Require new line at
+	end of option-value pair, and warn for spurious tokens before the
+	end of line.
+
+	* src/tokenize_config.c (config_tokenizer_eolp): New function.
+
 	* src/testsuite/Makefile.in (PASSWD_PRELOAD): New variable, set
 	depending on IF_LD_PRELOAD, and passed to the environment of
 	run-tests. 
