@@ -1,3 +1,18 @@
+2010-02-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/config/lshd-userauth.conf: Added enable-publickey
+	option.
+
+	* src/testsuite/lsh-4-test: Added missing call to test_done.
+
+	* src/lshd-userauth.c (lshd_userauth_config_handler): New
+	function.
+	(main_options): New options --password, --publickey, --root-login,
+	and negated versions.
+	(handle_userauth): Implement the the options.
+	(handle_publickey, handle_password): Take the configuration as
+	argument, and return 0 if the method is not enabled.
+
 2010-02-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_config.c (parser_parse_option): Require new line at
@@ -8,7 +23,7 @@
 
 	* src/testsuite/Makefile.in (PASSWD_PRELOAD): New variable, set
 	depending on IF_LD_PRELOAD, and passed to the environment of
-	run-tests. 
+	run-tests.
 	(getpwnam-wrapper): Use $(CCPIC). Deleted -rdynamic when compiling
 	and -Wl,-soname when linking.
 
