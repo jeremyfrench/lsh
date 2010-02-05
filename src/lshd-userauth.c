@@ -250,7 +250,7 @@ lshd_user_clear(struct lshd_user *self)
 
 static int
 lookup_user(struct lshd_user *user, uint32_t name_length,
-	    const uint8_t *name_utf8)
+	    const uint8_t *name_utf8, int allow_root)
 {
   struct passwd *passwd;
   const char *cname;
@@ -305,8 +305,8 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
     }
   else
     {
-      /* No root login. FIXME: Make configurable.  */
-      if (!user->uid)
+      /* No root login, unless explicitly enabled.  */
+      if (!allow_root && !user->uid)
 	return 0;
 
 #if HAVE_GETSPNAM && HAVE_SHADOW_H
@@ -443,7 +443,7 @@ get_verifier(struct lshd_user *user, enum lsh_atom algorithm,
 static int
 handle_publickey(struct simple_buffer *buffer,
 		 struct lshd_user *user,
-		 const struct lsh_string *session_id)
+		 const struct lshd_userauth_config *config)
 {
   int check_key;
   enum lsh_atom algorithm;
@@ -456,6 +456,9 @@ handle_publickey(struct simple_buffer *buffer,
   int res;
   
   struct verifier *v;
+
+  if (!config->with_publickey)
+    return 0;
 
   if (! (parse_boolean(buffer, &check_key)
 	 && parse_atom(buffer, &algorithm)
@@ -486,7 +489,7 @@ handle_publickey(struct simple_buffer *buffer,
   /* The signature is on the session id, followed by the userauth
      request up to the actual signature. To avoid collisions, the
      length field for the session id is included. */
-  signed_data = ssh_format("%S%ls", session_id, 
+  signed_data = ssh_format("%S%ls", config->session_id, 
 			   signature_start, buffer->data);
 
   res = VERIFY(v, algorithm,
@@ -498,18 +501,20 @@ handle_publickey(struct simple_buffer *buffer,
   return res;
 }
 
-#if 0
 /* Returns 1 on success, 0 on failure. */
 static int
 handle_password(struct simple_buffer *buffer,
 		struct lshd_user *user,
-		const struct lsh_string *session_id UNUSED)
+		const struct lshd_userauth_config *config)
 {
   int change_passwd;
   uint32_t password_length;
   const uint8_t *password_data;
   const struct lsh_string *password;
   const char *cpassword;
+
+  if (!config->with_password)
+    return 0;
 
   if (!(parse_boolean(buffer, &change_passwd)
 	&& parse_string(buffer, &password_length, &password_data)))
@@ -550,16 +555,25 @@ handle_password(struct simple_buffer *buffer,
   lsh_string_free (password);
   return 1;  
 }
-#endif
+
 #define MAX_ATTEMPTS 10
 
 static int
-handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
+handle_userauth(struct lshd_user *user,
+		const struct lshd_userauth_config *config)
 {
-  struct int_list *methods
-    = make_int_list(1, ATOM_PUBLICKEY, -1);
+  struct int_list *methods;
   unsigned attempt;
-  
+  unsigned i;
+
+  methods = alloc_int_list(config->with_password + config->with_publickey);
+  i = 0;
+
+  if (config->with_password)
+    LIST(methods)[i++] = ATOM_PASSWORD;
+  if (config->with_publickey)
+    LIST(methods)[i++] = ATOM_PUBLICKEY;
+
   for (attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
     {
       struct lsh_string *packet;
@@ -603,22 +617,21 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
 	  continue;
 	}
 
-      if (!lookup_user(user, user_length, user_utf8))
+      if (!lookup_user(user, user_length, user_utf8, config->allow_root))
 	goto fail;
 
-      /* FIXME: Needs to check configuration of which methods to support. */
+      /* NOTE: Each called function have to check if the memthod is
+	 enabled. */
       switch (method)
 	{
 	default:
 	  goto fail;
 	case ATOM_PUBLICKEY:
-	  res = handle_publickey(&buffer, user, session_id);
+	  res = handle_publickey(&buffer, user, config);
 	  break;
-#if 0
 	case ATOM_PASSWORD:
-	  res = handle_password(&buffer, user, session_id);
+	  res = handle_password(&buffer, user, config);
 	  break;
-#endif
 	}
       switch (res)
 	{
@@ -824,6 +837,12 @@ start_service(struct lshd_user *user, char **argv)
 
 enum {
   OPT_SESSION_ID = 0x200,
+  OPT_PASSWORD,
+  OPT_NO_PASSWORD,
+  OPT_PUBLICKEY,
+  OPT_NO_PUBLICKEY,
+  OPT_ROOT_LOGIN,
+  OPT_NO_ROOT_LOGIN,
 };  
 
 const char *argp_program_version
@@ -844,6 +863,21 @@ main_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "session-id", OPT_SESSION_ID, "Session id", 0,
     "Session id from the transport layer.", 0 },
+
+  { "password", OPT_PASSWORD, NULL, 0,
+    "Enable password user authentication (default).", 0},
+  { "no-password", OPT_NO_PASSWORD, NULL, 0,
+    "Disable password user authentication.", 0},
+
+  { "publickey", OPT_PUBLICKEY, NULL, 0,
+    "Enable publickey user authentication (default).", 0},
+  { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
+    "Disable publickey user authentication.", 0},
+
+  { "root-login", OPT_ROOT_LOGIN, NULL, 0,
+    "Allow root to login.", 0 },
+  { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
+    "Don't allow root to login (default).", 0 },
   
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -853,19 +887,31 @@ main_options[] =
      (name lshd_userauth_config)
      (super server_config)
      (vars
-       (session_id string)))
+       (werror_config object werror_config)
+       (session_id string)
+       (with_password . int)
+       (with_publickey . int)
+       (allow_root . int)))
 */
+
+static const struct config_parser
+lshd_userauth_config_parser;
 
 static struct lshd_userauth_config *
 make_lshd_userauth_config(void)
 {
   NEW(lshd_userauth_config, self);
   init_server_config(&self->super,
-		     &werror_config_parser,
+		     &lshd_userauth_config_parser,
 		     FILE_LSHD_USERAUTH_CONF,
 		     ENV_LSHD_USERAUTH_CONF);
 
+  self->werror_config = make_werror_config();
   self->session_id = NULL;
+  self->with_password = -1;
+  self->with_publickey = -1;
+  self->allow_root = -1;
+
   return self;
 }
 
@@ -885,6 +931,16 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_END:
       if (!self->session_id)
 	argp_error(state, "Mandatory option --session-id is missing.");
+
+      /* Defaults should havev been setup at the end of the config
+	 file parsing. */
+      assert (self->with_password >= 0);
+      assert (self->with_publickey >= 0);
+      assert (self->allow_root >= 0);
+
+      if (!(self->with_password || self->with_publickey))
+	argp_error(state, "All user authentication methods disabled.\n");
+      
       break;
 
     case OPT_SESSION_ID:
@@ -892,6 +948,21 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->session_id)
 	argp_error(state, "Invalid argument for --session-id.");
       break;
+
+    case OPT_PASSWORD:
+      self->with_password = 1;
+      break;
+    case OPT_NO_PASSWORD:
+      self->with_password = 0;
+      break;
+
+    case OPT_PUBLICKEY:
+      self->with_password = 1;
+      break;
+    case OPT_NO_PUBLICKEY:
+      self->with_password = 0;
+      break;
+      
     }
   return 0;
 }
@@ -906,6 +977,69 @@ main_argp =
   NULL, NULL
 };
 
+static const struct config_option
+lshd_userauth_config_options[] = {
+  { OPT_PASSWORD, "enable-password", CONFIG_TYPE_BOOL,
+    "Support for password user authentication", "no" },
+  { OPT_PUBLICKEY, "enable-publickey", CONFIG_TYPE_BOOL,
+    "Support for publickey user authentication", "yes" },
+  { OPT_ROOT_LOGIN, "allow-root-login", CONFIG_TYPE_BOOL,
+    "Allow the root user to login", "no" },
+
+  { 0, NULL, 0, NULL, NULL }
+};
+
+static int
+lshd_userauth_config_handler(int key, uint32_t value, const uint8_t *data UNUSED,
+			     struct config_parser_state *state)
+{
+  CAST_SUBTYPE(lshd_userauth_config, self, state->input);
+  switch (key)
+    {
+    case CONFIG_PARSE_KEY_INIT:
+      state->child_inputs[0] = self->werror_config;
+      break;
+    case CONFIG_PARSE_KEY_END:
+      /* Set up defaults, for values specified neither in the
+	 configuration file nor on the command line. */
+      if (self->with_password < 0)
+	self->with_password = 0;
+      if (self->with_publickey < 0)
+	self->with_publickey = 0;
+      if (self->allow_root < 0)
+	self->allow_root = 0;
+
+      break;
+
+    case OPT_PASSWORD:
+      if (self->with_password < 0)
+	self->with_password = value;
+      break;
+    case OPT_PUBLICKEY:
+      if (self->with_publickey < 0)
+	self->with_publickey = value;
+      break;
+    case OPT_ROOT_LOGIN:
+      if (self->allow_root < 0)
+	self->allow_root = value;
+      break;
+    }
+  return 0;
+}
+
+static const struct config_parser *
+lshd_userauth_config_children[] = {
+  &werror_config_parser,
+  NULL
+};
+
+static const struct config_parser
+lshd_userauth_config_parser = {
+  lshd_userauth_config_options,
+  lshd_userauth_config_handler,
+  lshd_userauth_config_children
+};
+
 int
 main(int argc, char **argv)
 {
@@ -914,13 +1048,15 @@ main(int argc, char **argv)
   const char *helper_program;
   int helper_fd;
 
+  trace("main\n");
+
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
-  werror("Started userauth service.\n");
+  verbose("Started userauth service.\n");
 
   lshd_user_init(&user);
 
-  if (!handle_userauth(&user, config->session_id))
+  if (!handle_userauth(&user, config))
     {
       write_packet(format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				     "Access denied", ""));
