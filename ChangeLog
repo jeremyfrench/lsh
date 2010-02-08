@@ -1,5 +1,8 @@
 2010-02-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: When looking for a shared libc, look for the
+	symlink /libc.so.* rather than the glibc-specific name libc-*.so.
+
 	* src/lshd-userauth.c: Renamed configuration parameters and
 	corresonding variables to allow-password, allow-publickey and
 	allow-root-login.
