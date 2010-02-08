@@ -250,7 +250,7 @@ lshd_user_clear(struct lshd_user *self)
 
 static int
 lookup_user(struct lshd_user *user, uint32_t name_length,
-	    const uint8_t *name_utf8, int allow_root)
+	    const uint8_t *name_utf8, int allow_root_login)
 {
   struct passwd *passwd;
   const char *cname;
@@ -306,7 +306,7 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
   else
     {
       /* No root login, unless explicitly enabled.  */
-      if (!allow_root && !user->uid)
+      if (!allow_root_login && !user->uid)
 	return 0;
 
 #if HAVE_GETSPNAM && HAVE_SHADOW_H
@@ -457,7 +457,7 @@ handle_publickey(struct simple_buffer *buffer,
   
   struct verifier *v;
 
-  if (!config->with_publickey)
+  if (!config->allow_publickey)
     return 0;
 
   if (! (parse_boolean(buffer, &check_key)
@@ -513,7 +513,7 @@ handle_password(struct simple_buffer *buffer,
   const struct lsh_string *password;
   const char *cpassword;
 
-  if (!config->with_password)
+  if (!config->allow_password)
     return 0;
 
   if (!(parse_boolean(buffer, &change_passwd)
@@ -566,12 +566,12 @@ handle_userauth(struct lshd_user *user,
   unsigned attempt;
   unsigned i;
 
-  methods = alloc_int_list(config->with_password + config->with_publickey);
+  methods = alloc_int_list(config->allow_password + config->allow_publickey);
   i = 0;
 
-  if (config->with_password)
+  if (config->allow_password)
     LIST(methods)[i++] = ATOM_PASSWORD;
-  if (config->with_publickey)
+  if (config->allow_publickey)
     LIST(methods)[i++] = ATOM_PUBLICKEY;
 
   for (attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
@@ -617,7 +617,7 @@ handle_userauth(struct lshd_user *user,
 	  continue;
 	}
 
-      if (!lookup_user(user, user_length, user_utf8, config->allow_root))
+      if (!lookup_user(user, user_length, user_utf8, config->allow_root_login))
 	goto fail;
 
       /* NOTE: Each called function have to check if the memthod is
@@ -889,9 +889,9 @@ main_options[] =
      (vars
        (werror_config object werror_config)
        (session_id string)
-       (with_password . int)
-       (with_publickey . int)
-       (allow_root . int)))
+       (allow_password . int)
+       (allow_publickey . int)
+       (allow_root_login . int)))
 */
 
 static const struct config_parser
@@ -908,9 +908,9 @@ make_lshd_userauth_config(void)
 
   self->werror_config = make_werror_config();
   self->session_id = NULL;
-  self->with_password = -1;
-  self->with_publickey = -1;
-  self->allow_root = -1;
+  self->allow_password = -1;
+  self->allow_publickey = -1;
+  self->allow_root_login = -1;
 
   return self;
 }
@@ -934,11 +934,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       /* Defaults should havev been setup at the end of the config
 	 file parsing. */
-      assert (self->with_password >= 0);
-      assert (self->with_publickey >= 0);
-      assert (self->allow_root >= 0);
+      assert (self->allow_password >= 0);
+      assert (self->allow_publickey >= 0);
+      assert (self->allow_root_login >= 0);
 
-      if (!(self->with_password || self->with_publickey))
+      if (!(self->allow_password || self->allow_publickey))
 	argp_error(state, "All user authentication methods disabled.\n");
       
       break;
@@ -950,17 +950,24 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_PASSWORD:
-      self->with_password = 1;
+      self->allow_password = 1;
       break;
     case OPT_NO_PASSWORD:
-      self->with_password = 0;
+      self->allow_password = 0;
       break;
 
     case OPT_PUBLICKEY:
-      self->with_password = 1;
+      self->allow_publickey = 1;
       break;
     case OPT_NO_PUBLICKEY:
-      self->with_password = 0;
+      self->allow_publickey = 0;
+      break;
+
+    case OPT_ROOT_LOGIN:
+      self->allow_root_login = 1;
+      break;
+    case OPT_NO_ROOT_LOGIN:
+      self->allow_root_login = 0;
       break;
       
     }
@@ -979,9 +986,9 @@ main_argp =
 
 static const struct config_option
 lshd_userauth_config_options[] = {
-  { OPT_PASSWORD, "enable-password", CONFIG_TYPE_BOOL,
+  { OPT_PASSWORD, "allow-password", CONFIG_TYPE_BOOL,
     "Support for password user authentication", "no" },
-  { OPT_PUBLICKEY, "enable-publickey", CONFIG_TYPE_BOOL,
+  { OPT_PUBLICKEY, "allow-publickey", CONFIG_TYPE_BOOL,
     "Support for publickey user authentication", "yes" },
   { OPT_ROOT_LOGIN, "allow-root-login", CONFIG_TYPE_BOOL,
     "Allow the root user to login", "no" },
@@ -1002,26 +1009,26 @@ lshd_userauth_config_handler(int key, uint32_t value, const uint8_t *data UNUSED
     case CONFIG_PARSE_KEY_END:
       /* Set up defaults, for values specified neither in the
 	 configuration file nor on the command line. */
-      if (self->with_password < 0)
-	self->with_password = 0;
-      if (self->with_publickey < 0)
-	self->with_publickey = 0;
-      if (self->allow_root < 0)
-	self->allow_root = 0;
+      if (self->allow_password < 0)
+	self->allow_password = 0;
+      if (self->allow_publickey < 0)
+	self->allow_publickey = 0;
+      if (self->allow_root_login < 0)
+	self->allow_root_login = 0;
 
       break;
 
     case OPT_PASSWORD:
-      if (self->with_password < 0)
-	self->with_password = value;
+      if (self->allow_password < 0)
+	self->allow_password = value;
       break;
     case OPT_PUBLICKEY:
-      if (self->with_publickey < 0)
-	self->with_publickey = value;
+      if (self->allow_publickey < 0)
+	self->allow_publickey = value;
       break;
     case OPT_ROOT_LOGIN:
-      if (self->allow_root < 0)
-	self->allow_root = value;
+      if (self->allow_root_login < 0)
+	self->allow_root_login = value;
       break;
     }
   return 0;
