@@ -259,7 +259,7 @@ IF_LD_PRELOAD='#'
 
 if test "x$GCC" = xyes ; then
   for d in /lib /lib64 /lib/64 ; do
-    for f in $d/libc.so $d/libc-*.so ; do
+    for f in $d/libc.so $d/libc.so.* ; do
       if test -x $f ; then
         IF_LD_PRELOAD=''
         break
