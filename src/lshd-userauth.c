@@ -864,20 +864,20 @@ main_options[] =
   { "session-id", OPT_SESSION_ID, "Session id", 0,
     "Session id from the transport layer.", 0 },
 
-  { "password", OPT_PASSWORD, NULL, 0,
-    "Enable password user authentication (default).", 0},
-  { "no-password", OPT_NO_PASSWORD, NULL, 0,
-    "Disable password user authentication.", 0},
+  { "allow-password", OPT_PASSWORD, NULL, 0,
+    "Enable password user authentication.", 0},
+  { "deny-password", OPT_NO_PASSWORD, NULL, 0,
+    "Disable password user authentication (default).", 0},
 
-  { "publickey", OPT_PUBLICKEY, NULL, 0,
-    "Enable publickey user authentication (default).", 0},
-  { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
-    "Disable publickey user authentication.", 0},
+  { "allow-publickey", OPT_PUBLICKEY, NULL, 0,
+    "Enable publickey user authentication.", 0},
+  { "deny-publickey", OPT_NO_PUBLICKEY, NULL, 0,
+    "Disable publickey user authentication (default).", 0},
 
-  { "root-login", OPT_ROOT_LOGIN, NULL, 0,
-    "Allow root to login.", 0 },
-  { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
-    "Don't allow root to login (default).", 0 },
+  { "allow-root-login", OPT_ROOT_LOGIN, NULL, 0,
+    "Allow root user to login.", 0 },
+  { "deny-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
+    "Don't allow root user to login (default).", 0 },
   
   { NULL, 0, NULL, 0, NULL, 0 }
 };
