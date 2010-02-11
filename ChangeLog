@@ -1,3 +1,8 @@
+2010-02-11  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-userauth.c (main_options): Renamed options to start
+	with --allow or --deny.
+
 2010-02-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: When looking for a shared libc, look for the
