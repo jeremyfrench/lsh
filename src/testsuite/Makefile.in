@@ -71,7 +71,7 @@ TEST_OBJS = testutils.$(OBJEXT) \
 
 TEST_LIBS = -lspki -lhogweed -lnettle $(LIBS)
 
-OTHER_SOURCES = testutils.c prgrp-timeout.c
+OTHER_SOURCES = testutils.c prgrp-timeout.c getpwnam-wrapper.c
 
 SOURCES = $(TS_SOURCES) $(OTHER_SOURCES)
 
