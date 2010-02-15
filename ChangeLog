@@ -1,3 +1,8 @@
+2010-02-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (OTHER_SOURCES): Added
+	getpwnam-wrapper.c.
+
 2010-02-11  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (main_options): Renamed options to start
