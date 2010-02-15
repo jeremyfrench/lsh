@@ -1,5 +1,8 @@
 2010-02-15  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lshd.c (make_lshd_port): Check that IPV6_V6ONLY is defined
+	before trying to setsockopt it.
+
 	* src/testsuite/Makefile.in (OTHER_SOURCES): Added
 	getpwnam-wrapper.c.
 
