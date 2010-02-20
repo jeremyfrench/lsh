@@ -180,7 +180,10 @@ transport_write_flush(struct transport_write_state *self,
        (kexinit object kexinit_info)))
 */
 
-/* Uses for the key exchange method */
+void
+init_transport_context (struct transport_context *self, int is_server);
+
+/* Used for the key exchange method */
 
 /* GABA:
    (class

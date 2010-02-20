@@ -28,6 +28,7 @@
 
 #include <assert.h>
 
+#include "algorithms.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_string.h"
@@ -59,6 +60,15 @@
 /* Forward declaration. */
 static void *
 oop_timer_retry(oop_source *oop, struct timeval tv, void *state);
+
+void
+init_transport_context (struct transport_context *self,
+			int is_server)
+{
+  self->is_server = is_server;
+  self->algorithms = all_symmetric_algorithms();
+  self->kexinit = NULL;
+}
 
 void
 init_transport_connection(struct transport_connection *self,
