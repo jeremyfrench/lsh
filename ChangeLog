@@ -1,3 +1,14 @@
+2010-02-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (make_lsh_transport_config): Use
+	init_transport_context.
+	(start_userauth): In verbose mode, display the user name we're
+	trying to authenticate.
+	(try_password_auth): Likewise.
+	(try_keyboard_interactive_auth): Likewise.
+
+	* src/transport.c (init_transport_context): New function.
+
 2010-02-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (make_lshd_port): Check that IPV6_V6ONLY is defined
