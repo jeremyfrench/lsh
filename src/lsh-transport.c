@@ -134,7 +134,7 @@ static struct lsh_transport_config *
 make_lsh_transport_config(void)
 {
   NEW(lsh_transport_config, self);
-  self->super.is_server = 0;
+  init_transport_context (&self->super, 0);
 
   self->home = getenv(ENV_HOME);
   if (!self->home)
@@ -143,7 +143,6 @@ make_lsh_transport_config(void)
       return NULL;
     }
 
-  self->super.algorithms = all_symmetric_algorithms();
   self->algorithms = make_algorithms_options(self->super.algorithms);
 
   self->werror_config = make_werror_config();
@@ -162,8 +161,6 @@ make_lsh_transport_config(void)
     make_int_list(2, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
 		  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1);
   
-  self->super.kexinit = NULL;
-
   self->sloppy = 0;
   self->capture_file = NULL;
   self->capture_fd = -1;
@@ -489,7 +486,8 @@ start_userauth(struct lsh_transport_connection *self)
 
       lsh_string_free(signed_data);
 
-      verbose("Requesting authentication using the `publickey' method.\n");
+      verbose("Requesting authentication of user `%z' using the `publickey' method.\n",
+	      config->user);
 
       transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			    request);
@@ -535,7 +533,8 @@ try_password_auth(struct lsh_transport_connection *self)
 
   random_add(RANDOM_SOURCE_SECRET, STRING_LD(password));
 
-  verbose("Requesting authentication using the `password' method.\n");
+  verbose("Requesting authentication of user `%z' using the `password' method.\n",
+	  self->config->user);
 
   transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			ssh_format("%c%z%z%a%c%fS",
@@ -552,7 +551,9 @@ try_password_auth(struct lsh_transport_connection *self)
 static int
 try_keyboard_interactive_auth(struct lsh_transport_connection *self)
 {
-  verbose("Requesting authentication using the `keyboard-interactive' method.\n");
+  verbose("Requesting authentication of user `%z' using the `keyboard-interactive' method.\n",
+	  self->config->user);
+
   transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			ssh_format("%c%z%z%a%i%i",
 				   SSH_MSG_USERAUTH_REQUEST,
