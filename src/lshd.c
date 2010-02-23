@@ -76,21 +76,10 @@
      (name lshd_context)
      (super transport_context)
      (vars
-       ; Command line options
-       ;; (algorithms object algorithms_options)
-       ;; (port . "char *")
-       ;; (hostkey . "char *")
+       ; Service configuration
+       (service_config struct service_config)
 
-       ;; (daemonic . int)
-       ;; (background . int)
-       ;; (corefile . int)
-       ;; (pid_file . "const char *")
-       ; -1 means use pid file iff we're in daemonic mode
-       ;; (use_pid_file . int)
-
-       (keys object alist)
-       ; For now, a list { name, program, name, program, NULL }       
-       (services . "const char **")))
+       (keys object alist)))
 */
 
 /* Connection */
@@ -171,10 +160,13 @@ lshd_service_request_handler(struct transport_forward *self,
       && parse_eod(&buffer))
     {
       CAST(lshd_context, ctx, self->super.ctx);
-      const char *program = server_lookup_module(ctx->services,
-						 name_length, name);
+      const char *service = ctx->service_config.name;
+      uint32_t service_length;
+      
+      service_length = strlen(service);
 
-      if (program)
+      if (name_length == service_length
+	  && !memcmp (name, service, service_length))
 	{
 	  int pipe[2];
 	  pid_t child;
@@ -214,7 +206,9 @@ lshd_service_request_handler(struct transport_forward *self,
 	  else
 	    {
 	      /* Child process */
+	      struct arglist args;
 	      struct lsh_string *hex;
+	      unsigned i;
 
 	      close(pipe[0]);
 	      dup2(pipe[1], STDIN_FILENO);
@@ -225,9 +219,17 @@ lshd_service_request_handler(struct transport_forward *self,
 
 	      /* FIXME: Pass sufficient information so that
 		 $SSH_CLIENT can be set properly. */
-	      execl(program, program, "--session-id", lsh_string_data(hex), NULL);
+	      arglist_init (&args);
+	      arglist_push (&args, ctx->service_config.args.argv[0]);
+	      arglist_push (&args, "--session-id");
+	      arglist_push (&args, lsh_string_data(hex));
+	      for (i = 1; i < ctx->service_config.args.argc; i++)
+		arglist_push (&args, ctx->service_config.args.argv[i]);
 
-	      werror("lshd_service_request_handler: exec failed: %e.\n", errno);
+	      execv(args.argv[0], (char **) args.argv);
+
+	      werror("lshd_service_request_handler: exec of %z failed: %e.\n",
+		     args.argv[0], errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	}
@@ -352,17 +354,11 @@ static struct lshd_context *
 make_lshd_context(void)
 {
   NEW(lshd_context, self);
-  static const char *services[3];
 
-  services[0] = "ssh-userauth";
-  GET_FILE_ENV(services[1], LSHD_USERAUTH);
-  services[2] = NULL;
-
-  self->super.is_server = 1;
-  self->super.algorithms = all_symmetric_algorithms();
+  init_transport_context (&self->super, 1);
+  init_service_config (&self->service_config);
 
   self->keys = make_alist(0, -1);
-  self->services = services;
 
   return self;
 }
@@ -443,7 +439,6 @@ make_sighup_close_callback(struct resource *resource)
      (vars
        ; Command line options
        (algorithms object algorithms_options)
-       (werror_config object werror_config)
 
        (ctx object lshd_context)
 
@@ -454,14 +449,11 @@ make_sighup_close_callback(struct resource *resource)
 
        (daemonic . int)
        (daemon_flags . "enum daemon_flags")
+       ;; (background . int)
        (corefile . int)
        (pid_file string)
-       ; -1 means use pid file iff we're in daemonic mode
-       (use_pid_file . int)
-
-       (keys object alist)
-       ; For now, a list { name, program, name, program, NULL }       
-       (services . "const char **")))
+       ; -1 means use pid file iff we are in daemonic mode
+       (use_pid_file . int)))
 */
 
 static const struct config_parser
@@ -475,8 +467,7 @@ make_lshd_config(struct lshd_context *ctx)
 		     FILE_LSHD_CONF, ENV_LSHD_CONF);
 
   self->algorithms = make_algorithms_options(all_symmetric_algorithms());
-  self->werror_config = make_werror_config();
-  
+
   self->ctx = ctx;
 
   /* Default behaviour is to lookup the "ssh" service, and fall back
@@ -681,7 +672,7 @@ enum {
 };
 
 static const struct argp_option
-main_options[] =
+lshd_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "interface", OPT_INTERFACE, "INTERFACE", 0,
@@ -700,10 +691,11 @@ main_options[] =
 };
 
 static const struct argp_child
-main_argp_children[] =
+lshd_argp_children[] =
 {
   { &server_argp, 0, "", 0 },
   { &algorithms_argp, 0, "", 0 },
+  { &service_argp, 0, "", 0},
   { NULL, 0, NULL, 0}
 };
 
@@ -737,7 +729,7 @@ parse_interface(size_t length, const char *arg)
 }
 
 static error_t
-main_argp_parser(int key, char *arg, struct argp_state *state)
+lshd_argp_parser(int key, char *arg, struct argp_state *state)
 {
   CAST(lshd_config, self, state->input);
 
@@ -748,9 +740,30 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
       state->child_inputs[1] = self->algorithms;
+      state->child_inputs[2] = &self->ctx->service_config;
       break;
 
     case ARGP_KEY_END:
+      if (!self->ctx->service_config.name)
+	{
+	  const char *program;
+
+	  self->ctx->service_config.name = "ssh-userauth";
+
+	  GET_FILE_ENV(program, LSHD_USERAUTH);
+	  arglist_push (&self->ctx->service_config.args, program);
+
+	  /* Propagate werror-related options. */
+	  if (self->super.super.verbose > 0)
+	    arglist_push (&self->ctx->service_config.args, "-v");
+	  if (self->super.super.quiet > 0)
+	    arglist_push (&self->ctx->service_config.args, "-q");
+	  if (self->super.super.debug > 0)
+	    arglist_push (&self->ctx->service_config.args, "--debug");
+	  if (self->super.super.trace > 0)
+	    arglist_push (&self->ctx->service_config.args, "--trace");
+	}
+      assert (self->ctx->service_config.args.argc > 0);
       break;
 
     case OPT_INTERFACE:
@@ -800,11 +813,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 }
 
 static const struct argp
-main_argp =
-{ main_options, main_argp_parser,
+lshd_argp =
+{ lshd_options, lshd_argp_parser,
   NULL,
   "Server for the ssh-2 protocol.",
-  main_argp_children,
+  lshd_argp_children,
   NULL, NULL
 };
 
@@ -833,7 +846,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
   switch (key)
     {
     case CONFIG_PARSE_KEY_INIT:
-      state->child_inputs[0] = self->werror_config;
+      state->child_inputs[0] = &self->super.super;
       break;
     case CONFIG_PARSE_KEY_END:
       {
@@ -846,8 +859,8 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 
 	if (self->daemonic > 0)
 	  {
-	    if (self->werror_config->syslog < 0)
-	      self->werror_config->syslog = 1;
+	    if (self->super.super.syslog < 0)
+	      self->super.super.syslog = 1;
 
 	    if (self->use_pid_file < 0)
 	      self->use_pid_file = 1;
@@ -983,7 +996,7 @@ main(int argc, char **argv)
 
   config = make_lshd_config(make_lshd_context());
 
-  argp_parse(&main_argp, argc, argv, 0, NULL, config);
+  argp_parse(&lshd_argp, argc, argv, 0, NULL, config);
 
   /* Put this check after argument parsing, to make the --help option
      work. */
