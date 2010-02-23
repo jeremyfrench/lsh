@@ -24,6 +24,7 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
+#include "arglist.h"
 #include "server_config.h"
 #include "werror.h"
 
@@ -60,6 +61,21 @@ make_server_config(const struct config_parser *parser,
 		   const char *env_variable);
 
 extern const struct argp server_argp;
+
+
+/* GABA:
+   (struct
+     (name service_config)
+     (vars
+       ; Pointers into the original command line
+       (name . "const char *")
+       (args indirect-special "struct arglist" #f arglist_clear)))
+*/
+
+void
+init_service_config(struct service_config *self);
+
+extern const struct argp service_argp;
 
 #endif /* LSH_SERVER_H_INCLUDED */
 

@@ -161,6 +161,7 @@ enum {
   OPT_CONFIG_FILE = 0x200,
   OPT_PRINT_EXAMPLE,
   OPT_USE_EXAMPLE,
+  OPT_SERVICE
 };
 
 static const struct argp_option
@@ -246,5 +247,78 @@ server_argp =
   server_argp_parser,
   NULL, NULL,
   server_argp_children,
+  NULL, NULL
+};
+
+void
+init_service_config(struct service_config *self)
+{
+  self->name = NULL;
+  arglist_init (&self->args);
+}
+
+static const struct argp_option
+service_options[] =
+{
+  { "service", OPT_SERVICE, "NAME { COMMAND LINE }", 0,
+    "Service to offer.", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static error_t
+service_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST_SUBTYPE(service_config, self, state->input);
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+
+    case OPT_SERVICE:
+      if (self->name)
+	argp_error (state, "Multiple --service options not supported.");
+
+      self->name = arg;
+      if (state->next >= state->argc
+	  || strcmp (state->argv[state->next], "{"))
+	argp_error (state,
+		      "--service requires a name and a brace-delimited command line.");
+      else
+	{
+	  unsigned level = 1;
+	  
+	  for (state->next++; state->next < state->argc; )
+	    {
+	      const char *s = state->argv[state->next++];
+	      if (!strcmp(s, "{"))
+		level++;
+	      else if (!strcmp(s, "}"))
+		{
+		  level--;
+		  if (!level)
+		    {
+		      if (!self->args.argc)
+			argp_error (state, "Empty command line for --service.");
+
+		      return 0;
+		    }
+		}
+	      arglist_push (&self->args, s);
+	    }
+	  argp_error (state, "Unexpected end of arguments while parsing --service command line.");
+	}
+      break;
+    }
+  return 0;
+}
+
+const struct argp
+service_argp =
+{
+  service_options,
+  service_argp_parser,
+  NULL, NULL,
+  NULL,
   NULL, NULL
 };
