@@ -70,9 +70,10 @@ bootstrap: $(generated_sources) $(dist_classes)
 # created by the bootstrap target.
 all-here: bootstrap environ.h $(TARGETS)
 
-# queue.c not really used by all programs
+# queue.c and arglist.c not really used by all programs
 COMMON_SOURCES = atoms.c \
 		 alist.c \
+		 arglist.c \
 		 charset.c \
 		 gc.c \
 		 io.c \
@@ -126,8 +127,7 @@ SERVER_SOURCES = server.c \
 
 pty_helper_SOURCES = pty-helper.c
 
-lsh_SOURCES = arglist.c \
-	      client.c \
+lsh_SOURCES = client.c \
 	      client_escape.c \
 	      client_pty.c \
 	      client_session.c \
