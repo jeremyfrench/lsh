@@ -191,10 +191,16 @@ spawn_lshg () {
 }
 
 spawn_xvfb () {
-    $XVFB -nolisten tcp $TEST_DISPLAY &
+    rm $XAUTHORITY
+    # Set up authorization the old-fashioned way; The security
+    # extension used by xauth generate is not always supported.
+    $XAUTH <<EOF
+add $TEST_DISPLAY . `../lsh-keygen -a symmetric --bit-length 128`
+EOF
+    
+    $XVFB -auth $XAUTHORITY -nolisten tcp $TEST_DISPLAY &
     at_exit "kill $!"
     sleep 3
-    xauth generate $TEST_DISPLAY . 
 }
 
 
