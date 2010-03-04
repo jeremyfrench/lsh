@@ -64,7 +64,7 @@ extern const struct argp server_argp;
 
 
 /* GABA:
-   (struct
+   (class
      (name service_config)
      (vars
        ; Pointers into the original command line
@@ -72,8 +72,8 @@ extern const struct argp server_argp;
        (args indirect-special "struct arglist" #f arglist_clear)))
 */
 
-void
-init_service_config(struct service_config *self);
+struct service_config *
+make_service_config(void);
 
 extern const struct argp service_argp;
 

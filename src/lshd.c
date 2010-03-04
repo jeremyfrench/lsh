@@ -77,7 +77,7 @@
      (super transport_context)
      (vars
        ; Service configuration
-       (service_config struct service_config)
+       (service_config object service_config)
 
        (keys object alist)))
 */
@@ -160,7 +160,7 @@ lshd_service_request_handler(struct transport_forward *self,
       && parse_eod(&buffer))
     {
       CAST(lshd_context, ctx, self->super.ctx);
-      const char *service = ctx->service_config.name;
+      const char *service = ctx->service_config->name;
       uint32_t service_length;
       
       service_length = strlen(service);
@@ -220,11 +220,11 @@ lshd_service_request_handler(struct transport_forward *self,
 	      /* FIXME: Pass sufficient information so that
 		 $SSH_CLIENT can be set properly. */
 	      arglist_init (&args);
-	      arglist_push (&args, ctx->service_config.args.argv[0]);
+	      arglist_push (&args, ctx->service_config->args.argv[0]);
 	      arglist_push (&args, "--session-id");
 	      arglist_push (&args, lsh_string_data(hex));
-	      for (i = 1; i < ctx->service_config.args.argc; i++)
-		arglist_push (&args, ctx->service_config.args.argv[i]);
+	      for (i = 1; i < ctx->service_config->args.argc; i++)
+		arglist_push (&args, ctx->service_config->args.argv[i]);
 
 	      execv(args.argv[0], (char **) args.argv);
 
@@ -356,7 +356,7 @@ make_lshd_context(void)
   NEW(lshd_context, self);
 
   init_transport_context (&self->super, 1);
-  init_service_config (&self->service_config);
+  self->service_config = make_service_config ();
 
   self->keys = make_alist(0, -1);
 
@@ -740,30 +740,30 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
       state->child_inputs[1] = self->algorithms;
-      state->child_inputs[2] = &self->ctx->service_config;
+      state->child_inputs[2] = self->ctx->service_config;
       break;
 
     case ARGP_KEY_END:
-      if (!self->ctx->service_config.name)
+      if (!self->ctx->service_config->name)
 	{
 	  const char *program;
 
-	  self->ctx->service_config.name = "ssh-userauth";
+	  self->ctx->service_config->name = "ssh-userauth";
 
 	  GET_FILE_ENV(program, LSHD_USERAUTH);
-	  arglist_push (&self->ctx->service_config.args, program);
+	  arglist_push (&self->ctx->service_config->args, program);
 
 	  /* Propagate werror-related options. */
 	  if (self->super.super.verbose > 0)
-	    arglist_push (&self->ctx->service_config.args, "-v");
+	    arglist_push (&self->ctx->service_config->args, "-v");
 	  if (self->super.super.quiet > 0)
-	    arglist_push (&self->ctx->service_config.args, "-q");
+	    arglist_push (&self->ctx->service_config->args, "-q");
 	  if (self->super.super.debug > 0)
-	    arglist_push (&self->ctx->service_config.args, "--debug");
+	    arglist_push (&self->ctx->service_config->args, "--debug");
 	  if (self->super.super.trace > 0)
-	    arglist_push (&self->ctx->service_config.args, "--trace");
+	    arglist_push (&self->ctx->service_config->args, "--trace");
 	}
-      assert (self->ctx->service_config.args.argc > 0);
+      assert (self->ctx->service_config->args.argc > 0);
       break;
 
     case OPT_INTERFACE:

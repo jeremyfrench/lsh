@@ -250,11 +250,14 @@ server_argp =
   NULL, NULL
 };
 
-void
-init_service_config(struct service_config *self)
+struct service_config *
+make_service_config(void)
 {
+  NEW(service_config, self);
   self->name = NULL;
   arglist_init (&self->args);
+
+  return self;
 }
 
 static const struct argp_option
