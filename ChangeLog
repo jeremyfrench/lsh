@@ -1,3 +1,24 @@
+2010-03-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-keygen.c (main_argp_parser): Added --bit-length option,
+	to replace the old --level option. Added sypport for -a symmetric,
+	which generates random keys for use as a shared secret.
+	(check_file): Allow file to be NULL.
+	(process_private): Hex encode symmetric keys.
+	(main): Use the value of the --bit-length option. New logic to
+	handle generation of symmetric keys.
+	(dsa_generate_key): Take bit size as input, not a NIST security
+	level.
+	(main_argp_parser): By default, don't encrypt symmetric keys.
+
+	* src/lshd.c: Updated for service_config being a class.
+
+	* src/server.c (make_service_config): New function, replacing
+	init_service_config.
+
+	* src/server.h (service_config): Make this into a class rather
+	than a struct, for safer casting in service_argp_parser.
+
 2010-02-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (make_lsh_transport_config): Use
