@@ -1,5 +1,9 @@
 2010-03-04  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/functions.sh (spawn_xvfb): Explicitly setup the
+	xauthority file using xauth add, don't rely on xauth generate and
+	the X11 security extension.
+
 	* src/lsh-keygen.c (main_argp_parser): Added --bit-length option,
 	to replace the old --level option. Added sypport for -a symmetric,
 	which generates random keys for use as a shared secret.
