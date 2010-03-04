@@ -202,7 +202,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       /* Default behaviour is to encrypt the key unless running in
 	 server mode. */
-      if (!self->crypto_name && !self->server)
+      if (!self->crypto_name && !self->server && self->algorithm != 's')
 	{
 	  self->crypto_name = ATOM_AES256_CBC;
 	  self->crypto = &crypto_aes256_cbc_algorithm;	 
