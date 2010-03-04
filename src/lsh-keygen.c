@@ -81,6 +81,7 @@ enum {
   OPT_WRITE_RAW,
   OPT_LABEL,
   OPT_PASSPHRASE,
+  OPT_BIT_LENGTH
 };
 
 /* GABA:
@@ -94,9 +95,10 @@ enum {
        (server . int)
 
        ; Key generation options
-       ; 'd' means dsa, 'r' rsa
+       ; 'd' means dsa, 'r' rsa, 's' plain symmetric key
        (algorithm . int)
        (level . int)
+       (bit_length . int)
 
        ; Output options
        (public_file string)
@@ -124,6 +126,7 @@ make_lsh_keygen_options(void)
   self->server = 0;
 
   self->level = -1;
+  self->bit_length = -1;
   self->algorithm = 'r';
 
   self->public_file = NULL;
@@ -160,10 +163,11 @@ main_options[] =
   /* FIXME: Split into two options, --length to specify bit size, and
      --nist-level for dsa and backwards compatibility. */
 
+  { "bit-length", OPT_BIT_LENGTH, "Key length", 0, "Specify bit length of generated key.", 0},
   { "nist-level", 'l', "Security level", 0, "For DSA keys, this is the "
     "NIST security level: Level 0 uses 512-bit primes, level 8 uses "
     "1024 bit primes, and the default is 8. For RSA keys, it's the "
-    "bit length of the modulus, and the default is 2048 bits.", 0 },
+    "bit length of the modulus, and the default is 2048 bits. (Obsolete, use --bit-length instead).", 0 },
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/identity", 0 },
   { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
   { "label", OPT_LABEL, "Text", 0, "Unencrypted label for the key.", 0 },
@@ -196,21 +200,80 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (!werror_init(&self->super))
 	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
 
+      /* Default behaviour is to encrypt the key unless running in
+	 server mode. */
+      if (!self->crypto_name && !self->server)
+	{
+	  self->crypto_name = ATOM_AES256_CBC;
+	  self->crypto = &crypto_aes256_cbc_algorithm;	 
+	}
+      if (!self->write_raw && self->crypto)
+	{
+	  if (!self->label)
+	    {
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 300
+#endif
+	      char host[MAXHOSTNAMELEN];
+	      const char *name;
+	  
+	      USER_NAME_FROM_ENV(name);
+
+	      if (!name)
+		{
+		  argp_failure(state, EXIT_FAILURE, 0,
+			       "LOGNAME not set. Please use the -l option.");
+		  return EINVAL;
+		}
+
+	      if ( (gethostname(host, sizeof(host)) < 0)
+		   && (errno != ENAMETOOLONG) )
+		argp_failure(state, EXIT_FAILURE, errno,
+			     "Can't get the host name. Please use the -l option.");
+	      
+	      self->label = ssh_format("%lz@%lz", name, host);
+	    }
+	}
       switch (self->algorithm)
 	{
 	case 'd':
-	  if (self->level < 0)
-	    self->level = 8;
-	  else if (self->level > 8)
-	    argp_error(state, "Security level for DSA should be in the range 0-8.");
-	  
+	  if (self->bit_length < 0)
+	    {
+	      if (self->level >= 0)
+		{
+		  if (self->level > 8)
+		    argp_error(state, "Security level for DSA should be in the range 0-8.");
+		  self->bit_length = 512 + 64 * self->level;
+		}
+	      else
+		self->bit_length = 1024;
+	    }
+	  if (self->bit_length < 512 || self->bit_length > 1024)
+	    argp_error(state, "DSA keys supported only for sizes 512 - 1024 bits, "
+		       "with anything other than 1024 considered obsolete.");
 	  break;
 	case 'r':
-	  if (self->level < 0)
-	    self->level = 2048;
-	  else if (self->level < 512)
+	  if (self->bit_length < 0)
+	    {
+	      if (self->level < 0)
+		self->bit_length = 2048;
+	      else
+		self->bit_length = self->level;
+	    }
+
+	  else if (self->bit_length < 512)
 	    argp_error(state, "RSA keys should be at the very least 512 bits.");
 	  break;
+	case 's':
+	  if (self->bit_length < 0)
+	    self->bit_length = 128;
+	  if (self->bit_length & 7)
+	    argp_error(state, "Size for symmetric keys must be a multiple of 8 bits.\n");
+
+	  /* Skip setup of file names and defaults that we don't
+	     need. */
+	  return 0;
+
 	default:
 	  fatal("Internal error!\n");
 	}
@@ -252,40 +315,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       self->public_file = ssh_format("%lS.pub", self->private_file);
 
-      /* Default behaviour is to encrypt the key unless running in
-	 server mode. */
-      if (!self->crypto_name && !self->server)
-	{
-	  self->crypto_name = ATOM_AES256_CBC;
-	  self->crypto = &crypto_aes256_cbc_algorithm;	 
-	}
-      if (!self->write_raw && self->crypto)
-	{
-	  if (!self->label)
-	    {
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN 300
-#endif
-	      char host[MAXHOSTNAMELEN];
-	      const char *name;
-	  
-	      USER_NAME_FROM_ENV(name);
-
-	      if (!name)
-		{
-		  argp_failure(state, EXIT_FAILURE, 0,
-			       "LOGNAME not set. Please use the -l option.");
-		  return EINVAL;
-		}
-
-	      if ( (gethostname(host, sizeof(host)) < 0)
-		   && (errno != ENAMETOOLONG) )
-		argp_failure(state, EXIT_FAILURE, errno,
-			     "Can't get the host name. Please use the -l option.");
-	      
-	      self->label = ssh_format("%lz@%lz", name, host);
-	    }
-	}
       break;
 	  
     case OPT_SERVER:
@@ -301,32 +330,47 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case 'l':
-	{
-	  char *end;
-	  long l = strtol(arg, &end, 0);
+      {
+	char *end;
+	long l = strtol(arg, &end, 0);
 	      
-	  if (!*arg || *end)
-	    {
-	      argp_error(state, "Invalid security level.");
-	      break;
-	    }
-	  if (l<0) 
-	    {
-	      argp_error(state, "Security level can't be negative.");
-	      break;
-	    }
-	  self->level = l;
-	  break;
-	}
+	if (!*arg || *end)
+	  {
+	    argp_error(state, "Invalid security level.");
+	    break;
+	  }
+	if (l<0) 
+	  {
+	    argp_error(state, "Security level can't be negative.");
+	    break;
+	  }
+	self->level = l;
+	break;
+      }
 
+    case OPT_BIT_LENGTH:
+      {
+	char *end;
+	long l = strtol(arg, &end, 0);
+	      
+	if (!*arg || *end || l <= 0)
+	  {
+	    argp_error(state, "Invalid bit length.");
+	    break;
+	  }
+	self->bit_length = l;
+	break;
+      }
     case 'a':
       if (!strcasecmp(arg, "dsa"))
 	self->algorithm = 'd';
       else if (!strcasecmp(arg, "rsa"))
 	self->algorithm = 'r';
+      else if (!strcasecmp(arg, "symmetric"))
+	self->algorithm = 's';
       else
 	argp_error(state, "Unknown algorithm. The supported algorithms are "
-		   "RSA and DSA.");
+		   "RSA and DSA and symmetric.");
       
       break;
 
@@ -403,7 +447,7 @@ progress(void *ctx UNUSED, int c)
 }
 
 static struct lsh_string *
-dsa_generate_key(unsigned level)
+dsa_generate_key(unsigned bits)
 {
   struct dsa_public_key public;
   struct dsa_private_key private;
@@ -415,7 +459,7 @@ dsa_generate_key(unsigned level)
   if (dsa_generate_keypair(&public, &private,
 			   NULL, lsh_random,
 			   NULL, progress,
-			   512 + 64 * level))
+			   bits))
     {
       key =
 	lsh_string_format_sexp(0,
@@ -465,8 +509,8 @@ check_file(const struct lsh_string *file)
 {
   struct stat sbuf;
 
-  if (stat(lsh_get_cstring(file), &sbuf) == 0
-      || errno != ENOENT)
+  if (file && (stat(lsh_get_cstring(file), &sbuf) == 0
+	       || errno != ENOENT))
     {
       werror("File `%S' already exists.\n"
 	     "lsh-keygen doesn't overwrite existing key files.\n"
@@ -539,7 +583,9 @@ process_private(const struct lsh_string *key,
 				options->iterations,
 				key);
     }
-  else
+  else if (options->algorithm == 's')
+    return ssh_format("%lxfS\n", key);
+  else    
     return key;
 }
 
@@ -581,7 +627,7 @@ main(int argc, char **argv)
     if (!(check_file(options->private_file)
 	  && check_file(options->public_file)))
       return EXIT_FAILURE;
-  
+
   if (options->server)
     res = random_init_system();
   else
@@ -612,12 +658,15 @@ main(int argc, char **argv)
     switch (options->algorithm)
       {
       case 'd':
-	private = dsa_generate_key(options->level);
+	private = dsa_generate_key(options->bit_length);
 	break;
       case 'r':
-	private = rsa_generate_key(options->level);
+	private = rsa_generate_key(options->bit_length);
 	break;
-      default:
+      case 's':
+	private = lsh_string_random(options->bit_length / 8);
+	break;
+      default:	
 	fatal("Internal error!\n");
       }
 
@@ -626,32 +675,38 @@ main(int argc, char **argv)
 
   else
     {
-      const struct lsh_string *public;
-      int public_fd;
+      if (options->public_file)
+	{
+	  const struct lsh_string *public;
+	  int public_fd;
 
-      public = process_public(private, options);
-      if (!public)
-	return EXIT_FAILURE;
+	  public = process_public(private, options);
+	  if (!public)
+	    return EXIT_FAILURE;
 
+	  public_fd = open_file(options->public_file);
+	  if (public_fd < 0)
+	    return EXIT_FAILURE;
+
+	  if (!write_raw(public_fd, STRING_LD(public)))
+	    {
+	      werror("Writing public key failed: %e.\n", errno);
+	      return EXIT_FAILURE;
+	    }
+	  lsh_string_free(public);
+	}
       private = process_private(private, options);
       if (!private)
 	return EXIT_FAILURE;
 
-      public_fd = open_file(options->public_file);
-      if (public_fd < 0)
-	return EXIT_FAILURE;
-
-      if (!write_raw(public_fd, STRING_LD(public)))
+      if (options->private_file)
 	{
-	  werror("Writing public key failed: %e.\n", errno);
-	  return EXIT_FAILURE;
+	  private_fd = open_file(options->private_file);
+	  if (private_fd < 0)
+	    return EXIT_FAILURE;
 	}
-      lsh_string_free(public);
-
-      private_fd = open_file(options->private_file);
-      if (private_fd < 0)
-	return EXIT_FAILURE;
-
+      else
+	private_fd = STDOUT_FILENO;
     }
 
   if (!write_raw(private_fd, STRING_LD(private)))
