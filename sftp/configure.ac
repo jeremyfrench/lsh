@@ -208,7 +208,7 @@ else
  )
 
  if test x"$workingreadline" != xyes; then
-  AC_MSG_WARN([Your readline libary appears to be broken. lsftp will be built in non interactive mode ONLY.])
+  AC_MSG_WARN([Your readline library appears to be broken. lsftp will be built in non interactive mode ONLY.])
  fi # Working readline?
 fi # Found headers?
 
