@@ -196,11 +196,8 @@ AC_CHECK_LIB( termcap, tgetent )
 
 if test x"$ac_cv_header_readline_readline_h" = xno -a\
         x"$ac_cv_header_readline_h" = xno ; then
-		AC_MSG_WARN(
-[You don't appear to have the readline library
-(or there seems to be a problem with it). lsftp 
-will still work, but it will be built in 
-non interactive mode ONLY.])
+		AC_MSG_WARN([You don't appear to have the readline library. lsftp 
+will be built in non interactive mode ONLY.])
 else 
 # Check for libraries only if we found the includes
  AC_CHECK_LIB(readline, rl_callback_handler_remove,
@@ -211,10 +208,7 @@ else
  )
 
  if test x"$workingreadline" != xyes; then
-  AC_MSG_WARN([
-Your readline libary appears to be broken. lsftp will still work, but
-it will be built in non interactive mode ONLY.
-])
+  AC_MSG_WARN([Your readline libary appears to be broken. lsftp will be built in non interactive mode ONLY.])
  fi # Working readline?
 fi # Found headers?
 
@@ -255,10 +249,7 @@ if test x"$workingreadline" = xyes; then
 
  if test x"$ac_cv_header_readline_history_h" = xno -a\
          x"$ac_cv_header_history_h" = xno ; then
-                AC_MSG_WARN([
-Can't find either <history.h> or <readline/history.h>, disabling
-history.
-                ])
+                AC_MSG_WARN([Can't find either <history.h> or <readline/history.h>, disabling history.])
  else
   # has either <history.h> or <readline/history.h>
 
@@ -281,10 +272,7 @@ history.
   
    if test x"$foundhistoryinhistory" != xyes; then
     # Failed to find working history functions
-    AC_MSG_WARN([
-Your readline library do not appear to have the 
-history functions. History will be disabled.
-    ])
+    AC_MSG_WARN([Your readline library do not appear to have the history functions. History will be disabled.])
    fi # history functions in libhistory
   fi # history functions in libreadline?
  fi # history.h found? 

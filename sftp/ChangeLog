@@ -1,3 +1,7 @@
+2010-03-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Single line messages with AC_MSG_WARN.
+
 2009-09-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* Makefile.in (distclean-here): Delete config.status, config.log
