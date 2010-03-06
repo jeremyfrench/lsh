@@ -23,6 +23,30 @@
 	* src/server.h (service_config): Make this into a class rather
 	than a struct, for safer casting in service_argp_parser.
 
+2010-02-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (lshd_context): Added service_config, deleted
+	commented-out attributes.
+	(lshd_service_request_handler): Made service configurable.
+	(make_lshd_context): Use init_transport_context and
+	init_service_config.
+	(lshd_config): Deleted werror_config (it's inherited via
+	server_config).
+	(make_lshd_config): Deleted call to make_werror_config.
+	(lshd_argp_children): Added service_argp.
+	(lshd_argp_parser): Updated initialization of child_inputs. Setup
+	default service, ssh-userauth.
+	(lshd_config_handler): Fixed references to the inherited
+	werror_config.
+
+	* src/Makefile.in (COMMON_SOURCES): Added arglist.c.
+
+	* src/server.h (service_config): New class.
+
+	* src/server.c (init_service_config): New function.
+	(service_argp, service_argp_parser): New parser för --service {
+	... } argument.
+
 2010-02-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (make_lsh_transport_config): Use
