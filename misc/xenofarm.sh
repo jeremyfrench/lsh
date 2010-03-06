@@ -136,8 +136,7 @@ cfgwarn () {
     logfile="r/${task}log.txt"
     warnfile="r/${task}warn.txt"
     egrep -i 'warning|\(w\)' "$logfile" \
-    | sed -e '/configure: WARNING:  Converted \. to /d' \
-	-e '/configure: WARNING:  No scheme implementation found/d' \
+    | sed -e '/configure: WARNING: No scheme implementation found/d' \
     > "$warnfile"
     warnings=`wc -l < $warnfile`
     if test $warnings -gt 0
