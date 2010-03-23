@@ -1,3 +1,8 @@
+2010-03-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_x11.c (do_client_channel_x11_receive): Fixed broken,
+	too short(!), allocation for X11 connection failure message.
+
 2010-03-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (spawn_xvfb): Explicitly setup the
