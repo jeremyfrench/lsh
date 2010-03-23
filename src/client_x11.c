@@ -314,12 +314,12 @@ do_client_channel_x11_receive(struct ssh_channel *s,
 	    else
 	      {
 		werror("client_x11: X11 connection denied; bad cookie.\n");
-#define X11_ACCESS_DENIED_REASON "Access denied.\n"
-#define X11_ACCESS_DENIED_REASON_WORDS (sizeof(X11_ACCESS_DENIED_REASON + 2)/3)
-#define X11_ACCESS_DENIED_LENGTH 8 + 4 * X11_ACCESS_DENIED_REASON_WORDS
+#define X11_FAIL_REASON "Access denied.\n"
+#define X11_FAIL_REASON_WORDS ((sizeof(X11_FAIL_REASON) - 1 + 3)/4)
+#define X11_FAIL_LENGTH (8 + 4 * X11_FAIL_REASON_WORDS)
 		
-		if (self->super.super.send_window_size >= X11_ACCESS_DENIED_LENGTH
-		    && self->super.super.send_max_packet >= X11_ACCESS_DENIED_LENGTH)
+		if (self->super.super.send_window_size >= X11_FAIL_LENGTH
+		    && self->super.super.send_max_packet >= X11_FAIL_LENGTH)
 		  {
 		    /* Report failure to X client. According to RFC 1013,
 
@@ -353,21 +353,21 @@ do_client_channel_x11_receive(struct ssh_channel *s,
 			 24     end
 		    */
 
-		    uint8_t msg[X11_ACCESS_DENIED_LENGTH];
+		    uint8_t msg[X11_FAIL_LENGTH];
 		    memset(msg, 0, sizeof(msg));
 
 		    if (self->little_endian)
 		      {
 			LE_WRITE_UINT16(msg + 2, 11);
-			LE_WRITE_UINT16(msg + 4, 4);
+			LE_WRITE_UINT16(msg + 4, X11_FAIL_REASON_WORDS);
 		      }
 		    else
 		      {
 			WRITE_UINT16(msg + 2, 11);
-			WRITE_UINT16(msg + 4, 4);
+			WRITE_UINT16(msg + 4, X11_FAIL_REASON_WORDS);
 		      }
 
-		    memcpy(msg + 8, X11_ACCESS_DENIED_REASON, sizeof(X11_ACCESS_DENIED_REASON) - 1);
+		    memcpy(msg + 8, X11_FAIL_REASON, sizeof(X11_FAIL_REASON) - 1);
 		    channel_transmit_data(&self->super.super, sizeof(msg), msg);
 		    channel_eof(&self->super.super);
 		  }
