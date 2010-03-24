@@ -84,8 +84,9 @@ server_dh_handler(struct transport_handler *s,
       && (mpz_cmp(self->dh.e, self->dh.params->modulo) < 0)
       && parse_eod(&buffer) )
     {
+      struct lsh_string *signature;
       mpz_t tmp;
-      
+
       mpz_init(tmp);
       mpz_powm(tmp, self->dh.e, self->dh.secret, self->dh.params->modulo);
       self->dh.K = ssh_format("%ln", tmp);
@@ -98,21 +99,33 @@ server_dh_handler(struct transport_handler *s,
 
       debug("Exchange hash: %xS\n", self->dh.exchange_hash);
 
-      /* Send server's message, to complete key exchange */      
-      transport_send_packet(connection, 0, 
-			    ssh_format("%c%S%n%fS",
-				       SSH_MSG_KEXDH_REPLY,
-				       self->key->public,
-				       self->dh.f, SIGN(self->key->private,
-							self->key->type,
-							lsh_string_length(self->dh.exchange_hash),
-							lsh_string_data(self->dh.exchange_hash))));
-      transport_keyexchange_finish(connection,
-				   self->dh.params->H,
-				   self->dh.exchange_hash,
-				   self->dh.K);
-      self->dh.exchange_hash = NULL;
-      self->dh.K = NULL;
+      signature = SIGN(self->key->private,
+		       self->key->type,
+		       lsh_string_length(self->dh.exchange_hash),
+		       lsh_string_data(self->dh.exchange_hash));
+
+      if (signature)
+	{
+	  /* Send server's message, to complete key exchange */      
+	  transport_send_packet(connection, 0, 
+				ssh_format("%c%S%n%fS",
+					   SSH_MSG_KEXDH_REPLY,
+					   self->key->public,
+					   self->dh.f, signature));
+	  transport_keyexchange_finish(connection,
+				       self->dh.params->H,
+				       self->dh.exchange_hash,
+				       self->dh.K);
+	  self->dh.exchange_hash = NULL;
+	  self->dh.K = NULL;
+	}
+      else
+	{
+	  werror("Signing using the private key failed, RSA key too small!\n");
+	  transport_disconnect(connection,
+			       SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			       "Configuration error.");
+	}
     }
   else
     transport_disconnect(connection, SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
