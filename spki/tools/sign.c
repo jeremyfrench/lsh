@@ -108,16 +108,17 @@ spki_sign_digest(struct sign_ctx *ctx,
   mpz_init(s);
 
   if (ctx->hash_algorithm == &nettle_md5)
-    rsa_md5_sign_digest(&ctx->priv, digest, s);
+    res = rsa_md5_sign_digest(&ctx->priv, digest, s);
   else if (ctx->hash_algorithm == &nettle_sha1)
-    rsa_sha1_sign_digest(&ctx->priv, digest, s);
+    res = rsa_sha1_sign_digest(&ctx->priv, digest, s);
   else
     /* Internal error */
     abort();
-  		
-  res = sexp_format(buffer, "(%s%b)%)",
-		    ctx->type->length, ctx->type->name,
-		    s);
+
+  if (res)
+    res = sexp_format(buffer, "(%s%b)%)",
+		      ctx->type->length, ctx->type->name,
+		      s);
   
   mpz_clear(s);
 
