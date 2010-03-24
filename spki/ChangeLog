@@ -1,3 +1,8 @@
+2010-03-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* tools/sign.c (spki_sign_digest): Check return value from
+	rsa_md5_sign_digest and rsa_sha1_sign_digest.
+
 2008-08-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* Makefile.in (tags-here): Put TAGS file in the source directory.
