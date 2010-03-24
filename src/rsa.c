@@ -229,30 +229,32 @@ do_rsa_sign(struct signer *s,
   sha1_init(&hash);
   sha1_update(&hash, msg_length, msg);
 
-  rsa_sha1_sign(&self->key, &hash, signature);
-
-  switch (algorithm)
-    {
-    case ATOM_SSH_RSA:
-      /* Uses the encoding:
-       *
-       * string ssh-rsa
-       * string signature-blob
-       */
+  if (rsa_sha1_sign(&self->key, &hash, signature))
+    switch (algorithm)
+      {
+      case ATOM_SSH_RSA:
+	/* Uses the encoding:
+	 *
+	 * string ssh-rsa
+	 * string signature-blob
+	 */
   
-      res = ssh_format("%a%un", ATOM_SSH_RSA, signature);
-      break;
+	res = ssh_format("%a%un", ATOM_SSH_RSA, signature);
+	break;
 
-      /* It doesn't matter here which flavour of SPKI is used. */
-    case ATOM_SPKI_SIGN_RSA:
-    case ATOM_SPKI_SIGN_DSS:
-    case ATOM_SPKI:
-      /* FIXME: Add hash algorithm to signature value? */
-      res = lsh_string_format_sexp(0, "%b", signature);
-      break;
-    default:
-      fatal("do_rsa_sign: Internal error!\n");
-    }
+	/* It doesn't matter here which flavour of SPKI is used. */
+      case ATOM_SPKI_SIGN_RSA:
+      case ATOM_SPKI_SIGN_DSS:
+      case ATOM_SPKI:
+	/* FIXME: Add hash algorithm to signature value? */
+	res = lsh_string_format_sexp(0, "%b", signature);
+	break;
+      default:
+	fatal("do_rsa_sign: Internal error!\n");
+      }
+  else
+    res = NULL;
+
   mpz_clear(signature);
   return res;
 }
