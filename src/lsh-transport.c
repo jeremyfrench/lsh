@@ -478,13 +478,20 @@ start_userauth(struct lsh_transport_connection *self)
       struct lsh_string *signed_data
 	= ssh_format("%S%lS", self->super.super.session_id, request);
 
+      struct lsh_string *signature = SIGN(key->private, key->type,
+					  lsh_string_length(signed_data),
+					  lsh_string_data(signed_data));
+      lsh_string_free(signed_data);
+
+      if (!signature)
+	{
+	  werror("Signing using the private key failed, RSA key too small!\n");
+	  lsh_string_free (request);
+	  goto no_pubkey;
+	}
       request =	ssh_format("%flS%fS", 
 			   request, 
-			   SIGN(key->private, key->type,
-				lsh_string_length(signed_data),
-				lsh_string_data(signed_data)));
-
-      lsh_string_free(signed_data);
+			   signature);
 
       verbose("Requesting authentication of user `%z' using the `publickey' method.\n",
 	      config->user);
@@ -494,6 +501,7 @@ start_userauth(struct lsh_transport_connection *self)
     }
   else
     {
+    no_pubkey:
       /* Find out whether or not password authentication is supported. */
       transport_send_packet(&self->super.super, TRANSPORT_WRITE_FLAG_PUSH,
 			    ssh_format("%c%z%z%a",
