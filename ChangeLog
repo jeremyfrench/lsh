@@ -1,3 +1,11 @@
+2010-03-24  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (start_userauth): Check return value from
+	the SIGN method.
+	* src/server_keyexchange.c (server_dh_handler): Likewise.
+
+	* src/rsa.c (do_rsa_sign): Check return value from rsa_sha1_sign.
+
 2010-03-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client_x11.c (do_client_channel_x11_receive): Fixed broken,
