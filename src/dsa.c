@@ -150,7 +150,7 @@ do_dsa_verify(struct verifier *c, int algorithm,
   sha1_init(&hash);
   sha1_update(&hash, length, msg);
   
-  res = dsa_verify(&self->key, &hash, &sv);
+  res = dsa_sha1_verify(&self->key, &hash, &sv);
  fail:
 
   dsa_signature_clear(&sv);
@@ -253,42 +253,42 @@ do_dsa_sign(struct signer *c,
   dsa_signature_init(&sv);
   sha1_init(&hash);
   sha1_update(&hash, msg_length, msg);
-  dsa_sign(&self->verifier->key, &self->key,
-	   NULL, lsh_random, &hash, &sv);
-  
-  debug("do_dsa_sign: r = %xn, s = %xn\n", sv.r, sv.s);
-  
-  /* Build signature */
 
-  switch (algorithm)
-    {
-    case ATOM_SSH_DSS:
+  if (dsa_sha1_sign(&self->verifier->key, &self->key,
+		NULL, lsh_random, &hash, &sv))
+    /* Build signature */
+    switch (algorithm)
       {
-	uint32_t blob_pos;
+      case ATOM_SSH_DSS:
+	{
+	  uint32_t blob_pos;
 	
-	/* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
-	 * length field, which should be removed in the next version. */
-	signature = ssh_format("%a%r", ATOM_SSH_DSS,
-			       2 * DSA_BLOB_LENGTH, &blob_pos);
-	dsa_blob_write(signature, blob_pos, &sv);
+	  /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+	   * length field, which should be removed in the next version. */
+	  signature = ssh_format("%a%r", ATOM_SSH_DSS,
+				 2 * DSA_BLOB_LENGTH, &blob_pos);
+	  dsa_blob_write(signature, blob_pos, &sv);
 
+	  break;
+	}
+	/* It doesn't matter here which flavour of SPKI is used. */
+      case ATOM_SPKI_SIGN_RSA:
+      case ATOM_SPKI_SIGN_DSS:
+      case ATOM_SPKI:
+	/* Format: "((1:r20:<r>)(1:s20:<s>))". */
+	signature = lsh_string_format_sexp(0, "((r%b)(s%b))",
+					   sv.r, sv.s);
+	
 	break;
+      default:
+	fatal("do_dsa_sign: Internal error, unexpected algorithm %a.\n",
+	      algorithm);
       }
-      /* It doesn't matter here which flavour of SPKI is used. */
-    case ATOM_SPKI_SIGN_RSA:
-    case ATOM_SPKI_SIGN_DSS:
-    case ATOM_SPKI:
-      /* Format: "((1:r20:<r>)(1:s20:<s>))". */
-      signature = lsh_string_format_sexp(0, "((r%b)(s%b))",
-					 sv.r, sv.s);
-	
-      break;
-    default:
-      fatal("do_dsa_sign: Internal error, unexpected algorithm %a.\n",
-	    algorithm);
-    }
-  dsa_signature_clear(&sv);
+  else
+    signature = NULL;
 
+  dsa_signature_clear(&sv);
+  
   return signature;
 }
 
