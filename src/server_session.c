@@ -126,18 +126,39 @@ do_kill_server_session(struct resource *s)
 
 /* Receive channel data */
 
+static void
+stdin_eof(struct server_session *session)
+{
+  if (session->pty)
+    {
+      static const uint8_t eof[1] = { 4 }; /* ^D */
+      /* Ignores any error, if process has closed tty we might get
+	 EPIPE (observed on freebsd). */
+      write_raw(session->in.fd, sizeof(eof), eof);      
+    }
+}
+
 static void *
 oop_write_stdin(oop_source *source UNUSED,
 		int fd, oop_event event, void *state)
-{
+{  
   CAST_SUBTYPE(server_session, session, (struct lsh_object *) state);
 
   assert(event == OOP_WRITE);
   assert(fd == session->in.fd);
 
-  if (channel_io_flush(&session->super, &session->in) != CHANNEL_IO_OK)
-    channel_write_state_close(&session->super, &session->in);
-
+  switch (channel_io_flush(&session->super, &session->in))
+    {
+    case CHANNEL_IO_OK:
+      /* Do nothing. */
+      break;
+    case CHANNEL_IO_EOF:
+      stdin_eof(session);
+      /* Fall through */
+    case CHANNEL_IO_ERROR:
+      channel_write_state_close(&session->super, &session->in);
+      break;
+    }
   return OOP_CONTINUE;
 }
 
@@ -150,11 +171,20 @@ do_receive(struct ssh_channel *s, int type,
   switch(type)
     {
     case CHANNEL_DATA:
-      if (channel_io_write(&session->super, &session->in,
-			   oop_write_stdin,
-			   length, data) != CHANNEL_IO_OK)
-	channel_write_state_close(&session->super, &session->in);
-
+      switch (channel_io_write(&session->super, &session->in,
+			       oop_write_stdin,
+			       length, data))
+	{
+	case CHANNEL_IO_OK:
+	  /* Do nothing. */
+	  break;
+	case CHANNEL_IO_EOF:
+	  stdin_eof(session);
+	  /* Fall through */
+	case CHANNEL_IO_ERROR:
+	  channel_write_state_close(&session->super, &session->in);
+	  break;
+	}
       break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
@@ -232,17 +262,11 @@ do_server_session_event(struct ssh_channel *channel, enum channel_event event)
       break;
 
     case CHANNEL_EVENT_EOF:
-      if (session->pty)
-	{
-	  static const uint8_t eof[1] = { 4 }; /* ^D */
-	  if (channel_io_write(channel, &session->in,
-			       oop_write_stdin, sizeof(eof), eof) != CHANNEL_IO_OK)
-
-	    channel_write_state_close(&session->super, &session->in);	
-	}
-
       if (!session->in.state->length)
-	channel_write_state_close(&session->super, &session->in);
+	{
+	  stdin_eof(session);
+	  channel_write_state_close(&session->super, &session->in);
+	}
       break;
 
     case CHANNEL_EVENT_STOP:
