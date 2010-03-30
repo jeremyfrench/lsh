@@ -1,5 +1,10 @@
 2010-03-30  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/dsa.c (do_dsa_verify): Updated for Nettle's dsa_sha1_verify
+	rename.
+	(do_dsa_sign): Updated for Nettle's dsa_sha1_sign rename, and
+	check return value.
+
 	* src/server_session.c (stdin_eof): New function. If we have a
 	pty, send EOF and ignore error.
 	(oop_write_stdin): Use it.
