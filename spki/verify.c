@@ -79,7 +79,7 @@ spki_verify_dsa(const uint8_t *digest,
 	 && spki_parse_type(key)
 	 && dsa_signature_from_sexp(&rs, &signature->sexp)
 	 && spki_parse_type(signature)
-	 && dsa_verify_digest(&dsa, digest, &rs));
+	 && dsa_sha1_verify_digest(&dsa, digest, &rs));
 
   dsa_signature_clear(&rs);
   dsa_public_key_clear(&dsa);

@@ -1,3 +1,8 @@
+2010-03-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* verify.c (spki_verify_dsa): Updated for Nettle's dsa_sha1_verify
+	rename.
+
 2010-03-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* tools/sign.c (spki_sign_digest): Check return value from
