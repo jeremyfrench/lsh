@@ -190,53 +190,53 @@ init_pty_state(struct pty_state *state, uid_t uid,
     if (utmp_file)
       {
 	werror("utmp_file: %s\n", utmp_file);
-#if HAVE_UTMPX_H
+# if HAVE_UTMPX_H
 	utmpxname(utmp_file);
-#else
+# else
 	utmpname(utmp_file);
-#endif
+# endif
       }
   
     state->wtmp_file = getenv(ENV_LSHD_WTMP);
     if (!state->wtmp_file)
       {
-#if HAVE_UTMPX_H
-# ifdef _WTMPX_FILE
+# if HAVE_UTMPX_H
+#  ifdef _WTMPX_FILE
 	state->wtmp_file = _WTMPX_FILE;
-# else
+#  else
 	state->wtmp_file = _PATH_WTMPX;
-# endif
-#else /* !HAVE_UTMPX_H */
+#  endif
+# else /* !HAVE_UTMPX_H */
 	state->wtmp_file = _PATH_WTMP;
-#endif
+# endif
       }
 
     werror("wtmp_file: %s\n", state->wtmp_file);
 
     CLEAR_FIELD(state->template);
   
-#if HAVE_UTMPX_H
+# if HAVE_UTMPX_H
 
-#if HAVE_STRUCT_UTMPX_UT_USER
+#  if HAVE_STRUCT_UTMPX_UT_USER
     COPY_STRING(state->template.ut_user, user);
-#elif HAVE_STRUCT_UTMPX_UT_NAME
+#  elif HAVE_STRUCT_UTMPX_UT_NAME
     COPY_STRING(state->template.ut_name, user);
-#endif
+#  endif
       
-#if HAVE_STRUCT_UTMPX_UT_HOST
+#  if HAVE_STRUCT_UTMPX_UT_HOST
     COPY_STRING(state->template.ut_host, host);
-#endif
+#  endif
       
-#elif HAVE_UTMP_H
+# elif HAVE_UTMP_H
 
-#if HAVE_STRUCT_UTMP_UT_NAME
+#  if HAVE_STRUCT_UTMP_UT_NAME
     COPY_STRING(state->template.ut_name, user);
-#endif
-#if HAVE_STRUCT_UTMP_UT_HOST
+#  endif
+#  if HAVE_STRUCT_UTMP_UT_HOST
     COPY_STRING(state->template.ut_host, host);
-#endif
+#  endif
     
-#endif /* HAVE_UTMP_H */
+# endif /* HAVE_UTMP_H */
   }
 #endif /* WITH_UTMP */
 }
@@ -322,16 +322,16 @@ record_login (const struct pty_state *state, struct pty_object *pty, pid_t pid)
   pty->entry.ut_type = USER_PROCESS;
   pty->entry.ut_pid = pid;
 
-#if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
+#  if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
   gettimeofday(&pty->entry.ut_tv, NULL);
-#endif
+#  endif
   if (pty->tty)
     {
       /* Set tty-related fields, and update utmp */
 
       COPY_STRING(pty->entry.ut_line, pty->line);
 
-#if HAVE_STRUCT_UTMPX_UT_ID
+#  if HAVE_STRUCT_UTMPX_UT_ID
       if (strprefix_p("pts/", pty->line))
 	{
 	  pty->entry.ut_id[0] = 'p';
@@ -341,15 +341,15 @@ record_login (const struct pty_state *state, struct pty_object *pty, pid_t pid)
 	COPY_STRING(pty->entry.ut_id, pty->line + 3);
       else
 	COPY_STRING(pty->entry.ut_id, pty->line);
-#endif
+#  endif
       setutxent();
       pututxline(&pty->entry);
     }
   updwtmpx(state->wtmp_file, &pty->entry);
 # elif HAVE_UTMP_H
-#if HAVE_STRUCT_UTMP_UT_TIME
+#  if HAVE_STRUCT_UTMP_UT_TIME
   entry.ut_time = time(NULL);
-#endif
+#  endif
   COPY_STRING(pty->entry.ut_line, pty->line);
 
   pututline(&pty->entry);
@@ -370,32 +370,32 @@ record_logout (struct pty_state *state, struct pty_object *pty)
 # if HAVE_UTMPX_H
   entry.ut_type = DEAD_PROCESS;
 
-#if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
+#  if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
   gettimeofday(&entry.ut_tv, NULL);
-#endif
+#  endif
 
   COPY_FIELD(entry, pty->entry, ut_line);
 
-#if HAVE_STRUCT_UTMPX_UT_ID
+#  if HAVE_STRUCT_UTMPX_UT_ID
   COPY_FIELD(entry, pty->entry, ut_id);
-#endif
+#  endif
   
   setutxent();
   pututxline(&entry);
 
   /* For wtmp, clear host and name */
-#if HAVE_STRUCT_UTMPX_UT_NAME
+#  if HAVE_STRUCT_UTMPX_UT_NAME
   CLEAR_FIELD(pty->entry.ut_name);
-#elif HAVE_STRUCT_UTMPX_UT_USER
+#  elif HAVE_STRUCT_UTMPX_UT_USER
   CLEAR_FIELD(pty->entry.ut_user);
-#endif
+#  endif
 
   updwtmpx(state->wtmp_file, &pty->entry);
   
 # elif HAVE_UTMP_H
-#if HAVE_STRUCT_UTMPX_UT_TIME
+#  if HAVE_STRUCT_UTMPX_UT_TIME
   entry->ut_time = time(NULL);
-#endif
+#  endif
   COPY_FIELD(entry, pty->entry, ut_line);
 
   setutent();
