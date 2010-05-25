@@ -1,3 +1,8 @@
+2010-05-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-keygen.c (dsa_generate_key): Updated call to
+	dsa_generate_keypair to explicitly specify a 160 bit q.
+
 2010-03-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/dsa.c (do_dsa_verify): Updated for Nettle's dsa_sha1_verify
