@@ -459,7 +459,7 @@ dsa_generate_key(unsigned bits)
   if (dsa_generate_keypair(&public, &private,
 			   NULL, lsh_random,
 			   NULL, progress,
-			   bits))
+			   bits, 160))
     {
       key =
 	lsh_string_format_sexp(0,
