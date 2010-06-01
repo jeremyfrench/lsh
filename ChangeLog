@@ -1,3 +1,9 @@
+2010-06-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac (LOCAL_NETTLE_DEP): When building with the bundled
+	nettle library, setup a dependency when linking.
+	* src/Makefile.in (LOCAL_NETTLE_DEP): Use it here.
+
 2010-05-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-keygen.c (dsa_generate_key): Updated call to

@@ -619,6 +619,8 @@ if test x$with_system_argp = xno ; then
   LIB_ARGP="-largp"
 fi
 
+LOCAL_NETTLE_DEP=''
+
 if test x$with_system_nettle = xno ; then
   AC_CONFIG_COMMANDS([nettle-symlinks],
   [nettle_srcdir="`cd "$srcdir/nettle" && pwd`"
@@ -626,7 +628,10 @@ if test x$with_system_nettle = xno ; then
     (mkdir $d 2>/dev/null; cd $d && rm -f nettle nettle_builddir && ln -s ../nettle nettle_builddir && ln -s $nettle_srcdir nettle)
   done])
   BUILD_SUBDIRS="$BUILD_SUBDIRS nettle"
+  LOCAL_NETTLE_DEP="nettle_builddir/libnettle.a nettle_builddir/libhogweed.a"
 fi
+
+AC_SUBST(LOCAL_NETTLE_DEP)
 
 if test x$with_system_libspki = xno ; then
   AC_CONFIG_COMMANDS([libspki-symlinks],
