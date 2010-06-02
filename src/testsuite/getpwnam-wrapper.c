@@ -51,13 +51,13 @@ getpwnam(const char *name)
       int res;
       char *s;
 
-      config_dir = getenv(ENV_LSHD_CONFIG_DIR);
+      config_dir = getenv("GETWPWNAM_WRAPPER_DIR");
       if (!config_dir)
 	return NULL;
 
       res = snprintf(buf, sizeof(buf), "%s/test-passwd", config_dir);
 
-      /* Detect both variants of reporting truncaton. */
+      /* Detect both variants of reporting truncation. */
       if (res < 0 || res >= sizeof(buf))
 	return NULL;
 
