@@ -1,0 +1,40 @@
+Signature algorithm: DSA, as defined in FIPS 186-3, using SHA256 for
+the hash function.
+
+Algorithm name: "ssh-dsa-sha256@lysator.liu.se" (suggested name
+"ssh-dsa-sha256" if/when registered with iana). Rational: "ssh-"
+prefix because we use ssh-specific encodings of keys and signatures.
+dsa since that's the name of the algorithm, and then "-sha256" since
+the algorithm description is parameterized by the hash function.
+
+Public-key format:
+
+      string    "ssh-dsa-sha256"
+      mpint     p
+      mpint     q
+      mpint     g
+      mpint     y
+
+Except for the name, this syntax is the same as for "ssh-dss". The
+prime q must be exactly 256 bits. The prime p is expected to be of
+size between 1024 and 3072 bits (do we need to specify exactly which
+key sizes should be supported by an implementation advertising this
+signature algorithm? We don't do that for any other signature
+algorithm, as far as I know).
+
+Signature format:
+
+      string    "ssh-dsa-sha256"
+      string    dsa_signature_blob
+
+The dsa_signature blob is a string with a 64-octets payload, where the
+first 32 represent r, unsigned and in network byte order, and the next
+32 octets represent s. (I'd prefer to depart from this
+"signature_blob" thing and instead use separate mpints for r and s,
+but I think it's more important to stay consistent with the other
+signature algorithms.
+
+As far as I'm aware, there's no need to add any local-suffix to the
+names included in the key and signature formats.
+
+ LocalWords: FIPS ssh dsa sha iana mpint dss mpints
