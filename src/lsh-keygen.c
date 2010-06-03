@@ -63,6 +63,13 @@
 
 #include "lsh_argp.h"
 
+enum config_algorithm {
+  ALG_RSA,
+  ALG_DSA_SHA1,
+  ALG_DSA_SHA256,
+  ALG_SYMMETRIC
+};
+
 #include "lsh-keygen.c.x"
 
 /* Uses a 30-bit public exponetnt for RSA. */
@@ -95,8 +102,7 @@ enum {
        (server . int)
 
        ; Key generation options
-       ; 'd' means dsa, 'r' rsa, 's' plain symmetric key
-       (algorithm . int)
+       (algorithm . "enum config_algorithm")
        (level . int)
        (bit_length . int)
 
@@ -127,7 +133,7 @@ make_lsh_keygen_options(void)
 
   self->level = -1;
   self->bit_length = -1;
-  self->algorithm = 'r';
+  self->algorithm = ALG_RSA;
 
   self->public_file = NULL;
   self->private_file = NULL;
@@ -150,7 +156,7 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-  { "algorithm", 'a', "Algorithm", 0, "DSA or RSA. "
+  { "algorithm", 'a', "Algorithm", 0, "RSA, DSA, DSA-SHA256 or Symmetric. "
     "Default is to generate RSA keys", 0 },
   { "server", OPT_SERVER, NULL, 0,
     "Use the server's seed-file, and change the default output file "
@@ -163,11 +169,13 @@ main_options[] =
   /* FIXME: Split into two options, --length to specify bit size, and
      --nist-level for dsa and backwards compatibility. */
 
-  { "bit-length", OPT_BIT_LENGTH, "Key length", 0, "Specify bit length of generated key.", 0},
-  { "nist-level", 'l', "Security level", 0, "For DSA keys, this is the "
+  { "bit-length", OPT_BIT_LENGTH, "Key length", 0,
+    "Specify bit length of generated key. Default is 1024 bits for "
+    "DSA and 2048 for RSA and DSA-SHA256.", 0},
+  { "nist-level", 'l', "Security level", 0,
+    "Obsolete, use --bit-length instead. For DSA keys, this is the "
     "NIST security level: Level 0 uses 512-bit primes, level 8 uses "
-    "1024 bit primes, and the default is 8. For RSA keys, it's the "
-    "bit length of the modulus, and the default is 2048 bits. (Obsolete, use --bit-length instead).", 0 },
+    "1024 bit primes. For RSA keys, it's the bit length of the modulus.", 0 },
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/identity", 0 },
   { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
   { "label", OPT_LABEL, "Text", 0, "Unencrypted label for the key.", 0 },
@@ -202,7 +210,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       /* Default behaviour is to encrypt the key unless running in
 	 server mode. */
-      if (!self->crypto_name && !self->server && self->algorithm != 's')
+      if (!self->crypto_name && !self->server
+	  && self->algorithm != ALG_SYMMETRIC)
 	{
 	  self->crypto_name = ATOM_AES256_CBC;
 	  self->crypto = &crypto_aes256_cbc_algorithm;	 
@@ -236,7 +245,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       switch (self->algorithm)
 	{
-	case 'd':
+	case ALG_DSA_SHA1:
 	  if (self->bit_length < 0)
 	    {
 	      if (self->level >= 0)
@@ -252,7 +261,19 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    argp_error(state, "DSA keys supported only for sizes 512 - 1024 bits, "
 		       "with anything other than 1024 considered obsolete.");
 	  break;
-	case 'r':
+	case ALG_DSA_SHA256:
+	  if (self->bit_length < 0)
+	    {
+	      if (self->level >= 0)
+		argp_error(state, "--nist-level not defined for dsa-sha256. Use --bit-length instead.");
+	      else
+		self->bit_length = 2048;
+	    }
+	  if (self->bit_length < 1024 || self->bit_length > 3072)
+	    argp_error(state, "DSA-SHA256 keys supported only for sizes 1024 - 3072 bits.");
+	  break;
+	  
+	case ALG_RSA:
 	  if (self->bit_length < 0)
 	    {
 	      if (self->level < 0)
@@ -264,7 +285,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  else if (self->bit_length < 512)
 	    argp_error(state, "RSA keys should be at the very least 512 bits.");
 	  break;
-	case 's':
+	  
+	case ALG_SYMMETRIC:
 	  if (self->bit_length < 0)
 	    self->bit_length = 128;
 	  if (self->bit_length & 7)
@@ -362,16 +384,21 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	break;
       }
     case 'a':
-      if (!strcasecmp(arg, "dsa"))
-	self->algorithm = 'd';
+      if (!strcasecmp(arg, "dsa")
+	  || !strcasecmp(arg, "dsa-sha1"))
+	self->algorithm = ALG_DSA_SHA1;
+      else if (!strcasecmp(arg, "dsa-sha256")
+	       || !strcasecmp(arg, "dsa2"))
+	self->algorithm = ALG_DSA_SHA256;
       else if (!strcasecmp(arg, "rsa"))
-	self->algorithm = 'r';
+	self->algorithm = ALG_RSA;
       else if (!strcasecmp(arg, "symmetric"))
-	self->algorithm = 's';
+	self->algorithm = ALG_SYMMETRIC;
       else
-	argp_error(state, "Unknown algorithm. The supported algorithms are "
-		   "RSA and DSA and symmetric.");
-      
+	argp_error(state, "Unknown algorithm. The supported choices are\n"
+		   "RSA, DSA (also known as DSA-SHA1), DSA-SHA256 (also known as DSA2)\n"
+		   "and Symmetric.");
+
       break;
 
     case 'i':
@@ -447,7 +474,7 @@ progress(void *ctx UNUSED, int c)
 }
 
 static struct lsh_string *
-dsa_generate_key(unsigned bits)
+dsa_sha1_generate_key(unsigned bits)
 {
   struct dsa_public_key public;
   struct dsa_private_key private;
@@ -464,6 +491,33 @@ dsa_generate_key(unsigned bits)
       key =
 	lsh_string_format_sexp(0,
 			       "(private-key(dsa(p%b)(q%b)(g%b)(y%b)(x%b)))",
+			       public.p, public.q, public.g, public.y,
+			       private.x);
+    }
+
+  dsa_public_key_clear(&public);
+  dsa_private_key_clear(&private);
+  return key;
+}
+
+static struct lsh_string *
+dsa_sha256_generate_key(unsigned bits)
+{
+  struct dsa_public_key public;
+  struct dsa_private_key private;
+  struct lsh_string *key = NULL;
+
+  dsa_public_key_init(&public);
+  dsa_private_key_init(&private);
+
+  if (dsa_generate_keypair(&public, &private,
+			   NULL, lsh_random,
+			   NULL, progress,
+			   bits, 256))
+    {
+      key =
+	lsh_string_format_sexp(0,
+			       "(private-key(dsa-sha256(p%b)(q%b)(g%b)(y%b)(x%b)))",
 			       public.p, public.q, public.g, public.y,
 			       private.x);
     }
@@ -583,7 +637,7 @@ process_private(const struct lsh_string *key,
 				options->iterations,
 				key);
     }
-  else if (options->algorithm == 's')
+  else if (options->algorithm == ALG_SYMMETRIC)
     return ssh_format("%lxfS\n", key);
   else    
     return key;
@@ -657,13 +711,16 @@ main(int argc, char **argv)
   else
     switch (options->algorithm)
       {
-      case 'd':
-	private = dsa_generate_key(options->bit_length);
+      case ALG_DSA_SHA1:
+	private = dsa_sha1_generate_key(options->bit_length);
 	break;
-      case 'r':
+      case ALG_DSA_SHA256:
+	private = dsa_sha256_generate_key(options->bit_length);
+	break;
+      case ALG_RSA:
 	private = rsa_generate_key(options->bit_length);
 	break;
-      case 's':
+      case ALG_SYMMETRIC:
 	private = lsh_string_random(options->bit_length / 8);
 	break;
       default:	
