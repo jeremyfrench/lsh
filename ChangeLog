@@ -1,3 +1,12 @@
+2010-06-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-keygen.c: Added support for dsa-sha256 keys.
+	(main_options): Improved descriptions.
+	(dsa_sha1_generate_key): Renamed, was dsa_generate_key.
+	(dsa_sha256_generate_key): New function.
+	(enum config_algorithm): New enum.
+
+
 2010-06-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac (LOCAL_NETTLE_DEP): When building with the bundled
