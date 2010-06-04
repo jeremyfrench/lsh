@@ -891,7 +891,10 @@ read_user_key(struct lsh_transport_config *config)
     case ATOM_DSA:
       return make_keypair(ATOM_SSH_DSS,
 			  PUBLIC_KEY(v), s);
-
+    case ATOM_DSA_SHA256:
+      return make_keypair(ATOM_SSH_DSA_SHA256_LOCAL,
+			  PUBLIC_KEY(v), s);
+      
     case ATOM_RSA_PKCS1:
     case ATOM_RSA_PKCS1_SHA1:
       return make_keypair(ATOM_SSH_RSA,
@@ -949,6 +952,28 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
 	lsh_string_free(spki_key);
 	break;
       }
+
+    case ATOM_SSH_DSA_SHA256_LOCAL:
+      {
+	struct lsh_string *spki_key;
+	struct verifier *v = make_ssh_dsa_sha256_verifier(key_length, key);
+
+	if (!v)
+	  {
+	    werror("do_lsh_lookup: Invalid ssh-dsa-sha256 key.\n");
+	    return NULL;
+	  }
+
+	spki_key = PUBLIC_SPKI_KEY(v, 0);
+
+	subject = spki_lookup_key(self->db, STRING_LD(spki_key), v);
+	assert(subject);
+	assert(subject->verifier);
+
+	lsh_string_free(spki_key);
+	break;
+      }
+
     case ATOM_SSH_RSA:
       {
 	struct lsh_string *spki_key;
