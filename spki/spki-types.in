@@ -4,6 +4,7 @@ comment
 display
 do
 dsa-sha1
+dsa-sha256
 entry
 hash
 issuer
@@ -19,6 +20,7 @@ rsa-pkcs1-md5
 rsa-pkcs1-sha1
 sequence
 sha1
+sha256
 signature
 subject
 subject-info
