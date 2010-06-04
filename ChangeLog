@@ -1,5 +1,35 @@
 2010-06-04  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/Makefile.in (TS_SH): Added passwd-1-test and
+	passwd-2-test.
+	(check): Don't pass on PASSWD_PRELOAD, leave that for
+	functions.sh.
+
+	* src/testsuite/passwd-1-test: New test, using dummy passwd
+	database.
+	* src/testsuite/passwd-2-test: New test, password authentication.
+
+	* src/testsuite/setup-env: Fixed setup of test password.
+
+	* src/testsuite/functions.sh (need_getpwnam_wrapper): New function.
+	(ENV_PROGRAM, GETPWNAM_PRELOAD): New variables.
+
+	* src/testsuite/getpwnam-wrapper.c (getpwnam): Added
+	empty-passwd-testuser to the dummy passwd database.
+
+	* src/lshd.c (lshd_service_request_handler): Don't hard code
+	--session-id argument, instead substitute "$(session_id)" if
+	appearing on the argument list.
+	(lshd_argp_parser): For the default service, ssh-userauth, add
+	--session-id $(session_id) to the argument list.
+
+	* src/lshd-userauth.c (lookup_user): If there's no login shell,
+	consider the account disabled. Improved check for missing home
+	directory.
+
+	* src/Makefile.in (stamp-h): Standard rule for config.h via
+	stamp-h.
+
 	* src/lshd.c (read_host_key): Recognize dsa-sha256.
 
 	* src/lshd-userauth.c (get_verifier): Recognize ssh-dsa-sha256.
@@ -29,7 +59,7 @@
 	* src/algorithms.c (lookup_hostkey_algorithm): Recognize
 	dsa-sha256.
 
-	* Src/Makefile.in (GPERF_FLAGS): Tweaked positions, to distinguish
+	* src/Makefile.in (GPERF_FLAGS): Tweaked positions, to distinguish
 	between ssh-rsa and ssh-dsa.
 
 	* src/atoms.in: Added ssh-dsa, ssh-dsa-sha256@lysator.liu.se,
@@ -43,6 +73,12 @@
 	(dsa_sha256_generate_key): New function.
 	(enum config_algorithm): New enum.
 
+2010-06-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/getpwnam-wrapper.c (getpwnam): Use
+	GETWPWNAM_WRAPPER_DIR to locate configuration directory.
+
+	* src/testsuite/setup-env: Create a password for testing.
 
 2010-06-01  Niels Möller  <nisse@lysator.liu.se>
 
