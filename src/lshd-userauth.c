@@ -411,6 +411,9 @@ get_verifier(struct lshd_user *user, enum lsh_atom algorithm,
     case ATOM_SSH_DSS:
       v = make_ssh_dss_verifier(key_length, key);
       break;
+    case ATOM_SSH_DSA_SHA256_LOCAL:
+      v = make_ssh_dsa_sha256_verifier(key_length, key);
+      break;
     case ATOM_SSH_RSA:
       v = make_ssh_rsa_verifier(key_length, key);
       break;
