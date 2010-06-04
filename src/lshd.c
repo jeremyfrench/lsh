@@ -642,7 +642,10 @@ read_host_key(const char *file,
       add_key(keys,
               make_keypair(ATOM_SSH_DSS, PUBLIC_KEY(v), s));
       break;
-
+    case ATOM_DSA_SHA256:
+      add_key(keys,
+              make_keypair(ATOM_SSH_DSA_SHA256_LOCAL, PUBLIC_KEY(v), s));
+      break;
     case ATOM_RSA_PKCS1:
     case ATOM_RSA_PKCS1_SHA1:
       add_key(keys,
