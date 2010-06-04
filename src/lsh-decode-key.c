@@ -119,6 +119,7 @@ lsh_decode_key(struct lsh_string *contents)
 {
   struct simple_buffer buffer;
   enum lsh_atom type;
+  struct verifier *v;	
 
   simple_buffer_init(&buffer, STRING_LD(contents));
 
@@ -132,8 +133,6 @@ lsh_decode_key(struct lsh_string *contents)
     {
     case ATOM_SSH_DSS:
       {
-        struct verifier *v;
-        
         werror("Reading key of type ssh-dss...\n");
 
         v = parse_ssh_dss_public(&buffer);
@@ -143,30 +142,41 @@ lsh_decode_key(struct lsh_string *contents)
             werror("Invalid dsa key.\n");
             return NULL;
           }
-        else
-          return PUBLIC_SPKI_KEY(v, 1);
+	break;
       }
-      
+
+    case ATOM_SSH_DSA_SHA256_LOCAL:
+      {
+        werror("Reading key of type ssh-dsa-sha256...\n");
+
+        v = parse_ssh_dsa_sha256_public(&buffer);
+        
+        if (!v)
+          {
+            werror("Invalid dsa-sha256 key.\n");
+            return NULL;
+          }
+	break;
+      }
     case ATOM_SSH_RSA:
       {
-          struct verifier *v;
-          
-          werror("Reading key of type ssh-rsa...\n");
+	werror("Reading key of type ssh-rsa...\n");
 
-          v = parse_ssh_rsa_public(&buffer);
+	v = parse_ssh_rsa_public(&buffer);
 
-          if (!v)
-            {
-              werror("Invalid rsa key.\n");
-              return NULL;
-            }
-          else
-            return PUBLIC_SPKI_KEY(v, 1);
-      }      
+	if (!v)
+	  {
+	    werror("Invalid rsa key.\n");
+	    return NULL;
+	  }
+
+	break;
+      }
     default:
       werror("Unknown key type.");
       return NULL;
     }
+  return PUBLIC_SPKI_KEY(v, 1);
 }
 
 
