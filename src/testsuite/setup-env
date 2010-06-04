@@ -25,9 +25,10 @@ echo "Authorizing key for login"
 echo "Creating test password"
 ../lsh-keygen -a symmetric --bit-length 32 -o "$TEST_HOME/test-passwd"
 
-(echo "#/bin/sh"
+(echo "#! /bin/sh"
  echo cat '"'$TEST_HOME/test-passwd'"') > "$TEST_HOME/write-passwd"
- 
+chmod +x "$TEST_HOME/write-passwd"
+
 echo "Creating utmp/wtmp logs"
 cat /dev/null > $LSHD_UTMP
 cat /dev/null > $LSHD_WTMP
