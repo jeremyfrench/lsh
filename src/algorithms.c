@@ -290,6 +290,9 @@ lookup_hostkey_algorithm(const char *name)
     return ATOM_NONE;
   else if (strcasecmp_list(name, "ssh-dss", "dsa", "dss", NULL))
     return ATOM_SSH_DSS;
+  else if (strcasecmp_list(name, "ssh-dsa-sha256", "dsa-sha256",
+			   "dsa2", NULL))
+    return ATOM_SSH_DSA_SHA256_LOCAL;
   else if (strcasecmp_list(name, "spki-sign-rsa", "spki-rsa", NULL))
     return ATOM_SPKI_SIGN_RSA;
   else if (strcasecmp_list(name, "spki-sign-dss", "spki-dss",
