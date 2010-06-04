@@ -1,3 +1,40 @@
+2010-06-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (read_host_key): Recognize dsa-sha256.
+
+	* src/lshd-userauth.c (get_verifier): Recognize ssh-dsa-sha256.
+
+	* src/lsh-transport.c (read_user_key): Recognize dsa-sha256.
+	(lsh_transport_lookup_verifier): Recognize ssh-dsa-sha256.
+
+	* src/lsh-decode-key.c (lsh_decode_key): Recognise ssh-dsa-sha256.
+	Also slight code cleanup.
+
+	* src/dsa.c: Updated dsa-sha1 functions for renamed constants.
+	(do_dsa_verify): Require signature blob to be precisely 40 octets.
+	(do_dsa_sha256_verify): New function.
+	(do_dsa_sha256_public_key): New function.
+	(do_dsa_sha256_public_spki_key): New function.
+	(init_dsa_sha256_verifier): New function.
+	(parse_ssh_dsa_sha256_public): New function.
+	(do_dsa_sha256_sign): New function.
+	(do_dsa_sha256_get_verifier): New function.
+	(make_dsa_sha256_verifier): New function.
+	(make_dsa_sha256_signer): New function.
+	(dsa_sha256_algorithm): New algorithm.
+	(make_ssh_dsa_sha256_verifier): New function.
+
+	* src/crypto.h: Declarations for dsa-sha256.
+
+	* src/algorithms.c (lookup_hostkey_algorithm): Recognize
+	dsa-sha256.
+
+	* Src/Makefile.in (GPERF_FLAGS): Tweaked positions, to distinguish
+	between ssh-rsa and ssh-dsa.
+
+	* src/atoms.in: Added ssh-dsa, ssh-dsa-sha256@lysator.liu.se,
+	and dsa-sha256.
+
 2010-06-03  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-keygen.c: Added support for dsa-sha256 keys.
