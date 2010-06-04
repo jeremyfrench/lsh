@@ -34,6 +34,10 @@ LSH_MAKE_SEED=/bin/false
 : ${XMODMAP:="`PATH="$PATH:/usr/openwin/bin:/usr/X11R6/bin" type_p xmodmap`"}
 : ${XVFB:="`PATH="$PATH:/usr/openwin/bin:/usr/X11R6/bin" type_p Xvfb`"}
 
+: ${ENV_PROGRAM:="`type_p env`"}
+
+GETPWNAM_PRELOAD="`pwd`/getpwnam-wrapper.so"
+
 export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT
 export LSHD_CONNECTION LSHD_PTY_HELPER LSHD_USERAUTH
 export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
@@ -115,6 +119,10 @@ need_tcputils () {
 
 need_tsocks () {
     type tsocks >/dev/null 2>&1 || test_skip
+}
+
+need_getpwnam_wrapper () {
+    [ -f "getpwnam-wrapper.so" ] || test_skip
 }
 
 at_exit () {
