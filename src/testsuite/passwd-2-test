@@ -1,0 +1,23 @@
+#! /bin/sh
+
+echo passwd test, password login
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+need_getpwnam_wrapper
+
+spawn_lshd --service ssh-userauth "{" \
+  "$ENV_PROGRAM" LD_PRELOAD="$GETPWNAM_PRELOAD" GETWPWNAM_WRAPPER_DIR="$TEST_HOME" \
+  "$LSHD_USERAUTH" --allow-password --deny-publickey --session-id '$(session_id)' "}" \
+|| test_fail
+
+exec_lsh -l testuser --askpass "$TEST_HOME/write-passwd" echo foo | grep foo || test_fail
+exec_lsh -l otheruser --askpass "$TEST_HOME/write-passwd" true && test_fail
+exec_lsh -l no-passwd-testuser --askpass "$TEST_HOME/write-passwd" true && test_fail
+exec_lsh -l disabled-testuser --askpass "$TEST_HOME/write-passwd" true && test_fail
+
+test_success

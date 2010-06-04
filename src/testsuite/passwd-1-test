@@ -1,0 +1,27 @@
+#! /bin/sh
+
+echo passwd test, publickey login
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+need_getpwnam_wrapper
+
+spawn_lshd --service ssh-userauth "{" \
+  "$ENV_PROGRAM" LD_PRELOAD="$GETPWNAM_PRELOAD" GETWPWNAM_WRAPPER_DIR="$TEST_HOME" \
+  "$LSHD_USERAUTH" --session-id '$(session_id)' "}" \
+|| test_fail
+
+exec_lsh -l testuser echo foo | grep foo || test_fail
+exec_lsh -l otheruser true && test_fail
+exec_lsh -l no-passwd-testuser true || test_fail
+
+# I'd like to test the acocunt disabled check, but that check is
+# bypassed when not running as root.
+
+# exec_lsh -l disabled-testuser true && test_fail
+
+test_success
