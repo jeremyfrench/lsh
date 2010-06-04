@@ -1,3 +1,11 @@
+2010-06-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* spki-types.in: Added sha256 and dsa-sha256.
+
+	* verify.c (spki_verify_dsa_sha1): Renamed, from spki_verify_dsa.
+	(spki_verify_dsa_sha256): New function.
+	(spki_verify): Recognize dsa-sha256 keys.
+
 2010-03-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* verify.c (spki_verify_dsa): Updated for Nettle's dsa_sha1_verify

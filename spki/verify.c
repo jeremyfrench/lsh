@@ -31,7 +31,10 @@
 #include "certificate.h"
 #include "parse.h"
 
-#define RSA_KEYSIZE_LIMIT 3000
+#define RSA_KEYSIZE_LIMIT 4096
+/* Spec sets hard limit at 1024 resp. 3072, be a little more liberal. */
+#define DSA_SHA1_KEYSIZE_LIMIT 2048
+#define DSA_SHA256_KEYSIZE_LIMIT 4096
 
 
 static int
@@ -63,9 +66,9 @@ spki_verify_rsa(int (*verify)(const struct rsa_public_key *key,
 }
 
 static int
-spki_verify_dsa(const uint8_t *digest,
-		struct spki_iterator *key,
-		struct spki_iterator *signature)
+spki_verify_dsa_sha1(const uint8_t *digest,
+		     struct spki_iterator *key,
+		     struct spki_iterator *signature)
 {
   struct dsa_public_key dsa;
   struct dsa_signature rs;
@@ -75,11 +78,39 @@ spki_verify_dsa(const uint8_t *digest,
   dsa_signature_init(&rs);
 
   res = (dsa_keypair_from_sexp_alist(&dsa, NULL,
-				     RSA_KEYSIZE_LIMIT, &key->sexp)
+				     DSA_SHA1_KEYSIZE_LIMIT,
+				     DSA_SHA1_Q_BITS, &key->sexp)
 	 && spki_parse_type(key)
-	 && dsa_signature_from_sexp(&rs, &signature->sexp)
+	 && dsa_signature_from_sexp(&rs, &signature->sexp, DSA_SHA1_Q_BITS)
 	 && spki_parse_type(signature)
 	 && dsa_sha1_verify_digest(&dsa, digest, &rs));
+
+  dsa_signature_clear(&rs);
+  dsa_public_key_clear(&dsa);
+
+  return res;    
+}
+
+static int
+spki_verify_dsa_sha256(const uint8_t *digest,
+		       struct spki_iterator *key,
+		       struct spki_iterator *signature)
+{
+  struct dsa_public_key dsa;
+  struct dsa_signature rs;
+  int res;
+
+  dsa_public_key_init(&dsa);
+  dsa_signature_init(&rs);
+
+  res = (dsa_keypair_from_sexp_alist(&dsa, NULL,
+				     DSA_SHA256_KEYSIZE_LIMIT,
+				     DSA_SHA256_Q_BITS, &key->sexp)
+	 && spki_parse_type(key)
+	 && dsa_signature_from_sexp(&rs, &signature->sexp,
+				    DSA_SHA256_Q_BITS)
+	 && spki_parse_type(signature)
+	 && dsa_sha256_verify_digest(&dsa, digest, &rs));
 
   dsa_signature_clear(&rs);
   dsa_public_key_clear(&dsa);
@@ -145,8 +176,13 @@ spki_verify(void *ctx UNUSED,
     case SPKI_TYPE_DSA_SHA1:
       return (hash->type == SPKI_TYPE_SHA1
 	      && hash->length == SHA1_DIGEST_SIZE
-	      && spki_verify_dsa(hash->digest, &key, signature));
+	      && spki_verify_dsa_sha1(hash->digest, &key, signature));
 
+    case SPKI_TYPE_SHA256:
+      return (hash->type == SPKI_TYPE_SHA256
+	      && hash->length == SHA256_DIGEST_SIZE
+	      && spki_verify_dsa_sha256(hash->digest, &key, signature));
+      
     default:
       return 0;
     }
