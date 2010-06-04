@@ -36,6 +36,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	socks5-test socks4-test \
 	lshg-tcpip-local-test lshg-tcpip-remote-test \
 	lcp-test \
+	passwd-1-test passwd-2-test \
 	x11-1-test x11-2-test x11-3-test x11-4-test x11-5-test \
 	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test \
 	lshd-random-input-test
@@ -89,7 +90,6 @@ all:
 
 check: $(TARGETS)
 	LD_LIBRARY_PATH="`pwd`/../nettle_builddir/.lib" srcdir=`cd $(srcdir) && pwd` \
-	PASSWD_PRELOAD="$(PASSWD_PRELOAD)" \
 	$(TIMEOUT_PROGRAM) $(srcdir)/run-tests $(TS_ALL)
 
 $(TS_C): testutils.$(OBJEXT)
