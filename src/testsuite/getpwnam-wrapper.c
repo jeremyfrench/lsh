@@ -97,6 +97,13 @@ getpwnam(const char *name)
 
       return &passwd;
     }
+  else if (strcmp (name, "empty-passwd-testuser") == 0)
+    {
+      passwd.pw_name = "empty-passwd-testuser";
+      passwd.pw_passwd = "";
+
+      return &passwd;
+    }
 
   return NULL;
 }
