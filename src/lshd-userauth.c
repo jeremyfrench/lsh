@@ -219,7 +219,8 @@ lshd_user_clear(struct lshd_user *self)
  *
  * If our uid is non-zero, i.e. we're not running as root, then an
  * account is considered valid if and only if it's uid matches the
- * server's. We never try checking the shadow record.
+ * server's, and the password field is non-empty. We never try
+ * checking the shadow record.
  *
  * If we're running as root, first check the passwd record.
  *
@@ -276,6 +277,11 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
     /* Ignore accounts with empty passwords. */
     return 0;
 
+  /* If there's no shell, there's no reasonable default we can
+     substitute, so consider the account disabled. */
+  if (!user->shell || !*user->shell)
+    return 0;
+  
   user->uid = passwd->pw_uid;
   user->gid = passwd->pw_gid;
   user->shell = passwd->pw_shell;
@@ -290,7 +296,7 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
       if (user->uid != me)
 	return 0;
 
-      /* Skip all other checks, a non-root user sunning lshd
+      /* Skip all other checks, a non-root user running lshd
 	 presumably wants to be able to login to his or her
 	 account. */
 
@@ -378,11 +384,7 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
 	return 0;
     }
 
-  /* FIXME: Is it really appropriate to have a default for the login
-     shell? */
-  if (!user->shell)
-    user->shell = "/bin/sh";
-  if (!user->home)
+  if (!user->home || !*user->home)
     user->home = "/";
 
   return 1;
