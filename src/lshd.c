@@ -221,11 +221,17 @@ lshd_service_request_handler(struct transport_forward *self,
 		 $SSH_CLIENT can be set properly. */
 	      arglist_init (&args);
 	      arglist_push (&args, ctx->service_config->args.argv[0]);
-	      arglist_push (&args, "--session-id");
-	      arglist_push (&args, lsh_string_data(hex));
 	      for (i = 1; i < ctx->service_config->args.argc; i++)
-		arglist_push (&args, ctx->service_config->args.argv[i]);
-
+		{
+		  const char *arg = ctx->service_config->args.argv[i];
+		  if (arg[0] == '$')
+		    {
+		      arg++;
+		      if (!strcmp(arg, "(session_id)"))
+			arg = lsh_string_data(hex);
+		    }
+		  arglist_push (&args, arg);
+		}
 	      execv(args.argv[0], (char **) args.argv);
 
 	      werror("lshd_service_request_handler: exec of %z failed: %e.\n",
@@ -756,6 +762,9 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 	  GET_FILE_ENV(program, LSHD_USERAUTH);
 	  arglist_push (&self->ctx->service_config->args, program);
 
+	  arglist_push (&self->ctx->service_config->args, "--session-id");
+	  arglist_push (&self->ctx->service_config->args, "$(session_id)");
+	  
 	  /* Propagate werror-related options. */
 	  if (self->super.super.verbose > 0)
 	    arglist_push (&self->ctx->service_config->args, "-v");
