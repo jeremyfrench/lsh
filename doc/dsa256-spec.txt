@@ -9,30 +9,28 @@ the algorithm description is parameterized by the hash function.
 
 Public-key format:
 
-      string    "ssh-dsa-sha256"
+      string    "ssh-dsa"
       mpint     p
       mpint     q
       mpint     g
       mpint     y
 
-Except for the name, this syntax is the same as for "ssh-dss". The
-prime q must be exactly 256 bits. The prime p is expected to be of
-size between 1024 and 3072 bits (do we need to specify exactly which
-key sizes should be supported by an implementation advertising this
-signature algorithm? We don't do that for any other signature
-algorithm, as far as I know).
+Except for the name, this syntax is the same as for "ssh-dss". When
+used for the algorithm ssh-dsa-sha256, the prime q must be exactly 256
+bits. The prime p is expected to be of size between 1024 and 3072 bits
+(do we need to specify exactly which key sizes should be supported by
+an implementation advertising this signature algorithm? We don't do
+that for any other signature algorithm, as far as I know).
 
 Signature format:
 
-      string    "ssh-dsa-sha256"
-      string    dsa_signature_blob
+      string    "ssh-dsa"
+      mpint	r
+      mpint	s
 
-The dsa_signature blob is a string with a 64-octets payload, where the
-first 32 represent r, unsigned and in network byte order, and the next
-32 octets represent s. (I'd prefer to depart from this
-"signature_blob" thing and instead use separate mpints for r and s,
-but I think it's more important to stay consistent with the other
-signature algorithms.
+This departs from the signature_blob thing used for other signature
+algorithms. It's intended that this signature format should be useful
+for all variants of dsa, with any hash function.
 
 As far as I'm aware, there's no need to add any local-suffix to the
 names included in the key and signature formats.
