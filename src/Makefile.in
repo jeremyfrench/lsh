@@ -391,7 +391,8 @@ Makefile: $(srcdir)/Makefile.in ../config.status
 config.make: $(srcdir)/config.make.in ../config.status
 	cd .. && $(SHELL) ./config.status src/config.make
 
-config.h: $(srcdir)/config.h.in ../config.status
+config.h: stamp-h
+stamp-h: $(srcdir)/config.h.in ../config.status
 	cd .. && $(SHELL) ./config.status src/config.h
 
 @DEP_INCLUDE@ $(SOURCES:.c=.$(OBJEXT).d) $(SPECIAL_SOURCES:.c=.m$(OBJEXT).d)
