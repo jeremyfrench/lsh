@@ -242,6 +242,17 @@ parse_ssh_dss_public(struct simple_buffer *buffer);
 struct verifier *
 make_ssh_dss_verifier(uint32_t length, const uint8_t *key);
 
+/* DSA-SHA256 signatures */
+
+extern struct signature_algorithm dsa_sha256_algorithm;
+
+/* Non spki keys */
+struct verifier *
+parse_ssh_dsa_sha256_public(struct simple_buffer *buffer);
+
+struct verifier *
+make_ssh_dsa_sha256_verifier(uint32_t length, const uint8_t *key);
+
 /* GABA:
    (class
      (name keypair)
