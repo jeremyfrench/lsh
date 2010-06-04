@@ -54,6 +54,9 @@ diffie-hellman-group14-sha1      (to be REQUIRED?)
 ssh-dss              REQUIRED     sign      Simple DSS
 ssh-rsa              RECOMMENDED  sign      Simple RSA
 
+ssh-dsa		     Experimental in LSH    FIPS 186-3
+ssh-dsa-sha256@lysator.liu.se
+
 # x509v3-sign-rsa      RECOMMENDED  sign    X.509 certificates (RSA key)
 # x509v3-sign-dss      RECOMMENDED  sign    X.509 certificates (DSS key)
 spki-sign-rsa        OPTIONAL     sign    SPKI certificates (RSA key)
@@ -119,13 +122,16 @@ USR2
 # For unknown signals
 signal-unknown@lysator.liu.se
  
-# Used in spki keys
+# Used in spki keys. FIXME: Delete, use the SPKI_TYPE ids instead.
 dsa
+dsa-sha256
 
 # For use in spki keys
 rsa-pkcs1
 
-# These two should be obsoleted
+# These two are in the spki spec, it's not clear if we should use them
+# in lsh.
+
 rsa-pkcs1-sha1
 rsa-pkcs1-md5
 
