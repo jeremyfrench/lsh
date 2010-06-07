@@ -80,6 +80,8 @@ hash_data(struct spki_hashes *hashes,
 {
   HASH(hashes, md5, length, data);
   HASH(hashes, sha1, length, data);
+  HASH(hashes, sha256, length, data);
+  hashes->flags = SPKI_HASH_MD5 | SPKI_HASH_SHA1 | SPKI_HASH_SHA256;
 }
 #undef HASH
 
@@ -108,8 +110,6 @@ spki_principal_add_key(struct spki_acl_db *db,
   else
     hash_data(&principal->hashes, key_length, key);
 
-  principal->flags = SPKI_PRINCIPAL_MD5 | SPKI_PRINCIPAL_SHA1;
-  
   principal->next = db->first_principal;
   db->first_principal = principal;
   
@@ -129,7 +129,7 @@ spki_principal_add_md5(struct spki_acl_db *db,
   principal->verifier = NULL;
 
   memcpy(principal->hashes.md5, md5, sizeof(principal->hashes.md5));
-  principal->flags = SPKI_PRINCIPAL_MD5;
+  principal->hashes.flags = SPKI_HASH_MD5;
   
   principal->next = db->first_principal;
   db->first_principal = principal;
@@ -150,7 +150,7 @@ spki_principal_add_sha1(struct spki_acl_db *db,
   principal->verifier = NULL;
 
   memcpy(principal->hashes.sha1, sha1, sizeof(principal->hashes.sha1));
-  principal->flags = SPKI_PRINCIPAL_SHA1;
+  principal->hashes.flags = SPKI_HASH_SHA1;
   
   principal->next = db->first_principal;
   db->first_principal = principal;
@@ -158,11 +158,35 @@ spki_principal_add_sha1(struct spki_acl_db *db,
   return principal;
 }
 
-#define HASH_MATCH(flags, h1, h2)				\
-  (((flags) == SPKI_PRINCIPAL_MD5				\
-    && !memcmp((h1).md5, (h2).md5, sizeof((h1).md5)))		\
-   || ((flags) == SPKI_PRINCIPAL_SHA1				\
-       && !memcmp((h1).sha1, (h2).sha1, sizeof((h1).sha1))))
+static struct spki_principal *
+spki_principal_add_sha256(struct spki_acl_db *db,
+			  const uint8_t *sha256)
+{
+  SPKI_NEW(db, struct spki_principal, principal);
+  if (!principal)
+    return NULL;
+
+  principal->key = NULL;
+  principal->alias = NULL;
+  principal->verifier = NULL;
+
+  memcpy(principal->hashes.sha256, sha256, sizeof(principal->hashes.sha256));
+  principal->hashes.flags = SPKI_HASH_SHA256;
+  
+  principal->next = db->first_principal;
+  db->first_principal = principal;
+  
+  return principal;
+}
+
+/* h1 should include exactly one hash value, h2 should have all. */
+#define HASH_MATCH(h1, h2)						\
+  (((h1).flags == SPKI_HASH_MD5					\
+    && !memcmp((h1).md5, (h2).md5, sizeof((h1).md5)))			\
+   || ((h1).flags == SPKI_HASH_SHA1				\
+       && !memcmp((h1).sha1, (h2).sha1, sizeof((h1).sha1)))		\
+   || ((h1).flags == SPKI_HASH_SHA256				\
+       && !memcmp((h1).sha256, (h2).sha256, sizeof((h1).sha256))))
 
 static void
 spki_principal_fix_aliases(struct spki_principal *principal)
@@ -174,7 +198,7 @@ spki_principal_fix_aliases(struct spki_principal *principal)
       if (s->key || s->alias)
 	continue;
 
-      if (HASH_MATCH(s->flags, s->hashes, principal->hashes))
+      if (HASH_MATCH(s->hashes, principal->hashes))
 	s->alias = principal;
     }
 }
@@ -199,14 +223,13 @@ spki_principal_by_key(struct spki_acl_db *db,
 	}
       else
 	/* Check hashes, exactly one should be present */
-	if (HASH_MATCH(s->flags, s->hashes, hashes))
+	if (HASH_MATCH(s->hashes, hashes))
 	  {
 	    s->key = spki_dup(db, key_length, key);
 	    if (!s->key)
 	      return NULL;
 	    s->key_length = key_length;
 	    s->hashes = hashes;
-	    s->flags |= (SPKI_PRINCIPAL_MD5 | SPKI_PRINCIPAL_SHA1);
 
 	    spki_principal_fix_aliases(s);
 	    return s;
@@ -223,7 +246,7 @@ spki_principal_by_md5(struct spki_acl_db *db, const uint8_t *digest)
   struct spki_principal *s;
 
   for (s = db->first_principal; s; s = s->next)
-    if ( (s->flags & SPKI_PRINCIPAL_MD5)
+    if ( (s->hashes.flags & SPKI_HASH_MD5)
 	 && !memcmp(s->hashes.md5, digest, sizeof(s->hashes.md5)))
       return s;
 
@@ -236,18 +259,31 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest)
   struct spki_principal *s;
 
   for (s = db->first_principal; s; s = s->next)
-    if ( (s->flags & SPKI_PRINCIPAL_SHA1)
+    if ( (s->hashes.flags & SPKI_HASH_SHA1)
 	 && !memcmp(s->hashes.sha1, digest, sizeof(s->hashes.sha1)))
       return s;
   
   return spki_principal_add_sha1(db, digest);
 }
 
+struct spki_principal *
+spki_principal_by_sha256(struct spki_acl_db *db, const uint8_t *digest)
+{
+  struct spki_principal *s;
+
+  for (s = db->first_principal; s; s = s->next)
+    if ( (s->hashes.flags & SPKI_HASH_SHA256)
+	 && !memcmp(s->hashes.sha1, digest, sizeof(s->hashes.sha256)))
+      return s;
+  
+  return spki_principal_add_sha256(db, digest);
+}
+
 void
 spki_principal_free_chain(struct spki_acl_db *db,
 			  struct spki_principal *chain)
 {
-  while(chain)
+  while (chain)
     {
       struct spki_principal *next = chain->next;
 
@@ -650,6 +686,9 @@ spki_hash_verify(const struct spki_hash_value *hash,
     case SPKI_TYPE_SHA1:
       HASH_CHECK(hash, sha1, SHA1_DIGEST_SIZE, length, data);
       break;
+    case SPKI_TYPE_SHA256:
+      HASH_CHECK(hash, sha256, SHA256_DIGEST_SIZE, length, data);
+      break;
     }
   return 1;
 }
@@ -876,4 +915,4 @@ spki_date_cmp_time_t(struct spki_date *d, time_t t)
   spki_date_from_time_t(&d2, t);
   return memcmp(d, &d2, SPKI_DATE_SIZE);
 }
-  
+
