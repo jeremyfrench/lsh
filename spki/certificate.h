@@ -55,19 +55,23 @@ struct spki_tag;
 
 /* Forward declaration */
 struct spki_acl_db;
-  
+
+enum spki_hash_flags
+  {
+    SPKI_HASH_MD5 = 1,
+    SPKI_HASH_SHA1 = 2,
+    SPKI_HASH_SHA256 = 4,
+  };
+
 struct spki_hashes
 {
-  /* Include the flags in this struct? */
+  /* A flag is set iff the corresponding hash value is known. */
+  enum spki_hash_flags flags;
+
   uint8_t md5[MD5_DIGEST_SIZE];
   uint8_t sha1[SHA1_DIGEST_SIZE];
+  uint8_t sha256[SHA256_DIGEST_SIZE];
 };
-
-enum spki_principal_flags
-  {
-    SPKI_PRINCIPAL_MD5 = 1,
-    SPKI_PRINCIPAL_SHA1 = 2
-  };
 
 struct spki_principal
 {
@@ -79,8 +83,6 @@ struct spki_principal
   /* NULL if only hash is known */
   uint8_t *key;
 
-  /* A flag is set iff the corresponding hash value is known. */
-  enum spki_principal_flags flags;
   struct spki_hashes hashes;
 
   /* If the lookup code sees hashes and keys in an unfortunate order,
@@ -225,6 +227,9 @@ spki_principal_by_md5(struct spki_acl_db *db, const uint8_t *digest);
 
 struct spki_principal *
 spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest);
+
+struct spki_principal *
+spki_principal_by_sha256(struct spki_acl_db *db, const uint8_t *digest);
 
 void
 spki_principal_free_chain(struct spki_acl_db *db,
