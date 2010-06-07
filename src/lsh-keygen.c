@@ -542,7 +542,9 @@ rsa_generate_key(uint32_t bits)
 			   NULL, progress,
 			   bits, E_SIZE))
     {
-      /* FIXME: Use rsa-pkcs1 or rsa-pkcs1-sha1? */
+      /* FIXME: Use rsa-pkcs1 or rsa-pkcs1-sha1? libspki currently
+	 supports only rsa-pkcs1-sha1, but if rsa-pkcs1 makes sense it
+	 can be extended to support that. */
       /* FIXME: Some code duplication with
 	 rsa.c:do_rsa_public_spki_key */
       key = lsh_string_format_sexp(0, "(private-key(rsa-pkcs1(n%b)(e%b)"
