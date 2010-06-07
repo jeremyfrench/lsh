@@ -31,7 +31,7 @@ struct spki_iterator
 {
   /* When a parsing function is invoked, the sexp_iterator points into
    * the body of the expression being parsed, just after the type.
-   * Type is an interned representation fo the expresssion type, and start
+   * Type is an interned representation of the expresssion type, and start
    * is the position of the first byte of the expression. For example,
    *
    *     (foo x y z)
