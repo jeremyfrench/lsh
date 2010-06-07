@@ -63,7 +63,7 @@ spki_intern(struct spki_iterator *i)
 	return assoc->id;
     }
   
-  return spki_parse_fail(i);;
+  return spki_parse_fail(i);
 }
 
 /* NOTE: Uses SPKI_TYPE_SYNTAX_ERROR (= 0) for both unknown types and
