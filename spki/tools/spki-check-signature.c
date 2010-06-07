@@ -103,7 +103,6 @@ main(int argc, char **argv)
   struct check_options o;
   
   struct spki_acl_db db;
-  struct sexp_iterator sexp;
   struct spki_iterator i;
 
   struct spki_hash_value hash;
@@ -113,8 +112,7 @@ main(int argc, char **argv)
   
   spki_acl_init(&db);
 
-  if (sexp_transport_iterator_first(&sexp, strlen(o.signature), o.signature)
-      && spki_iterator_first_sexp(&i, &sexp)
+  if (spki_transport_iterator_first(&i, strlen(o.signature), o.signature)
       && spki_check_type(&i, SPKI_TYPE_SIGNATURE)
       && spki_parse_hash(&i, &hash)
       && spki_parse_principal(&db, &i, &principal))
