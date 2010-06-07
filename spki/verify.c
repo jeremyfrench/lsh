@@ -54,7 +54,7 @@ spki_verify_rsa(int (*verify)(const struct rsa_public_key *key,
 
   res = (rsa_keypair_from_sexp_alist(&rsa, NULL,
 				     RSA_KEYSIZE_LIMIT, &key->sexp)
-	 && spki_parse_type(key)
+	 && spki_parse_end(key)
 	 && nettle_mpz_set_sexp(s, mpz_sizeinbase(rsa.n, 2),
 				&signature->sexp)
 	 && spki_parse_end(signature)
@@ -80,9 +80,8 @@ spki_verify_dsa_sha1(const uint8_t *digest,
   res = (dsa_keypair_from_sexp_alist(&dsa, NULL,
 				     DSA_SHA1_KEYSIZE_LIMIT,
 				     DSA_SHA1_Q_BITS, &key->sexp)
-	 && spki_parse_type(key)
+	 && spki_parse_end(key)
 	 && dsa_signature_from_sexp(&rs, &signature->sexp, DSA_SHA1_Q_BITS)
-	 && spki_parse_type(signature)
 	 && dsa_sha1_verify_digest(&dsa, digest, &rs));
 
   dsa_signature_clear(&rs);
@@ -106,10 +105,9 @@ spki_verify_dsa_sha256(const uint8_t *digest,
   res = (dsa_keypair_from_sexp_alist(&dsa, NULL,
 				     DSA_SHA256_KEYSIZE_LIMIT,
 				     DSA_SHA256_Q_BITS, &key->sexp)
-	 && spki_parse_type(key)
+	 && spki_parse_end(key)
 	 && dsa_signature_from_sexp(&rs, &signature->sexp,
 				    DSA_SHA256_Q_BITS)
-	 && spki_parse_type(signature)
 	 && dsa_sha256_verify_digest(&dsa, digest, &rs));
 
   dsa_signature_clear(&rs);
