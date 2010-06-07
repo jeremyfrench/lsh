@@ -1,3 +1,36 @@
+2010-06-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* verify.c (spki_verify_rsa): Stricter check for end of expression
+	for key and signature.
+	(spki_verify_rsa): Use spki_parse_end to check for end of key.
+	(spki_verify_dsa_sha1): Use spki_parse_end to check for end of
+	key. Don't call spki_parse_end to get the end of the signature
+	value, since sexp_iterator_assoc exits that list for us.
+	(spki_verify_dsa_sha256): Likewise.
+
+	* tools/spki-check-signature.c (main): Use
+	spki_transport_iterator_first.
+
+	* certificate.c (hash_data): Compute sha256 hash, and set flags.
+	(spki_principal_add_key): Adapted to changed hash_data.
+	(spki_principal_add_md5): Adapted to renamed and moved flags.
+	(spki_principal_add_sha1): Likewise.
+	(spki_principal_add_sha256): New function.
+	(HASH_MATCH): Deleted flags argument, added sha256 support,
+	improved comment. Updated callers.
+	(spki_principal_by_key): Adapted to renamed and moved flags.
+	(spki_principal_by_md5): Likewise.
+	(spki_principal_by_sha1): Likewise.
+	(spki_principal_by_sha256): New function.
+	(spki_hash_verify): Added sha256 support.
+
+	* certificate.h (enum spki_principal_flags): Renamed to...
+	(enum spki_hash_flags): ...new enum. Renamed flags, and added
+	SPKI_HASH_SHA256.
+	(struct spki_hashes): Moved flags field here, and added sha256
+	hash.
+	(struct spki_principal): Deleted flags field.
+
 2010-06-04  Niels Möller  <nisse@lysator.liu.se>
 
 	* spki-types.in: Added sha256 and dsa-sha256.
