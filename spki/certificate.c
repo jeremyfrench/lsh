@@ -273,7 +273,7 @@ spki_principal_by_sha256(struct spki_acl_db *db, const uint8_t *digest)
 
   for (s = db->first_principal; s; s = s->next)
     if ( (s->hashes.flags & SPKI_HASH_SHA256)
-	 && !memcmp(s->hashes.sha1, digest, sizeof(s->hashes.sha256)))
+	 && !memcmp(s->hashes.sha256, digest, sizeof(s->hashes.sha256)))
       return s;
   
   return spki_principal_add_sha256(db, digest);
