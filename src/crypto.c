@@ -254,11 +254,7 @@ make_des3_cbc_instance(struct crypto_algorithm *algorithm UNUSED,
                        const uint8_t *key, const uint8_t *iv)
 {
   NEW(des3_instance, self);
-  uint8_t pkey[DES3_KEY_SIZE];
 
-  /* Fix odd parity */
-  des_fix_parity(DES3_KEY_SIZE, pkey, key);
-  
   self->super.block_size = DES3_BLOCK_SIZE;
   self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
 			? do_des3_encrypt
@@ -266,19 +262,13 @@ make_des3_cbc_instance(struct crypto_algorithm *algorithm UNUSED,
 
   CBC_SET_IV(&self->ctx, iv);
   
-  if (des3_set_key(&self->ctx.ctx, pkey))
+  if (des3_set_key(&self->ctx.ctx, key))
     return(&self->super);
-
-  switch(self->ctx.ctx.status)
+  else
     {
-    case DES_BAD_PARITY:
-      fatal("Internal error! Bad parity in make_des3_instance.\n");
-    case DES_WEAK_KEY:
-      werror("Detected weak DES key.\n");
+      werror("Detected a weak DES key.\n");
       KILL(self);
       return NULL;
-    default:
-      fatal("Internal error!\n");
     }
 }
 
