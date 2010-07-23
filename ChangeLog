@@ -1,3 +1,8 @@
+2010-07-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-userauth.c (lookup_user): Set user->shell before use.
+	(handle_userauth): More verbose output.
+
 2010-07-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/crypto.c (make_des3_cbc_instance): Updated to Nettle's new
