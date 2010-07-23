@@ -277,16 +277,16 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
     /* Ignore accounts with empty passwords. */
     return 0;
 
+  user->shell = passwd->pw_shell;
   /* If there's no shell, there's no reasonable default we can
      substitute, so consider the account disabled. */
   if (!user->shell || !*user->shell)
     return 0;
-  
+
   user->uid = passwd->pw_uid;
   user->gid = passwd->pw_gid;
-  user->shell = passwd->pw_shell;
   user->home = passwd->pw_dir;
-
+  
   me = getuid();
   if (me)
     {
@@ -623,18 +623,23 @@ handle_userauth(struct lshd_user *user,
 	}
 
       if (!lookup_user(user, user_length, user_utf8, config->allow_root_login))
-	goto fail;
-
+	{
+	  verbose("User lookup failed for user %pus.\n", user_length, user_utf8);
+	  goto fail;
+	}
       /* NOTE: Each called function have to check if the memthod is
 	 enabled. */
       switch (method)
 	{
 	default:
+	  verbose("Unsupported authentication method.\n");
 	  goto fail;
 	case ATOM_PUBLICKEY:
+	  verbose("Processing publickey request.\n");
 	  res = handle_publickey(&buffer, user, config);
 	  break;
 	case ATOM_PASSWORD:
+	  verbose("Processing password request.\n");
 	  res = handle_password(&buffer, user, config);
 	  break;
 	}
