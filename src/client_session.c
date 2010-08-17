@@ -252,7 +252,11 @@ do_client_session_event(struct ssh_channel *c, enum channel_event event)
       if (!session->err.state->length)
 	channel_write_state_close(&session->super, &session->err);
 
-      /* FIXME: Arrange for close when all data is written. */
+      /* If there's pending data, channel_write_state_close is called
+	 later, by oop_write_stdout and oop_write_stderr, after the
+	 calls to channel_io_flush eventually returns
+	 CHANNEL_IO_EOF. */
+
       break;
 
     case CHANNEL_EVENT_CLOSE:
