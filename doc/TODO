@@ -26,7 +26,7 @@ CHARSETS
 The conversion from UTF8->unicode->latin1 doesn't handle accented
 characters properly. Probably needs a complete rewrite.
 
-Check out  GNU libidn.
+Check out GNU libidn.
 
 
 CONFIGURATION
@@ -75,15 +75,6 @@ never have side effects.
 
 CHANNELS
 
-Implement window-change requests on the server side.
-
-Look at client_session.c:do_client_session_eof() and
-server_session.c:do_eof() and see if they can be unified or perhaps
-even deleted.
-
-The CHANNEL_CLOSE_AT_EOF should be enabled by default. It is the
-correct behaviour for all channels except the server side of sessions.
-
 The following bug should be eliminated: I use lshg to get a large
 file,
 
@@ -106,10 +97,6 @@ Implement other types of forwarding; ssh-agent, UDP, etc.
 Review the naming of functions in tcpforward.c; it appears a little
 inconsistent. 
 
-There's one known bug in lshd's X11 forwarding: It will start sending
-data on the session before the reply to the client's "shell" or "exec"
-request.
-
 
 RANDOMNESS
 
@@ -123,17 +110,13 @@ SPKI ISSUES
 
 Use the name "rsa-pkcs1" consistently for all keys, and perhaps
 include the name of the hash function in the signature objects.
-
-Encryption of private keys seems broken, decryption gives the error
-
-  lsh: Unknown encryption algorithm for pkcs5v2.
-  lsh: Decrypting private key failed.
   
 
 DENIAL OF SERVICE
 
 Review how much cpu and memory a malicious client can consume at the
 server.
+
 
 BUILD ISSUES
 
@@ -158,9 +141,6 @@ parse.c:parse_next_atom to allow that.
 The server currently allows the client to send random banner text
 before its version string. Such text is not allowed by the protocol
 spec.
-
-Add a timeout, to drop connections that hasn't older than (say) five
-minutes without having authenticated properly.
 
 
 USER INTERFACE ISSUES
@@ -188,7 +168,7 @@ The testsuite is far from complete. Some parts that it misses are
 
  * PTY allocation, requests, etc.
 
- * Userauth banner, failures, passwords,kerberos  password helper.
+ * Userauth banner, failures, kerberos password helper.
 
  * connection_handle_pending(), connection_ignore_handler,
    connection_fail_handler, connection_unimplemented_handler,
@@ -203,8 +183,6 @@ The testsuite is far from complete. Some parts that it misses are
  * sexp display types.
 
  * spki, tag prefix and tag any.
-
- * Encrypted private keys.
 
  * TCP forwarding: cancel-tcpip-forward, various exception.
 
@@ -226,7 +204,7 @@ have autoconf check for rusage().
 
 It seems that it is a little difficult to detect that an asyncronous
 connect() failed; poll() indicates that both reading and writing is
-possible, but write failes (with EPIPE/SIGPIPE) later. Perhaps a
+possible, but write fails (with EPIPE/SIGPIPE) later. Perhaps a
 linux-problem?
 
 Perhaps some of the dh-code in publickey_crypto should be moved to
@@ -259,7 +237,7 @@ About POLLHUP:
   --
   Bazsi
 
-Find out why opening /dev/ptmx failes occasionally (errno = 19, no
+Find out why opening /dev/ptmx fails occasionally (errno = 19, no
 such device).
 
 Add some workaround for the poll()-bug in linux/glibc-2.07 reported by
