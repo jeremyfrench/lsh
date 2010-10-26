@@ -1,4 +1,6 @@
-2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
+2010-10-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/werror.c (werror_format): Made static.
 
 	* src/testsuite/server-config-test.c: Added '=' tokens in input.
 
@@ -46,7 +48,7 @@
 	* src/client_x11.c (x11_connect_error): Use STRERROR to display
 	socket error code.
 
-2010-08-24  Niels Möller  <nisse@turmalin.hack.org>
+2010-08-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/scm/guile-compat.scm: Use the rdelim module, for the
 	read-line. Needed at least for guile-1.8.7.
