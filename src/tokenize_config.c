@@ -51,8 +51,8 @@ config_tokenizer_init(struct config_tokenizer *self,
     {
       /* HT, LF, VT, FF, CR */
       0,0,0,0,0,0,0,0,0,1,4,1,1,1,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-      /* SPACE */
-      1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      /* SPACE, '=' */
+      1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
       /* '{', '}' */
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,2,0,2,0,0,
@@ -90,6 +90,10 @@ config_tokenizer_next(struct config_tokenizer *self)
 	  self->type = TOK_END_GROUP;
 	  ADVANCE(1);
 	  break;
+	case '=':
+	  self->type = TOK_EQUAL;
+	  ADVANCE(1);
+	  break;	  
 	case '#':
 	  /* comment */
 	  while (LEFT && *HERE != '\n')

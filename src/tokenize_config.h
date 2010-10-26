@@ -31,6 +31,7 @@ enum config_token_type
   TOK_EOF,
   TOK_BEGIN_GROUP,
   TOK_END_GROUP,
+  TOK_EQUAL,
   TOK_STRING,
   TOK_ERROR
 };
