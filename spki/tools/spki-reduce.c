@@ -36,9 +36,7 @@
 static void
 usage(void)
 {
-  fprintf(stderr,
-	  "Usage: spki-reduce ...\n");
-  exit(EXIT_FAILURE);
+  fprintf(stderr, "Usage: spki-reduce ...\n");
 }
 
 struct reduce_options
@@ -56,6 +54,7 @@ parse_options(struct reduce_options *o,
   
   for (;;)
     {
+      enum { OPT_HELP = 300 };
       static const struct option options[] =
 	{
 	  /* Name, args, flag, val */
@@ -63,13 +62,13 @@ parse_options(struct reduce_options *o,
 	  { "tag", required_argument, NULL, 't' },
 
 	  { "version", no_argument, NULL, 'V' },
-	  { "help", no_argument, NULL, '?' },
+	  { "help", no_argument, NULL, OPT_HELP },
 	  { NULL, 0, NULL, 0 }
 	};
 
       int c;
      
-      c = getopt_long(argc, argv, "V?", options, NULL);
+      c = getopt_long(argc, argv, "V", options, NULL);
 
       switch (c)
 	{
@@ -96,8 +95,11 @@ parse_options(struct reduce_options *o,
 	  o->tag = optarg;
 	  break;
 
-	case '?':
+	case OPT_HELP:
 	  usage();
+	  exit (EXIT_SUCCESS);
+	case '?':
+	  exit (EXIT_FAILURE);
 	}
     }
 }

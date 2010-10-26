@@ -41,9 +41,7 @@
 static void
 usage(void)
 {
-  fprintf(stderr,
-	  "Usage: spki-delegate ...\n");
-  exit(EXIT_FAILURE);
+  printf("Usage: spki-delegate ...\n");
 }
 
 struct delegate_options
@@ -62,6 +60,8 @@ static void
 parse_options(struct delegate_options *o,
 	      int argc, char **argv)
 {
+  enum { OPT_HELP = 300 };
+
   o->issuer = NULL;
   o->subject = NULL;
   o->tag = NULL;
@@ -85,13 +85,13 @@ parse_options(struct delegate_options *o,
 	  { "no-sign", no_argument, NULL, 'n' },
 	  
 	  { "version", no_argument, NULL, 'V' },
-	  { "help", no_argument, NULL, '?' },
+	  { "help", no_argument, NULL, OPT_HELP },
 	  { NULL, 0, NULL, 0 }
 	};
 
       int c;
      
-      c = getopt_long(argc, argv, "V?", options, NULL);
+      c = getopt_long(argc, argv, "V", options, NULL);
 
       switch (c)
 	{
@@ -141,8 +141,12 @@ parse_options(struct delegate_options *o,
 	  o->sign = 0;
 	  break;
 	  
-	case '?':
+	case OPT_HELP:
 	  usage();
+	  exit (EXIT_SUCCESS);
+
+	case '?':
+	  exit (EXIT_FAILURE);
 	}
     }
 }

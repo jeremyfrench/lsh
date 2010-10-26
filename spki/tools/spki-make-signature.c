@@ -46,7 +46,6 @@ usage(void)
 	  "  --digest        Read a digest, instead if a file to be hashed,\n"
 	  "                  from stdin.\n"
 	  "  --seed-file     A yarrow seed file to use.\n");
-  exit(EXIT_FAILURE);
 }
 
 struct sign_options
@@ -66,19 +65,20 @@ parse_options(struct sign_options *o,
   
   for (;;)
     {
+      enum { OPT_HELP = 300 };      
       static const struct option options[] =
 	{
 	  /* Name, args, flag, val */
 	  { "digest", no_argument, NULL, 'd' },
 	  { "seed-file", required_argument, NULL, 's' },
 	  { "version", no_argument, NULL, 'V' },
-	  { "help", no_argument, NULL, '?' },
+	  { "help", no_argument, NULL, OPT_HELP },
 	  { NULL, 0, NULL, 0 }
 	};
 
       int c;
      
-      c = getopt_long(argc, argv, "V?s:w:", options, NULL);
+      c = getopt_long(argc, argv, "Vs:w:", options, NULL);
     
       switch (c)
 	{
@@ -106,8 +106,12 @@ parse_options(struct sign_options *o,
 	  o->digest_mode = 1;
 	  break;
 
-	case '?':
+	case OPT_HELP:
 	  usage();
+	  exit (EXIT_SUCCESS);
+
+	case '?':
+	  exit (EXIT_FAILURE);
 	}
     }
 }

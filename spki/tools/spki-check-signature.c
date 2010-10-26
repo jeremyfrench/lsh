@@ -39,7 +39,6 @@ static void
 usage(void)
 {
   fprintf(stderr, "spki-check-signature [ --no-data ] SIGNATURE\n");
-  exit(EXIT_FAILURE);
 }
 
 struct check_options
@@ -57,17 +56,18 @@ parse_options(struct check_options *o,
 
   for (;;)
     {
+      enum { OPT_HELP = 300 };
       static const struct option options[] =
 	{
 	  /* Name, args, flag, val */
 	  { "no-data", no_argument, NULL, 'n' },
 	  { "version", no_argument, NULL, 'V' },
-	  { "help", no_argument, NULL, '?' },
+	  { "help", no_argument, NULL, OPT_HELP },
 	  { NULL, 0, NULL, 0 }
 	};
       int c;
      
-      c = getopt_long(argc, argv, "V?", options, NULL);
+      c = getopt_long(argc, argv, "V", options, NULL);
     
       switch (c)
 	{
@@ -91,8 +91,12 @@ parse_options(struct check_options *o,
 	  o->with_data = 0;
 	  break;
 
-	case '?':
+	case OPT_HELP:
 	  usage();
+	  exit (EXIT_SUCCESS);
+
+	case '?':
+	  exit (EXIT_FAILURE);
 	}
     }
 }
