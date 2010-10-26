@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <signal.h>
 
+#include "getopt.h"
+
 volatile sig_atomic_t got_sigchld;
 int sig_pipe[2];
 pid_t child_pid;
@@ -139,7 +141,15 @@ main (int argc, char **argv)
   int tty;
   int non_interactive = 0;
 
-  while ( (c = getopt (argc, argv, "nt:")) != -1)
+  enum { OPT_HELP = 300 };
+  static const struct option options[] =
+    {
+      /* Name, args, flag, val */
+
+      { "help", no_argument, NULL, OPT_HELP },
+      { NULL, 0, NULL, 0 }
+    };  
+  while ( (c = getopt_long (argc, argv, "nt:", options, NULL)) != -1)
     {
       switch (c)
 	{
@@ -156,12 +166,13 @@ main (int argc, char **argv)
 	  non_interactive = 1;
 	  break;
 
-	case '?':
+	case OPT_HELP:
 	usage:
-	  fprintf(stderr, "Usage: %s [-t TIMEOUT] [-n] COMMAND ARGS...\n"
+	  printf("Usage: %s [-t TIMEOUT] [-n] COMMAND ARGS...\n"
 		  "Timeout is in seconds.\n", argv[0]);
+	  return EXIT_SUCCESS;
+	case '?':
 	  return EXIT_FAILURE;
-
 	default:
 	  abort();
 	}
