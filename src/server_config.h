@@ -43,10 +43,20 @@ typedef int (*config_parser_handler_t)(int key, uint32_t value, const uint8_t *d
 enum config_type
 {
   CONFIG_TYPE_NONE,
-  /* CONFIG_TYPE_NOARG, */
+  /* VALUE is 0 or 1 */
   CONFIG_TYPE_BOOL,
-  CONFIG_TYPE_UNSIGNED,
-  CONFIG_TYPE_STRING
+  /* VALUE holds an unsigned number (FIXME: Rename
+     CONFIG_TYPE_NUMBER?)*/
+  CONFIG_TYPE_NUMBER,
+  /* Length stored in VALUE, DATA points to the constants. Currently
+     not allocated, but a pointer into the input data. FIXME: To
+     support quoting with escape handling, we'd need to allocate the
+     string. */
+  CONFIG_TYPE_STRING,
+  /* Length stored in VALUE, DATA points at a newly allocated
+     catenation of NUL-terminated strings. Similar to argz, but with
+     an explicit length to specify the end of the list. */
+  CONFIG_TYPE_LIST
 };
 
 enum

@@ -39,6 +39,7 @@
 
 #include "tokenize_config.h"
 #include "werror.h"
+#include "xalloc.h"
 
 struct group
 {
@@ -140,7 +141,7 @@ parser_init(struct parser_state *state,
   if (!state->storage)
     return ENOMEM;
 
-  state->groups = (void *) state->storage;
+  state->groups = state->storage;
   state->egroup = state->groups + szs.num_groups;
 
   if (szs.num_child_inputs > 0)
@@ -182,8 +183,8 @@ parser_init(struct parser_state *state,
   return 0;
 }
 
-static int
-parser_finalize(struct parser_state *state, int err)
+static void
+parser_finalize(struct parser_state *state)
 {
   struct group *group;
 
@@ -193,8 +194,6 @@ parser_finalize(struct parser_state *state, int err)
 
   free(state->storage);
   state->storage = NULL;
-
-  return err;
 }
 
 static int
@@ -217,6 +216,94 @@ parse_value_unsigned(uint32_t *value, unsigned length, const uint8_t *arg)
 }
 
 static int
+list_append(uint32_t *length, uint32_t *size, uint8_t **list,
+	    uint32_t token_length, const uint8_t *token)
+{
+  /* Allocates using lsh_space_alloc and lsh_space_realloc rather than
+     malloc/realloc, so that the service_config calls can free it
+     using lsh_space_free. */
+  if (!*size)
+    {
+      *list = lsh_space_alloc(token_length + 100);
+    }
+  else if (*size < *length + token_length + 1)
+    {o
+      *size *= 2;
+      *list = lsh_space_realloc(*list, *size);
+    }
+  memcpy(*list + *length, token, token_length);
+  *list[*length + token_length] = '\0';
+  *length += token_length + 1;
+
+  return 0;
+}
+
+static int
+parse_value_list(uint32_t *length, uint8_t **list,
+		 struct config_tokenizer *tokenizer)
+{
+  uint32_t size;  
+  unsigned level;
+  unsigned start_line;
+  int err;
+
+  *length = 0;
+  size = 0;
+
+  if (tokenizer->type != TOK_STRING)
+    return EINVAL;
+
+  err = list_append (length, &size, list,
+		     tokenizer->token_length, tokenizer->token);
+
+  if (err)
+    return err;
+
+  if (config_tokenizer_next(tokenizer) != TOK_BEGIN_GROUP)
+    {
+      config_tokenizer_error(tokenizer, "Missing '{'");
+      free (*list);
+      return ENOMEM;
+    }
+
+  start_line = tokenizer->lineno;
+  level = 1;
+
+  while (!err)
+    {
+      switch (config_tokenizer_next(tokenizer))
+	{
+	case TOK_STRING:
+	  err = list_append (length, &size, list,
+			     tokenizer->token_length, tokenizer->token);
+	  break;
+	case TOK_BEGIN_GROUP:
+	  level++;
+	  err = list_append (length, &size, list, 1, "{");
+	  break;
+	case TOK_END_GROUP:
+	  level--;
+	  if (!level)
+	    return 0;
+	  err = list_append (length, &size, list, 1, "}");
+	  break;
+	case TOK_EQUAL:
+	  err = list_append (length, &size, list, 1, "=");
+	  break;
+	case TOK_EOF:
+	  werror("%z:%i: Unexpected end of file when parsing group\n",
+		 tokenizer->file, start_line);
+	  /* Fall through */
+	case TOK_ERROR:
+	  goto fail;
+	}
+    }
+ fail:
+  free(*list);	  
+  return EINVAL;	  
+}
+
+static int
 parser_parse_option(struct parser_state *state,
 		    struct config_tokenizer *tokenizer)
 {  
@@ -232,43 +319,56 @@ parser_parse_option(struct parser_state *state,
 	{
 	  if (config_tokenizer_looking_at (tokenizer, option->name))
 	    {
-	      uint32_t value = 0;
-	      const uint8_t *data = NULL;
+	      uint32_t value;
+	      const uint8_t *data;
 
-	      if (tokenizer->type != TOK_STRING)
-		err = EINVAL;
-
+	      if (option->type == CONFIG_TYPE_LIST)
+		{
+		  uint8_t *list;
+		  err = parse_value_list(&value, &list, tokenizer);
+		  data = list;
+		}
 	      else
 		{
-		  unsigned length = tokenizer->token_length;
-		  const uint8_t *arg = tokenizer->token;
-
-		  switch (option->type)
+		  if (tokenizer->type != TOK_EQUAL
+		      || config_tokenizer_next(tokenizer) != TOK_STRING)
 		    {
-		    default:
-		      werror("%z:%i: Unknown configuration type %i for option `%z'\n",
+		      werror("%z:%i: Bad syntax for configuration option `%z'\n",
 			     tokenizer->file, tokenizer->lineno,
-			     option->type, option->name);
-		      err = EINVAL;
-		      break;
-	  
-		    case CONFIG_TYPE_BOOL:
-		      err = parse_value_bool(&value, length, arg);
-		      break;
-
-		    case CONFIG_TYPE_UNSIGNED:
-		      err = parse_value_unsigned(&value, length, arg);
-		      break;
-			  
-		    case CONFIG_TYPE_STRING:
-		      value = length;
-		      data = arg;
-		      break;
+			     option->name);
+		      return EINVAL;
 		    }
-		  if (!config_tokenizer_eolp (tokenizer))
-		    werror("%z:%i: Ignoring spurious data at end of line\n",
-			   tokenizer->file, tokenizer->lineno);			   
+		  else
+		    {
+		      unsigned length = tokenizer->token_length;
+		      const uint8_t *arg = tokenizer->token;
+		      
+		      switch (option->type)
+			{
+			default:
+			  werror("%z:%i: Unknown configuration type %i for option `%z'\n",
+				 tokenizer->file, tokenizer->lineno,
+				 option->type, option->name);
+			  return EINVAL;
+	  
+			case CONFIG_TYPE_BOOL:
+			  err = parse_value_bool(&value, length, arg);
+			  break;
+
+			case CONFIG_TYPE_NUMBER:
+			  err = parse_value_unsigned(&value, length, arg);
+			  break;
+
+			case CONFIG_TYPE_STRING:
+			  value = length;
+			  data = arg;
+			  break;
+			}
+		    }
 		}
+	      if (!config_tokenizer_eolp (tokenizer))
+		config_tokenizer_error(tokenizer,
+				       "Ignoring spurious data at end of line");
 
 	      if (err)
 		werror("%z:%i: Bad value for configuration option `%z'\n",
@@ -326,7 +426,8 @@ server_config_parse_string(const struct config_parser *parser,
     }  
  done:
   
-  return parser_finalize(&state, err);
+  parser_finalize(&state);
+  return err;
 }
 
 int
@@ -363,7 +464,7 @@ server_config_parse_example(const struct config_parser *parser,
 		err = parse_value_bool(&value, length, option->example);
 		break;
 
-	      case CONFIG_TYPE_UNSIGNED:
+	      case CONFIG_TYPE_NUMBER:
 		err = parse_value_unsigned(&value, length, option->example);
 		break;
 
@@ -381,7 +482,8 @@ server_config_parse_example(const struct config_parser *parser,
 
 	  }
     }
-  return parser_finalize(&state, err);
+  parser_finalize(&state);
+  return err;
 }
 
 void
@@ -399,20 +501,26 @@ server_config_print_example(const struct config_parser *parser,
       fprintf(f, "%s", option->name);
       
       if (option->example)
-	fprintf(f, " %s", option->example);
-
+	{
+	  if (option->type != CONFIG_TYPE_LIST)
+	    fprintf(f, " =");
+	  fprintf(f, " %s", option->example);
+	}
       else switch(option->type)
 	{
 	default:
 	  break;
 	case CONFIG_TYPE_STRING:
-	  fprintf(f, " # STRING");
+	  fprintf(f, " = STRING");
 	  break;
 	case CONFIG_TYPE_BOOL:
-	  fprintf(f, " # yes / no");
+	  fprintf(f, " = yes / no");
 	  break;
-	case CONFIG_TYPE_UNSIGNED:
-	  fprintf(f, " # NUMBER");
+	case CONFIG_TYPE_NUMBER:
+	  fprintf(f, " = NUMBER");
+	  break;
+	case CONFIG_TYPE_LIST:
+	  fprintf(f, " NAME { ARGS... }");
 	  break;
 	}
 
