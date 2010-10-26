@@ -302,6 +302,22 @@ strprefix_p(const char *prefix, const char *s)
   return 1;
 }
 
+#if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
+static void
+utmp_gettimeofday(STRUCT_UTMP *entry)
+{
+  /* On 64-bit, glibc may use a private 32-bit variant of struct
+     timeval, for binary compatibility. So we can't always pass
+     &pty->entry directly to gettimeofday. */
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  entry->ut_tv.tv_sec = tv.tv_sec;
+  entry->ut_tv.tv_usec = tv.tv_usec;
+}
+#else /* ! HAVE_STRUCT_UTMPX_UT_TV_TV_SEC */
+# define utmp_gettimeofday(entry)
+#endif /* ! HAVE_STRUCT_UTMPX_UT_TV_TV_SEC */
+
 static void
 record_login (const struct pty_state *state, struct pty_object *pty, pid_t pid)
 {
@@ -322,9 +338,8 @@ record_login (const struct pty_state *state, struct pty_object *pty, pid_t pid)
   pty->entry.ut_type = USER_PROCESS;
   pty->entry.ut_pid = pid;
 
-#  if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
-  gettimeofday(&pty->entry.ut_tv, NULL);
-#  endif
+  utmp_gettimeofday(&pty->entry);
+
   if (pty->tty)
     {
       /* Set tty-related fields, and update utmp */
@@ -370,9 +385,7 @@ record_logout (struct pty_state *state, struct pty_object *pty)
 # if HAVE_UTMPX_H
   entry.ut_type = DEAD_PROCESS;
 
-#  if HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
-  gettimeofday(&entry.ut_tv, NULL);
-#  endif
+  utmp_gettimeofday(&pty->entry);
 
   COPY_FIELD(entry, pty->entry, ut_line);
 
