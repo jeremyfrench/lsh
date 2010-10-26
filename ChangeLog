@@ -1,5 +1,7 @@
 2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
 
+	* src/testsuite/server-config-test.c: Added '=' tokens in input.
+
 	* src/testsuite/config/lshd-connection.conf: Updated to new syntax
 	with '=' tokens.
 	* src/testsuite/config/lshd-userauth.conf: Likewise.
