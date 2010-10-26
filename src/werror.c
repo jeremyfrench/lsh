@@ -305,6 +305,9 @@ werror_hex(uint32_t n)
 }
 
 static void
+werror_format(const char *format, ...);
+
+static void
 werror_hexdump(uint32_t length, const uint8_t *data)
 {
   uint32_t i = 0;
@@ -577,7 +580,7 @@ werror_vformat(const char *f, va_list args)
 }
 
 /* Unconditionally display message. */
-void
+static void
 werror_format(const char *format, ...) 
 {
   va_list args;

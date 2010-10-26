@@ -103,8 +103,6 @@ void set_error_syslog(void);
  */
 
 
-void werror_format(const char *format, ...);
-
 void werror(const char *format, ...);
 void trace(const char *format, ...);
 void debug(const char *format, ...);
