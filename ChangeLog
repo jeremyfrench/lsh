@@ -1,5 +1,29 @@
 2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
 
+	* src/testsuite/config/lshd-connection.conf: Updated to new syntax
+	with '=' tokens.
+	* src/testsuite/config/lshd-userauth.conf: Likewise.
+	* src/testsuite/config/lshd.conf: Likewise.
+
+	* src/server_config.c (parser_init): Deleted unnecessary cast.
+	(parser_finalize): Deleted err argument and return value. Updated
+	callers.
+	(list_append): New function.
+	(parse_value_list): New function.
+	(parser_parse_option): Recognize CONFIG_TYPE_LIST. Require '='
+	token for all other types.
+	(server_config_print_example): Output '=' tokens. Handle
+	CONFIG_TYPE_LIST.
+
+	* src/server_config.h (enum config_type): Renamed
+	CONFIG_TYPE_UNSIGNED to CONFIG_TYPE_NUMBER. Added
+	CONFIG_TYPE_LIST.
+
+	* src/tokenize_config.c (char_class): Added '=' as separator.
+	(config_tokenizer_next): Recognize '='.
+
+	* src/tokenize_config.h (enum config_token_type): Added TOK_EQUAL.
+
 	* src/pkcs5-test.c (main): Added long options. Deleted -?, and
 	fixed handling of bad options.
 	* src/testsuite/prgrp-timeout.c (main): Likewise.
