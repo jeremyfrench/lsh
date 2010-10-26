@@ -110,11 +110,16 @@ read_packet(uint32_t *seqno)
       if (res <= 0)
 	{
 	  if (res == 0)
-	    die("read_packet: End of file after %i header octets.\n",
-		done);
+	    {
+	      if (done > 0)
+		die("read_packet: End of file after %i header octets.\n",
+		    done);
+	      else
+		exit(EXIT_SUCCESS);
+	    }
 	  else
 	    die("read_packet: read failed after %i header octets: %e.\n",
-		   done, errno);
+		done, errno);
 	}
       done += res;
     }
@@ -942,7 +947,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->session_id)
 	argp_error(state, "Mandatory option --session-id is missing.");
 
-      /* Defaults should havev been setup at the end of the config
+      /* Defaults should have been setup at the end of the config
 	 file parsing. */
       assert (self->allow_password >= 0);
       assert (self->allow_publickey >= 0);
@@ -950,7 +955,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       if (!(self->allow_password || self->allow_publickey))
 	argp_error(state, "All user authentication methods disabled.\n");
-      
+
       break;
 
     case OPT_SESSION_ID:
@@ -1064,8 +1069,6 @@ main(int argc, char **argv)
   struct lshd_userauth_config *config = make_lshd_userauth_config();
   const char *helper_program;
   int helper_fd;
-
-  trace("main\n");
 
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
