@@ -62,8 +62,8 @@ parser = {
 
 static const char *config_file =
 "# a comment\n"
-"foo aaa\n\n   \n"
-"bar bbbb\n"
+"foo = aaa\n\n   \n"
+"bar = bbbb\n"
 "  # bla bla";
 
 int
