@@ -638,6 +638,8 @@ lsh_string_zlib(struct lsh_string *s, uint32_t start,
 #endif /* undef LSH_MINIMAL */
 
 #if HAVE_INET_NTOP
+/* FIXME: A bit useless. Should take a struct sockaddr as input
+   instead. Or maybe wrap getnameinfo? */
 struct lsh_string *
 lsh_string_ntop(int family, uint32_t length, const void *addr)
 {
@@ -648,7 +650,7 @@ lsh_string_ntop(int family, uint32_t length, const void *addr)
 
   if (!inet_ntop(family, addr,
 		 s->data, s->length))
-    fatal("inet_ntop failed for IPv6 address.\n");
+    fatal("inet_ntop failed.\n");
 
   lsh_string_trunc(s, strlen(s->data));
 
