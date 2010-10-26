@@ -63,6 +63,7 @@ char_class[0x100] =
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   };
+
 #define IS_SPACE(c) (char_class[c] & 5)
 #define IS_SPACE_NOT_LF(c) (char_class[c] & 1)
 #define IS_SEPARATOR(c) (char_class[c] & 7)
@@ -143,6 +144,9 @@ config_tokenizer_eolp(struct config_tokenizer *self)
   return res;
 }
 
+/* Could be generalized to take a format string and additional
+   arguments. But then the werror machinery must be generalized too,
+   and that's probably not worth the effort. */
 void
 config_tokenizer_error(struct config_tokenizer *self, const char *msg)
 {
