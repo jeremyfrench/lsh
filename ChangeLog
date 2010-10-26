@@ -1,3 +1,25 @@
+2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
+
+	* src/pkcs5-test.c (main): Added long options. Deleted -?, and
+	fixed handling of bad options.
+	* src/testsuite/prgrp-timeout.c (main): Likewise.
+
+	* src/lshd-userauth.c (read_packet): Don't treat EOF at start of
+	header as an error.
+	(main): Deleted useless trace call before arpg_parse.
+
+	* src/lshd-pty-helper.c (utmp_gettimeofday): New function, to work
+	around ut_tv 32-bit backwards compatibility hack for 64-bit
+	systems.
+
+	* src/tcpforward.c (tcpforward_connect_error): Use STRERROR to
+	display socket error code.
+	(make_tcpforward_listen_port): Trace output of local and target
+	ports.
+
+	* src/client_x11.c (x11_connect_error): Use STRERROR to display
+	socket error code.
+
 2010-08-24  Niels Möller  <nisse@turmalin.hack.org>
 
 	* src/scm/guile-compat.scm: Use the rdelim module, for the

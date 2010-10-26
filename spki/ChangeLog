@@ -1,3 +1,13 @@
+2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
+
+	* tools/spki-delegate.c (parse_options): Deleted -?, and fixed
+	handling of bad options.
+	* tools/spki-reduce.c (parse_options): Likewise.
+
+	* tools/spki-check-signature.c (parse_options): Added long
+	options. Deleted -?, and fixed handling of bad options.
+	* tools/spki-make-signature.c (parse_options): Likewise.
+
 2010-06-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* verify.c (spki_verify_rsa): Stricter check for end of expression
