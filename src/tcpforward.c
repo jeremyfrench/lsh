@@ -142,6 +142,9 @@ make_tcpforward_listen_port(struct ssh_connection *connection,
   socklen_t addr_length;
   int fd;
 
+  trace("make_tcpforward_listen_port: Local port: %S:%i, target port: %S:%i\n",
+	local->ip, local->port, forward->ip, forward->port);
+
   addr = io_make_sockaddr(&addr_length,
 			  lsh_get_cstring(local->ip), local->port);
   if (!addr)
@@ -188,7 +191,7 @@ tcpforward_connect_error(struct io_connect_state *s, int error)
 {
   CAST(tcpforward_connect_state, self, s);
   
-  werror("Connection failed, socket error %i\n", error);
+  werror("Connection failed: %s\n", STRERROR(error));
   channel_open_deny(self->info,
 		    SSH_OPEN_CONNECT_FAILED, "Connection failed");
 }
