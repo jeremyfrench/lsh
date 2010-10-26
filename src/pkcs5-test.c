@@ -48,8 +48,15 @@ int main(int argc, char **argv)
   int c;
 
   char *key;
-  
-  while ((c = getopt(argc, argv, "i:s:l:")) != -1)
+
+  enum { OPT_HELP = 300 };
+  static const struct option options[] =
+    {
+      /* Name, args, flag, val */
+      { "help", no_argument, NULL, OPT_HELP },
+      { NULL, 0, NULL, 0 }
+    };  
+  while ((c = getopt_long(argc, argv, "i:s:l:", options, NULL)) != -1)
     {
       switch (c)
 	{
@@ -66,8 +73,11 @@ int main(int argc, char **argv)
 	  if ( (length < 1) || (length > 5000) )
 	    usage();
 	  break;
-	case '?':
+	case OPT_HELP:
 	  usage();
+	  return EXIT_SUCCESS;
+	case '?':
+	  return EXIT_FAILURE;
 	default:
 	  abort();
 	}
