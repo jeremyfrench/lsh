@@ -379,8 +379,8 @@ support for using stream ciphers was disabled by default a few versions
 back, for security reasons.
 
 There also exists free implementations of @code{ssh-1}, for both Unix
-and Windows. @command{ossh} and later OpenSSH are derived from earlier
-version av Tatu Ylönen's @command{ssh}, and are free software.
+and Windows. @command{ossh} and later OpenSSH are derived from an earlier
+free version av Tatu Ylönen's @command{ssh}, and are free software.
 
 @node ssh2, Kerberos, ssh1, Related techniques
 @comment  node-name,  next,  previous,  up
@@ -405,8 +405,8 @@ protocol specification). The license for the SSH company's
 use''.
 
 @item
-@command{putty}, a free @command{ssh} implementation for Microsoft
-Windows.
+@command{putty}, a free @command{ssh} implementation primarily for
+Microsoft Windows.
 
 @end itemize
 
@@ -599,30 +599,22 @@ To make lsh less paranoid, use
 lsh --sloppy-host-authentication sara.lysator.liu.se
 @end example
 
-@comment XXX 
-
 @noindent
 Then @command{lsh} will display a @dfn{fingerprint} of the host key of
-the remote machine, and ask you if it is correct. If so, the machine is
-considered authentic and a corresponding acl-entry is appended to the
-file @file{~/.lsh/captured_keys}. You can copy acl-entries you have
-verified to @file{~/.lsh/host-acls}.
-
-You can even use
-
-@example
-lsh --sloppy-host-authentication --capture-to ~/.lsh/host-acls
-@end example
-
-@noindent
-to get @command{lsh} to behave more like the traditional @command{ssh}
-program. 
+the remote machine, and ask you if it is correct. If you confirm,
+@command{lsh} asks you if the host key should be remembered for the
+future. If you confirm again, a corresponding acl-entry is appended to
+@file{~/.lsh/host-acls}.
 
 @c You can create fingerprints for the hostkeys you need regularly, and
 @c keep with you (@pxref{sexp}).
 
 @example
 lsh -l omar sara.lysator.liu.se
+@end example
+or
+@example
+lsh omar@@sara.lysator.liu.se
 @end example
 
 @noindent
@@ -648,14 +640,16 @@ lsh -G -B sara.lysator.liu.se
 @end example
 
 Opens an ssh connection, creates a ``gateway socket'', and forks into
-the background. 
+the background. After this gateway is setup, the command
 
 @example
-lshg sara.lysator.liu.se
+lsh sara.lysator.liu.se
 @end example
 
 creates a new session using an existing gateway socket, without the
 overhead for a new key exchange and without asking for any passwords.
+Access to the gateway, an @code{AF_UNIX}-socket located under
+@file{/tmp}, is restricted using the usual file permissions.
 
 @node  tcpip forwarding, lshd basics, lsh basics, Getting started
 @comment  node-name,  next,  previous,  up
@@ -750,6 +744,8 @@ on the same command line.
 @node lshd basics, public-key, tcpip forwarding, Getting started
 @comment  node-name,  next,  previous,  up
 @section @command{lshd} basics
+@comment XXX
+
 There are no global configuration files for @command{lshd}; all
 configuration is done with command line options (@pxref{Invoking lshd}).
 
