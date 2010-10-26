@@ -227,7 +227,7 @@ list_append(uint32_t *length, uint32_t *size, uint8_t **list,
       *list = lsh_space_alloc(token_length + 100);
     }
   else if (*size < *length + token_length + 1)
-    {o
+    {
       *size *= 2;
       *list = lsh_space_realloc(*list, *size);
     }
