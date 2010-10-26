@@ -19,7 +19,7 @@ exec_lsh -l testuser echo foo | grep foo || test_fail
 exec_lsh -l otheruser true && test_fail
 exec_lsh -l no-passwd-testuser true || test_fail
 
-# I'd like to test the acocunt disabled check, but that check is
+# I'd like to test the account disabled check, but that check is
 # bypassed when not running as root.
 
 # exec_lsh -l disabled-testuser true && test_fail
