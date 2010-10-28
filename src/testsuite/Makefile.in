@@ -38,13 +38,13 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	lcp-test \
 	passwd-1-test passwd-2-test \
 	x11-1-test x11-2-test x11-3-test x11-4-test x11-5-test \
-	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test \
+	rapid7-lsh-test rapid7-lshd-test login-auth-test \
 	lshd-random-input-test
 
 TS_C = $(TS_SOURCES:.c=$(EXEEXT))
 TS_ALL = $(TS_C) $(TS_SH)
 
-TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) $(PASSWD_PRELOAD)
+TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) mini-inetd$(EXEEXT) $(PASSWD_PRELOAD)
 
 TEST_OBJS = testutils.$(OBJEXT) \
 	    ../algorithms.$(OBJEXT) \
@@ -72,7 +72,7 @@ TEST_OBJS = testutils.$(OBJEXT) \
 
 TEST_LIBS = -lspki -lhogweed -lnettle $(LIBS)
 
-OTHER_SOURCES = testutils.c prgrp-timeout.c getpwnam-wrapper.c
+OTHER_SOURCES = testutils.c prgrp-timeout.c mini-inetd.c getpwnam-wrapper.c
 
 SOURCES = $(TS_SOURCES) $(OTHER_SOURCES)
 
@@ -110,6 +110,9 @@ include $(srcdir)/.test-rules.make
 
 prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT)
 	$(LINK) prgrp-timeout.$(OBJEXT) -o prgrp-timeout 
+
+mini-inetd(EXEEXT): mini-inetd.$(OBJEXT)
+	$(LINK) mini-inetd.$(OBJEXT) -o mini-inetd
 
 # FIXME: Make this optional
 # Do we need -rdynamic?
