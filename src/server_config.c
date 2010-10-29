@@ -366,16 +366,20 @@ parser_parse_option(struct parser_state *state,
 			}
 		    }
 		}
-	      if (!config_tokenizer_eolp (tokenizer))
-		config_tokenizer_error(tokenizer,
-				       "Ignoring spurious data at end of line");
 
 	      if (err)
 		werror("%z:%i: Bad value for configuration option `%z'\n",
 		       tokenizer->file, tokenizer->lineno,
 		       option->name);
 	      else
-		err = group->parser->handler(option->key, value, data, &group->state);
+		{
+		  if (!config_tokenizer_eolp (tokenizer))
+		    config_tokenizer_error(tokenizer,
+					   "Ignoring spurious data at end of line");
+
+		  err = group->parser->handler(option->key,
+					       value, data, &group->state);
+		}
 
 	      /* FIXME: Use a special error code analogous to
 		 ARGP_ERR_UNKNOWN. But which errno value can we borrow
