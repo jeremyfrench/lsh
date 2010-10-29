@@ -160,13 +160,11 @@ lshd_service_request_handler(struct transport_forward *self,
       && parse_eod(&buffer))
     {
       CAST(lshd_context, ctx, self->super.ctx);
-      const char *service = ctx->service_config->name;
-      uint32_t service_length;
+      const struct service_entry *service
+	= server_lookup_service(ctx->service_config,
+				name_length, name);
       
-      service_length = strlen(service);
-
-      if (name_length == service_length
-	  && !memcmp (name, service, service_length))
+      if (service)
 	{
 	  int pipe[2];
 	  pid_t child;
@@ -220,10 +218,10 @@ lshd_service_request_handler(struct transport_forward *self,
 	      /* FIXME: Pass sufficient information so that
 		 $SSH_CLIENT can be set properly. */
 	      arglist_init (&args);
-	      arglist_push (&args, ctx->service_config->args.argv[0]);
-	      for (i = 1; i < ctx->service_config->args.argc; i++)
+	      arglist_push (&args, service->args.argv[0]);
+	      for (i = 1; i < service->args.argc; i++)
 		{
-		  const char *arg = ctx->service_config->args.argv[i];
+		  const char *arg = service->args.argv[i];
 		  if (arg[0] == '$')
 		    {
 		      arg++;
@@ -232,6 +230,10 @@ lshd_service_request_handler(struct transport_forward *self,
 		    }
 		  arglist_push (&args, arg);
 		}
+	      debug("exec of service %s. Argument list:\n", name_length, name);
+	      for (i = 0; i < args.argc; i++)
+		debug("  %z\n", args.argv[i]);
+
 	      execv(args.argv[0], (char **) args.argv);
 
 	      werror("lshd_service_request_handler: exec of %z failed: %e.\n",
@@ -753,29 +755,32 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
-      if (!self->ctx->service_config->name)
+      if (object_queue_is_empty(&self->ctx->service_config->services))
 	{
+	  struct service_entry *entry
+	    = make_service_entry("ssh-userauth", NULL);
 	  const char *program;
 
-	  self->ctx->service_config->name = "ssh-userauth";
-
 	  GET_FILE_ENV(program, LSHD_USERAUTH);
-	  arglist_push (&self->ctx->service_config->args, program);
+	  arglist_push (&entry->args, program);
 
-	  arglist_push (&self->ctx->service_config->args, "--session-id");
-	  arglist_push (&self->ctx->service_config->args, "$(session_id)");
+	  arglist_push (&entry->args, "--session-id");
+	  arglist_push (&entry->args, "$(session_id)");
 	  
 	  /* Propagate werror-related options. */
 	  if (self->super.super.verbose > 0)
-	    arglist_push (&self->ctx->service_config->args, "-v");
+	    arglist_push (&entry->args, "-v");
 	  if (self->super.super.quiet > 0)
-	    arglist_push (&self->ctx->service_config->args, "-q");
+	    arglist_push (&entry->args, "-q");
 	  if (self->super.super.debug > 0)
-	    arglist_push (&self->ctx->service_config->args, "--debug");
+	    arglist_push (&entry->args, "--debug");
 	  if (self->super.super.trace > 0)
-	    arglist_push (&self->ctx->service_config->args, "--trace");
+	    arglist_push (&entry->args, "--trace");
+
+	  assert (entry->args.argc > 0);
+	  object_queue_add_head (&self->ctx->service_config->services,
+				 &entry->super);
 	}
-      assert (self->ctx->service_config->args.argc > 0);
       break;
 
     case OPT_INTERFACE:
@@ -859,6 +864,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
     {
     case CONFIG_PARSE_KEY_INIT:
       state->child_inputs[0] = &self->super.super;
+      state->child_inputs[1] = self->ctx->service_config;
       break;
     case CONFIG_PARSE_KEY_END:
       {
@@ -965,6 +971,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 static const struct config_parser *
 lshd_config_children[] = {
   &werror_config_parser,
+  &service_config_parser,
   NULL
 };
 
