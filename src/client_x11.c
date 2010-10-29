@@ -427,7 +427,7 @@ x11_connect_error(struct io_connect_state *s, int error)
 {
   CAST(x11_connect_state, self, s);
   
-  werror("Connection failed: %s\n", STRERROR(error));
+  werror("Connection failed: %e\n", error);
   channel_open_deny(self->info,
 		    SSH_OPEN_CONNECT_FAILED, "Connection failed");
 }
