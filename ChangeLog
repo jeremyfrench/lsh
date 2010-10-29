@@ -1,5 +1,24 @@
 2010-10-29  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lshd.c (lshd_service_request_handler): Use
+	server_lookup_service.
+	(lshd_argp_parser): Updated handling of default service.
+	(lshd_config_handler): Initialize service_config child.
+	(lshd_config_children): Added service_config_parser.
+
+	* src/server.c (make_service_entry): New function.
+	(make_service_config): Updated initialization.
+	(server_lookup_service): New function.
+	(service_options): New option --service-add.
+	(service_argp_parser): Support --service-add. Support multiple
+	--service and --service-add options.
+	(service_config_options): New config option "service".
+	(service_config_handler): New function.
+	(service_config_parser): New config file parser.
+
+	* src/server.h (class service_entry): New class.
+	(class service_config): Support multiple services.
+
 	* src/tcpforward.c (make_tcpforward_listen_port): Trace output of
 	requested port and the bound ip address.
 	(tcpforward_connect_error): Convert error number to string.
