@@ -1,5 +1,12 @@
 2010-10-29  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/functions.sh (LSHD_LIBEXEC_DIR): Define and
+	export.
+	(LSHD_USERAUTH): Deleted.
+
+	* src/server_config.c (parser_parse_option): Don't check for
+	proper end of line if we already had a syntax error.
+
 	* src/lshd.c (lshd_service_request_handler): Take
 	environment variable LSHD_LIBEXEC_DIR and compiled in LIBEXECDIR
 	into account when interpreting the program name. Added the
