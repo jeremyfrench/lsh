@@ -25,6 +25,7 @@
 #define LSH_SERVER_H_INCLUDED
 
 #include "arglist.h"
+#include "queue.h"
 #include "server_config.h"
 #include "werror.h"
 
@@ -65,17 +66,35 @@ extern const struct argp server_argp;
 
 /* GABA:
    (class
-     (name service_config)
+     (name service_entry)
      (vars
-       ; Pointers into the original command line
+       ; Storage for the strings, or NULL if they need not be deallocated.
+       (storage space "const char")
+       (name_length . size_t)
        (name . "const char *")
        (args indirect-special "struct arglist" #f arglist_clear)))
+*/
+
+struct service_entry *
+make_service_entry(const uint8_t *name, const uint8_t *storage);
+
+/* GABA:
+   (class
+     (name service_config)
+     (vars
+       (services struct object_queue)
+       (override_config_file . int)))
 */
 
 struct service_config *
 make_service_config(void);
 
+const struct service_entry *
+server_lookup_service(struct service_config *self,
+		      size_t length, const char *name);
+
 extern const struct argp service_argp;
+extern const struct config_parser service_config_parser;
 
 #endif /* LSH_SERVER_H_INCLUDED */
 
