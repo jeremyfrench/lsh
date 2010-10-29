@@ -46,7 +46,8 @@
 #undef GABA_DEFINE
 
 /* Handles lists of services or subsystems. MODULES is a list { name,
-   program, name, program, ..., NULL }. */ 
+   program, name, program, ..., NULL }. FIXME: Delete, use the
+   service_config machinery also for subsystems. */ 
 const char *
 server_lookup_module(const char **modules,
 		     uint32_t length, const uint8_t *name)
@@ -161,7 +162,8 @@ enum {
   OPT_CONFIG_FILE = 0x200,
   OPT_PRINT_EXAMPLE,
   OPT_USE_EXAMPLE,
-  OPT_SERVICE
+  OPT_SERVICE,
+  OPT_SERVICE_ADD  
 };
 
 static const struct argp_option
@@ -250,14 +252,38 @@ server_argp =
   NULL, NULL
 };
 
+struct service_entry *
+make_service_entry(const uint8_t *name, const uint8_t *storage)
+{
+  NEW(service_entry, self);
+  self->storage = storage;
+  self->name = name;
+  self->name_length = strlen(name);
+  arglist_init(&self->args);
+  return self;
+}
+
 struct service_config *
 make_service_config(void)
 {
   NEW(service_config, self);
-  self->name = NULL;
-  arglist_init (&self->args);
+  object_queue_init(&self->services);
+  self->override_config_file = 0;
 
   return self;
+}
+
+const struct service_entry *
+server_lookup_service(struct service_config *self,
+		      size_t length, const char *name)
+{
+  FOR_OBJECT_QUEUE (&self->services, n)
+    {
+      CAST(service_entry, entry, n);
+      if (entry->name_length == length && !memcmp(entry->name, name, length))
+	return entry;
+    }
+  return NULL;
 }
 
 static const struct argp_option
@@ -265,6 +291,9 @@ service_options[] =
 {
   { "service", OPT_SERVICE, "NAME { COMMAND LINE }", 0,
     "Service to offer.", 0 },
+  { "add-service", OPT_SERVICE_ADD, "NAME { COMMAND LINE }", 0,
+    "Service to offer. Unlike --service does not override other services "
+    "listed in the config file.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -279,37 +308,44 @@ service_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case OPT_SERVICE:
-      if (self->name)
-	argp_error (state, "Multiple --service options not supported.");
-
-      self->name = arg;
-      if (state->next >= state->argc
-	  || strcmp (state->argv[state->next], "{"))
-	argp_error (state,
-		      "--service requires a name and a brace-delimited command line.");
+      self->override_config_file = 1;
+      /* Fall through */
+    case OPT_SERVICE_ADD:
+      if (server_lookup_service(self, strlen(arg), arg))
+	werror("Multiple definitions of the %z service ignored.\n", arg);
       else
 	{
-	  unsigned level = 1;
-	  
-	  for (state->next++; state->next < state->argc; )
-	    {
-	      const char *s = state->argv[state->next++];
-	      if (!strcmp(s, "{"))
-		level++;
-	      else if (!strcmp(s, "}"))
-		{
-		  level--;
-		  if (!level)
-		    {
-		      if (!self->args.argc)
-			argp_error (state, "Empty command line for --service.");
+	  struct service_entry *entry = make_service_entry(arg, NULL);
 
-		      return 0;
+	  if (state->next >= state->argc
+	      || strcmp (state->argv[state->next], "{"))
+	    argp_error (state,
+			"--service requires a name and a brace-delimited command line.");
+	  else
+	    {
+	      unsigned level = 1;
+	  
+	      for (state->next++; state->next < state->argc; )
+		{
+		  const char *s = state->argv[state->next++];
+		  if (!strcmp(s, "{"))
+		    level++;
+		  else if (!strcmp(s, "}"))
+		    {
+		      level--;
+		      if (!level)
+			{
+			  if (!entry->args.argc)
+			    argp_error (state, "Empty command line for --service.");
+
+			  object_queue_add_head (&self->services, &entry->super);
+			  return 0;
+			}
 		    }
+		  arglist_push (&entry->args, s);
 		}
-	      arglist_push (&self->args, s);
+	      argp_error (state, "Unexpected end of arguments while parsing --service command line.");
 	    }
-	  argp_error (state, "Unexpected end of arguments while parsing --service command line.");
 	}
       break;
     }
@@ -324,4 +360,58 @@ service_argp =
   NULL, NULL,
   NULL,
   NULL, NULL
+};
+
+static const struct config_option
+service_config_options[] = {
+  { OPT_SERVICE, "service", CONFIG_TYPE_LIST, "Service to offer.", NULL },
+  { 0, NULL, 0, NULL, NULL },
+};
+
+static int
+service_config_handler(int key, uint32_t value, const uint8_t *data,
+		       struct config_parser_state *state)
+{
+  CAST_SUBTYPE(service_config, self, state->input);
+
+  if (key == OPT_SERVICE && !self->override_config_file)
+    {
+      struct service_entry *entry;
+      const char *item;
+      uint32_t length;
+      uint32_t item_length;
+
+      length = value;
+      item = data;
+      
+      item_length = strnlen(item, length) + 1;
+      assert (item_length <= length);
+
+      entry = make_service_entry(item, data);
+
+      item += item_length;
+      length -= item_length;
+	  
+      for (;;)
+	{
+	  item_length = strnlen(item, length) + 1;
+	  assert (item_length <= length);
+
+	  arglist_push(&entry->args, item);
+
+	  item += item_length;
+	  length -= item_length;
+	}
+
+      object_queue_add_head (&self->services, &entry->super);	    
+    }
+
+  return 0;
+}
+
+const struct config_parser
+service_config_parser = {
+  service_config_options,
+  service_config_handler,
+  NULL
 };
