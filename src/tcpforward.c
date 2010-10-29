@@ -150,6 +150,26 @@ make_tcpforward_listen_port(struct ssh_connection *connection,
   if (!addr)
     return NULL;
 
+  switch (addr->sa_family)
+    {
+    case AF_INET:
+      trace("make_tcpforward_listen_port: Binding IPv4 address %fS\n",
+	    lsh_string_ntop(addr->sa_family, INET_ADDRSTRLEN,
+			    &((struct sockaddr_in *)addr)->sin_addr));
+      break;
+#if WITH_IPV6
+    case AF_INET6:
+      trace("make_tcpforward_listen_port: Binding IPv6 address %fS\n",
+	    lsh_string_ntop(addr->sa_family, INET6_ADDRSTRLEN,
+			    &((struct sockaddr_in6 *)addr)->sin6_addr));
+      break;
+#endif
+    default:
+      trace("make_tcpforward_listen_port: Binding address of family %i\n",
+	    addr->sa_family);
+      break;
+    }
+
   fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
   if (fd < 0)
     return NULL;
@@ -191,7 +211,7 @@ tcpforward_connect_error(struct io_connect_state *s, int error)
 {
   CAST(tcpforward_connect_state, self, s);
   
-  werror("Connection failed: %s\n", STRERROR(error));
+  werror("Connection failed: %e\n", error);
   channel_open_deny(self->info,
 		    SSH_OPEN_CONNECT_FAILED, "Connection failed");
 }
@@ -202,6 +222,9 @@ tcpforward_connect(const struct address_info *a,
 {
   struct sockaddr *addr;
   socklen_t addr_length;
+
+  trace("tcpforward_connect: target port: %S:%i\n",
+	a->ip, a->port);
 
   addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
   if (!addr)
@@ -224,7 +247,7 @@ tcpforward_connect(const struct address_info *a,
 
     if (!res)
       {
-	channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(res));
+	channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(errno));
 	return NULL;
       }
     return &self->super.super.super;
