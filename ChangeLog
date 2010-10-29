@@ -1,3 +1,17 @@
+2010-10-29  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/tcpforward.c (make_tcpforward_listen_port): Trace output of
+	requested port and the bound ip address.
+	(tcpforward_connect_error): Convert error number to string.
+	(tcpforward_connect): Trace output of target port.
+	(tcpforward_connect): Fixed logging of errno when io_connect
+	fails.
+
+	* src/client_x11.c (x11_connect_error): Convert error number to
+	string.
+
+	* src/io.c (oop_io_connect): Use errno if getsockopt fails.
+
 2010-10-28  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (at_connect): Use our own mini-inetd.
