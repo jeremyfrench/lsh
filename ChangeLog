@@ -1,5 +1,13 @@
 2010-10-29  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lshd.c (lshd_service_request_handler): Take
+	environment variable LSHD_LIBEXEC_DIR and compiled in LIBEXECDIR
+	into account when interpreting the program name. Added the
+	resulting name to debug output. Also deleted local variable hex.
+
+	* src/environ.h.in (FILE_LSHD_USERAUTH): Stripped directory part.
+	(ENV_LSHD_LIBEXEC_DIR): New define.
+
 	* src/lshd.c (lshd_service_request_handler): Use
 	server_lookup_service.
 	(lshd_argp_parser): Updated handling of default service.
