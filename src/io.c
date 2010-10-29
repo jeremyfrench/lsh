@@ -418,11 +418,10 @@ oop_io_connect(oop_source *source UNUSED,
   global_oop_source->cancel_fd(global_oop_source, fd, OOP_WRITE);
 
   /* Check if the connection was successful */
-  if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *) &socket_error, &len) < 0
-      || socket_error)
-    {
-      self->error(self, socket_error);
-    }
+  if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &socket_error, &len) < 0)
+    self->error(self, errno);
+  else if (socket_error)
+    self->error(self, socket_error);
   else
     {
       self->super.fd = -1;
@@ -756,6 +755,8 @@ io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
    DNS names in tcpip forwarding requests, so all names have to be
    translated by the client. */
 
+/* FIXME: Get rid of this function? Used only in lsh.c, and then
+   something similar is done in client_x11.c:parse_display. */
 struct address_info *
 io_lookup_address(const char *ip, const char *service)
 {
