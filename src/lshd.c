@@ -168,6 +168,7 @@ lshd_service_request_handler(struct transport_forward *self,
 	{
 	  int pipe[2];
 	  pid_t child;
+	  const char *libexecdir;
 
 	  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
 	    {
@@ -178,6 +179,13 @@ lshd_service_request_handler(struct transport_forward *self,
 				   "Service could not be started");
 	      return;
 	    }
+
+	  libexecdir = getenv(ENV_LSHD_LIBEXEC_DIR);
+	  if (!libexecdir)
+	    libexecdir = LIBEXECDIR;
+	  else if (libexecdir[0] != '/')
+	    die("Bad value for $%z: Must be an absolute filename.\n");
+
 	  child = fork();
 	  if (child < 0)
 	    {
@@ -205,7 +213,7 @@ lshd_service_request_handler(struct transport_forward *self,
 	    {
 	      /* Child process */
 	      struct arglist args;
-	      struct lsh_string *hex;
+	      const char *program;
 	      unsigned i;
 
 	      close(pipe[0]);
@@ -213,12 +221,19 @@ lshd_service_request_handler(struct transport_forward *self,
 	      dup2(pipe[1], STDOUT_FILENO);
 	      close(pipe[1]);
 
-	      hex = ssh_format("%lxS", self->super.session_id);
-
 	      /* FIXME: Pass sufficient information so that
 		 $SSH_CLIENT can be set properly. */
 	      arglist_init (&args);
-	      arglist_push (&args, service->args.argv[0]);
+	      program = service->args.argv[0];
+
+	      arglist_push (&args, program);
+
+	      /* If not absolute, interpret it relative to
+		 libexecdir. */
+	      if (program[0] != '/')
+		program = lsh_get_cstring(ssh_format("%lz/%lz",
+						     libexecdir, program));
+	      
 	      for (i = 1; i < service->args.argc; i++)
 		{
 		  const char *arg = service->args.argv[i];
@@ -226,15 +241,17 @@ lshd_service_request_handler(struct transport_forward *self,
 		    {
 		      arg++;
 		      if (!strcmp(arg, "(session_id)"))
-			arg = lsh_string_data(hex);
+			arg = lsh_get_cstring(ssh_format("%lxS",
+							 self->super.session_id));
 		    }
 		  arglist_push (&args, arg);
 		}
-	      debug("exec of service %s. Argument list:\n", name_length, name);
+	      debug("exec of service %s, program %z. Argument list:\n",
+		    name_length, name, program);
 	      for (i = 0; i < args.argc; i++)
 		debug("  %z\n", args.argv[i]);
 
-	      execv(args.argv[0], (char **) args.argv);
+	      execv(program, (char **) args.argv);
 
 	      werror("lshd_service_request_handler: exec of %z failed: %e.\n",
 		     args.argv[0], errno);
@@ -761,6 +778,7 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 	    = make_service_entry("ssh-userauth", NULL);
 	  const char *program;
 
+	  /* Note: FILE_LSHD_USERAUTH is relative to libexecdir. */
 	  GET_FILE_ENV(program, LSHD_USERAUTH);
 	  arglist_push (&entry->args, program);
 
