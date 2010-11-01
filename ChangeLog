@@ -1,3 +1,24 @@
+2010-11-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_config.c (list_append): Deleted return value. Instead
+	aborts if allocation fails. Call config_tokenizer_next to get
+	first string. Use lsh_space_free rather than plain free.
+	(parser_parse_option): Call config_tokenizer_next
+	after config_tokenizer_looking_at. Separate error message for
+	missing '='.
+	(server_config_parse_example): Handle CONFIG_TYPE_LIST (not yet
+	tested).
+
+	* src/parse_config.c (parse_setting): Call config_tokenizer_next
+	after config_tokenizer_looking_at.
+	(parse_groups): Likewise.
+
+	* src/tokenize_config.c (config_tokenizer_looking_at): Don't call
+	config_tokenizer_next.
+
+	* src/testsuite/functions.sh (LSHD_USERAUTH): Partly reverted
+	previous change. Define, but don't export.
+
 2010-10-29  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (LSHD_LIBEXEC_DIR): Define and
