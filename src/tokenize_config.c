@@ -159,15 +159,9 @@ config_tokenizer_looking_at(struct config_tokenizer *self, const char *word)
 {
   unsigned length = strlen(word);
 
-  if (self->type == TOK_STRING
-      && length == self->token_length
-      && !memcmp(self->token, word, length))
-    {
-      config_tokenizer_next(self);
-      return 1;
-    }
-  else
-    return 0;
+  return (self->type == TOK_STRING
+	  && length == self->token_length
+	  && !memcmp(self->token, word, length));
 }
 
 struct lsh_string *
@@ -182,6 +176,7 @@ config_tokenizer_get_string(struct config_tokenizer *self)
   return s;
 }
 
+/* FIXME: Call config_tokenizer_next first? */
 int
 config_tokenizer_skip_token(struct config_tokenizer *self, enum config_token_type type)
 {

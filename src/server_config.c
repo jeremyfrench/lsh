@@ -215,7 +215,7 @@ parse_value_unsigned(uint32_t *value, unsigned length, const uint8_t *arg)
   fatal("Not implemented.\n");
 }
 
-static int
+static void
 list_append(uint32_t *length, uint32_t *size, uint8_t **list,
 	    uint32_t token_length, const uint8_t *token)
 {
@@ -250,45 +250,47 @@ parse_value_list(uint32_t *length, uint8_t **list,
   *length = 0;
   size = 0;
 
-  if (tokenizer->type != TOK_STRING)
+  if (config_tokenizer_next(tokenizer) != TOK_STRING)
     return EINVAL;
 
-  err = list_append (length, &size, list,
-		     tokenizer->token_length, tokenizer->token);
+  list_append (length, &size, list,
+	       tokenizer->token_length, tokenizer->token);
 
-  if (err)
-    return err;
+  if (config_tokenizer_next(tokenizer) != TOK_EQUAL)
+    {
+      config_tokenizer_error(tokenizer, "Missing '='");
+      goto fail;
+    }
 
   if (config_tokenizer_next(tokenizer) != TOK_BEGIN_GROUP)
     {
       config_tokenizer_error(tokenizer, "Missing '{'");
-      free (*list);
-      return ENOMEM;
+      goto fail;
     }
 
   start_line = tokenizer->lineno;
   level = 1;
 
-  while (!err)
+  for (;;)
     {
       switch (config_tokenizer_next(tokenizer))
 	{
 	case TOK_STRING:
-	  err = list_append (length, &size, list,
-			     tokenizer->token_length, tokenizer->token);
+	  list_append (length, &size, list,
+		       tokenizer->token_length, tokenizer->token);
 	  break;
 	case TOK_BEGIN_GROUP:
 	  level++;
-	  err = list_append (length, &size, list, 1, "{");
+	  list_append (length, &size, list, 1, "{");
 	  break;
 	case TOK_END_GROUP:
 	  level--;
 	  if (!level)
 	    return 0;
-	  err = list_append (length, &size, list, 1, "}");
+	  list_append (length, &size, list, 1, "}");
 	  break;
 	case TOK_EQUAL:
-	  err = list_append (length, &size, list, 1, "=");
+	  list_append (length, &size, list, 1, "=");
 	  break;
 	case TOK_EOF:
 	  werror("%z:%i: Unexpected end of file when parsing group\n",
@@ -299,7 +301,7 @@ parse_value_list(uint32_t *length, uint8_t **list,
 	}
     }
  fail:
-  free(*list);	  
+  lsh_space_free(*list);	  
   return EINVAL;	  
 }
 
@@ -330,8 +332,14 @@ parser_parse_option(struct parser_state *state,
 		}
 	      else
 		{
-		  if (tokenizer->type != TOK_EQUAL
-		      || config_tokenizer_next(tokenizer) != TOK_STRING)
+		  if (config_tokenizer_next(tokenizer) != TOK_EQUAL)
+		    {
+		      werror("%z:%i: Missing '=' for configuration option `%z'\n",
+			     tokenizer->file, tokenizer->lineno,
+			     option->name);
+		      return EINVAL;
+		    }
+		  if (config_tokenizer_next(tokenizer) != TOK_STRING)
 		    {
 		      werror("%z:%i: Bad syntax for configuration option `%z'\n",
 			     tokenizer->file, tokenizer->lineno,
@@ -464,6 +472,19 @@ server_config_parse_example(const struct config_parser *parser,
 	      default:
 		fatal("Internal error.\n");
 
+	      case CONFIG_TYPE_LIST:
+		{
+		  struct config_tokenizer tokenizer;
+		  uint8_t *list;
+		  
+		  config_tokenizer_init(&tokenizer, "example fragment",
+					length, option->example);
+		  config_tokenizer_next(&tokenizer);
+
+		  err = parse_value_list(&value, &list, &tokenizer);
+		  data = list;
+		  
+		}
 	      case CONFIG_TYPE_BOOL:
 		err = parse_value_bool(&value, length, option->example);
 		break;

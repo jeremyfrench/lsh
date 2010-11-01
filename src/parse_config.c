@@ -109,7 +109,8 @@ parse_setting(struct config_tokenizer *self, struct config_setting **settings)
 
       return 1;
     }
-  
+  config_tokenizer_next(self);
+
   s = config_tokenizer_get_string(self);
   if (!s)
     return 0;
@@ -193,6 +194,7 @@ parse_groups(struct config_tokenizer *self)
 	{
 	  if (config_tokenizer_looking_at(self, "hosts"))
 	    {
+	      config_tokenizer_next(self);
 	      if (!config_tokenizer_skip_token(self, TOK_BEGIN_GROUP))
 		return NULL;
 
