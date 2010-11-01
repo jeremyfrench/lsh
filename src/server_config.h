@@ -45,8 +45,7 @@ enum config_type
   CONFIG_TYPE_NONE,
   /* VALUE is 0 or 1 */
   CONFIG_TYPE_BOOL,
-  /* VALUE holds an unsigned number (FIXME: Rename
-     CONFIG_TYPE_NUMBER?)*/
+  /* VALUE holds an unsigned number */
   CONFIG_TYPE_NUMBER,
   /* Length stored in VALUE, DATA points to the constants. Currently
      not allocated, but a pointer into the input data. FIXME: To
