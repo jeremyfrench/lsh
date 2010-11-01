@@ -234,8 +234,6 @@ list_append(uint32_t *length, uint32_t *size, uint8_t **list,
   memcpy(*list + *length, token, token_length);
   *list[*length + token_length] = '\0';
   *length += token_length + 1;
-
-  return 0;
 }
 
 static int
@@ -245,7 +243,6 @@ parse_value_list(uint32_t *length, uint8_t **list,
   uint32_t size;  
   unsigned level;
   unsigned start_line;
-  int err;
 
   *length = 0;
   size = 0;
