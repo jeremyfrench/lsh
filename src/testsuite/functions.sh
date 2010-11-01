@@ -21,9 +21,11 @@ type_p () {
 
 : ${LSH_TRANSPORT:="`cd .. && pwd`/lsh-transport"}
 LSH_MAKE_SEED=/bin/false
+
 : ${LSHD_LIBEXEC_DIR="`cd .. && pwd`"}
 : ${LSHD_CONNECTION:="`cd .. && pwd`/lshd-connection"}
 : ${LSHD_PTY_HELPER:="`cd .. && pwd`/lshd-pty-helper"}
+: ${LSHD_USERAUTH:="`cd .. && pwd`/lshd-userauth"}
 
 : ${LSHD_UTMP:="`pwd`/home/utmpx"}
 : ${LSHD_WTMP:="`pwd`/home/wtmpx"}
