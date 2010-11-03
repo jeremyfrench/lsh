@@ -59,6 +59,8 @@
 
 2010-11-01  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/lshd-example-config-test: New test case.
+
 	* src/server_config.c (list_append): Deleted return value. Instead
 	aborts if allocation fails. Call config_tokenizer_next to get
 	first string. Use lsh_space_free rather than plain free.
