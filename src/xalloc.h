@@ -90,8 +90,7 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 #define lsh_free(p) free((void *) (p))
 #define lsh_malloc malloc
 #define lsh_realloc realloc
-
-#define lsh_space_free free
+#define lsh_space_free lsh_free
 
 #define CHECK_TYPE(c, o) ((struct lsh_object *)(o))
 #define CHECK_SUBTYPE(c, o) ((struct lsh_object *)(o))
