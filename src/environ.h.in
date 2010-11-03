@@ -26,9 +26,10 @@
 #define FILE_SEED_FILE_DIR	LOCALSTATEDIR "/spool/lsh"
 #define FILE_SEED_FILE		LOCALSTATEDIR "/spool/lsh/yarrow-seed-file"
 
-#define FILE_LSHD_CONNECTION	LIBEXECDIR "/lshd-connection"
-#define FILE_LSHD_PTY_HELPER	LIBEXECDIR "/lshd-pty-helper"
+#define FILE_LSHD_CONNECTION	"lshd-connection"
+#define FILE_LSHD_PTY_HELPER	"lshd-pty-helper"
 #define FILE_LSHD_USERAUTH	"lshd-userauth"
+
 #define FILE_LSH_TRANSPORT	LIBEXECDIR "/lsh-transport"
 #define FILE_LSH_MAKE_SEED	BINDIR "/lsh-make-seed"
 

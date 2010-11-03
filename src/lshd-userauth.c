@@ -568,7 +568,7 @@ handle_password(struct simple_buffer *buffer,
 
 #define MAX_ATTEMPTS 10
 
-static int
+static const struct service_entry *
 handle_userauth(struct lshd_user *user,
 		const struct lshd_userauth_config *config)
 {
@@ -584,6 +584,8 @@ handle_userauth(struct lshd_user *user,
   if (config->allow_publickey)
     LIST(methods)[i++] = ATOM_PUBLICKEY;
 
+  /* FIXME: Don't count publickey requests without signature as failed
+     attempts. */
   for (attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
     {
       struct lsh_string *packet;
@@ -593,7 +595,10 @@ handle_userauth(struct lshd_user *user,
       const uint8_t *user_utf8;
       uint32_t seqno;
 
-      enum lsh_atom service;
+      uint32_t service_length;
+      const uint8_t *service_name;
+      const struct service_entry *service;
+
       enum lsh_atom method;
       int res;
 
@@ -614,12 +619,17 @@ handle_userauth(struct lshd_user *user,
 	}
 
       if (! (parse_string(&buffer, &user_length, &user_utf8)
-	     && parse_atom(&buffer, &service)
+	     && parse_string(&buffer, &service_length, &service_name)
 	     && parse_atom(&buffer, &method)))
 	protocol_error("Invalid USERAUTH_REQUEST message");
+
+      service = service_config_lookup(config->service_config,
+				      service_length, service_name);
       
-      if (service != ATOM_SSH_CONNECTION)
+      if (!service)
 	{
+	  verbose("Request for unknown service %ps.\n",
+		  service_length, service_name);
 	fail:
 	  write_packet(format_userauth_failure(methods, 0));
 	  lsh_string_free(packet);
@@ -660,10 +670,10 @@ handle_userauth(struct lshd_user *user,
 	case 1:
 	  write_packet(format_userauth_success());
 	  lsh_string_free(packet);
-	  return 1;
+	  return service;
 	}
     }
-  return 0;  
+  return NULL;
 }
 
 static int
@@ -755,7 +765,7 @@ format_env_pair(const char *name, const char *value)
 /* Change persona, set up new environment, change directory, and exec
    the service process. */
 static void
-start_service(struct lshd_user *user, char **argv)
+start_service(struct lshd_user *user, const char *program, const char **argv)
 {
   /* We need place for SHELL, HOME, USER, LOGNAME, TZ, PATH,
      LSHD_CONFIG_DIR, and a terminating NULL */
@@ -842,7 +852,7 @@ start_service(struct lshd_user *user, char **argv)
   */
   /* NOTE: Any relative PATH in argv[0] will be interpreted relative
      to the user's home directory. */
-  execve(argv[0], (char **) argv, (char **) env);
+  execve(program, (char **) argv, (char **) env);
 
   werror("start_service: exec failed: %e.\n", errno);
 }
@@ -858,7 +868,9 @@ enum {
   OPT_NO_PUBLICKEY,
   OPT_ROOT_LOGIN,
   OPT_NO_ROOT_LOGIN,
-};  
+  OPT_SERVICE,
+  OPT_ADD_SERVICE,
+};
 
 const char *argp_program_version
 = "lshd-userauth (" PACKAGE_STRING ")";
@@ -879,6 +891,13 @@ main_options[] =
   { "session-id", OPT_SESSION_ID, "Session id", 0,
     "Session id from the transport layer.", 0 },
 
+  { "service", OPT_SERVICE, "NAME { COMMAND LINE }", 0,
+    "Service to offer.", 0 },
+  { "add-service", OPT_ADD_SERVICE, "NAME { COMMAND LINE }", 0,
+    "Service to offer. Unlike --service does not override other services "
+    "listed in the config file.", 0 },
+
+  { NULL, 0, NULL, 0, "Authentication options::", 0 },  
   { "allow-password", OPT_PASSWORD, NULL, 0,
     "Enable password user authentication.", 0},
   { "deny-password", OPT_NO_PASSWORD, NULL, 0,
@@ -903,6 +922,7 @@ main_options[] =
      (super server_config)
      (vars
        (werror_config object werror_config)
+       (service_config object service_config)
        (session_id string)
        (allow_password . int)
        (allow_publickey . int)
@@ -922,6 +942,7 @@ make_lshd_userauth_config(void)
 		     ENV_LSHD_USERAUTH_CONF);
 
   self->werror_config = make_werror_config();
+  self->service_config = make_service_config();
   self->session_id = NULL;
   self->allow_password = -1;
   self->allow_publickey = -1;
@@ -947,6 +968,29 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->session_id)
 	argp_error(state, "Mandatory option --session-id is missing.");
 
+      if (object_queue_is_empty(&self->service_config->services))
+	{
+	  struct service_entry *entry
+	    = make_service_entry("ssh-connection", NULL);
+	  const char *program;
+
+	  GET_FILE_ENV(program, LSHD_CONNECTION);
+	  arglist_push (&entry->args, program);
+
+	  /* Propagate werror-related options. */
+	  if (self->super.super.verbose > 0)
+	    arglist_push (&entry->args, "-v");
+	  if (self->super.super.quiet > 0)
+	    arglist_push (&entry->args, "-q");
+	  if (self->super.super.debug > 0)
+	    arglist_push (&entry->args, "--debug");
+	  if (self->super.super.trace > 0)
+	    arglist_push (&entry->args, "--trace");
+
+	  assert (entry->args.argc > 0);
+	  object_queue_add_head (&self->service_config->services,
+				 &entry->super);
+	}
       /* Defaults should have been setup at the end of the config
 	 file parsing. */
       assert (self->allow_password >= 0);
@@ -962,6 +1006,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->session_id = lsh_string_hex_decode(strlen(arg), arg);
       if (!self->session_id)
 	argp_error(state, "Invalid argument for --session-id.");
+      break;
+
+    case OPT_SERVICE:
+      self->service_config->override_config_file = 1;
+      /* Fall through */
+    case OPT_ADD_SERVICE:
+      service_config_argp(self->service_config,
+			  state, "service", arg);      
       break;
 
     case OPT_PASSWORD:
@@ -1001,6 +1053,9 @@ main_argp =
 
 static const struct config_option
 lshd_userauth_config_options[] = {
+  { OPT_SERVICE, "service", CONFIG_TYPE_LIST, "Service to offer.",
+    "ssh-connection = { lshd-connection --helper-fd $(helper_fd) "
+    "--use-example-config }" },
   { OPT_PASSWORD, "allow-password", CONFIG_TYPE_BOOL,
     "Support for password user authentication", "no" },
   { OPT_PUBLICKEY, "allow-publickey", CONFIG_TYPE_BOOL,
@@ -1032,6 +1087,11 @@ lshd_userauth_config_handler(int key, uint32_t value, const uint8_t *data UNUSED
 	self->allow_root_login = 0;
 
       break;
+
+    case OPT_SERVICE:
+      if (!service_config_option(self->service_config,
+				 "service", value, data))
+	return EINVAL;
 
     case OPT_PASSWORD:
       if (self->allow_password < 0)
@@ -1067,52 +1127,87 @@ main(int argc, char **argv)
 {
   struct lshd_user user;
   struct lshd_userauth_config *config = make_lshd_userauth_config();
-  const char *helper_program;
+  const char *libexecdir;  
+  const struct service_entry *service;
   int helper_fd;
+  struct arglist args;
+  const char *program;
+  unsigned i;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
   verbose("Started userauth service.\n");
 
+  libexecdir = getenv(ENV_LSHD_LIBEXEC_DIR);
+  if (!libexecdir)
+    libexecdir = LIBEXECDIR;
+  else if (libexecdir[0] != '/')
+    die("Bad value for $%z: Must be an absolute filename.\n",
+	ENV_LSHD_LIBEXEC_DIR);
+
   lshd_user_init(&user);
 
-  if (!handle_userauth(&user, config))
+  service = handle_userauth(&user, config);
+
+  if (!service)
     {
       write_packet(format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				     "Access denied", ""));
       exit(EXIT_FAILURE);      
     }
 
-  GET_FILE_ENV(helper_program, LSHD_PTY_HELPER);
+  helper_fd = -1;
+  arglist_init (&args);
 
-  /* With UNIX98-style ptys, utmp is sufficient privileges for the
-     helper program. */
+  program = service->args.argv[0];
+  arglist_push (&args, program);
 
-  /* FIXME: Make sure that the user can't attach a debugger to this
-     process. How? */
-  helper_fd = spawn_helper(helper_program, user.uid,
-			   lookup_group("utmp", user.gid));
+  /* If not absolute, interpret it relative to libexecdir. */
+  if (program[0] != '/')
+    program = lsh_get_cstring(ssh_format("%lz/%lz",
+					 libexecdir, program));
+  
+  for (i = 1; i < service->args.argc; i++)
+    {
+      const char *arg = service->args.argv[i];
+      if (arg[0] == '$')
+	{
+	  if (!strcmp(arg+1, "(helper_fd)"))
+	    {
+	      /* With UNIX98-style ptys, utmp is sufficient privileges
+		 for the helper program. */
 
-  {
-    char *args[4] = { NULL, NULL, NULL, NULL };
-    char buf[10];
-    
-    GET_FILE_ENV(args[0], LSHD_CONNECTION);
+	      /* FIXME: Make sure that the user can't attach a
+		 debugger to this process. How? */
+	      if (helper_fd < 0)
+		{
+		  const char *helper_program;
+		  GET_FILE_ENV(helper_program, LSHD_PTY_HELPER);
 
-    if (args[0][0] != '/')
-      werror("Using a relative filename `%z'.\n", args[0]);
+		  /* If not absolute, interpret it relative to libexecdir. */
+		  if (helper_program[0] != '/')
+		    helper_program
+		      = lsh_get_cstring(ssh_format("%lz/%lz",
+						   libexecdir,
+						   helper_program));
 
-    if (helper_fd != -1)
-      {
-	snprintf(buf, sizeof(buf)-1, "%d", helper_fd);
-	buf[sizeof(buf)-1] = 0;
-	
-	args[1] = "--helper-fd";
-	args[2] = buf;
-      }
-	
-    start_service(&user, args);
-    
-    service_error("Failed to start service process");
-  }
+		  helper_fd = spawn_helper(helper_program, user.uid,
+					   lookup_group("utmp", user.gid));
+		  if (helper_fd < 0)
+		    die("Could not spawn helper process.\n");		  
+		}
+	      arg = lsh_get_cstring(ssh_format("%di", helper_fd));
+	    }
+	}
+      arglist_push (&args, arg);
+    }
+
+  debug("exec of service %s, program %z. Argument list:\n",
+	service->name_length, service->name, program);
+  for (i = 0; i < args.argc; i++)
+    debug("  %z\n", args.argv[i]);
+
+  start_service(&user, program, args.argv);
+
+  service_error("Failed to start service process");
 }

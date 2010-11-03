@@ -76,7 +76,6 @@
      (name lshd_context)
      (super transport_context)
      (vars
-       ; Service configuration
        (service_config object service_config)
 
        (keys object alist)))
@@ -161,7 +160,7 @@ lshd_service_request_handler(struct transport_forward *self,
     {
       CAST(lshd_context, ctx, self->super.ctx);
       const struct service_entry *service
-	= server_lookup_service(ctx->service_config,
+	= service_config_lookup(ctx->service_config,
 				name_length, name);
       
       if (service)
@@ -184,7 +183,8 @@ lshd_service_request_handler(struct transport_forward *self,
 	  if (!libexecdir)
 	    libexecdir = LIBEXECDIR;
 	  else if (libexecdir[0] != '/')
-	    die("Bad value for $%z: Must be an absolute filename.\n");
+	    die("Bad value for $%z: Must be an absolute filename.\n",
+		ENV_LSHD_LIBEXEC_DIR);
 
 	  child = fork();
 	  if (child < 0)
@@ -224,8 +224,8 @@ lshd_service_request_handler(struct transport_forward *self,
 	      /* FIXME: Pass sufficient information so that
 		 $SSH_CLIENT can be set properly. */
 	      arglist_init (&args);
-	      program = service->args.argv[0];
 
+	      program = service->args.argv[0];
 	      arglist_push (&args, program);
 
 	      /* If not absolute, interpret it relative to
@@ -239,8 +239,7 @@ lshd_service_request_handler(struct transport_forward *self,
 		  const char *arg = service->args.argv[i];
 		  if (arg[0] == '$')
 		    {
-		      arg++;
-		      if (!strcmp(arg, "(session_id)"))
+		      if (!strcmp(arg+1, "(session_id)"))
 			arg = lsh_get_cstring(ssh_format("%lxS",
 							 self->super.session_id));
 		    }
@@ -468,7 +467,9 @@ make_sighup_close_callback(struct resource *resource)
        (ctx object lshd_context)
 
        (ports struct string_queue)
+       (ports_override_config_file . int)
        (interfaces struct object_queue)
+       (interfaces_override_config_file . int)
 
        (hostkey string)
 
@@ -498,7 +499,9 @@ make_lshd_config(struct lshd_context *ctx)
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
   string_queue_init(&self->ports);
+  self->ports_override_config_file = 0;
   object_queue_init(&self->interfaces);
+  self->interfaces_override_config_file = 0;
 
   self->hostkey = NULL;
   self->daemonic = 0;
@@ -692,11 +695,11 @@ enum {
   OPT_INTERFACE = 0x201,
   OPT_DAEMONIC,
   OPT_PIDFILE,
+  OPT_NO_PIDFILE,
   OPT_CORE,
-  OPT_SETSID,
-  OPT_NO = 0x400,
-  OPT_NO_PIDFILE = (OPT_PIDFILE | OPT_NO),
-  OPT_NO_SETSID = (OPT_SETSID | OPT_NO),
+  OPT_NO_SETSID,
+  OPT_SERVICE,
+  OPT_ADD_SERVICE,
 };
 
 static const struct argp_option
@@ -707,6 +710,12 @@ lshd_options[] =
     "Listen on this network interface.", 0 }, 
   { "port", 'p', "PORT", 0, "Listen on this port.", 0 },
   { "host-key", 'h', "FILE", 0, "Location of the server's private key.", 0},
+
+  { "service", OPT_SERVICE, "NAME { COMMAND LINE }", 0,
+    "Service to offer.", 0 },
+  { "add-service", OPT_ADD_SERVICE, "NAME { COMMAND LINE }", 0,
+    "Service to offer. Unlike --service does not override other services "
+    "listed in the config file.", 0 },
 
   { NULL, 0, NULL, 0, "Daemonic behaviour:", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, chdir to /, and use syslog.", 0 },
@@ -723,7 +732,6 @@ lshd_argp_children[] =
 {
   { &server_argp, 0, "", 0 },
   { &algorithms_argp, 0, "", 0 },
-  { &service_argp, 0, "", 0},
   { NULL, 0, NULL, 0}
 };
 
@@ -768,8 +776,7 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
       state->child_inputs[1] = self->algorithms;
-      state->child_inputs[2] = self->ctx->service_config;
-      break;
+       break;
 
     case ARGP_KEY_END:
       if (object_queue_is_empty(&self->ctx->service_config->services))
@@ -808,16 +815,25 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "Invalid interface `%s'\n", arg);
 
 	object_queue_add_tail(&self->interfaces, &interface->super);
-
+	self->interfaces_override_config_file = 1;
 	break;
       }
     case 'p':
       string_queue_add_tail(&self->ports, make_string(arg));
+      self->ports_override_config_file = 1;
       break;
 
     case 'h':
       if (!self->hostkey)
 	self->hostkey = make_string(arg);
+      break;
+
+    case OPT_SERVICE:
+      self->ctx->service_config->override_config_file = 1;
+      /* Fall through */
+    case OPT_ADD_SERVICE:
+      service_config_argp(self->ctx->service_config,
+			  state, "service", arg);      
       break;
 
     case OPT_DAEMONIC:
@@ -864,6 +880,10 @@ lshd_config_options[] = {
     "Interface to listen to.", NULL },
   { 'p', "port", CONFIG_TYPE_STRING,
     "Port number or service name.", "ssh" },
+  { OPT_SERVICE, "service", CONFIG_TYPE_LIST, "Service to offer.",
+    "ssh-userauth = { lshd-userauth --session-id $(session_id) "
+    "--use-example-config }" },
+
   { OPT_CORE, "enable-core-file", CONFIG_TYPE_BOOL,
     "Allow lshd to dump core if it crashes.", "no" },
   { OPT_PIDFILE, "pid-file", CONFIG_TYPE_STRING,
@@ -882,7 +902,6 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
     {
     case CONFIG_PARSE_KEY_INIT:
       state->child_inputs[0] = &self->super.super;
-      state->child_inputs[1] = self->ctx->service_config;
       break;
     case CONFIG_PARSE_KEY_END:
       {
@@ -955,21 +974,28 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
       /* FIXME: Interface and port options should be disabled, if
 	 given on the command line. */
     case OPT_INTERFACE:
-      {
-	struct lshd_interface *interface = parse_interface(value, data);
-	if (!interface)
-	  /* FIXME: Abort config parsing somehow? */
-	  werror("Invalid interface `%s'\n", value, data);
-	else
-	  object_queue_add_tail(&self->interfaces, &interface->super);
+      if (!self->interfaces_override_config_file)
+	{
+	  struct lshd_interface *interface = parse_interface(value, data);
+	  if (!interface)
+	    /* FIXME: Abort config parsing somehow? */
+	    werror("Invalid interface `%s'\n", value, data);
+	  else
+	    object_queue_add_tail(&self->interfaces, &interface->super);
 
-	break;
-      }
-
-    case 'p':
-      string_queue_add_tail(&self->ports, ssh_format("%ls", value, data));
+	}
       break;
 
+    case 'p':
+      if (!self->ports_override_config_file)
+	string_queue_add_tail(&self->ports, ssh_format("%ls", value, data));
+      break;
+
+    case OPT_SERVICE:
+      if (!service_config_option(self->ctx->service_config,
+				 "service", value, data))
+	return EINVAL;
+				 
     case OPT_CORE:
       if (self->corefile < 0)
 	self->corefile = value;
@@ -989,8 +1015,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 static const struct config_parser *
 lshd_config_children[] = {
   &werror_config_parser,
-  &service_config_parser,
-  NULL
+   NULL
 };
 
 static const struct config_parser

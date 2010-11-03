@@ -273,8 +273,9 @@ make_service_config(void)
   return self;
 }
 
+
 const struct service_entry *
-server_lookup_service(struct service_config *self,
+service_config_lookup(struct service_config *self,
 		      size_t length, const char *name)
 {
   FOR_OBJECT_QUEUE (&self->services, n)
@@ -286,113 +287,87 @@ server_lookup_service(struct service_config *self,
   return NULL;
 }
 
-static const struct argp_option
-service_options[] =
+void
+service_config_argp(struct service_config *self,
+		    struct argp_state *state,
+		    const char *opt, const char *name)
 {
-  { "service", OPT_SERVICE, "NAME { COMMAND LINE }", 0,
-    "Service to offer.", 0 },
-  { "add-service", OPT_SERVICE_ADD, "NAME { COMMAND LINE }", 0,
-    "Service to offer. Unlike --service does not override other services "
-    "listed in the config file.", 0 },
-  { NULL, 0, NULL, 0, NULL, 0 }
-};
-
-static error_t
-service_argp_parser(int key, char *arg, struct argp_state *state)
-{
-  CAST_SUBTYPE(service_config, self, state->input);
-
-  switch(key)
+  if (service_config_lookup(self, strlen(name), name))
+    werror("Multiple definitions of the %z %z ignored.\n", name, opt);
+  else
     {
-    default:
-      return ARGP_ERR_UNKNOWN;
+      struct service_entry *entry = make_service_entry(name, NULL);
 
-    case OPT_SERVICE:
-      self->override_config_file = 1;
-      /* Fall through */
-    case OPT_SERVICE_ADD:
-      if (server_lookup_service(self, strlen(arg), arg))
-	werror("Multiple definitions of the %z service ignored.\n", arg);
+      if (state->next >= state->argc
+	  || strcmp (state->argv[state->next], "{"))
+	argp_error (state,
+		    "--%s requires a name and a brace-delimited command line.",
+		    opt);
       else
 	{
-	  struct service_entry *entry = make_service_entry(arg, NULL);
-
-	  if (state->next >= state->argc
-	      || strcmp (state->argv[state->next], "{"))
-	    argp_error (state,
-			"--service requires a name and a brace-delimited command line.");
-	  else
-	    {
-	      unsigned level = 1;
+	  unsigned level = 1;
 	  
-	      for (state->next++; state->next < state->argc; )
+	  for (state->next++; state->next < state->argc; )
+	    {
+	      const char *s = state->argv[state->next++];
+	      if (!strcmp(s, "{"))
+		level++;
+	      else if (!strcmp(s, "}"))
 		{
-		  const char *s = state->argv[state->next++];
-		  if (!strcmp(s, "{"))
-		    level++;
-		  else if (!strcmp(s, "}"))
+		  level--;
+		  if (!level)
 		    {
-		      level--;
-		      if (!level)
-			{
-			  if (!entry->args.argc)
-			    argp_error (state, "Empty command line for --service.");
+		      if (!entry->args.argc)
+			argp_error (state, "Empty command line for --%s.", opt);
 
-			  object_queue_add_head (&self->services, &entry->super);
-			  return 0;
-			}
+		      object_queue_add_head (&self->services, &entry->super);
+		      return;
 		    }
-		  arglist_push (&entry->args, s);
 		}
-	      argp_error (state, "Unexpected end of arguments while parsing --service command line.");
+	      arglist_push (&entry->args, s);
 	    }
+	  argp_error (state,
+		      "Unexpected end of arguments while parsing --%s command line.", opt);
 	}
-      break;
     }
-  return 0;
 }
 
-const struct argp
-service_argp =
+int
+service_config_option(struct service_config *self,
+		      const char *opt, uint32_t length, const uint8_t *data)
 {
-  service_options,
-  service_argp_parser,
-  NULL, NULL,
-  NULL,
-  NULL, NULL
-};
-
-static const struct config_option
-service_config_options[] = {
-  { OPT_SERVICE, "service", CONFIG_TYPE_LIST, "Service to offer.", NULL },
-  { 0, NULL, 0, NULL, NULL },
-};
-
-static int
-service_config_handler(int key, uint32_t value, const uint8_t *data,
-		       struct config_parser_state *state)
-{
-  CAST_SUBTYPE(service_config, self, state->input);
-
-  if (key == OPT_SERVICE && !self->override_config_file)
+  if (!self->override_config_file)
     {
       struct service_entry *entry;
       const char *item;
-      uint32_t length;
       uint32_t item_length;
 
-      length = value;
       item = data;
       
       item_length = strnlen(item, length) + 1;
       assert (item_length <= length);
 
+      if (item_length == length)
+	{
+	  /* FIXME: Include file and line number in message. */
+	  werror("Empty command line for %s %z\n",
+		 item_length, item, opt);
+	  return 0;
+	}
+
+      if (service_config_lookup(self, item_length, item))
+	{
+	  werror("Multiple definitions of the %s %z ignored.\n",
+		 item_length, item, opt);
+	  return 1;
+	}
+      
       entry = make_service_entry(item, data);
 
       item += item_length;
       length -= item_length;
 	  
-      for (;;)
+      while (length > 0)
 	{
 	  item_length = strnlen(item, length) + 1;
 	  assert (item_length <= length);
@@ -403,15 +378,7 @@ service_config_handler(int key, uint32_t value, const uint8_t *data,
 	  length -= item_length;
 	}
 
-      object_queue_add_head (&self->services, &entry->super);	    
+      object_queue_add_head (&self->services, &entry->super);
     }
-
-  return 0;
+  return 1;
 }
-
-const struct config_parser
-service_config_parser = {
-  service_config_options,
-  service_config_handler,
-  NULL
-};

@@ -90,11 +90,17 @@ struct service_config *
 make_service_config(void);
 
 const struct service_entry *
-server_lookup_service(struct service_config *self,
+service_config_lookup(struct service_config *self,
 		      size_t length, const char *name);
 
-extern const struct argp service_argp;
-extern const struct config_parser service_config_parser;
+void
+service_config_argp(struct service_config *self,
+		    struct argp_state *state,
+		    const char *opt, const char *name);
+
+int
+service_config_option(struct service_config *self,
+		      const char *opt, uint32_t length, const uint8_t *data);
 
 #endif /* LSH_SERVER_H_INCLUDED */
 
