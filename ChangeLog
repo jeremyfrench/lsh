@@ -1,3 +1,62 @@
+2010-11-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (TS_SH): Added lshd-example-config-test.
+
+	* src/environ.h.in (FILE_LSHD_CONNECTION): Deleted directory part.
+	(FILE_LSHD_PTY_HELPER): Likewise.
+
+	* src/lshd.c (lshd_service_request_handler): Fixed error message
+	for bad $LSHD_LIBEEXEC_DIR. Leave unrecognized "$(foo)" in the
+	argument list untouched (previously, skipped the initial "$").
+	(class server_config): New attributes ports_override_config_file
+	and interfaces_override_config_file.
+	(make_lshd_config): Initialize ports_override_config_file and
+	interfaces_override_config_file.
+	(OPT_NO, OPT_SETSID): Deleted constants.
+	(lshd_options): Added --service and --add-service.
+	(lshd_argp_children): Deleted service_argp.
+	(lshd_argp_parser): Updated child init in ARGP_KEY_INIT.
+	Set ports_override_config_file and interfaces_override_config_file
+	if the corresponding option occurs on the command line.
+	Handle --service and --add-service.
+	(lshd_config_options): Added config option "service".
+	(lshd_config_handler): Fixed child initialization. Check
+	ports_override_config_file and interfaces_override_config_file.
+	Handle "service" option.
+
+	* src/lshd-userauth.c (handle_userauth): Use
+	service_config_lookup, instead of hard-coding ssh-connection.
+	Changed return type to return struct service_entry pointer.
+	(main_options): Added --service and --add-service.
+	(class server_config): Added service_config atttribute.
+	(make_lshd_userauth_config): Call make_service_config.
+	(main_argp_parser): Setup default service in ARGP_KEY_END case.
+	Handle --service and --add-service.
+	(lshd_userauth_config_options): New config option "service".
+	(lshd_userauth_config_handler): Handle service option.
+	(main): Take environment variable LSHD_LIBEXEC_DIR and compiled in
+	LIBEXECDIR into account when interpreting the name of the hepler
+	program and the service program. Use the service_entry returned
+	from handle_userauth. Expand "$(helper_fd)" in the argument list,
+	and spawn the helper program only if this expansion is used.
+
+	* src/xalloc.h (lsh_space_free) [!DEBUG_ALLOC]: Defined to
+	lsh_free rather then free, to avoid warnings when freeing const
+	pointers.
+
+	* src/server.c (service_config_lookup): Renamed and updated
+	callers, from...
+	(server_lookup_service): ... old name.
+	(service_config_argp): New function, doing the main work for an
+	argp service parser, without being one.
+	(service_config_option): New function, analogous but for config
+	file parsing.
+	(service_argp): Deleted argp parser.
+	(service_config_parser): Deleted config file parser.
+
+	* src/server_config.c (list_append): Fixed broken indirection.
+	(server_config_parse_example): Fixed CONFIG_TYPE_LIST case.
+
 2010-11-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_config.c (list_append): Deleted return value. Instead
