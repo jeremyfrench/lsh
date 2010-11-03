@@ -215,6 +215,8 @@ parse_value_unsigned(uint32_t *value, unsigned length, const uint8_t *arg)
   fatal("Not implemented.\n");
 }
 
+/* NOTE: More or less duplicates nettle_buffer. But lshd-connection
+   isn't linked with nettle. */
 static void
 list_append(uint32_t *length, uint32_t *size, uint8_t **list,
 	    uint32_t token_length, const uint8_t *token)
@@ -224,15 +226,16 @@ list_append(uint32_t *length, uint32_t *size, uint8_t **list,
      using lsh_space_free. */
   if (!*size)
     {
-      *list = lsh_space_alloc(token_length + 100);
+      *size = token_length + 100;
+      *list = lsh_space_alloc(*size);
     }
   else if (*size < *length + token_length + 1)
     {
-      *size *= 2;
+      *size = *size * 2 + token_length + 1;
       *list = lsh_space_realloc(*list, *size);
     }
   memcpy(*list + *length, token, token_length);
-  *list[*length + token_length] = '\0';
+  (*list)[*length + token_length] = '\0';
   *length += token_length + 1;
 }
 
@@ -240,7 +243,7 @@ static int
 parse_value_list(uint32_t *length, uint8_t **list,
 		 struct config_tokenizer *tokenizer)
 {
-  uint32_t size;  
+  uint32_t size;
   unsigned level;
   unsigned start_line;
 
@@ -299,7 +302,7 @@ parse_value_list(uint32_t *length, uint8_t **list,
     }
  fail:
   lsh_space_free(*list);	  
-  return EINVAL;	  
+  return EINVAL;
 }
 
 static int
@@ -476,11 +479,10 @@ server_config_parse_example(const struct config_parser *parser,
 		  
 		  config_tokenizer_init(&tokenizer, "example fragment",
 					length, option->example);
-		  config_tokenizer_next(&tokenizer);
 
 		  err = parse_value_list(&value, &list, &tokenizer);
 		  data = list;
-		  
+		  break;
 		}
 	      case CONFIG_TYPE_BOOL:
 		err = parse_value_bool(&value, length, option->example);
