@@ -23,8 +23,6 @@ type_p () {
 LSH_MAKE_SEED=/bin/false
 
 : ${LSHD_LIBEXEC_DIR="`cd .. && pwd`"}
-: ${LSHD_CONNECTION:="`cd .. && pwd`/lshd-connection"}
-: ${LSHD_PTY_HELPER:="`cd .. && pwd`/lshd-pty-helper"}
 : ${LSHD_USERAUTH:="`cd .. && pwd`/lshd-userauth"}
 
 : ${LSHD_UTMP:="`pwd`/home/utmpx"}
@@ -41,7 +39,7 @@ LSH_MAKE_SEED=/bin/false
 GETPWNAM_PRELOAD="`pwd`/getpwnam-wrapper.so"
 
 export LSH_YARROW_SEED_FILE SEXP_CONV LSH_TRANSPORT
-export LSHD_LIBEXEC_DIR LSHD_CONNECTION LSHD_PTY_HELPER
+export LSHD_LIBEXEC_DIR
 export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 
 : ${LSHD_FLAGS:=''}
