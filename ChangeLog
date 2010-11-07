@@ -1,3 +1,20 @@
+2010-11-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh (LSHD_CONNECTION): Deleted variable.
+	(LSHD_PTY_HELPER): Deleted variable.
+
+	* src/lshd-userauth.c (main_argp_parser): Use FILE_LSHD_CONNECTION
+	directly, without consulting $LSHD_CONNECTION in the environment.
+	$LSHD_LIBEXEC_DIR is consulted later.
+	(main): Use FILE_LSHD_PTY_HELPER, also without cunsulting environment.
+	* src/lshd.c (lshd_argp_parser): Analogous change to use
+	FILE_LSHD_USERAUTH directly.
+
+	* src/environ.h.in (ENV_LSHD_CONNECTION): Deleted,
+	LSHD_LIBEXEC_DIR or service option should be sufficient.
+	(ENV_LSHD_PTY_HELPER): Likewise.
+	(ENV_LSHD_USERAUTH): Likewise.
+
 2010-11-03  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added lshd-example-config-test.
