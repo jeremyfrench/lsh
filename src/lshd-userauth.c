@@ -972,10 +972,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	{
 	  struct service_entry *entry
 	    = make_service_entry("ssh-connection", NULL);
-	  const char *program;
 
-	  GET_FILE_ENV(program, LSHD_CONNECTION);
-	  arglist_push (&entry->args, program);
+	  arglist_push (&entry->args, FILE_LSHD_CONNECTION);
 
 	  /* Propagate werror-related options. */
 	  if (self->super.super.verbose > 0)
@@ -1181,16 +1179,13 @@ main(int argc, char **argv)
 		 debugger to this process. How? */
 	      if (helper_fd < 0)
 		{
-		  const char *helper_program;
-		  GET_FILE_ENV(helper_program, LSHD_PTY_HELPER);
-
-		  /* If not absolute, interpret it relative to libexecdir. */
-		  if (helper_program[0] != '/')
-		    helper_program
-		      = lsh_get_cstring(ssh_format("%lz/%lz",
-						   libexecdir,
-						   helper_program));
-
+		  /* FIXME: Make configurable? */
+		  /* Interpreted relative to libexecdir. */
+		  const char *helper_program
+		    = lsh_get_cstring(ssh_format("%lz/%lz",
+						 libexecdir,
+						 FILE_LSHD_PTY_HELPER));
+		  
 		  helper_fd = spawn_helper(helper_program, user.uid,
 					   lookup_group("utmp", user.gid));
 		  if (helper_fd < 0)

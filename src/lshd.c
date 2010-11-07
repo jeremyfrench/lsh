@@ -783,11 +783,9 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 	{
 	  struct service_entry *entry
 	    = make_service_entry("ssh-userauth", NULL);
-	  const char *program;
 
 	  /* Note: FILE_LSHD_USERAUTH is relative to libexecdir. */
-	  GET_FILE_ENV(program, LSHD_USERAUTH);
-	  arglist_push (&entry->args, program);
+	  arglist_push (&entry->args, FILE_LSHD_USERAUTH);
 
 	  arglist_push (&entry->args, "--session-id");
 	  arglist_push (&entry->args, "$(session_id)");
