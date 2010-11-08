@@ -1,5 +1,8 @@
 2010-11-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/functions.sh (at_connect): Don't use -m flag to
+	mini-inetd.
+
 	* src/atoms.in: Deleted ssh-userauth and ssh-connection (no longer
 	hardcoded).
 
