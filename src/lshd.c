@@ -1013,7 +1013,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 static const struct config_parser *
 lshd_config_children[] = {
   &werror_config_parser,
-   NULL
+  NULL
 };
 
 static const struct config_parser
