@@ -212,10 +212,12 @@ EOF
 }
 
 
-# at_connect local-port max-connections shell-command
+# at_connect local-port max-connections shell-command Note: Doesn't
+# use -m $2 to set max connections. mini-inetd is always terminated
+# by the below kill.
 at_connect () {
     # sleep 1 # Allow some time for earlier processes to die
-    ./mini-inetd -m $2 -- localhost:$1 /bin/sh sh -c "$3" &
+    ./mini-inetd -- localhost:$1 /bin/sh sh -c "$3" &
     at_exit "kill $!"
 }
 
