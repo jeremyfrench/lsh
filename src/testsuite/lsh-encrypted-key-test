@@ -8,9 +8,6 @@ fi
 
 . $srcdir/functions.sh
 
-# FIXME: Not currently supported
-test_skip
-
 fname="$TEST_HOME/lsh-encrypted-key-test-helper"
 keyname="$TEST_HOME/lsh-encrypted-key-test-key"
 
