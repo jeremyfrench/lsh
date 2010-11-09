@@ -184,7 +184,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case 'p':
-      self->passwd = ssh_format("%lz", arg);
+      self->passwd = make_string(arg);
       break;
     }
   return 0;
@@ -209,7 +209,7 @@ srp_gen(struct srp_gen_options *options)
   /* NOTE: Allows random to be of bad quality */
   salt = lsh_string_random(options->r, SALT_SIZE);
 
-  name = ssh_format("%lz", options->name);
+  name = make_string(options->name);
 
   /* FIXME: Leaks some strings. */
   res = srp_make_verifier(options->G, options->H,

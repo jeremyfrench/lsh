@@ -443,11 +443,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       }
       
     case OPT_LABEL:
-      self->label = ssh_format("%lz", arg);
+      self->label = make_string(arg);
       break;
       
     case OPT_PASSPHRASE:
-      self->passphrase = ssh_format("%lz", arg);
+      self->passphrase = make_string(arg);
       break;
     }
 

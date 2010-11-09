@@ -97,7 +97,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case 'o':
-      self->file = ssh_format("%lz", arg);
+      self->file = make_string(arg);
       break;
     }
   return 0;
