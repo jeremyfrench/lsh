@@ -11,7 +11,7 @@ fi
 # Traditional BSD pty:s are currently not supported.
 [ -c /dev/ptmx ] || test_skip
 
-# The current asks for a remote tty only if it has a tty locally.
+# The current version asks for a remote tty only if it has a tty locally.
 
 tty > /dev/null || test_skip
 
