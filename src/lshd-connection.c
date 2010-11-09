@@ -201,9 +201,9 @@ oop_read_service(oop_source *source UNUSED, int fd, oop_event event, void *state
 	  exit(EXIT_FAILURE);
 	  break;
 	case SSH_READ_EOF:
-	  werror("Transport layer closed\n", error_msg);
+	  verbose("Transport layer closed.\n");
 	  return OOP_HALT;
-	  break;
+
 	case SSH_READ_PUSH:
 	case SSH_READ_PENDING:
 	  return OOP_CONTINUE;
@@ -393,7 +393,7 @@ main(int argc, char **argv)
   io_init();
   reaper_init();
 
-  werror("Started connection service\n");
+  trace("Started connection service\n");
   if (config->helper_fd != -1)
     verbose("helper fd: %i.\n", config->helper_fd);
 
