@@ -281,7 +281,7 @@ socks2address_info(uint8_t atype,
       break;
     case SOCKS_IP6:
       /* It's possible to support ipv6 targets without any native ipv6
-	 support, but it's easier if we have standard functinos and
+	 support, but it's easier if we have standard functions and
 	 constants like AF_INET6 and inet_ntop. */
 #if WITH_IPV6
       host = lsh_string_ntop(AF_INET6, INET6_ADDRSTRLEN, addr);
