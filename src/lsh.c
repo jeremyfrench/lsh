@@ -497,7 +497,7 @@ main_options[] =
   { "forward-local-port", 'L', "LOCAL-PORT:TARGET-HOST:TARGET-PORT", 0,
     "Forward TCP/IP connections at a local port", 0 },
   { "forward-socks", 'D', "PORT", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
-  /* FIXME: Remote forwarding and X11 forwarding doesn't work over a gateway. */
+  /* FIXME: X11 forwarding doesn't work reliably over a gateway. */
   { "forward-remote-port", 'R', "REMOTE-PORT:TARGET-HOST:TARGET-PORT", 0,
     "Forward TCP/IP connections at a remote port", 0 },
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
@@ -609,33 +609,32 @@ main_argp_children[] =
 };
 
 static int
-parse_arg_unsigned(const char *arg, unsigned long *n)
+parse_arg_unsigned(const char *arg, unsigned long *n, char terminator)
 {
   char *end;
   if (*arg == 0)
     return 0;
 
   *n = strtoul(arg, &end, 0);
-  return *end == 0;
+  return *end == terminator;
 }
 
 /* Parse the argument for -R and -L */
-static int
-parse_forward_arg(char *arg,
-		  unsigned long *listen_port,
-		  struct address_info **target)
+static struct address_info *
+parse_forward_arg(const char *arg,
+		  unsigned long *listen_port)
 {
   const char *host;
-  const char *target_port;
+  uint32_t host_length;
+
+  unsigned long target_port;
   char *sep;
   
   sep = strchr(arg, ':');
   if (!sep)
     return 0;
 
-  sep[0] = '\0';
-
-  if (!parse_arg_unsigned(arg, listen_port))
+  if (!parse_arg_unsigned(arg, listen_port, ':'))
     return 0;
   
   host = sep + 1;
@@ -644,12 +643,13 @@ parse_forward_arg(char *arg,
   if (!sep)
     return 0;
 
-  sep[0] = '\0';
-  target_port = sep + 1;
+  host_length = sep - host;
 
-  *target = io_lookup_address(host, target_port);
-  
-  return *target != NULL;
+  if (!parse_arg_unsigned(sep + 1, &target_port, '\0'))
+    return 0;
+
+  return make_address_info(ssh_format("%ls", host_length, host),
+			   target_port);
 }
 
 #define CASE_ARG(opt, attr, none)		\
@@ -808,8 +808,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'E':
       add_action(self,
-		 client_command_session(self,
-					ssh_format("%lz", arg)));
+		 client_command_session(self, make_string(arg)));
       break;
 
     case 'S':
@@ -817,8 +816,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_SUBSYSTEM:
-      add_action(self, client_subsystem_session(self,
-						ssh_format("%lz", arg)));
+      add_action(self, client_subsystem_session(self, make_string(arg)));
 
       self->start_shell = 0;
 #if WITH_PTY_SUPPORT
@@ -831,13 +829,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	unsigned long listen_port;
 	struct address_info *target;
 
-	if (!parse_forward_arg(arg, &listen_port, &target))
+	target = parse_forward_arg(arg, &listen_port);
+	if (!target)
 	  argp_error(state, "Invalid forward specification `%s'.", arg);
 
 	add_action(self, forward_local_port
-		   (make_address_info((self->with_remote_peers
-				       ? NULL
-				       : ssh_format("%lz", "127.0.0.1")),
+		   (make_address_info(make_string(self->with_remote_peers
+						  ? "" : "localhost"),
 				      listen_port),
 		    target));
 	break;
@@ -845,14 +843,20 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'D':
       {
-	unsigned long socks_port = DEFAULT_SOCKS_PORT;
-	if (arg && (parse_arg_unsigned(arg, &socks_port) == 0 || socks_port > 0xffff))
-	  argp_error(state, "Invalid port number `%s' for socks.", arg);
+	unsigned long socks_port;
+	if (arg)
+	  {
+	    if (!parse_arg_unsigned(arg, &socks_port, '\0')
+		|| socks_port > 0xffff)
+	      argp_error(state, "Invalid port number `%s' for socks.", arg);
+	  }
+	else
+	  socks_port = DEFAULT_SOCKS_PORT;
 
 	add_action(self, make_socks_server
 		   (make_address_info((self->with_remote_peers
 				       ? NULL
-				       : ssh_format("%lz", "127.0.0.1")),
+				       : make_string("localhost")),
 				      socks_port)));
 	break;
       }
@@ -866,19 +870,21 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->detach = 1;
       break;
 
-      /* FIXME: Doesn't yet work over the gateway. */
     case 'R':
       {
 	unsigned long listen_port;
 	struct address_info *target;
 
-	if (!parse_forward_arg(arg, &listen_port, &target))
+	target = parse_forward_arg(arg, &listen_port);
+	if (!target)
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
+	/* RFC 4254 specifies that "" means all interfaces and
+	   "localhost" means all local interfaces. */
 	add_action(self, forward_remote_port
 		   (make_address_info((self->with_remote_peers
-				       ? ssh_format("%lz", "0.0.0.0")
-				       : ssh_format("%lz", "127.0.0.1")),
+				       ? make_string("")
+				       : make_string("localhost")),
 				      listen_port),
 		    target));
 
