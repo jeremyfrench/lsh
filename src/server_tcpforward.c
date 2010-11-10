@@ -56,23 +56,17 @@ static struct server_forward *
 make_server_forward(struct ssh_connection *connection,
 		    const struct address_info *address)
 {
-  struct io_listen_port *port
-    = make_tcpforward_listen_port(connection, ATOM_FORWARDED_TCPIP,
-				  address, address);
+  struct resource *port
+    = tcpforward_listen(connection, ATOM_FORWARDED_TCPIP,
+			address, address);
   if (!port)
     return NULL;
-
-  if (!io_listen(port))
-    {
-      KILL_RESOURCE(&port->super.super);
-      return NULL;
-    }
   else
     {
       NEW(server_forward, self);
 
       self->super.address = address;
-      self->port = &port->super.super;
+      self->port = port;
 
       remember_resource(connection->resources, self->port);
       
