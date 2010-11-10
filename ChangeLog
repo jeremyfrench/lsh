@@ -1,3 +1,66 @@
+2010-11-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (parse_arg_unsigned): New argument with expected
+	terminator.
+	(parse_forward_arg): Return targret address on success. Don't
+	modify the input string, using updated parse_arg_unsigned. Don't
+	use io_lookup_address; names are resolved later.
+	(main_argp_parser): Use make_string. Updated to parse_forward_arg
+	changes. When setting up tcp forwarding, use "" to denote any
+	address, and "localhost" to denote any local addresses.
+
+	* src/lshd.c (make_lshd_port): Use io_bind_sockaddr.
+	(open_port): Unconditionally set AI_PASSIVE.
+
+	* src/server_tcpforward.c (make_server_forward): Use
+	tcpforward_listen, replacing calls to make_tcpforward_listen_port
+	and io_listen.
+	* src/client_tcpforward.c (do_forward_local_port): Likewise.
+
+	* src/socks.c (make_socks_listen_port): Rewritten, analogously to
+	tcpforward_listen, below.
+	(do_make_socks_server): Updated to use new make_socks_listen_port.
+
+	* src/tcpforward.c (tcpforward_listen): New function, replacing
+	make_tcpforward_listen_port. Does address lookups via
+	io_getaddrinfo, and may bind multiple interfaces using IPv4 or
+	IPv6. Trace message with each bound interface. Call io_listen, not
+	just io_bind_sockaddr.
+	(make_tcpforward_listen_port): Deleted.
+	(class io_connect_state): New ttributes to keep track of list of
+	addresses.
+	(tcpforward_connect_error): Try next address, if available.
+	(tcpforward_connect): Use io_getaddrinfo, and attempt connection
+	to each address on the list.
+
+	* src/io.c (io_getaddrinfo): New helper function.
+	(io_make_sockaddr): Deleted function.
+	(io_lookup_address): Deleted function.
+	(io_bind_sockaddr): Set IPV6_V6ONLY. Report errors using werror.
+
+	* src/server_x11.c (do_x11_listen_port_accept): Fixed error
+	message.
+	(open_x11_socket): Use make_string.
+
+	* src/queue.h (class addr_queue): Deleted unused class.
+	* src/queue.c: Deleted all addr_queue related functions.
+
+2010-11-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-connection.c (oop_read_service): Use verbose, not
+	werror, for message on EOF.
+	(main): Use trace, not werror, for startup message.
+
+	* src/lsh-decode-key.c (main_argp_parser): Use make_string.
+	* src/lsh-keygen.c (main_argp_parser): Likewise.
+	* src/srp-gen.c (srp_gen): Likewise.
+	(main_argp_parser): Likewise.
+
+	* src/testsuite/lshg-tcpip-remote-test: Deleted sleep.
+	* src/testsuite/tcpip-remote-test: Likewise.
+
+	* src/testsuite/lsh-encrypted-key-test: Reenabled test.
+
 2010-11-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (at_connect): Don't use -m flag to
