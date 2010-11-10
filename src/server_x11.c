@@ -138,7 +138,7 @@ do_x11_listen_port_accept(struct io_listen_port *s,
 			     ATOM_LD(ATOM_X11),
 			     "%z%i", "unix-domain", 0))
     {
-      werror("tcpforward_listen_port: Allocating a local channel number failed.");
+      werror("Allocating a local channel number for forwarded X11 failed.");
       KILL_RESOURCE(&channel->super);
     }
 }
@@ -220,7 +220,7 @@ open_x11_socket(struct ssh_connection *connection,
       if (s >= 0)
 	{
 	  /* Store name */
-	  name = ssh_format("%lz", sa.sun_path);
+	  name = make_string(sa.sun_path);
 	  break;
 	}
     }
