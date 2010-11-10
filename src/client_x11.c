@@ -649,7 +649,6 @@ parse_display(struct client_x11_display *self, const char *display)
   
   if (host)
     {
-      /* FIXME: Some duplication with io_lookup_address. */
       struct addrinfo hints;
       struct addrinfo *list;
       int err;
@@ -671,6 +670,7 @@ parse_display(struct client_x11_display *self, const char *display)
 		 gai_strerror(err));
 	  return 0;
 	}
+      assert(list);
       self->address_length = list->ai_addrlen;
       
       self->address = lsh_space_alloc(self->address_length);
