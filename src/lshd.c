@@ -333,45 +333,29 @@ lshd_port_accept(struct io_listen_port *s,
 static struct resource *
 make_lshd_port(struct lshd_context *ctx, socklen_t addr_len, struct sockaddr *addr)
 {
-  NEW(lshd_port, self);
-  int yes = 1;  
-  int fd = socket(addr->sa_family, SOCK_STREAM, 0);
-
-  init_io_listen_port(&self->super, fd, lshd_port_accept);
-  self->ctx = ctx;
+  int fd = io_bind_sockaddr(addr, addr_len);
 
   if (fd < 0)
     {
       werror("socket failed: %e.\n", errno);
-    fail:
-      KILL_RESOURCE(&self->super.super.super);
       return NULL;
     }
-
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
-    werror("setsockopt SO_REUSEADDR failed: %e.\n", errno);
-
-#if WITH_IPV6 && defined (IPV6_V6ONLY)
-  if (addr->sa_family == AF_INET6)
+  else
     {
-      if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes)) < 0)
-	werror("setsockopt IPV6_V6ONLY failed: %e.\n", errno);
-    }
-#endif
+      NEW(lshd_port, self);
+      
+      init_io_listen_port(&self->super, fd, lshd_port_accept);
+      self->ctx = ctx;
 
-  if (bind(fd, addr, addr_len) < 0)
-    {
-      werror("bind failed: %e.\n", errno);
-      goto fail;
-    }
+      if (!io_listen(&self->super))
+	{
+	  werror("listen failed: %e.\n", errno);
+	  KILL_RESOURCE(&self->super.super.super);
+	  return NULL;
+	}
 
-  if (!io_listen(&self->super))
-    {
-      werror("listen failed: %e.\n", errno);
-      goto fail;
+      return &self->super.super.super;
     }
-
-  return &self->super.super.super;
 }
 
 static struct lshd_context *
@@ -540,8 +524,8 @@ open_port (struct lshd_context *ctx, struct resource_list *resources,
   debug("open_port: node = %z, port = %S\n",
 	node ? node : "ANY", port);
 
-  if (!node)
-    hints.ai_flags = AI_PASSIVE;
+  /* FIXME: Also use AI_ADDRCONFIG? */
+  hints.ai_flags = AI_PASSIVE;
 
   err = getaddrinfo(node, lsh_get_cstring(port), &hints, &list);
   if (err)
@@ -565,7 +549,7 @@ open_port (struct lshd_context *ctx, struct resource_list *resources,
     }
   return done;
 #else /* !HAVE_GETADDRINFO */
-#error Not yet supported */
+#error getaddrinfo currently required */
 #endif /* !HAVE_GETADDRINFO */
 }
 
