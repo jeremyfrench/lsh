@@ -667,30 +667,60 @@ do_socks_accept(struct io_listen_port *s,
   socks_start_read(channel);
 }
 
-static struct io_listen_port *
+/* Some duplication with tcpforward_listen. */
+static unsigned
 make_socks_listen_port(struct ssh_connection *connection,
 		       const struct address_info *local)
 {
-  struct sockaddr *addr;
-  socklen_t addr_length;
-  int fd;
+  struct addrinfo *list;
+  struct addrinfo *p;
+  int err;
 
-  addr = io_make_sockaddr(&addr_length,
-			  lsh_get_cstring(local->ip), local->port);
-  if (!addr)
-    return NULL;
+  unsigned bound;
 
-  fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
-  if (fd < 0)
-    return NULL;
+  trace("make_socks_listen_port: Local port: %S:%i\n",
+	local->ip, local->port);
 
-  {
-    NEW(socks_listen_port, self);
-    init_io_listen_port(&self->super, fd, do_socks_accept);
+  err = io_getaddrinfo(local, AI_PASSIVE, &list);
+  if (err)
+    {
+      werror("make_socks_listen_port: getaddrinfo failed: %z\n",
+	     gai_strerror(err));
+      return 0;
+    }
 
-    self->connection = connection;
-    return &self->super;
-  }
+  for (p = list, bound = 0; p; p = p->ai_next)
+    if (p->ai_family == AF_INET || p->ai_family == AF_INET6)
+      {
+	int fd = io_bind_sockaddr(p->ai_addr, p->ai_addrlen);
+	if (fd >= 0)
+	  {
+	    NEW(socks_listen_port, self);
+	    init_io_listen_port(&self->super, fd, do_socks_accept);
+
+	    self->connection = connection;
+
+	    if (!io_listen(&self->super))
+	      KILL_RESOURCE(&self->super.super.super);
+	    else
+	      {
+		struct address_info *bound
+		  = sockaddr2info(p->ai_addrlen, p->ai_addr);
+
+		trace("make_socks_listen_port: Bound port %S:%i\n",
+		      bound->ip, bound->port);
+
+		KILL(bound);
+
+		remember_resource(connection->resources,
+				  &self->super.super.super);
+		bound++;
+	      }
+	  }
+      }
+  freeaddrinfo(list);
+
+  return bound;;
 }
 
 /* GABA:
@@ -701,28 +731,17 @@ make_socks_listen_port(struct ssh_connection *connection,
        (local const object address_info)))
 */
 
+/* FIXME: Inline make_socks_listen_port here? */
 static void
 do_make_socks_server(struct client_connection_action *s,
 		     struct ssh_connection *connection)
 {
   CAST(make_socks_server_action, self, s);
-  struct io_listen_port *port;
 
-  port = make_socks_listen_port(connection, self->local);
-  if (!port)
+  if (!make_socks_listen_port(connection, self->local))
     {
-      werror("Invalid local port %S:%i.\n",
+      werror("Failed to setup SOCKS: Invalid local port %S:%i.\n",
 	     self->local->ip, self->local->port);
-    }
-  else if (!io_listen(port))
-    {
-      werror("Listening on local port %S:%i failed: %e.\n",
-	     self->local->ip, self->local->port, errno);
-      KILL_RESOURCE(&port->super.super);
-    }
-  else
-    {
-      remember_resource(connection->resources, &port->super.super);
     }
 }
   
