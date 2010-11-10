@@ -69,12 +69,11 @@ struct resource *
 tcpforward_connect(const struct address_info *a,
 		   const struct channel_open_info *info);
 
-struct io_listen_port *
-make_tcpforward_listen_port(struct ssh_connection *connection,
-			    int type,
-			    const struct address_info *local,
-			    const struct address_info *forward);
-
+struct resource *
+tcpforward_listen(struct ssh_connection *connection,
+		  int type,
+		  const struct address_info *local,
+		  const struct address_info *forward);
 
 extern struct channel_open channel_open_direct_tcpip;
 extern struct channel_open channel_open_forwarded_tcpip;

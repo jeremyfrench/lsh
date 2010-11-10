@@ -132,58 +132,73 @@ do_tcpforward_listen_port_accept(struct io_listen_port *s,
     }
 }
 
-struct io_listen_port *
-make_tcpforward_listen_port(struct ssh_connection *connection,
-			    int type,
-			    const struct address_info *local,
-			    const struct address_info *forward)
+/* Like in the protocol (RFC 4254), empty address means listen on all
+   interfaces. */
+struct resource *
+tcpforward_listen(struct ssh_connection *connection,
+		  int type,
+		  const struct address_info *local,
+		  const struct address_info *forward)
 {
-  struct sockaddr *addr;
-  socklen_t addr_length;
-  int fd;
+  struct addrinfo *list;
+  struct addrinfo *p;
+  int err;
 
-  trace("make_tcpforward_listen_port: Local port: %S:%i, target port: %S:%i\n",
+  struct resource_list *resources;
+
+  trace("tcpforward_listen: Local port: %S:%i, target port: %S:%i\n",
 	local->ip, local->port, forward->ip, forward->port);
 
-  addr = io_make_sockaddr(&addr_length,
-			  lsh_get_cstring(local->ip), local->port);
-  if (!addr)
-    return NULL;
-
-  switch (addr->sa_family)
+  err = io_getaddrinfo(local, AI_PASSIVE, &list);
+  if (err)
     {
-    case AF_INET:
-      trace("make_tcpforward_listen_port: Binding IPv4 address %fS\n",
-	    lsh_string_ntop(addr->sa_family, INET_ADDRSTRLEN,
-			    &((struct sockaddr_in *)addr)->sin_addr));
-      break;
-#if WITH_IPV6
-    case AF_INET6:
-      trace("make_tcpforward_listen_port: Binding IPv6 address %fS\n",
-	    lsh_string_ntop(addr->sa_family, INET6_ADDRSTRLEN,
-			    &((struct sockaddr_in6 *)addr)->sin6_addr));
-      break;
-#endif
-    default:
-      trace("make_tcpforward_listen_port: Binding address of family %i\n",
-	    addr->sa_family);
-      break;
+      if (err == EAI_SYSTEM)
+	werror("tcpforward_listen: getaddrinfo failed: %e\n", errno);
+      else
+	werror("tcpforward_listen: getaddrinfo failed: %z\n",
+	       gai_strerror(err));
+      return NULL;
     }
 
-  fd = io_bind_sockaddr((struct sockaddr *) addr, addr_length);
-  if (fd < 0)
-    return NULL;
+  resources = NULL;
 
-  {
-    NEW(tcpforward_listen_port, self);
-    init_io_listen_port(&self->super, fd, do_tcpforward_listen_port_accept);
+  for (p = list; p; p = p->ai_next)
+    if (p->ai_family == AF_INET || p->ai_family == AF_INET6)
+      {
+	int fd = io_bind_sockaddr(p->ai_addr, p->ai_addrlen);
+	if (fd >= 0)
+	  {
+	    NEW(tcpforward_listen_port, self);
+	    init_io_listen_port(&self->super, fd,
+				do_tcpforward_listen_port_accept);
 
-    self->connection = connection;
-    self->type = type;
-    self->forward = forward;
+	    self->connection = connection;
+	    self->type = type;
+	    self->forward = forward;
 
-    return &self->super;
-  }
+	    if (!io_listen(&self->super))
+	      KILL_RESOURCE(&self->super.super.super);
+	    else
+	      {
+		struct address_info *bound
+		  = sockaddr2info(p->ai_addrlen, p->ai_addr);
+
+		trace("tcpforward_listen: Bound port %S:%i\n",
+		      bound->ip, bound->port);
+
+		KILL(bound);
+
+		if (!resources)
+		  resources = make_resource_list();
+
+		remember_resource(resources, &self->super.super.super);
+	      }
+	  }
+      }
+
+  freeaddrinfo(list);
+
+  return &resources->super;
 }
 
 /* GABA:
@@ -191,6 +206,10 @@ make_tcpforward_listen_port(struct ssh_connection *connection,
      (name tcpforward_connect_state)
      (super io_connect_state)
      (vars
+       ; List of addresses to try
+       (list special "struct addrinfo *" #f freeaddrinfo)
+       (next . "struct addrinfo *")
+       
        (info const object channel_open_info)))
 */
 
@@ -210,46 +229,58 @@ static void
 tcpforward_connect_error(struct io_connect_state *s, int error)
 {
   CAST(tcpforward_connect_state, self, s);
-  
+
+  for (; self->next; self->next = self->next->ai_next)
+    {
+      verbose("Connection failed, trying next address.\n");
+      io_close_fd(self->super.super.fd);
+      self->super.super.fd = -1;
+      if (io_connect(&self->super, self->next->ai_addrlen, self->next->ai_addr))
+	return;
+    }
   werror("Connection failed: %e\n", error);
   channel_open_deny(self->info,
 		    SSH_OPEN_CONNECT_FAILED, "Connection failed");
 }
 
 struct resource *
-tcpforward_connect(const struct address_info *a,
+tcpforward_connect(const struct address_info *addr,
 		   const struct channel_open_info *info)
 {
-  struct sockaddr *addr;
-  socklen_t addr_length;
+  struct addrinfo *list;
+  int err;
 
   trace("tcpforward_connect: target port: %S:%i\n",
-	a->ip, a->port);
-
-  addr = io_make_sockaddr(&addr_length, lsh_get_cstring(a->ip), a->port);
-  if (!addr)
+	addr->ip, addr->port);
+  
+  /* FIXME: Use AI_ADDRCONFIG ? */
+  err = io_getaddrinfo(addr, 0, &list);
+  if (err)
     {
-      channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, "Invalid address");
+      werror("Could not resolv address `%S:%i\n",
+	     addr->ip, addr->port, gai_strerror(err));
+      channel_open_deny(info, SSH_OPEN_CONNECT_FAILED,
+			"Address could not be resolved.");
       return NULL;
     }
+  else
+    {
+      NEW(tcpforward_connect_state, self);
 
-  {
-    NEW(tcpforward_connect_state, self);
-    init_io_connect_state(&self->super,
-			  tcpforward_connect_done,
-			  tcpforward_connect_error);
-    int res;
-    
-    self->info = info;
+      init_io_connect_state(&self->super,
+			    tcpforward_connect_done,
+			    tcpforward_connect_error);
+      self->info = info;
+      self->list = list; 
+     
+      for (self->next = self->list; self->next; self->next = self->next->ai_next)
+	{
+	  if (io_connect(&self->super,
+			 self->next->ai_addrlen, self->next->ai_addr))
+	    return &self->super.super.super;
+	}
 
-    res = io_connect(&self->super, addr_length, addr);
-    lsh_space_free(addr);
-
-    if (!res)
-      {
-	channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(errno));
-	return NULL;
-      }
-    return &self->super.super.super;
-  }
+      channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(errno));
+      return NULL;
+    }
 }
