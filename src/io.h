@@ -110,6 +110,11 @@ io_callout(struct lsh_callback *action, unsigned seconds);
 unsigned
 get_portno(const char *service, const char *protocol);
 
+int
+io_getaddrinfo(const struct address_info *addr,
+	       int flags,
+	       struct addrinfo **res);
+
 struct address_info *
 make_address_info(struct lsh_string *host, 
 		  uint32_t port);
@@ -117,17 +122,6 @@ make_address_info(struct lsh_string *host,
 struct address_info *
 sockaddr2info(size_t addr_len,
               const struct sockaddr *addr);
-
-struct address_info *
-io_lookup_address(const char *ip, const char *service);
-
-struct sockaddr *
-io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port);
-
-unsigned
-io_resolv_address(const char *host, const char *service,
-		  unsigned default_port,
-		  struct addr_queue *q);
 
 /* Returns an 1 on success, 0 on error (and then see errno) */
 int

@@ -631,6 +631,45 @@ get_portno(const char *service, const char *protocol)
     }
 }
 
+
+int
+io_getaddrinfo(const struct address_info *addr,
+	       int flags,
+	       struct addrinfo **res)
+{
+  struct addrinfo hints;
+  const char *host;
+  char port[10];
+  
+  if (addr->port > 0xffff)
+    {
+    invalid:
+      errno = EINVAL;
+      return EAI_SYSTEM;
+    }
+
+  host = lsh_get_cstring(addr->ip);
+  if (!host)
+    {
+      werror("lsh_getaddrinfo: Address contains NUL character.\n");
+      goto invalid;
+    }
+  
+  /* Like in the protocol (RFC 4254), empty address means listen on all
+     interfaces. */
+  if ( (hints.ai_flags & AI_PASSIVE) & !*host)
+    host = NULL;
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = PF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = flags;
+  
+  snprintf(port, sizeof(port), "%d", addr->port);
+
+  return getaddrinfo(host, port, &hints, res);
+}
+
 struct address_info *
 make_address_info(struct lsh_string *host, uint32_t port)
 {
@@ -683,176 +722,6 @@ sockaddr2info(size_t addr_length,
     default:
       fatal("io.c: sockaddr2info: Unsupported address family.\n");
     }
-}
-
-/* Creates a sockaddr. Only handles ip-addresses, no dns names. This
-   is a simplified version of address_info2sockaddr. */
-struct sockaddr *
-io_make_sockaddr(socklen_t *lenp, const char *ip, unsigned port)
-{
-  struct sockaddr *sa;
-  int res;
-
-  if (!ip)
-    {
-      werror("io_make_sockaddr: NULL ip address!\n");
-      return NULL;
-    }
-  if (port >= 0x10000)
-    {
-      werror("io_make_sockaddr: Invalid port %i.\n", port);
-      return NULL;
-    }
-
-#if WITH_IPV6
-  if (strchr(ip, ':'))
-    {
-      /* IPv6 */
-      struct sockaddr_in6 *sin6;
-      NEW_SPACE(sin6);
-      
-      sin6->sin6_family = AF_INET6;
-      sin6->sin6_port = htons(port);
-      res = inet_pton(AF_INET6, ip, &sin6->sin6_addr);
-
-      *lenp = sizeof(*sin6);
-      sa = (struct sockaddr *) sin6;
-    }
-  else
-#endif
-    {
-      /* IPv4 */
-      struct sockaddr_in *sin;
-      NEW_SPACE(sin);
-      
-      sin->sin_family = AF_INET;
-      sin->sin_port = htons(port);
-      res = inet_pton(AF_INET, ip, &sin->sin_addr);
-
-      *lenp = sizeof(*sin);
-      sa = (struct sockaddr *) sin;
-    }
-  if (res < 0)
-    {
-      werror("inet_pton failed for address type %i: %e.\n",
-	     sa->sa_family, errno);
-
-      lsh_space_free(sa);
-      return NULL;
-    }
-  else if (!res)
-    {
-      werror("Invalid address for address type %i.\n",
-	     sa->sa_family);
-      lsh_space_free(sa);
-      return NULL;
-    }
-
-  return sa;
-}
-
-/* Translating a dns name to an IP address. We don't currently support
-   DNS names in tcpip forwarding requests, so all names have to be
-   translated by the client. */
-
-/* FIXME: Get rid of this function? Used only in lsh.c, and then
-   something similar is done in client_x11.c:parse_display. */
-struct address_info *
-io_lookup_address(const char *ip, const char *service)
-{
-  struct address_info *addr;
-  const char *last_dot;
-  
-  assert(ip);
-
-  if (strchr(ip, ':'))
-    {
-      /* Raw IPv6 address */
-      unsigned port;
-
-    raw_address:
-
-      port = get_portno(service, "tcp");
-      if (port > 0)
-	return make_address_info(make_string(ip), port);
-      else return 0;
-    }
-
-  /* Difference between a dns name and an ip address is that the ip
-     address is dotted, and the final component starts with a
-     digit. */
-  last_dot = strrchr(ip, '.');
-  if (last_dot && last_dot[1] >= '0' && last_dot[1] <= '9')
-    /* Raw IPv4 address */
-    goto raw_address;
-
-  /* So, it looks like a domain name. Look it up. */
-#if HAVE_GETADDRINFO
-  {
-    struct addrinfo hints;
-    struct addrinfo *list;
-    struct addrinfo *p;
-    int err;
-    
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-
-    err = getaddrinfo(ip, service, &hints, &list);
-    if (err)
-      {
-      	werror("io_address_lookup: getaddrinfo failed: %z\n",
-	      gai_strerror(err));
-	return 0;
-      }
-
-    addr = NULL;
-    
-    /* We pick only one address, and prefer IPv4 */
-    for (p = list; p; p = p->ai_next)
-      {
-	if (p->ai_family == AF_INET)
-	  {
-	    struct sockaddr_in *sin = (struct sockaddr_in *) p->ai_addr;
-	    assert(p->ai_addrlen == sizeof(*sin));
-	    
-	    addr = make_address_info(lsh_string_ntop(AF_INET, INET_ADDRSTRLEN,
-						     &sin->sin_addr),
-				     ntohs(sin->sin_port));
-
-	    break;
-	  }
-      }
-#if WITH_IPV6
-    if (!addr)
-      for (p = list; p; p = p->ai_next)
-      {
-	if (p->ai_family == AF_INET6)
-	  {
-	    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) p->ai_addr;
-	    assert(p->ai_addrlen == sizeof(*sin6));
-	    
-	    addr = make_address_info(lsh_string_ntop(AF_INET6, INET6_ADDRSTRLEN,
-						     &sin6->sin6_addr),
-				     ntohs(sin6->sin6_port));
-
-	    break;
-	  }
-      }
-#endif
-    freeaddrinfo(list);
-    
-    if (!addr)
-      {
-	werror("No internet address found.\n");
-	return NULL;
-      }
-
-    return addr;
-  }
-#else
-#error At the moment, getaddrinfo is required
-#endif
 }
 
 static void
@@ -1089,13 +958,24 @@ io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length)
 
   fd = socket(addr->sa_family, SOCK_STREAM, 0);
   if (fd < 0)
-    return -1;
-
+    {
+      werror("socket failed: %e.\n", errno);
+      return -1;
+    }
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes)) < 0)
     werror("setsockopt failed: %e.\n", errno);
 
+#if WITH_IPV6 && defined (IPV6_V6ONLY)
+  if (addr->sa_family == AF_INET6)
+    {
+      if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes)) < 0)
+	werror("setsockopt IPV6_V6ONLY failed: %e.\n", errno);
+    }
+#endif
+  
   if (bind(fd, addr, addr_length) < 0)
     {
+      werror("bind failed: %e.\n", errno);
       close(fd);
       return -1;
     }
