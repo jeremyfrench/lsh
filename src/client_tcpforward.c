@@ -58,25 +58,16 @@ do_forward_local_port(struct client_connection_action *s,
 		      struct ssh_connection *connection)
 {
   CAST(forward_local_port_action, self, s);
-  struct io_listen_port *port;
+  struct resource *port;
 
-  port = make_tcpforward_listen_port(connection, ATOM_DIRECT_TCPIP,
-				     self->local, self->target);
-  if (!port)
-    {
-      werror("Invalid local port %S:%i.\n",
-	     self->local->ip, self->local->port);
-    }
-  else if (!io_listen(port))
-    {
-      werror("Listening on local port %S:%i failed: %e.\n",
-	     self->local->ip, self->local->port, errno);
-      KILL_RESOURCE(&port->super.super);
-     }
+  port = tcpforward_listen(connection, ATOM_DIRECT_TCPIP,
+			   self->local, self->target);
+  if (port)
+    remember_resource(connection->resources, port);
+
   else
-    {
-      remember_resource(connection->resources, &port->super.super);
-    }
+    werror("Could not forward local port %S:%i.\n",
+	   self->local->ip, self->local->port);
 }
 
 struct client_connection_action *
