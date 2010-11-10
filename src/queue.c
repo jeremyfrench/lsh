@@ -38,8 +38,6 @@ static void do_object_queue_mark(struct lsh_queue *q,
 				 void (*mark)(struct lsh_object *o));
 static void do_object_queue_free(struct lsh_queue *q);
 static void do_string_queue_free(struct lsh_queue *q);
-static void do_addr_queue_free(struct lsh_queue *q);
-
 
 #define GABA_DEFINE
 #include "queue.h.x"
@@ -372,77 +370,6 @@ do_string_queue_free(struct lsh_queue *q)
   FOR_QUEUE(q, struct string_queue_node *, n)
     {
       lsh_string_free(n->s);
-      lsh_space_free(n);
-    }
-}
-
-
-/* addr_queue */
-static struct addr_queue_node *
-make_addr_queue_node(socklen_t size)
-{
-  struct addr_queue_node *n
-    = lsh_space_alloc(offsetof(struct addr_queue_node, addr)
-		      + size);
-  n->size = size;
-  return n;
-}
-
-struct sockaddr *
-addr_queue_add_head(struct addr_queue *q, socklen_t size)
-{
-  struct addr_queue_node *n = make_addr_queue_node(size);
-  lsh_queue_add_head(&q->q, &n->header);
-  return &n->addr; 
-}
-
-struct sockaddr *
-addr_queue_add_tail(struct addr_queue *q, socklen_t size)
-{
-  struct addr_queue_node *n = make_addr_queue_node(size);
-  lsh_queue_add_tail(&q->q, &n->header);
-  return &n->addr; 
-}
-
-void
-addr_queue_remove_head(struct addr_queue *q)
-{
-  lsh_space_free(lsh_queue_remove_head(&q->q));
-}
-
-void
-addr_queue_remove_tail(struct addr_queue *q)
-{
-  lsh_space_free(lsh_queue_remove_tail(&q->q));
-}
-
-static struct sockaddr *
-addr_queue_peek(struct lsh_queue_node *n, socklen_t *size)
-{
-  struct addr_queue_node *self = (struct addr_queue_node *) n;
-  *size = self->size;
-  return &self->addr;
-}
-
-struct sockaddr *
-addr_queue_peek_head(struct addr_queue *q, socklen_t *size)
-{
-  return q->q.length ? addr_queue_peek(q->q.head, size)
-    : NULL;
-}
-
-struct sockaddr *
-addr_queue_peek_tail(struct addr_queue *q, socklen_t *size)
-{
-  return q->q.length ? addr_queue_peek(q->q.tailprev, size)
-    : NULL;
-}
-
-static void
-do_addr_queue_free(struct lsh_queue *q)
-{
-  FOR_QUEUE(q, struct addr_queue_node *, n)
-    {
       lsh_space_free(n);
     }
 }

@@ -166,38 +166,4 @@ struct lsh_string *string_queue_peek_tail(struct string_queue *q);
 	  && (var = ((struct string_queue_node *)var##_node)->s);	\
         var##_node = var##_node->np_links[LSH_QUEUE_NEXT])
 
-
-/* addr_queue */
-struct addr_queue_node
-{
-  struct lsh_queue_node header;
-  socklen_t size;
-  struct sockaddr addr;
-};
-
-/* GABA:
-   (struct
-     (name addr_queue)
-     (vars
-       (q indirect-special "struct lsh_queue"
-          #f do_addr_queue_free)))
-*/
-
-#define addr_queue_init(self) lsh_queue_init(&(self)->q)
-#define addr_queue_is_empty(self) lsh_queue_is_empty(&(self)->q)
-
-struct sockaddr *
-addr_queue_add_head(struct addr_queue *q, socklen_t size);
-
-struct sockaddr *
-addr_queue_add_tail(struct addr_queue *q, socklen_t size);
-
-void addr_queue_remove_head(struct addr_queue *q);
-void addr_queue_remove_tail(struct addr_queue *q);
-
-struct sockaddr *
-addr_queue_peek_head(struct addr_queue *q, socklen_t *size);
-struct sockaddr *
-addr_queue_peek_tail(struct addr_queue *q, socklen_t *size);
-
 #endif /* LSH_QUEUE_H_INCLUDED */
