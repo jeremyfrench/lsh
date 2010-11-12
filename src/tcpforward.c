@@ -274,11 +274,9 @@ tcpforward_connect(const struct address_info *addr,
       self->list = list; 
      
       for (self->next = self->list; self->next; self->next = self->next->ai_next)
-	{
-	  if (io_connect(&self->super,
-			 self->next->ai_addrlen, self->next->ai_addr))
-	    return &self->super.super.super;
-	}
+	if (io_connect(&self->super,
+		       self->next->ai_addrlen, self->next->ai_addr))
+	  return &self->super.super.super;
 
       channel_open_deny(info, SSH_OPEN_CONNECT_FAILED, STRERROR(errno));
       return NULL;
