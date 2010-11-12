@@ -977,7 +977,8 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
       if (!service_config_option(self->ctx->service_config,
 				 "service", value, data))
 	return EINVAL;
-				 
+      break;
+
     case OPT_CORE:
       if (self->corefile < 0)
 	self->corefile = value;
