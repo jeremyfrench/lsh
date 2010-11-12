@@ -1,3 +1,19 @@
+2010-11-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-userauth.c (main_options): Fixed double ':' in header.
+	(class lshd_userauth_config): Deleted werror_config attribute;
+	this class is already inherited.
+	(make_lshd_userauth_config): Deleted initialization of
+	werror_config attribute.
+	(CASE_FLAG): New macro.
+	(main_argp_parser): Use CASE_FLAG.
+	(lshd_userauth_config_handler): Updated child state initialization
+	to point to inherited werror config.
+	(lshd_userauth_config_handler): Added missing break.
+	(main): Use trace, not werror, for startup message.
+
+	* src/lshd.c (lshd_config_handler): Added missing break.
+
 2010-11-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (parse_arg_unsigned): New argument with expected
