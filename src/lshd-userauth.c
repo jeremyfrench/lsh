@@ -897,7 +897,7 @@ main_options[] =
     "Service to offer. Unlike --service does not override other services "
     "listed in the config file.", 0 },
 
-  { NULL, 0, NULL, 0, "Authentication options::", 0 },  
+  { NULL, 0, NULL, 0, "Authentication options:", 0 },  
   { "allow-password", OPT_PASSWORD, NULL, 0,
     "Enable password user authentication.", 0},
   { "deny-password", OPT_NO_PASSWORD, NULL, 0,
@@ -921,7 +921,6 @@ main_options[] =
      (name lshd_userauth_config)
      (super server_config)
      (vars
-       (werror_config object werror_config)
        (service_config object service_config)
        (session_id string)
        (allow_password . int)
@@ -941,7 +940,6 @@ make_lshd_userauth_config(void)
 		     FILE_LSHD_USERAUTH_CONF,
 		     ENV_LSHD_USERAUTH_CONF);
 
-  self->werror_config = make_werror_config();
   self->service_config = make_service_config();
   self->session_id = NULL;
   self->allow_password = -1;
@@ -950,6 +948,14 @@ make_lshd_userauth_config(void)
 
   return self;
 }
+
+#define CASE_FLAG(opt, flag)			\
+  case OPT_##opt:				\
+    self->flag = 1;				\
+    break;					\
+  case OPT_NO_##opt:				\
+    self->flag = 0;				\
+    break
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -1014,27 +1020,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 			  state, "service", arg);      
       break;
 
-    case OPT_PASSWORD:
-      self->allow_password = 1;
-      break;
-    case OPT_NO_PASSWORD:
-      self->allow_password = 0;
-      break;
-
-    case OPT_PUBLICKEY:
-      self->allow_publickey = 1;
-      break;
-    case OPT_NO_PUBLICKEY:
-      self->allow_publickey = 0;
-      break;
-
-    case OPT_ROOT_LOGIN:
-      self->allow_root_login = 1;
-      break;
-    case OPT_NO_ROOT_LOGIN:
-      self->allow_root_login = 0;
-      break;
-      
+    CASE_FLAG(PASSWORD, allow_password);
+    CASE_FLAG(PUBLICKEY, allow_publickey);
+    CASE_FLAG(ROOT_LOGIN, allow_root_login);
     }
   return 0;
 }
@@ -1072,7 +1060,7 @@ lshd_userauth_config_handler(int key, uint32_t value, const uint8_t *data UNUSED
   switch (key)
     {
     case CONFIG_PARSE_KEY_INIT:
-      state->child_inputs[0] = self->werror_config;
+      state->child_inputs[0] = &self->super.super;
       break;
     case CONFIG_PARSE_KEY_END:
       /* Set up defaults, for values specified neither in the
@@ -1090,7 +1078,7 @@ lshd_userauth_config_handler(int key, uint32_t value, const uint8_t *data UNUSED
       if (!service_config_option(self->service_config,
 				 "service", value, data))
 	return EINVAL;
-
+      break;
     case OPT_PASSWORD:
       if (self->allow_password < 0)
 	self->allow_password = value;
@@ -1134,7 +1122,7 @@ main(int argc, char **argv)
 
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
-  verbose("Started userauth service.\n");
+  trace("Started userauth service.\n");
 
   libexecdir = getenv(ENV_LSHD_LIBEXEC_DIR);
   if (!libexecdir)
