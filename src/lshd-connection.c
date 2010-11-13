@@ -55,12 +55,26 @@
 
 #include "lshd-connection.c.x"
 
+enum tcpforward_type {  
+  TCPFORWARD_LOCAL = 1,
+  TCPFORWARD_REMOTE = 2
+};
+
 /* GABA:
    (class
      (name lshd_connection_config)
      (super server_config)
      (vars
-       (helper_fd . int)))
+       (helper_fd . int)
+       (subsystem_config object service_config)
+       ; For all these, -1 means use the default
+       ; enum tcpforward_type flags ored together.
+       (allow_tcpforward . int)
+       (allow_session . int)
+       (allow_shell . int)
+       (allow_exec . int)
+       (allow_pty . int)
+       (allow_x11 . int)))
 */
 
 /* GABA:
@@ -258,7 +272,6 @@ make_lshd_connection(struct lshd_connection_config *config)
 {
   NEW(lshd_connection, self);
   init_ssh_connection(&self->super, kill_lshd_connection, do_write_packet, do_disconnect);
-  struct alist *requests;
   
   io_register_fd(STDIN_FILENO, "transport read fd");
 
@@ -266,61 +279,125 @@ make_lshd_connection(struct lshd_connection_config *config)
   self->reader = make_service_read_state();
   service_start_read(self);
 
-  /* FIXME: Make pty and x11 support configurable. */  
-  requests = make_alist(4,
-			ATOM_SHELL, &shell_request_handler,
-			ATOM_EXEC, &exec_request_handler,
-			ATOM_PTY_REQ, &pty_request_handler,
-			ATOM_WINDOW_CHANGE, &window_change_request_handler, -1);
-#if WITH_X11_FORWARD
-  ALIST_SET (requests, ATOM_X11_REQ, &x11_request_handler.super);
-#endif
-    
-  ALIST_SET(self->super.channel_types, ATOM_SESSION,
-	    &make_open_session(requests,
-			       self->config->helper_fd)->super);
+  if (config->allow_session)
+    {
+      struct alist *requests = make_alist(0, -1);
 
-  /* FIXME: Make tcpip forwarding optional */
-  ALIST_SET(self->super.channel_types, ATOM_DIRECT_TCPIP, &channel_open_direct_tcpip.super);
-  
-  ALIST_SET(self->super.global_requests, ATOM_TCPIP_FORWARD,
-	    &tcpip_forward_handler.super);
-  ALIST_SET(self->super.global_requests, ATOM_CANCEL_TCPIP_FORWARD,
-	    &tcpip_cancel_forward_handler.super);
+      if (config->allow_shell)
+	ALIST_SET(requests, ATOM_SHELL, &shell_request_handler.super);
+      if (config->allow_exec)
+	ALIST_SET(requests, ATOM_EXEC, &exec_request_handler.super);
+
+#if WITH_PTY_SUPPORT
+      if (config->allow_pty)
+	{
+	  ALIST_SET(requests, ATOM_PTY_REQ, &pty_request_handler.super);
+	  ALIST_SET(requests, ATOM_WINDOW_CHANGE,
+		    &window_change_request_handler.super);
+	}
+      /* FIXME: Warning message if disabled at compile time. */
+#endif
+#if WITH_X11_FORWARD
+      if (config->allow_x11)
+	ALIST_SET (requests, ATOM_X11_REQ, &x11_request_handler.super);
+#endif
+
+      if (!object_queue_is_empty(&config->subsystem_config->services))
+	ALIST_SET(requests, ATOM_SUBSYSTEM,
+		  &make_subsystem_handler(config->subsystem_config)->super);
+
+      ALIST_SET(self->super.channel_types, ATOM_SESSION,
+		&make_open_session(requests,
+				   config->helper_fd)->super);
+    }
+
+  if (config->allow_tcpforward & TCPFORWARD_LOCAL)
+    ALIST_SET(self->super.channel_types, ATOM_DIRECT_TCPIP,
+	      &channel_open_direct_tcpip.super);
+
+  if (config->allow_tcpforward & TCPFORWARD_REMOTE)
+    {
+      ALIST_SET(self->super.global_requests, ATOM_TCPIP_FORWARD,
+		&tcpip_forward_handler.super);
+      ALIST_SET(self->super.global_requests, ATOM_CANCEL_TCPIP_FORWARD,
+		&tcpip_cancel_forward_handler.super);
+    }
 
   return self;
 }
 
 /* Option parsing */
 
-const char *argp_program_version
-= "lshd-connection (" PACKAGE_STRING ")";
+static const struct config_parser
+lshd_connection_config_parser;
 
 static struct lshd_connection_config *
 make_lshd_connection_config(void)
 {
   NEW(lshd_connection_config, self);
-  init_server_config(&self->super, &werror_config_parser,
+  init_server_config(&self->super, &lshd_connection_config_parser,
 		     FILE_LSHD_CONNECTION_CONF,
 		     ENV_LSHD_CONNECTION_CONF);
 
+  self->subsystem_config = make_service_config ();
   self->helper_fd = -1;
+
+  self->allow_tcpforward = -1;
+  self->allow_session = -1;
+  self->allow_shell = -1;
+  self->allow_exec = -1;
+  self->allow_pty = -1;
+  self->allow_x11 = -1;
+
   return self;
 }
 
 enum {
   OPT_HELPER_FD = 0x201,
+  OPT_SESSION,
+  OPT_NO_SESSION,
+  OPT_SHELL,
+  OPT_NO_SHELL,
+  OPT_EXEC,
+  OPT_NO_EXEC,
+  OPT_PTY,
+  OPT_NO_PTY,
+  OPT_X11_FORWARD,
+  OPT_NO_X11_FORWARD,
+  OPT_SUBSYSTEM,
+  OPT_ADD_SUBSYSTEM,
+  OPT_TCPFORWARD,
+  OPT_NO_TCPFORWARD,
 };
 
 static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
+  { "allow-tcpip-forward", OPT_TCPFORWARD, "TYPE", OPTION_ARG_OPTIONAL,
+    "The optional type can be \"local\" or \"remote\".", 0 },
+  { "deny-tcpip-forward", OPT_NO_TCPFORWARD, NULL, 0,
+    "Disable all TCP/IP forwarding.", 0 },
   { "helper-fd", OPT_HELPER_FD, "FD", 0,
     "Use this file descriptor to talk to the helper process "
     "managing ptys and utmp records.", 0 },
+  { NULL, 0, NULL, 0, "Session configuration:", 0},
+  { "allow-session", OPT_SESSION, NULL, 0, "Allow sessions channels.", 0},
+  { "deny-session", OPT_NO_SESSION, NULL, 0, "Deny all session channels.", 0},
+  { "allow-shell", OPT_SHELL, NULL, 0, "Allow shell sessions.", 0},
+  { "deny-shell", OPT_NO_SHELL, NULL, 0, "Deny shell sessions.", 0},
+  { "allow-exec", OPT_EXEC, NULL, 0, "Allow exec sessions.", 0},
+  { "deny-exec", OPT_NO_EXEC, NULL, 0, "Deny exec sessions.", 0},
+  { "subsystem", OPT_SUBSYSTEM, "NAME { COMMAND LINE }", 0,
+    "Enable named subsystem.", 0 },
+  { "add-subsystem", OPT_ADD_SUBSYSTEM, "NAME { COMMAND LINE }", 0,
+    "Enable named subsystem. Unlike --subsystem does not override "
+    "other services listed in the config file.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
+
+const char *argp_program_version
+= "lshd-connection (" PACKAGE_STRING ")";
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
@@ -330,6 +407,14 @@ main_argp_children[] =
   { &server_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
+
+#define CASE_FLAG(opt, flag)			\
+  case OPT_##opt:				\
+    self->flag = 1;				\
+    break;					\
+  case OPT_NO_##opt:				\
+    self->flag = 0;				\
+    break
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -342,6 +427,25 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
+      break;
+    case ARGP_KEY_END:
+      /* Defaults should have been setup at the end of the config
+	 file parsing. */
+      assert(self->allow_tcpforward >= 0);
+      assert(self->allow_session >= 0);
+      assert(self->allow_shell >= 0);
+      assert(self->allow_exec >= 0);
+      assert(self->allow_pty >= 0);
+      assert(self->allow_x11 >= 0);
+
+      if (!self->allow_tcpforward && !self->allow_session)
+	argp_error(state, "All channel types disabled.");
+      if (self->allow_session
+	  && !self->allow_shell && !self->allow_exec
+	  && object_queue_is_empty(&self->subsystem_config->services))
+	argp_error(state, "Session channel enabled, but all requests "
+		   "to start a process are disabled.");
+
       break;
     case OPT_HELPER_FD:
       {
@@ -366,6 +470,37 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	io_set_close_on_exec(self->helper_fd);
       }
       break;
+    case OPT_TCPFORWARD:
+      if (optarg)
+	{
+	  if (!strcmp(optarg, "local"))
+	    self->allow_tcpforward = TCPFORWARD_LOCAL;
+	  else if (!strcmp(optarg, "remote"))
+	    self->allow_tcpforward = TCPFORWARD_REMOTE;
+	  else
+	    argp_error(state, "Invalid argument to --allow-tcpforward.");
+	}
+      else
+	self->allow_tcpforward = TCPFORWARD_LOCAL | TCPFORWARD_REMOTE;
+      
+      break;
+    case OPT_NO_TCPFORWARD:
+      self->allow_tcpforward = 0;
+      break;
+
+    CASE_FLAG(SESSION, allow_session);
+    CASE_FLAG(SHELL, allow_shell);
+    CASE_FLAG(EXEC, allow_exec);
+    CASE_FLAG(PTY, allow_pty);
+    CASE_FLAG(X11_FORWARD, allow_x11);
+
+    case OPT_SUBSYSTEM:
+      self->subsystem_config->override_config_file = 1;
+      /* Fall through */
+    case OPT_ADD_SUBSYSTEM:
+      service_config_argp(self->subsystem_config,
+			  state, "subsystem", arg);      
+      break;      
     }
   return 0;
 }
@@ -380,6 +515,132 @@ main_argp =
   NULL, NULL
 };
 
+static const struct config_option
+lshd_connection_config_options[] = {
+  { OPT_SUBSYSTEM, "subsystem", CONFIG_TYPE_LIST, "Enable subsystem.", NULL },
+  { OPT_SESSION, "allow-session", CONFIG_TYPE_BOOL,
+    "Support for session channels.", "yes" },
+  { OPT_SHELL, "allow-shell", CONFIG_TYPE_BOOL,
+    "Support for shell requests.", "yes" },
+  { OPT_EXEC, "allow-exec", CONFIG_TYPE_BOOL,
+    "Support for exec requests.", "yes" },
+  { OPT_PTY, "allow-pty", CONFIG_TYPE_BOOL,
+    "Support for pty requests.", "yes" },
+  { OPT_X11_FORWARD, "allow-x11", CONFIG_TYPE_BOOL,
+    "Support X11 forwarding.", "yes" },
+  { OPT_TCPFORWARD, "allow-tcpforward", CONFIG_TYPE_STRING,
+    "Support for tcpforward, \"yes\", \"no\", \"local\", or \"remote\".", "yes" },
+
+  { 0, NULL, 0, NULL, NULL }
+};
+
+static int
+lshd_connection_config_handler(int key, uint32_t value, const uint8_t *data UNUSED,
+			       struct config_parser_state *state)
+{
+  CAST_SUBTYPE(lshd_connection_config, self, state->input);
+  switch (key)
+    {
+    case CONFIG_PARSE_KEY_INIT:
+      state->child_inputs[0] = &self->super.super;
+      break;
+    case CONFIG_PARSE_KEY_END:
+      /* Set up defaults, for values specified neither in the
+	 configuration file nor on the command line. */
+      if (self->allow_tcpforward < 0)
+	self->allow_tcpforward = 0;
+      if (self->allow_session < 0)
+	self->allow_session = 0;
+      if (self->allow_shell < 0)
+	self->allow_shell = 0;
+      if (self->allow_exec < 0)
+	self->allow_exec = 0;
+      if (self->allow_pty < 0)
+	self->allow_pty = 0;
+      if (self->allow_x11 < 0)
+	self->allow_x11 = 0;
+
+      break;
+
+    case OPT_SUBSYSTEM:
+      if (!service_config_option(self->subsystem_config,
+				 "subsystem", value, data))
+	return EINVAL;
+      break;
+
+    case OPT_TCPFORWARD:
+      {
+	int flags;
+	switch (value)
+	  {
+	  default:
+	  fail:
+	    werror("Invalid argument for allow-tcpforward option.\n");
+	    return EINVAL;
+	  case 2:
+	    if (memcmp(data, "no", value))
+	      goto fail;
+	    flags = 0;
+	    break;
+	  case 3:
+	    if (memcmp(data, "yes", value))
+	      goto fail;
+	    flags = TCPFORWARD_LOCAL | TCPFORWARD_REMOTE;
+	    break;
+	  case 5:
+	    if (memcmp(data, "local", value))
+	      goto fail;
+	    flags = TCPFORWARD_LOCAL;
+	    break;
+	  case 6:
+	    if (memcmp(data, "remote", value))
+	      goto fail;
+	    flags = TCPFORWARD_REMOTE;
+	    break;
+	  }
+		
+	if (self->allow_tcpforward < 0)
+	  self->allow_tcpforward = flags;
+
+	break;
+      }
+
+    case OPT_SESSION:
+      if (self->allow_session < 0)
+	self->allow_session = value;
+      break;
+    case OPT_SHELL:
+      if (self->allow_shell < 0)
+	self->allow_shell = value;
+      break;
+    case OPT_EXEC:
+      if (self->allow_exec < 0)
+	self->allow_exec = value;
+      break;
+    case OPT_PTY:
+      if (self->allow_pty < 0)
+	self->allow_pty = value;
+      break;
+    case OPT_X11_FORWARD:
+      if (self->allow_x11 < 0)
+	self->allow_x11 = value;
+      break;
+    }
+  return 0;
+}
+
+static const struct config_parser *
+lshd_connection_config_children[] = {
+  &werror_config_parser,
+  NULL
+};
+
+static const struct config_parser
+lshd_connection_config_parser = {
+  lshd_connection_config_options,
+  lshd_connection_config_handler,
+  lshd_connection_config_children
+};
 
 int
 main(int argc, char **argv)
