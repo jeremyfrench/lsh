@@ -33,9 +33,6 @@
 #include "server.h.x"
 #undef GABA_DECLARE
 
-const char *
-server_lookup_module(const char **modules,
-		     uint32_t length, const uint8_t *name);
 
 /* GABA:
    (class
@@ -83,6 +80,7 @@ make_service_entry(const uint8_t *name, const uint8_t *storage);
      (name service_config)
      (vars
        (services struct object_queue)
+       (libexec_dir . "const char *")
        (override_config_file . int)))
 */
 
@@ -90,7 +88,7 @@ struct service_config *
 make_service_config(void);
 
 const struct service_entry *
-service_config_lookup(struct service_config *self,
+service_config_lookup(const struct service_config *self,
 		      size_t length, const char *name);
 
 void
