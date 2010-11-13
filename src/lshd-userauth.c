@@ -775,12 +775,14 @@ start_service(struct lshd_user *user, const char *program, const char **argv)
      support providing command line options with the service, that
      might be a cleaner alternative. */
 
-#define ENV_MAX 8
+#define ENV_MAX 9
 
   const char *env[ENV_MAX];
   const char *tz = getenv(ENV_TZ);
   const char *cname = lsh_get_cstring(user->name);  
   const char *config_dir = getenv(ENV_LSHD_CONFIG_DIR);
+  const char *libexec_dir = getenv(ENV_LSHD_LIBEXEC_DIR);
+  
   unsigned i;
   
   assert(cname);
@@ -796,6 +798,8 @@ start_service(struct lshd_user *user, const char *program, const char **argv)
 
   if (config_dir)
     env[i++] = format_env_pair(ENV_LSHD_CONFIG_DIR, config_dir);
+  if (libexec_dir)
+    env[i++] = format_env_pair(ENV_LSHD_LIBEXEC_DIR, libexec_dir);
   env[i++] = NULL;
 
   assert(i <= ENV_MAX);
@@ -1113,7 +1117,6 @@ main(int argc, char **argv)
 {
   struct lshd_user user;
   struct lshd_userauth_config *config = make_lshd_userauth_config();
-  const char *libexecdir;  
   const struct service_entry *service;
   int helper_fd;
   struct arglist args;
@@ -1123,13 +1126,6 @@ main(int argc, char **argv)
   argp_parse(&main_argp, argc, argv, 0, NULL, config);
 
   trace("Started userauth service.\n");
-
-  libexecdir = getenv(ENV_LSHD_LIBEXEC_DIR);
-  if (!libexecdir)
-    libexecdir = LIBEXECDIR;
-  else if (libexecdir[0] != '/')
-    die("Bad value for $%z: Must be an absolute filename.\n",
-	ENV_LSHD_LIBEXEC_DIR);
 
   lshd_user_init(&user);
 
@@ -1148,10 +1144,11 @@ main(int argc, char **argv)
   program = service->args.argv[0];
   arglist_push (&args, program);
 
-  /* If not absolute, interpret it relative to libexecdir. */
+  /* If not absolute, interpret it relative to libexec_dir. */
   if (program[0] != '/')
     program = lsh_get_cstring(ssh_format("%lz/%lz",
-					 libexecdir, program));
+					 config->service_config->libexec_dir,
+					 program));
   
   for (i = 1; i < service->args.argc; i++)
     {
@@ -1168,10 +1165,10 @@ main(int argc, char **argv)
 	      if (helper_fd < 0)
 		{
 		  /* FIXME: Make configurable? */
-		  /* Interpreted relative to libexecdir. */
+		  /* Interpreted relative to libexec_dir. */
 		  const char *helper_program
 		    = lsh_get_cstring(ssh_format("%lz/%lz",
-						 libexecdir,
+						 config->service_config->libexec_dir,
 						 FILE_LSHD_PTY_HELPER));
 		  
 		  helper_fd = spawn_helper(helper_program, user.uid,

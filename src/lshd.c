@@ -167,7 +167,6 @@ lshd_service_request_handler(struct transport_forward *self,
 	{
 	  int pipe[2];
 	  pid_t child;
-	  const char *libexecdir;
 
 	  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
 	    {
@@ -178,13 +177,6 @@ lshd_service_request_handler(struct transport_forward *self,
 				   "Service could not be started");
 	      return;
 	    }
-
-	  libexecdir = getenv(ENV_LSHD_LIBEXEC_DIR);
-	  if (!libexecdir)
-	    libexecdir = LIBEXECDIR;
-	  else if (libexecdir[0] != '/')
-	    die("Bad value for $%z: Must be an absolute filename.\n",
-		ENV_LSHD_LIBEXEC_DIR);
 
 	  child = fork();
 	  if (child < 0)
@@ -232,7 +224,8 @@ lshd_service_request_handler(struct transport_forward *self,
 		 libexecdir. */
 	      if (program[0] != '/')
 		program = lsh_get_cstring(ssh_format("%lz/%lz",
-						     libexecdir, program));
+						     ctx->service_config->libexec_dir,
+						     program));
 	      
 	      for (i = 1; i < service->args.argc; i++)
 		{
