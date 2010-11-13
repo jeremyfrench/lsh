@@ -1,3 +1,51 @@
+2010-11-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/config/lshd-connection.conf: Use new config file
+	options to enable all features.
+
+	* src/lshd-connection.c (enum tcpforward_type): New enum.
+	(class lshd_connection_config): Added attributes subsystem_config,
+	allow_tcpforward, allow_session, allow_shell, allow_exec,
+	allow_pty, allow_x11.
+	(make_lshd_connection): Make all session and forwarding features
+	configurable.
+	(make_lshd_connection_config): Initialize new atttributes, and
+	link to new lshd_connection_config_parser.
+	(main_options): New command line options: --allow-tcpip-forward,
+	--deny-tcpip-forward, --allow-session, --deny-session,
+	--allow-shell, --deny-shell, --allow-exec, --deny-exec,
+	--subsystem, and --add-subsystem.
+	(CASE_FLAG): New macro.
+	(main_argp_parser): Sanity check configuration at ARGP_KEY_END.
+	Handle new command line options (see above).
+	(lshd_connection_config_options): New list of config file options.
+	(lshd_connection_config_handler): New function.
+	(lshd_connection_config_parser): New config file parser.
+
+	* src/server_session.c (class subsystem_request): Use
+	service_config to represent subsystems.
+	(quote_argument_length): New function.
+	(quote_argument): New function.
+	(subsystem_command_line): New function.
+	(do_spawn_subsystem): Rewritten to use service_config_lookup and
+	subsystem_command_line.
+	(make_subsystem_handler): Changed argument type to const struct
+	service_config *.
+
+	* src/lshd-userauth.c (main): Use libexec_dir from the
+	service_config class.
+	(start_service): Propagate environment variable $LSHD_LIBEXEC_DIR.
+
+	* src/lshd.c (lshd_service_request_handler): Use libexec_dir from
+	the service_config class.
+
+	* src/server.c (server_lookup_module): Deleted function.
+	(make_service_config): Set libexec_dir, taking environment
+	variable $LSHD_LIBEXEC_DIR into account.
+	(service_config_lookup): Declare argument const.
+
+	* src/server.h (class service_config): New attribute libexec_dir.
+
 2010-11-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (main_options): Fixed double ':' in header.
