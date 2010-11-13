@@ -26,6 +26,7 @@
 
 #include "channel.h"
 #include "io.h"
+#include "server.h"
 
 #include <assert.h>
 #include <string.h>
@@ -40,7 +41,7 @@ extern struct channel_request
 exec_request_handler;
 
 struct channel_request *
-make_subsystem_handler(const char **subsystems);
+make_subsystem_handler(const struct service_config *subsystems);
 
 struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,

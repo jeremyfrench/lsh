@@ -44,7 +44,6 @@
 #include "lsh_process.h"
 #include "lsh_string.h"
 #include "reaper.h"
-#include "server.h"
 #include "server_pty.h"
 #include "server_x11.h"
 #include "ssh.h"
@@ -731,18 +730,116 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 			 "Invalid exec CHANNEL_REQUEST message.");
 }
 
-/* For simplicity, represent a subsystem simply as a name of the
- * executable. */
-
 /* GABA:
    (class
      (name subsystem_request)
      (super channel_request)
      (vars
-       ;(subsystems object alist)
-       ; A list { name, program, name, program, NULL }
-       (subsystems . "const char **")))
+       (subsystems const object service_config)))
 */
+
+
+static uint32_t
+quote_argument_length(const char *arg)
+{
+  uint32_t length;
+  uint32_t i;
+
+  /* Pair of single quotes. */
+  length = 2;
+
+  for (i = 0; arg[i]; i++)
+    {
+      if (arg[i] == '\'')
+	/* Needs to insert '"'"' */
+	length += 5;
+      else
+	length ++;
+    }
+  return length;
+}
+
+static uint32_t
+quote_argument(struct lsh_string *s, uint32_t pos, const char *arg)
+{
+  size_t seg;
+
+  do {
+    if (*arg == '\'')
+      {
+	lsh_string_putc(s, pos++, '"');
+	do
+	  {
+	    lsh_string_putc(s, pos++, '\'');
+	    arg++;
+	  }
+	while(*arg == '\'');
+	lsh_string_putc(s, pos++, '"');
+	if (!*arg)
+	  break;
+      }
+    lsh_string_putc(s, pos++, '\'');
+    seg = strcspn(arg, "'\n");
+    lsh_string_write(s, pos, seg, arg);
+    pos += seg;
+    arg += seg;
+
+    lsh_string_putc(s, pos++, '\'');
+  } while (*arg);
+
+  return pos;
+}
+/* Generate a shell command line from argument list, trying to be
+   portable for different shells. Single quotes are quoted using
+   double quotes, everything else using single quotes, except quote
+   newline which we can't quote portably (with bash one can quote it
+   with single quotes, while for tcsh we need both single quotes and a
+   n extra backslash). */
+static struct lsh_string *
+subsystem_command_line(const struct service_config *config,
+		       const struct arglist *args)
+{
+  struct lsh_string *s = NULL;
+  const char *program;
+  unsigned i;
+  uint32_t length;
+  uint32_t pos;
+
+  struct lsh_string *line;
+
+  assert(args->argc > 0);
+
+  program = args->argv[0];
+  if (program[0] != '/')
+    {
+      s = ssh_format("%lx/%lz", config->libexec_dir, program);
+      program = lsh_get_cstring(s);
+    }
+
+  /* Space separators */
+  length = quote_argument_length(program) + args->argc - 1;
+
+  for (i = 1; i < args->argc; i++)
+    {
+      if (strchr(args->argv[1], '\n'))
+	return NULL;
+
+      length += quote_argument_length(args->argv[i]);
+    }
+
+  line = lsh_string_alloc(length);
+
+  pos = quote_argument(line, 0, program);
+  lsh_string_free(s);
+  
+  for (i = 1; i < args->argc; i++)
+    {
+      lsh_string_putc(line, pos++, ' ');
+      pos = quote_argument(line, pos, args->argv[i]);
+    }
+  lsh_string_trunc(line, pos);
+  return line;
+}
 
 static void
 do_spawn_subsystem(struct channel_request *s,
@@ -758,32 +855,48 @@ do_spawn_subsystem(struct channel_request *s,
 
   if (parse_string(args, &name_length, &name)
       && parse_eod(args))
-    {    
-      const char * program = server_lookup_module(self->subsystems, name_length, name);
-  
-      if (!session->process && program)
+    {
+      if (!session->process)
 	{
-	  struct spawn_info spawn;
-	  const char *args[4] = { NULL, "-c", NULL, NULL };
-	  struct env_value env[5];
+	  const struct service_entry *subsystem;
+	  struct lsh_string *command_line;
 
-	  /* Don't use any pty */
-	  if (session->pty)
+	  subsystem = service_config_lookup(self->subsystems, name_length, name);
+	  if (subsystem)
 	    {
-	      KILL_RESOURCE(&session->pty->super);
-	      session->pty = NULL;
-	    }
+	      command_line = subsystem_command_line(self->subsystems,
+						    &subsystem->args);
+	      if (!command_line)
+		werror("Can't start subsystem with a command line containing newline.");
+	      else
+		{
+		  struct spawn_info spawn;
+		  const char *args[4] = { NULL, "-c", NULL, NULL };
+		  struct env_value env[5];
+	  
+		  /* Don't use any pty */
+		  if (session->pty)
+		    {
+		      KILL_RESOURCE(&session->pty->super);
+		      session->pty = NULL;
+		    }
 
-	  args[2] = program;
+		  args[2] = lsh_get_cstring(command_line);
       
-	  init_spawn_info(&spawn, session, args, 5, env);
-	  spawn.login = 0;
+		  init_spawn_info(&spawn, session, args, 5, env);
+		  spawn.login = 0;
 
-	  channel_request_reply(channel, info,
-				spawn_process(session, &spawn));
+		  channel_request_reply(channel, info,
+					spawn_process(session, &spawn));
+
+		  lsh_string_free(command_line);
+		  return;
+		}
+	    }
 	}
-      else
-	channel_request_reply(channel, info, 0);
+
+      /* The success case returns, this is the failure branch. */
+      channel_request_reply(channel, info, 0);
     }
   else
     SSH_CONNECTION_ERROR(channel->connection,
@@ -791,7 +904,7 @@ do_spawn_subsystem(struct channel_request *s,
 }
 
 struct channel_request *
-make_subsystem_handler(const char **subsystems)
+make_subsystem_handler(const struct service_config *subsystems)
 {
   NEW(subsystem_request, self);
 
