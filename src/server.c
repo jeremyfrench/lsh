@@ -45,27 +45,6 @@
 #include "server.h.x"
 #undef GABA_DEFINE
 
-/* Handles lists of services or subsystems. MODULES is a list { name,
-   program, name, program, ..., NULL }. FIXME: Delete, use the
-   service_config machinery also for subsystems. */ 
-const char *
-server_lookup_module(const char **modules,
-		     uint32_t length, const uint8_t *name)
-{
-  unsigned i;
-  if (memchr(name, 0, length))
-    return NULL;
-
-  for (i = 0; modules[i]; i+=2)
-    {
-      assert(modules[i+1]);
-      if ((length == strlen(modules[i]))
-	  && !memcmp(name, modules[i], length))
-	return modules[i+1];
-    }
-  return NULL;
-}
-
 /* The config file is located, in order of decreasing precendence:
  *
  *   1. The --config-file command line option.
@@ -270,12 +249,19 @@ make_service_config(void)
   object_queue_init(&self->services);
   self->override_config_file = 0;
 
+  self->libexec_dir = getenv(ENV_LSHD_LIBEXEC_DIR);
+
+  if (!self->libexec_dir)
+    self->libexec_dir = LIBEXECDIR;
+  else if (self->libexec_dir[0] != '/')
+    die("Bad value for $%z: Must be an absolute filename.\n",
+	ENV_LSHD_LIBEXEC_DIR);
+
   return self;
 }
 
-
 const struct service_entry *
-service_config_lookup(struct service_config *self,
+service_config_lookup(const struct service_config *self,
 		      size_t length, const char *name)
 {
   FOR_OBJECT_QUEUE (&self->services, n)
