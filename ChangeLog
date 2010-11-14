@@ -1,3 +1,9 @@
+2010-11-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd-connection.c (make_lshd_connection): Warning message
+	for attempt to enable features which were disabled at compile
+	time.
+
 2010-11-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/config/lshd-connection.conf: Use new config file
