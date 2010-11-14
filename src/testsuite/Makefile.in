@@ -111,8 +111,8 @@ include $(srcdir)/.test-rules.make
 prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT)
 	$(LINK) prgrp-timeout.$(OBJEXT) -o prgrp-timeout 
 
-mini-inetd(EXEEXT): mini-inetd.$(OBJEXT)
-	$(LINK) mini-inetd.$(OBJEXT) -o mini-inetd
+mini-inetd$(EXEEXT): mini-inetd.$(OBJEXT)
+	$(LINK) mini-inetd.$(OBJEXT) $(LIBS) -o mini-inetd
 
 # FIXME: Make this optional
 # Do we need -rdynamic?
