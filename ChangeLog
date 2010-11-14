@@ -1,5 +1,7 @@
 2010-11-14  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/Makefile.in (mini-inetd$(EXEEXT)): Fixed typo with EXEEXT.
+
 	* src/lshd-connection.c (make_lshd_connection): Warning message
 	for attempt to enable features which were disabled at compile
 	time.
