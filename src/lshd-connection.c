@@ -288,20 +288,24 @@ make_lshd_connection(struct lshd_connection_config *config)
       if (config->allow_exec)
 	ALIST_SET(requests, ATOM_EXEC, &exec_request_handler.super);
 
-#if WITH_PTY_SUPPORT
       if (config->allow_pty)
 	{
+#if WITH_PTY_SUPPORT
 	  ALIST_SET(requests, ATOM_PTY_REQ, &pty_request_handler.super);
 	  ALIST_SET(requests, ATOM_WINDOW_CHANGE,
 		    &window_change_request_handler.super);
+#else /* !WITH_PTY_SUPPORT */
+	  werror("PTY support disabled at compile time.\n");
+#endif /* !WITH_PTY_SUPPORT */
 	}
-      /* FIXME: Warning message if disabled at compile time. */
-#endif
-#if WITH_X11_FORWARD
       if (config->allow_x11)
-	ALIST_SET (requests, ATOM_X11_REQ, &x11_request_handler.super);
-#endif
-
+	{
+#if WITH_X11_FORWARD
+	  ALIST_SET (requests, ATOM_X11_REQ, &x11_request_handler.super);
+#else /* !WITH_X11_FORWARD */
+	  werror("X11 support disabled at compile time.\n");
+#endif /* !WITH_X11_FORWARD */
+	}
       if (!object_queue_is_empty(&config->subsystem_config->services))
 	ALIST_SET(requests, ATOM_SUBSYSTEM,
 		  &make_subsystem_handler(config->subsystem_config)->super);
