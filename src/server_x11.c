@@ -93,11 +93,12 @@ do_kill_x11_listen_port(struct resource *s)
 
       /* Temporarily change to the right directory. */
       old_cd = lsh_pushd_fd(self->dir);
-      if (old_cd < 0)
-	return;
 
       close(self->dir);
       self->dir = -1;
+
+      if (old_cd < 0)
+	return;
 
       if (unlink(lsh_get_cstring(self->name)) < 0)
 	werror("Failed to delete x11 socket %S: %e.\n",
@@ -215,6 +216,7 @@ open_x11_socket(struct ssh_connection *connection,
       sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
       snprintf(sa.sun_path, sizeof(sa.sun_path), "X%d", number);
 
+      trace("Trying to bind X11 display %i\n", number);
       s = io_bind_sockaddr((struct sockaddr *) &sa, SUN_LEN(&sa));
 
       if (s >= 0)
@@ -223,6 +225,11 @@ open_x11_socket(struct ssh_connection *connection,
 	  name = make_string(sa.sun_path);
 	  break;
 	}
+      else if (errno != EADDRINUSE)
+	/* FIXME: On Solaris, gid root is required to create sockets
+	   in /tmp/.X11-unix. Attempt to bind tcp/ip port on localhost
+	   instead? */
+	break;
     }
 
   umask(old_umask);
