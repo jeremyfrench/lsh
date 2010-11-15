@@ -37,6 +37,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+/* For IPPROTO_TCP on FreeBSD */
+#include <netinet/in.h>
+
 #include "getopt.h"
 
 static void NORETURN PRINTF_STYLE(1, 2)
