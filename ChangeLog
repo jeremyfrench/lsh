@@ -1,5 +1,13 @@
 2010-11-15  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/Makefile.in (OTHER_SOURCES): Added getopt.c getopt1.c.
+	(DISTFILES): Added getopt.h.
+	(GETOPT_OBJS): New variable.
+	(prgrp-timeout): Depend on and link with getopt files.
+	(mini-inetd): Likewise.
+
+	* .bootstrap: Link getopt files to the src/testsuite directory.
+
 	* misc/xenofarm.sh: If a gmp dist is included in the build
 	package, and gmp is not already installed on the system, install
 	it in $pfx before trying to build lsh.
@@ -20,7 +28,7 @@
 
 2010-11-14  Niels Möller  <nisse@lysator.liu.se>
 
-	* src/testsuite/Makefile.in (mini-inetd$(EXEEXT)): Fixed typo with EXEEXT.
+	* src/testsuite/Makefile.in (mini-inetd): Fixed typo with EXEEXT.
 
 	* src/lshd-connection.c (make_lshd_connection): Warning message
 	for attempt to enable features which were disabled at compile
@@ -317,7 +325,7 @@
 	lshd-no-auth-test.
 	(TARGETS): Added mini-inetd.
 	(OTHER_SOURCES): Added mini-inetd.c.
-	(mini-inetd(EXEEXT)): New rule.
+	(mini-inetd): New rule.
 
 	* src/testsuite/mini-inetd.c: New file. Reimplementation of
 	mini-inetd, hopefully working better with IPv6 than the version in
@@ -1122,7 +1130,7 @@
 	(lsh_SOURCES): Removed xauth.c.
 	(lsh_writekey_SOURCES): Deleted.
 	(lsh_writekey_OBJS): Deleted.
-	(lsh-writekey$(EXEEXT)): Deleted target.
+	(lsh-writekey): Deleted target.
 	(lsh_transport_OBJS): Added $(INTERACT_RANDOM_OBJS).
 	(lsh_keygen_OBJS): Likewise.
 
