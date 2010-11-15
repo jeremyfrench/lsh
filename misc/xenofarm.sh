@@ -109,7 +109,8 @@ dotask() {
     warnfunc="$3"
     cmd="$4"
     var=${5:-status}
-    if test `eval echo '${'$var'}'` = good
+    var_value=`eval echo '${'$var'}'`
+    if test $var_value = good
     then
 	logstart $task
         timeecho Begin $task
@@ -130,7 +131,7 @@ dotask() {
 	    logfail
 	fi
     else
-	echo status $status makes it impossible/unnecessary to perform this step \
+	echo status $var_value makes it impossible/unnecessary to perform this step \
 	    > r/${task}log.txt
     fi
 }
@@ -206,6 +207,7 @@ else
 fi
 
 if [ -f $LIBGMPDIST ] ; then
+  LIBGMPBASE=`echo $LIBGMPDIST | sed 's/.tar.gz$//'`
   # Crude check if gmp is installed. If not, install i $pfx.
   if [ -f /usr/include/gmp.h ] ; then
     libgmpstatus=skip
