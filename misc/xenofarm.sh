@@ -44,6 +44,8 @@ pfx=`pwd`/pfx
 
 oopcfgargs="-C --prefix=$pfx --disable-shared --without-adns --without-readline --without-glib --without-tcl --without-www $cfgargs"
 
+gmpcfgargs="-C --prefix=$pfx --disable-shared"
+
 cfgargs="-C --with-include-path=/usr/local/include:$pfx/include --with-lib-path=/usr/local/lib:$pfx/lib --prefix=$pfx $cfgargs"
 
 # Fix PATH for system where the default environment is broken
@@ -73,6 +75,7 @@ BASE=`echo lsh-*.tar.gz | sed 's/.tar.gz$//'`
 VERS=`echo "$BASE" | sed 's/^lsh-//'`
 
 LIBOOPDIST=`echo liboop-*.tar.gz`
+LIBGMPDIST=`echo libgmp-*.tar.gz`
 
 timeecho () {
     # FIXME: Don't depend on GNU date
@@ -202,12 +205,34 @@ else
   liboopstatus=skip
 fi
 
+if [ -f $LIBGMPDIST ] ; then
+  # Crude check if gmp is installed. If not, install i $pfx.
+  if [ -f /usr/include/gmp.h ] ; then
+    libgmpstatus=skip
+  else
+    if [ -f /usr/local/include/gmp.h ] ; then
+      libgmpstatus=skip
+    else
+      libgmpstatus=good
+    fi
+  fi
+else
+  libgmpstatus=skip
+fi
+
 dotask 1 "oopunzip" "" "gzip -d $LIBOOPBASE.tar.gz" liboopstatus
 dotask 1 "oopunpack" "" "tar xf $LIBOOPBASE.tar" liboopstatus
 dotask 1 "oopcfg" "cfgwarn" "cd $LIBOOPBASE && ./configure $oopcfgargs" liboopstatus
 dotask 1 "oopmake" "makewarn" "cd $LIBOOPBASE && $MAKE" liboopstatus
 dotask 0 "oopcheck" "makewarn" "cd $LIBOOPBASE && $MAKE check" liboopstatus
 dotask 1 "oopinstall" "makewarn" "cd $LIBOOPBASE && $MAKE install" liboopstatus
+
+dotask 1 "gmpunzip" "" "gzip -d $LIBGMPBASE.tar.gz" libgmpstatus
+dotask 1 "gmpunpack" "" "tar xf $LIBGMPBASE.tar" libgmpstatus
+dotask 1 "gmpcfg" "cfgwarn" "cd $LIBGMPBASE && ./configure $gmpcfgargs" libgmpstatus
+dotask 1 "gmpmake" "makewarn" "cd $LIBGMPBASE && $MAKE" libgmpstatus
+dotask 0 "gmpcheck" "makewarn" "cd $LIBGMPBASE && $MAKE check" libgmpstatus
+dotask 1 "gmpinstall" "makewarn" "cd $LIBGMPBASE && $MAKE install" libgmpstatus
 
 dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
@@ -269,6 +294,9 @@ cp $BASE/config.h r/config-h.txt
 
 cp $LIBOOPBASE/config.cache r/oopconfigcache.txt
 cp $LIBOOPBASE/config.log r/oopconfiglog.txt
+
+cp $LIBGMPBASE/config.cache r/gmpconfigcache.txt
+cp $LIBGMPBASE/config.log r/gmpconfiglog.txt
 
 find $BASE -name core -print > r/corefiles.txt
 if test `wc -l < r/corefiles.txt` -eq 0
