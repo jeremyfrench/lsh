@@ -207,7 +207,7 @@ open_x11_socket(struct ssh_connection *connection,
   
   for (number = X11_MIN_DISPLAY; number <= X11_MAX_DISPLAY; number++)
     {
-      /* The default size if sockaddr_un should always be enough to format
+      /* The default size of sockaddr_un should always be enough to format
        * the filename "X<display num>". */
       struct sockaddr_un sa;
   
