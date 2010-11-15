@@ -1,5 +1,9 @@
 2010-11-15  Niels Möller  <nisse@lysator.liu.se>
 
+	* misc/xenofarm.sh: If a gmp dist is included in the build
+	package, and gmp is not already installed on the system, install
+	it in $pfx before trying to build lsh.
+
 	* src/testsuite/mini-inetd.c: Include netinet/in.h, needed for
 	IPPROTO_TCP on FreeBSD.
 
