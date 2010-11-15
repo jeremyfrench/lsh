@@ -1,5 +1,8 @@
 2010-11-15  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/mini-inetd.c: Include netinet/in.h, needed for
+	IPPROTO_TCP on FreeBSD.
+
 	* src/server_x11.c (do_kill_x11_listen_port): Close self->dir,
 	even if lsh_pushd_fd fails.
 	(open_x11_socket): Stop trying higher display numbers if bind
