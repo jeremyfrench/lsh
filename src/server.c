@@ -330,7 +330,7 @@ service_config_option(struct service_config *self,
 
       item = data;
       
-      item_length = strnlen(item, length) + 1;
+      item_length = strlen(item) + 1;
       assert (item_length <= length);
 
       if (item_length == length)
@@ -355,7 +355,7 @@ service_config_option(struct service_config *self,
 	  
       while (length > 0)
 	{
-	  item_length = strnlen(item, length) + 1;
+	  item_length = strlen(item) + 1;
 	  assert (item_length <= length);
 
 	  arglist_push(&entry->args, item);
