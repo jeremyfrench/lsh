@@ -37,11 +37,11 @@ relative_symlink misc/vsnprintf.c \
     argp sftp
     
 relative_symlink misc/getopt.c \
-    nettle/examples nettle/tools spki/tools
+    src/testsuite nettle/examples nettle/tools spki/tools
 relative_symlink misc/getopt1.c \
-    nettle/examples nettle/tools spki/tools
+    src/testsuite nettle/examples nettle/tools spki/tools
 relative_symlink misc/getopt.h \
-    nettle/examples nettle/tools spki/tools
+    src/testsuite nettle/examples nettle/tools spki/tools
 
 relative_symlink config.guess nettle spki
 relative_symlink config.sub nettle spki
