@@ -1,3 +1,16 @@
+2010-11-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_x11.c (do_kill_x11_listen_port): Close self->dir,
+	even if lsh_pushd_fd fails.
+	(open_x11_socket): Stop trying higher display numbers if bind
+	fails with an error other then EADDRINUSE.
+
+	* src/io.c (io_bind_sockaddr): Save and restore errno when
+	returning failure.
+
+	* src/server.c (service_config_option): Avoid using the
+	non-standard strnlen function; plain strlen is good enough here.
+
 2010-11-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (mini-inetd$(EXEEXT)): Fixed typo with EXEEXT.
