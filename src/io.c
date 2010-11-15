@@ -959,7 +959,9 @@ io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length)
   fd = socket(addr->sa_family, SOCK_STREAM, 0);
   if (fd < 0)
     {
+      int saved_errno = errno;
       werror("socket failed: %e.\n", errno);
+      errno = saved_errno;
       return -1;
     }
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes)) < 0)
@@ -975,8 +977,10 @@ io_bind_sockaddr(struct sockaddr *addr, socklen_t addr_length)
   
   if (bind(fd, addr, addr_length) < 0)
     {
+      int saved_errno = errno;
       werror("bind failed: %e.\n", errno);
       close(fd);
+      errno = saved_errno;
       return -1;
     }
 
