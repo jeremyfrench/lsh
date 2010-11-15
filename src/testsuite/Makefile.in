@@ -72,7 +72,10 @@ TEST_OBJS = testutils.$(OBJEXT) \
 
 TEST_LIBS = -lspki -lhogweed -lnettle $(LIBS)
 
-OTHER_SOURCES = testutils.c prgrp-timeout.c mini-inetd.c getpwnam-wrapper.c
+OTHER_SOURCES = testutils.c prgrp-timeout.c mini-inetd.c getpwnam-wrapper.c \
+	getopt.c getopt1.c
+
+GETOPT_OBJS = getopt.$(OBJEXT) getopt1.$(OBJEXT)
 
 SOURCES = $(TS_SOURCES) $(OTHER_SOURCES)
 
@@ -80,7 +83,7 @@ SOURCES = $(TS_SOURCES) $(OTHER_SOURCES)
 TIMEOUT_PROGRAM = ./prgrp-timeout$(EXEEXT) -n -t 28800
 
 DISTFILES = $(SOURCES) $(TS_SH) Makefile.in .test-rules.make \
-	    testutils.h \
+	    testutils.h getopt.h \
 	    functions.sh run-tests setup-env key-1.private key-2.private \
 	    UTF-8-test.txt \
 	    socks4-config socks5-config
@@ -108,11 +111,11 @@ test-rules:
 
 include $(srcdir)/.test-rules.make
 
-prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT)
-	$(LINK) prgrp-timeout.$(OBJEXT) -o prgrp-timeout 
+prgrp-timeout$(EXEEXT): prgrp-timeout.$(OBJEXT) $(GETOPT_OBJS)
+	$(LINK) prgrp-timeout.$(OBJEXT) $(GETOPT_OBJS) -o prgrp-timeout 
 
-mini-inetd$(EXEEXT): mini-inetd.$(OBJEXT)
-	$(LINK) mini-inetd.$(OBJEXT) $(LIBS) -o mini-inetd
+mini-inetd$(EXEEXT): mini-inetd.$(OBJEXT) $(GETOPT_OBJS)
+	$(LINK) mini-inetd.$(OBJEXT) $(GETOPT_OBJS) $(LIBS) -o mini-inetd
 
 # FIXME: Make this optional
 # Do we need -rdynamic?
