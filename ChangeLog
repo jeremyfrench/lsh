@@ -1,5 +1,9 @@
 2010-11-15  Niels Möller  <nisse@lysator.liu.se>
 
+	* misc/xenofarm.sh (dotask): Display the correct status value when
+	the step is skipped.
+	(LIBGMPDIST): Initialize.
+
 	* src/testsuite/Makefile.in (OTHER_SOURCES): Added getopt.c getopt1.c.
 	(DISTFILES): Added getopt.h.
 	(GETOPT_OBJS): New variable.
