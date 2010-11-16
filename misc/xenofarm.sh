@@ -208,16 +208,17 @@ fi
 
 if [ -f $LIBGMPDIST ] ; then
   LIBGMPBASE=`echo $LIBGMPDIST | sed 's/.tar.gz$//'`
-  # Crude check if gmp is installed. If not, install i $pfx.
-  if [ -f /usr/include/gmp.h ] ; then
-    libgmpstatus=skip
-  else
-    if [ -f /usr/local/include/gmp.h ] ; then
-      libgmpstatus=skip
-    else
-      libgmpstatus=good
+  # Crude check if gmp-3.1 or later is installed. If not, install i $pfx.
+  libgmpstatus=good
+  for d in /usr/local/include /usr/include/ ; do
+    if [ -f $d/gmp.h ] ; then
+      echo gmp.h location: $d/gmp.h
+      if grep mpz_getlimbn $d/gmp.h ; then
+        libgmpstatus=skip
+      fi
+      break
     fi
-  fi
+  done
 else
   libgmpstatus=skip
 fi
