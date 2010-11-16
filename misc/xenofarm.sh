@@ -75,7 +75,7 @@ BASE=`echo lsh-*.tar.gz | sed 's/.tar.gz$//'`
 VERS=`echo "$BASE" | sed 's/^lsh-//'`
 
 LIBOOPDIST=`echo liboop-*.tar.gz`
-LIBGMPDIST=`echo libgmp-*.tar.gz`
+LIBGMPDIST=`echo gmp-*.tar.gz`
 
 timeecho () {
     # FIXME: Don't depend on GNU date
