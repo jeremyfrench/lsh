@@ -44,9 +44,9 @@ pfx=`pwd`/pfx
 
 oopcfgargs="-C --prefix=$pfx --disable-shared --without-adns --without-readline --without-glib --without-tcl --without-www $cfgargs"
 
-gmpcfgargs="-C --prefix=$pfx --disable-shared"
+gmpcfgargs="-C --prefix=$pfx --disable-shared $cfgargs"
 
-cfgargs="-C --with-include-path=/usr/local/include:$pfx/include --with-lib-path=/usr/local/lib:$pfx/lib --prefix=$pfx $cfgargs"
+cfgargs="-C --with-include-path=$pfx/include:/usr/local/include --with-lib-path=$pfx/lib:/usr/local/lib --prefix=$pfx $cfgargs"
 
 # Fix PATH for system where the default environment is broken
 
