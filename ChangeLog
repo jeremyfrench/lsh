@@ -2,6 +2,8 @@
 
 	* misc/xenofarm.sh: Improved crude gmp check to look for
 	mpz_getlimbn.
+	(cfgargs): Tweaked order for --with-include-path and
+	--with-lib-path, to put $pfx before /usr/local.
 
 2010-11-15  Niels Möller  <nisse@lysator.liu.se>
 
