@@ -1,3 +1,8 @@
+2010-11-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh: Improved crude gmp check to look for
+	mpz_getlimbn.
+
 2010-11-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (dotask): Display the correct status value when
