@@ -1,3 +1,8 @@
+2010-11-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh: Copy list of files in $pfx into result
+	package.
+
 2010-11-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Improved crude gmp check to look for
