@@ -315,6 +315,8 @@ type makeinfo >> r/makeinfo.txt 2>&1
 $MAKE --version > r/makeversion.txt 2>&1 
 type $MAKE >> r/makeversion.txt
 
+ls -lR $pfx > r/pfxcontents.txt
+
 cp buildid.txt r/buildid.txt
 
 (cd r && tar cf - *) > xenofarm_result.tar
