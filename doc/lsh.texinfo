@@ -113,7 +113,7 @@ This manual explains how to use and hack @command{lsh}; it corresponds to
 * Installation::                
 * Getting started::             
 * Invoking lsh::                
-* Invoking lshg::                
+* Invoking lshg::               
 * Invoking lshd::               
 * Files and environment variables::  
 * Concept Index::               
@@ -136,12 +136,11 @@ Related programs and techniques
 
 Getting started
 
-* lsh-make-seed::               Initializing the randomness generator
+* lsh-make-seed ::              Initializing the randomness generator
 * lsh basics::                  Connection with lsh
 * tcpip forwarding::            Forwarding @acronym{TCP/IP} ports
 * lshd basics::                 Starting the lshd deamon
 * public-key::                  Using public-keys
-* srp::                         Using SRP authentication
 * sexp::                        Examining keys and other S-exp files
 * Converting keys::             
 
@@ -532,12 +531,11 @@ This section tells you how to perform some common tasks using the
 possibilities.
 
 @menu
-* lsh-make-seed::               Initializing the randomness generator
+* lsh-make-seed ::              Initializing the randomness generator
 * lsh basics::                  Connection with lsh
 * tcpip forwarding::            Forwarding @acronym{TCP/IP} ports
 * lshd basics::                 Starting the lshd deamon
 * public-key::                  Using public-keys
-* srp::                         Using SRP authentication
 * sexp::                        Examining keys and other S-exp files
 * Converting keys::             
 @end menu
@@ -563,8 +561,10 @@ seed file for use by @command{lshd}, run
 lsh-make-seed --server
 @end example
 
-as root. The seed file is stored as
-@file{/var/spool/lsh/yarrow-seed-file}.
+as root. By default, the seed file is stored as
+@file{/usr/local/var/spool/lsh/yarrow-seed-file}, this can be changed
+using the @option{--localstatedir} option to configure or the
+@code{LSH_YARROW_SEED_FILE} environment variable at run time.
 
 
 @node lsh basics, tcpip forwarding, lsh-make-seed , Getting started
@@ -744,36 +744,67 @@ on the same command line.
 @node lshd basics, public-key, tcpip forwarding, Getting started
 @comment  node-name,  next,  previous,  up
 @section @command{lshd} basics
-@comment XXX
 
-There are no global configuration files for @command{lshd}; all
-configuration is done with command line options (@pxref{Invoking lshd}).
+The secure shell server functionality is split between three different
+programs:
+@table @code
+@item lshd
+The main server program. Listens for incoming connections, host
+authentication, key exchange and encryption and decryption of data.
+Basically, this program implements the secure shell transport layer
+protocol (@acronym{rfc} 4253). It usually runs with root privileges, and
+it forks a service process, usually the @code{lshd-userauth} program, to
+handle the higher layers of the secure shell protocol.
+@item lshd-userauth
+This program is responsible for user authentication, including password
+authnetication and public key authentication. The corresponding protocol
+specification is (@acronym{rfc} 4252). This programs is usually started
+with root privileges. If user authentication is successful, it changes
+the process persona and execs another service process, usually
+@code{lshd-connection}. It also spawns a helper process,
+lshd-pty-helper, usually running with group @code{utmp} privileges.
+@item lshd-connection
+This is the program responsible for most of the features users associate
+with ssh, including login sessions, remote command execution,
+port forwarding, and the machinery for multiplexing multiple channels
+over a single ssh connection. It runs as the logged in user.
+@end table
 
-To run @command{lshd}, you must first create a hostkey, usually stored in
-@file{/etc/lsh_host_key}. To do this, run
+These programs communicate with each other using unencrypted ssh
+packets. Each has its own configuration file and command line options.
+By default, configuration files are stored in the @file{/usr/local/lshd} directory,
+this can be changed using the @option{--sysconfdir} option to configure
+or the @code{LSHD_CONFIG_DIR} environment variable at run time.
+
+By default, all features are disabled, and must be explicitly enabled to
+get any useful service, either on the command line or using the
+appropriate configuration file. An example configuration is compiled in.
+It can be enabled using the @option{--use-example-config}, and displayed
+using @option{--print-example-config}.
+
+To try out @command{lshd}, you must first create a hostkey, by default stored in
+@file{/usr/local/etc/lshd/host-key}. To do this, run
 
 @example
-lsh-keygen --server | lsh-writekey --server
+lsh-keygen --server
 @end example
 
 @noindent
-This will also create a file @file{/etc/lsh_host_key.pub},
+This will also create a file @file{/usr/local/etc/lshd/host-key.pub},
 containing the corresponding public key. 
 
-A typical command line for starting lshd in daemon mode is simply
+A typical command line for starting lshd in daemon mode, using the
+example configuration, is simply
 
 @example
-lshd --daemonic
+lshd --daemonic --use-example-config
 @end example
 
 You can find init script for @command{lshd} tailored for Debian's and
 RedHat's GNU/Linux systems in the @file{contrib} directory. 
 
-It is also possible to let @command{init} start @command{lshd}, by
-adding it in @file{/etc/inittab}.
 
-
-@node public-key, srp, lshd basics, Getting started
+@node public-key, sexp, lshd basics, Getting started
 @comment  node-name,  next,  previous,  up
 @section Using public-key user authentication
 
@@ -827,78 +858,7 @@ If you have accounts on several systems, you usually create one keypair
 on each of the systems, and on each system you authorize some or all of
 your other public keys for login.
 
-
-@node srp, sexp, public-key, Getting started
-@comment  node-name,  next,  previous,  up
-@section Using @acronym{SRP} authentication
-
-The Secure Remote Password protocol is a fairly new protocol that
-provides mutual authentication based on a password. To use it, you must
-first choose a secret password. Next, you create a @dfn{password
-verifier} that is derived from the password. The verifier is stored on
-the target machine (i.e. the machine you want to log in to).
-
-To create a verifier, you run the @command{srp-gen} program and type
-your new password. You have to do it on either the target machine,
-redirecting the output to ~/.lsh/srp-verifier, or you can generate it on
-some other machine and copy it to the target.
-
-The main advantage of using @acronym{SRP} is that you use the password
-not only to get access to the remote machine, but you also use it to
-authenticate the remote machine. I.e. you can use it to connect
-securely, @emph{without} having to know any hostkeys or fingerprints
-beforehand!
-
-For instance, you could connect using @acronym{SRP} to fetch the hostkey
-fingerprint for the remote machine, as a kind of bootstrapping
-procedure, and then use traditional authentication methods for further
-connections.
-
-For this to work, the verifier @emph{must} be kept @emph{secret}. If the
-enemy gets your verifier, he can mount some attacks:
-
-@itemize @bullet
-@item
-He can mount a @dfn{dictionary attack} on your password, i.e. generate a
-large list of likely password and check if any of them matches yours.
-
-@item
-He can impersonate the server. That means that if you try to connect to
-the remote machine using @acronym{SRP}, and the attacker can intercept
-your connection (e.g. by attacking the name resolution or routing
-system) he can successfully pretend to be the real server.
-@end itemize
-
-If you use @acronym{SRP} to get the hostkey or fingerprint for the
-remote machine, as outlined above, the impersonation attack destroys
-security, you could just as well connect the hostkey presented by the
-remote server without verifying it at all.
-
-If you use @acronym{SRP} exclusively, the situation seems somewhat
-different. As far as I can see, an attacker knowing your verifier can
-not mount a traditional man-in-the-middle-attack: He can play the
-server's part when talking to you, but in order to play your part when
-talking to the real server, he needs to know your password as well.
-
-@acronym{SRP} support is disabled by default, but can be enabled by the
-@option{--srp-keyexchange} option to @command{lshd} and @command{lsh}
-(naturally, it won't be used unless enabled on both sides). At the time
-of this writing, @acronym{SRP} is too new to be trusted by conservative
-cryptographers (and remember that conservatism is a virtue when it comes
-to security).
-
-And even if @acronym{SRP} in itself is secure, the way @command{lsh}
-integrates it into the @code{ssh} protocol has not had much peer review.
-The bottom line of this disclaimer is that the @acronym{SRP} support in
-@command{lsh} should be considered experimental.
-
-As far as I know, using @acronym{SRP} as a host authentication mechanism
-is not supported by any other @code{ssh} implementation. The protocol
-@command{lsh} uses is described in the @file{doc/srp-spec.txt}.
-Implementations that use @acronym{SRP} only as a user authentication
-mechanism are not compatible with @command{lsh}.
-
-@node sexp, Converting keys, srp, Getting started
+@node sexp, Converting keys, public-key, Getting started
 @comment  node-name,  next,  previous,  up
 @section Examining keys and other sexp files
 
@@ -1138,9 +1098,6 @@ lsh --sloppy-host-authentication --capture-to ~/.lsh/host-acls
 @noindent
 makes @command{lsh} behave more like the @command{ssh} program.
 
-@item --srp-keyexchange
-Try using @acronym{SRP} for keyexchange and mutual authentication.
-
 @end table
 
 @node Userauth options, Action options, Hostauth options, Invoking lsh
@@ -1352,6 +1309,7 @@ do that automatically.
 @chapter Invoking @command{lshg}
 @anchor{lshg-usage}
 
+@comment XXX 
 You use @command{lshg} to login to a remote machine to which you have
 previously used @command{lsh} to set up a gateway (@pxref{Action
 options}). Its usage is very similar to that of @command{lsh}
@@ -1433,12 +1391,6 @@ Not available in @command{lshg}.
 Not available in @command{lshg}.
 
 @item --no-dh-keyexchange
-Not available in @command{lshg}.
-
-@item --srp-keyexchange
-Not available in @command{lshg}.
-
-@item --no-srp-keyexchange
 Not available in @command{lshg}.
 
 @item -i
@@ -1553,9 +1505,6 @@ details.
 @item --login-shell
 Use the specified program as the login shell for all users, overriding
 the login shell in the passwd database.
-
-@item --srp-keyexchange
-Enable @acronym{SRP} keyexchange and user authentication.
 
 @item --no-pty-support
 Disable support for pseudo terminals.
@@ -1697,9 +1646,6 @@ if and only if this directory contains a file with a name which is the
 SHA1 hash of the key. The usual way to create files is by running the
 script @command{lsh-authorize}.
 
-@item ~/.lsh/srp-verifier
-If you use the experimental support for @acronym{SRP} (@pxref{srp}),
-the server reads a user's @acronym{SRP} verifier from this file.
 @end table
 
 @node    Concept Index,  , Files and environment variables, Top
