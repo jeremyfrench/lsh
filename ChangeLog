@@ -1,3 +1,8 @@
+2010-12-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo (lshd basics): Rewrote node.
+	(srp): Deleted node, and other references to SRP.
+
 2010-11-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Copy list of files in $pfx into result
