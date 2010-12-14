@@ -553,7 +553,7 @@ main_options[] =
     "If no gateway is running, start a new one.", 0 },
   { "start-gateway", OPT_START_GATEWAY, NULL, 0,
     "Stop any existing gateway, and start a new one.", 0 },
-  { "stop-gateway", OPT_START_GATEWAY, NULL, 0,
+  { "stop-gateway", OPT_STOP_GATEWAY, NULL, 0,
     "Stop any existing gateway. Disables all other actions.", 0 },
 
   { NULL, 0, NULL, 0, "Miscellaneous options:", 0 },
