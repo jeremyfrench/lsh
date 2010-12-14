@@ -543,6 +543,19 @@ main_options[] =
     "Disable X11 forwarding (default).", 0 },
 #endif
 
+  /* Gateway options */
+  { NULL, 0, NULL, 0, "Gateway options:", 0 },
+  { "use-gateway", OPT_USE_GATEWAY, NULL, 0,
+    "Always use a local gateway", 0 },
+  { "no-use-gateway", OPT_USE_GATEWAY | ARG_NOT, NULL, 0,
+    "Never use a local gateway", 0 },
+  { "gateway", 'G', NULL, 0,
+    "If no gateway is running, start a new one.", 0 },
+  { "start-gateway", OPT_START_GATEWAY, NULL, 0,
+    "Stop any existing gateway, and start a new one.", 0 },
+  { "stop-gateway", OPT_START_GATEWAY, NULL, 0,
+    "Stop any existing gateway. Disables all other actions.", 0 },
+
   { NULL, 0, NULL, 0, "Miscellaneous options:", 0 },
   { "escape-char", 'e', "Character", 0, "Escape char. `none' means disable. "
     "Default is to use `~' if we have a tty, otherwise none.", 0 },
@@ -584,18 +597,6 @@ main_options[] =
   { "mac", 'm', "ALGORITHM", 0, "Select MAC algorithm", 0 },
   { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHM, "ALGORITHM", 0,
     "Select host authentication algorithm.", 0 },
-
-  /* Gateway options */
-  { "use-gateway", OPT_USE_GATEWAY, NULL, 0,
-    "Always use a local gateway", 0 },
-  { "no-use-gateway", OPT_USE_GATEWAY | ARG_NOT, NULL, 0,
-    "Never use a local gateway", 0 },
-  { "gateway", 'G', NULL, 0,
-    "Use any existing gateway; if none exists, start a new one.", 0 },
-  { "start-gateway", OPT_START_GATEWAY, NULL, 0,
-    "Stop any existing gateway, and start a new one.", 0 },
-  { "stop-gateway", OPT_START_GATEWAY, NULL, 0,
-    "Stop any existing gateway. Disables all other actions.", 0 },
 
   { NULL, 0, NULL, 0, NULL, 0 }
 };
