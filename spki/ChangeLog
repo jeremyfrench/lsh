@@ -1,3 +1,22 @@
+2010-12-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* tag.c (spki_string_alloc): Renamed and updated callers, from...
+	(spki_string_new): ... old name.
+	(tag_list): Use const for input and output pointers.
+	(tag_atom): Likewise.
+	(tag_range): Likewise.
+	(spki_tag_release): Use const for some local pointers.
+	(spki_tag_set_alloc): Use const for one pointer. Renamed from...
+	(spki_tag_set_new): ... old name.
+	(atom_prefix): Use const inputs.
+	(atom_equal): Likewise.
+	(set_includes): Likewise.
+	(list_includes): Likewise.
+	(spki_tag_includes): Likewise.
+	(prefix_intersect): Use const for prefix argument.
+	(list_format): Use const input.
+	(spki_tag_format): Likewise. Also use const for some local pointers.
+
 2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
 
 	* tools/spki-delegate.c (parse_options): Deleted -?, and fixed

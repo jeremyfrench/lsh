@@ -46,6 +46,10 @@
 type *var = MALLOC(ctx, realloc, sizeof(type))
 
 
+/* FIXME: Consider using const for all tag-pointers; they shouldn't be
+   modified after construction. However, we can't use const for
+   functions that may modify the reference count. */
+
 /* Strings */
 struct spki_string
 {
@@ -58,8 +62,8 @@ struct spki_string
 };
 
 static struct spki_string *
-spki_string_new(void *ctx, nettle_realloc_func *realloc,
-		unsigned length, const uint8_t *data)
+spki_string_alloc(void *ctx, nettle_realloc_func *realloc,
+		  unsigned length, const uint8_t *data)
 {
   NEW(ctx, realloc, struct spki_string, s);
   uint8_t *p;
@@ -218,13 +222,13 @@ struct spki_tag_list
   struct spki_cons *children;
 };
 
-static struct spki_tag_list *
-tag_list(struct spki_tag *tag)
+static const struct spki_tag_list *
+tag_list(const struct spki_tag *tag)
 {
   assert(tag->type == SPKI_TAG_LIST
 	 || tag->type == SPKI_TAG_SET);
 
-  return (struct spki_tag_list *) tag;
+  return (const struct spki_tag_list *) tag;
 }
 
 /* For SPKI_TAG_ATOM and SPKI_TAG_PREFIX */
@@ -235,13 +239,13 @@ struct spki_tag_atom
   struct spki_string *atom;
 };
 
-static struct spki_tag_atom *
-tag_atom(struct spki_tag *tag)
+static const struct spki_tag_atom *
+tag_atom(const struct spki_tag *tag)
 {
   assert(tag->type == SPKI_TAG_ATOM
 	 || tag->type == SPKI_TAG_PREFIX);
 
-  return (struct spki_tag_atom *) tag;
+  return (const struct spki_tag_atom *) tag;
 }
 
 enum spki_range_type
@@ -267,12 +271,12 @@ struct spki_tag_range
   struct spki_string *upper;
 };
 
-static struct spki_tag_range *
-tag_range(struct spki_tag *tag)
+static const struct spki_tag_range *
+tag_range(const struct spki_tag *tag)
 {
   assert(tag->type == SPKI_TAG_RANGE);
 
-  return (struct spki_tag_range *) tag;
+  return (const struct spki_tag_range *) tag;
 }
 
 static void
@@ -305,8 +309,8 @@ spki_tag_atom_alloc(void *ctx, nettle_realloc_func *realloc,
 
   if (i->display)
     {
-      display = spki_string_new(ctx, realloc,
-				i->display_length, i->display);
+      display = spki_string_alloc(ctx, realloc,
+				  i->display_length, i->display);
 
       if (!display)
 	return NULL;
@@ -314,8 +318,8 @@ spki_tag_atom_alloc(void *ctx, nettle_realloc_func *realloc,
   else
     display = NULL;
   
-  atom = spki_string_new(ctx, realloc,
-			 i->atom_length, i->atom);
+  atom = spki_string_alloc(ctx, realloc,
+			   i->atom_length, i->atom);
 
   if (!atom)
     {
@@ -403,7 +407,7 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
     case SPKI_TAG_ATOM:
     case SPKI_TAG_PREFIX:
       {
-	struct spki_tag_atom *self = tag_atom(tag);
+	const struct spki_tag_atom *self = tag_atom(tag);
 
 	spki_string_release(ctx, realloc, self->display);
 	spki_string_release(ctx, realloc, self->atom);
@@ -413,15 +417,16 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
     case SPKI_TAG_LIST:
     case SPKI_TAG_SET:
       {
-	struct spki_tag_list *self = tag_list(tag);
+	const struct spki_tag_list *self = tag_list(tag);
 	spki_cons_release(ctx, realloc, self->children);
 
 	break;
       }
     case SPKI_TAG_RANGE:
       {
-	struct spki_tag_range *self = tag_range(tag);
+	const struct spki_tag_range *self = tag_range(tag);
 	
+	spki_string_release(ctx, realloc, self->display);
 	spki_string_release(ctx, realloc, self->lower);
 	spki_string_release(ctx, realloc, self->upper);
       }
@@ -444,8 +449,8 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
 
 /* FIXME: A destructive function could be more efficient */
 static struct spki_tag *
-spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
-		 struct spki_cons *c)
+spki_tag_set_alloc(void *ctx, nettle_realloc_func *realloc,
+		   struct spki_cons *c)
 {
   struct spki_cons *subsets = NULL;
   struct spki_tag *tag;
@@ -463,7 +468,7 @@ spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
 	}
       else
 	{
-	  struct spki_tag_list *set = tag_list(c->car);
+	  const struct spki_tag_list *set = tag_list(c->car);
 	  struct spki_cons *p;
 	  
 	  for (p = set->children; p; p = p->cdr)
@@ -570,14 +575,14 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 	
 	/* Empty sets are allowed, but not empty lists. */
 	if (i->type == SEXP_END)
-	  return spki_tag_set_new(ctx, realloc, NULL);
+	  return spki_tag_set_alloc(ctx, realloc, NULL);
 
 	children = spki_tag_compile_list(ctx, realloc, i);
 
 	if (!children)
 	  return NULL;
 
-	tag = spki_tag_set_new(ctx, realloc, children);
+	tag = spki_tag_set_alloc(ctx, realloc, children);
 	spki_cons_release(ctx, realloc, children);
 
 	return tag;
@@ -686,7 +691,7 @@ spki_tag_from_sexp(void *ctx, nettle_realloc_func *realloc,
 /* Tag operations */
 
 static int
-atom_prefix(struct spki_tag_atom *a, struct spki_tag_atom *b)
+atom_prefix(const struct spki_tag_atom *a, const struct spki_tag_atom *b)
 {
   assert(a->super.type == SPKI_TAG_PREFIX);
   assert(b->super.type == SPKI_TAG_ATOM);
@@ -696,7 +701,7 @@ atom_prefix(struct spki_tag_atom *a, struct spki_tag_atom *b)
 }
 
 static int
-atom_equal(struct spki_tag_atom *a, struct spki_tag_atom *b)
+atom_equal(const struct spki_tag_atom *a, const struct spki_tag_atom *b)
 {
   assert(a->super.type == SPKI_TAG_ATOM);
   assert(b->super.type == SPKI_TAG_ATOM);
@@ -706,8 +711,8 @@ atom_equal(struct spki_tag_atom *a, struct spki_tag_atom *b)
 }
 
 static int
-set_includes(struct spki_cons *set,
-	     struct spki_tag *request)
+set_includes(const struct spki_cons *set,
+	     const struct spki_tag *request)
 {
   /* The request is included if it's including in any of
    * the delegations in the set. */
@@ -736,8 +741,8 @@ set_includes(struct spki_cons *set,
 }
 
 static int
-list_includes(struct spki_cons *list,
-	      struct spki_tag *request)
+list_includes(const struct spki_cons *list,
+	      const struct spki_tag *request)
 {
   /* There may be fewer elements in the delegation list than in the
    * request list. A delegation list implicitly includes any number of
@@ -767,8 +772,8 @@ list_includes(struct spki_cons *list,
 /* Returns true if the requested authorization is included in the
  * delegated one. */
 int
-spki_tag_includes(struct spki_tag *delegated,
-		  struct spki_tag *request)
+spki_tag_includes(const struct spki_tag *delegated,
+		  const struct spki_tag *request)
 {
   switch (delegated->type)
     {
@@ -828,7 +833,7 @@ set_intersect(void *ctx, nettle_realloc_func *realloc,
   if (!head)
     return NULL;
 
-  return spki_tag_set_new(ctx, realloc, head);
+  return spki_tag_set_alloc(ctx, realloc, head);
 }
 
 static struct spki_tag *
@@ -862,7 +867,7 @@ list_intersect(void *ctx, nettle_realloc_func *realloc,
 }
 
 static struct spki_tag *
-prefix_intersect(struct spki_tag_atom *prefix,
+prefix_intersect(const struct spki_tag_atom *prefix,
 		 struct spki_tag *b)
 {
   return ( (b->type == SPKI_TAG_ATOM
@@ -924,7 +929,7 @@ spki_tag_intersect(void *ctx, nettle_realloc_func *realloc,
 /* Formatting a tag as an S-expression. */
 
 static unsigned
-list_format(struct spki_cons *c, struct nettle_buffer *buffer)
+list_format(const struct spki_cons *c, struct nettle_buffer *buffer)
 {
   unsigned done = 0;
   for ( ; c; c = c->cdr)
@@ -942,7 +947,7 @@ list_format(struct spki_cons *c, struct nettle_buffer *buffer)
 #define L(x) (sizeof(x "") - 1), x
 
 unsigned
-spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
+spki_tag_format(const struct spki_tag *tag, struct nettle_buffer *buffer)
 {
   switch(tag->type)
     {
@@ -954,7 +959,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
 
     case SPKI_TAG_SET:
       {
-	struct spki_tag_list *self = tag_list(tag);
+	const struct spki_tag_list *self = tag_list(tag);
 	unsigned length;
 	unsigned prefix;
 
@@ -969,7 +974,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
 
     case SPKI_TAG_LIST:
       {
-	struct spki_tag_list *self = tag_list(tag);
+	const struct spki_tag_list *self = tag_list(tag);
 	unsigned length;
 
 	if (!sexp_format(buffer, "%("))
@@ -984,7 +989,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
 
     case SPKI_TAG_PREFIX:
       {
-	struct spki_tag_atom *self = tag_atom(tag);
+	const struct spki_tag_atom *self = tag_atom(tag);
 	return sexp_format(buffer, "(%l%t%s)", L("1:*6:prefix"),
 			   self->display ? self->display->length : 0,
 			   self->display ? self->display->data : NULL,
@@ -997,7 +1002,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
       
     case SPKI_TAG_ATOM:
       {
-	struct spki_tag_atom *self = tag_atom(tag);
+	const struct spki_tag_atom *self = tag_atom(tag);
 	return sexp_format(buffer, "%t%s",
 			   self->display ? self->display->length : 0,
 			   self->display ? self->display->data : NULL,
