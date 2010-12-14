@@ -182,15 +182,10 @@ int lsftp_open_connection(char** argv, int argc)
 
 	cur_string = before_string;
 	
-	while( (
-		cur_string =  
-		lsftp_s_strtok( 
-			       cur_string,        /* Old startat */
+	while( (cur_string =  
+		lsftp_s_strtok(cur_string,        /* Old startat */
 			       " \r\n\t",         /* Separators */
-			       &tmp               /* Storage adress */
-			       )
-		)
-	       ) 
+			       &tmp)) )           /* Storage adress */
 	  {
 	    k++;
 	    free( tmp );
@@ -206,14 +201,10 @@ int lsftp_open_connection(char** argv, int argc)
 	
 	 cur_string = after_string;
 	 
-	 while( 
-	       cur_string =  
-	       lsftp_s_strtok( 
-			      cur_string,        /* Old startat */
-			      " \r\n\t",         /* Separators */
-			      &tmp               /* Storage */
-			      )
-	       ) 
+	 while ( (cur_string =  
+		  lsftp_s_strtok(cur_string,        /* Old startat */
+				 " \r\n\t",         /* Separators */
+				 &tmp)) )           /* Storage */
 	   {
 	     k++;
 	     free( tmp );
@@ -230,14 +221,10 @@ int lsftp_open_connection(char** argv, int argc)
 
 	cur_string = before_string;
 	
-	while( 
-	      cur_string =  
-	      lsftp_s_strtok( 
-			     cur_string,        /* Old startat */
-			     " \r\n\t",         /* Separators */
-			     &tmp               /* Storage */
-			     )		
-	      ) 
+	while ( (cur_string =  
+		 lsftp_s_strtok(cur_string,        /* Old startat */
+				" \r\n\t",         /* Separators */
+				&tmp)) )           /* Storage */
 	  /* Pass it as an argument */
 	  new_argv[ ++j ] = tmp;          
      	
@@ -252,15 +239,11 @@ int lsftp_open_connection(char** argv, int argc)
 	
 	j += i;
 	
-	while( (
-		cur_string =  
+	while( (cur_string =  
 		lsftp_s_strtok( 
 			       cur_string,        /* Old startat */
 			       " \r\n\t",         /* Separators */
-			       &tmp               /* Storage */
-			       )
-		)
-	       ) 
+			       &tmp)) )           /* Storage */
 	  /* Make a copy of the string and pass it as an argument */
 	  new_argv[ j++ ] = tmp;
 	
@@ -2387,8 +2370,6 @@ int
 lsftp_handle_stat(struct sftp_callback *s,
 		  const struct lsftp_callback *l)
 { 
-  void* f;
-
   if( s->localerr )
     lsftp_perror( l->local, s->localerrno );
 
