@@ -113,7 +113,6 @@ This manual explains how to use and hack @command{lsh}; it corresponds to
 * Installation::                
 * Getting started::             
 * Invoking lsh::                
-* Invoking lshg::               
 * Invoking lshd::               
 * Files and environment variables::  
 * Concept Index::               
@@ -150,6 +149,7 @@ Invoking @command{lsh}
 * Hostauth options::            
 * Userauth options::            
 * Actions: Action options.      What to do after login.
+* Gateway options::             
 * Messages: Verbosity options.  Tuning the amount of messages.
 
 @end detailmenu
@@ -747,13 +747,13 @@ on the same command line.
 
 The secure shell server functionality is split between three different
 programs:
-@table @code
+@table @command
 @item lshd
 The main server program. Listens for incoming connections, host
 authentication, key exchange and encryption and decryption of data.
 Basically, this program implements the secure shell transport layer
 protocol (@acronym{rfc} 4253). It usually runs with root privileges, and
-it forks a service process, usually the @code{lshd-userauth} program, to
+it forks a service process, usually the @command{lshd-userauth} program, to
 handle the higher layers of the secure shell protocol.
 @item lshd-userauth
 This program is responsible for user authentication, including password
@@ -761,7 +761,7 @@ authnetication and public key authentication. The corresponding protocol
 specification is (@acronym{rfc} 4252). This programs is usually started
 with root privileges. If user authentication is successful, it changes
 the process persona and execs another service process, usually
-@code{lshd-connection}. It also spawns a helper process,
+@command{lshd-connection}. It also spawns a helper process,
 lshd-pty-helper, usually running with group @code{utmp} privileges.
 @item lshd-connection
 This is the program responsible for most of the features users associate
@@ -957,7 +957,7 @@ fingerprint of the server public key.
 There are currently no tools for converting private keys.
 
 
-@node Invoking lsh, Invoking lshg, Getting started, Top
+@node Invoking lsh, Invoking lshd, Getting started, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lsh}
 @anchor{lsh-usage}
@@ -985,6 +985,7 @@ options on the command line is important.
 * Hostauth options::            
 * Userauth options::            
 * Actions: Action options.      What to do after login.
+* Gateway options::             
 * Messages: Verbosity options.  Tuning the amount of messages.
 @end menu
 
@@ -1121,7 +1122,7 @@ Don't attempt to log in using public key authentication.
 
 @end table
 
-@node Action options, Verbosity options, Userauth options, Invoking lsh
+@node Action options, Gateway options, Userauth options, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section Action options
 
@@ -1176,9 +1177,9 @@ executed on the remote machine.
 Start an interactive shell on the remote machine. 
 
 @item -G
-Open a gateway on the local machine. A gateway is a local socket,
-located under /tmp, that can be used for controlling and using the ssh
-connection. It is protected using the ordinary file permissions.
+Open a gateway on the local machine (@pxref{Gateway options}). A gateway
+is a local socket, located under /tmp, that can be used for controlling
+and using the ssh connection.
 
 @item -N
 This is a no-operation action. It inhibits the default action, which is
@@ -1243,30 +1244,61 @@ Redirect the stdout of a remote process to a given, local, file.
 Analogous to the @option{--stdout} option.
 
 @item --detach
+@comment FIXME: XXX not currently supported.
 Detach from terminal at session end.
 
 @item --write-pid
-Applies to @option{-E}. Write PID of backgrounded process to stdout.
-
-
+Applies to @option{-B}. Write PID of backgrounded process to stdout.
 
 @item -e
 Set the escape character (use ``none'') to disable. Default is ``~''
 if a tty is allocated and ``none'' otherwise.
 
-
-
 @item -g
 Remote peers, aka global forwarding. This option applies to the
 forwarding actions, i.e. @option{-L}, @option{-R} and @option{-D}. By
-default, only connections to the loopback interface, ip 127.0.0.1, are
-forwarded. This implies that only processes on the same machine can use
-the forwarded tunnel directly. If the -g modifier is in effect, the
-forwarding party will listen on @emph{all} network interfaces.
+default, only connections to the loopback interface are forwarded. This
+implies that only processes on the same machine can use the forwarded
+tunnel directly. If the -g modifier is in effect, the forwarding party
+will listen on @emph{all} network interfaces.
 
 @end table
 
-@node Verbosity options,  , Action options, Invoking lsh
+@node Gateway options, Verbosity options, Action options, Invoking lsh
+@comment  node-name,  next,  previous,  up
+@section Gateway options
+
+If a gateway is setup to a remote machine, usuallly using the
+@option{-G} option, @command{lsh} will reuse the same connection,
+avoiding the overhead of initial keyexchange and authentication. Access
+to the gateway is protected using ordinary file system permissions on
+the directory where the gateway sockets are located.
+
+The following options can be used to control starting, stopping and use
+of a gateway:
+
+@table @option
+@item -G
+If no gateway exists, start one (in addition to any other actions). To
+setup a gateway in the background, with no other actions, use
+@samp{lsh -B -G}.
+
+@item --use-gateway
+Require the use of a gateway, never ccreate a new connection. If no
+gateway exists, @command{lsh} exits.
+
+@item --no-use-gateway
+Don't use any gateway, always create a new connection.
+
+@item --start-gateway
+Stop any existing gateway, then start a new one just like @option{-G}.
+
+@item --stop-gateway
+Stop any existing gateway, then exit.
+
+@end table
+
+@node Verbosity options,  , Gateway options, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section Verbosity options
 
@@ -1304,102 +1336,7 @@ Note that all these options are orthogonal. If you use @option{--trace},
 you usually want to add @option{-v} as well; @option{--trace} does not
 do that automatically.
 
-@node Invoking lshg, Invoking lshd, Invoking lsh, Top
-@comment  node-name,  next,  previous,  up
-@chapter Invoking @command{lshg}
-@anchor{lshg-usage}
-
-@comment XXX 
-You use @command{lshg} to login to a remote machine to which you have
-previously used @command{lsh} to set up a gateway (@pxref{Action
-options}). Its usage is very similar to that of @command{lsh}
-(@pxref{Invoking lsh}), except that some options are not available.
-
-Basic usage is
-
-@samp{lshg [-l @var{username}] @var{host}}
-
-which attempts to connect to the gateway that should previously have
-been established by running @samp{lsh [-l @var{username}] -G @var{host}})
-
-The @var{username} and @var{host} are used to locate the gateway. The
-default value for @var{username} is determined in the same way as for
-@command{lsh} (@pxref{Invoking lsh}).
-
-As @command{lshg} uses almost the same options as @command{lsh}
-(@pxref{Invoking lsh}), only options that are not available or have
-a different meaning in @command{lshg} are listed here.
-
-The algorithm options (@pxref{Algorithm options}) as well as most of
-the userauth (@pxref{Userauth options}) and hostauth (@pxref{Hostauth
-options}) are not available in @command{lshg} as they are only used by
-session setup, which is already handled by @command{lsh}.
-
-Due to technical reasons, @acronym{X11}-forwarding cannot be performed by
-@command{lshg}, thus the @option{--x11-forward} option (@pxref{Action options}) is not
-available.
-
-To summarize, these are the options that are new, not available or
-that have different meanings:
-
-@table @option
-@item -G
-For @command{lsh} @option{-G} requests a gateway to be set up. For
-@command{lshg} it means that if no usable gateway is found
-@command{lsh} should be launched with the same arguments instead. 
-
-@item --send-debug
-Not available in @command{lsh}. Sends a @samp{debug} message to the remote machine.
-
-@item --send-ignore
-Not available in @command{lsh}.  Sends a @samp{ignore} message to the remote machine.
-
-@item -x
-(@option{--x11-forward}) Not available in @command{lshg}.
-
-@item -c
-(@option{--crypto}) Not available in @command{lshg}.
-
-@item -z
-(@option{--compression}) Not available in @command{lshg}.
-
-@item -m
-(@option{--mac}) Not available in @command{lshg}.
-
-@item --hostkey-algorithm
-Not available in @command{lshg}.
-
-@item --capture-to
-Not available in @command{lshg}.
-
-@item --strict-host-authentication
-Not available in @command{lshg}.
-
-@item --sloppy-host-authentication
-Not available in @command{lshg}.
-
-@item --host-db
-Not available in @command{lshg}.
-
-@item --publickey
-Not available in @command{lshg}.
-
-@item --no-publickey
-Not available in @command{lshg}.
-
-@item --dh-keyexchange
-Not available in @command{lshg}.
-
-@item --no-dh-keyexchange
-Not available in @command{lshg}.
-
-@item -i
-@option{--identity} Not available in @command{lshg}.
-
-
-@end table
-
-@node Invoking lshd, Files and environment variables, Invoking lshg, Top
+@node Invoking lshd, Files and environment variables, Invoking lsh, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lshd}
 @anchor{lshd-usage}
@@ -1409,6 +1346,8 @@ speaking the Secure Shell Protocol. It is usually started automatically
 when the systems boots, and runs with root privileges. However, it is
 also possible to start @command{lshd} manually, and with user
 privileges.
+
+@comment FIXME: XXX
 
 There are currently no configuration files. Instead, command line options
 are used to tell @command{lshd} what to do. Many options have @option{--foo}
