@@ -1,3 +1,11 @@
+2010-12-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo (Gateway options): New node.
+	(Invoking lshg): Deleted node.
+
+	* src/lsh.c (main_options): Moved gateway options to a new group,
+	and updated the description of -G. Fixed --stop-gateway option.
+
 2010-12-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (lshd basics): Rewrote node.
