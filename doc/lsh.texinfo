@@ -12,7 +12,7 @@
 * LSH: (lsh).           Secure Shell and related utilities.
 @end direntry
 
-@set UPDATED-FOR 2.0
+@set UPDATED-FOR 3.0
 
 @c Latin-1 doesn't work with tex output.
 @c Also look out for é characters.
@@ -22,7 +22,7 @@
 Manual for LSH. This manual corresponds to @command{lsh} version
 @value{UPDATED-FOR}. 
 
-Copyright 2000, 2004, 2008 @value{AUTHOR}
+Copyright 2000, 2004, 2008, 2010 @value{AUTHOR}
 
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
@@ -65,7 +65,7 @@ translation approved by the Free Software Foundation.
 @c The following two commands start the copyright page.
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2000, 2004 @value{AUTHOR}
+Copyright @copyright{} 2000, 2004, 2008, 2010 @value{AUTHOR}
 
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
@@ -130,6 +130,7 @@ Related programs and techniques
 
 * ssh1::                        SSH version 1
 * ssh2::                        SSH version 2
+* tls::                         
 * Kerberos::                    Kerberos
 * ipsec::                       IP Sec
 
@@ -331,7 +332,6 @@ redirection of network access through a @acronym{SOCKS} proxy.
 Convenient tunneling of @acronym{X} was one of the most impressive
 features of the original @command{ssh} programs. Both @command{lsh} and
 @command{lshd} support @acronym{X}-forwarding.
-
 Whan @acronym{X} forwarding is in effect, the remote process is started
 in an environment where the @env{DISPLAY} variable in the environment
 points to a fake @acronym{X} server, connections to which are forwarded
@@ -358,6 +358,7 @@ man-in-the-middle attacks.
 @menu
 * ssh1::                        SSH version 1
 * ssh2::                        SSH version 2
+* tls::                         
 * Kerberos::                    Kerberos
 * ipsec::                       IP Sec
 @end menu
@@ -381,12 +382,12 @@ There also exists free implementations of @code{ssh-1}, for both Unix
 and Windows. @command{ossh} and later OpenSSH are derived from an earlier
 free version av Tatu Ylönen's @command{ssh}, and are free software.
 
-@node ssh2, Kerberos, ssh1, Related techniques
+@node ssh2, tls, ssh1, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection @code{ssh-2.x}
 
 @command{ssh2} implements the next generation of the Secure Shell
-protocol, the development of which is supervised by the @acronym{IETF}
+protocol, now specified by the @acronym{IETF}
 secsh Working Group. Besides @command{lsh}, some well known
 implementations of this protocol includes
 @itemize
@@ -412,8 +413,22 @@ Microsoft Windows.
 There a numerous other implementations, both free and proprietary. The
 above list is far from complete.
 
+@node tls, Kerberos, ssh2, Related techniques
+@comment  node-name,  next,  previous,  up
+@subsection TLS
 
-@node Kerberos, ipsec, ssh2, Related techniques
+Transport Layer Security, @acronym{tls}, is a protocol developed by the @acronym{ietf},
+based on the earlier protocol called Secure Socket Layer, @acronym{ssl}, which was
+developed by Netscape. It provides as encrypted session, which can then be
+used for other protocols, such as @acronym{http}, @acronym{smtp}, and
+@acronym{imap}. 
+
+In @acronym{tls}, server authentication is usually based on x.509
+certificates. x.509 certificates can be used for client authentication
+as well, but it is more common to use an application specific
+authentication, often using some password.
+
+                @node Kerberos, ipsec, tls, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection Kerberos
 
@@ -816,7 +831,7 @@ to log in.
 To create a keypair, run
 
 @example
-lsh-keygen | lsh-writekey
+lsh-keygen
 @end example
 
 @noindent
@@ -837,11 +852,11 @@ then authorizing it by executing, on @samp{sara},
 lsh-authorize my-key.pub
 @end example
 
-By default, @command{lsh-writekey} encrypts the private key using a
+By default, @command{lsh-keygen} encrypts the private key using a
 passphrase. This gives you some protection if a backup tape gets into
 the wrong hands, or you use NFS to access the key file in your home
 directory. If you want an unencrypted key, pass the flag @option{-c
-none} to @command{lsh-writekey}.
+none} to @command{lsh-keygen}.
 
 For security reasons, you should keep the private key
 @file{~/.lsh/identity} secret. This is of course particularly important
@@ -898,7 +913,7 @@ fingerprints. The fingerprint of a key (or any sexp, for that matter) is
 simply the hash of its canonical representation. For example,
 
 @example
-sexp-conv --hash </etc/lsh_host_key.pub
+sexp-conv --hash </etc/lshd/host-key.pub
 @end example
 
 This flavour of fingerprints is different from the ssh
@@ -947,14 +962,17 @@ cat sshkey >> ~/.ssh/authorized_keys
 keys (just like @command{ssh-keygen}).
 
 @example
-lsh-export-key --fingerprint < /etc/lsh_host_key.pub
+lsh-export-key --fingerprint < /etc/lshd/host-key.pub
 @end example
 
 show the @acronym{MD5} and Bubble babble 
 fingerprint of the server public key.
 
-
-There are currently no tools for converting private keys.
+There are currently very limited tools for conversion of private keys.
+The slightly misnamed @command{pkcs1-conv} program can be used to
+convert unencrypted RSA private keys in @acronym{pkcs}#1 format, and
+unencrypted DSA keys in OpenSSL's format, to the sexp format used by
+@command{lsh}.
 
 
 @node Invoking lsh, Invoking lshd, Getting started, Top
@@ -1037,9 +1055,9 @@ algorithm negotiation will fail because the peer doesn't support
 prefers not to use it. 
 
 @item @option{-c} @tab Encryption
-  @tab @code{aes256-cbs}, @code{3dec-cbc}, @code{blowfish-cbc}, @code{arcfour}
+  @tab @code{aes128-ctr}, @code{3dec-cbc}, @code{blowfish-cbc}, @code{arcfour}
 
-  @tab The default encryption algorithm is aes256. The default list
+  @tab The default encryption algorithm is aes128. The default list
 includes only quite old and well studied algorithms. There is a special
 algorithm name @code{all} to enable all supported encryption algorithms
 (except @code{none}).
@@ -1081,10 +1099,12 @@ Specifies the location of the @acronym{ACL} file.
 @item --sloppy-host-authentication
 Tell @command{lsh} not to drop the connection if the server's key can not
 be authenticated. Instead, it displays the fingerprint of the key, and
-asks if it is trusted. The received key is also appended to the file
-@file{~/.lsh/captured_keys}. If run in quiet mode, @samp{lsh -q
+asks if it is trusted, and if it should be remembered for the future. If
+you confirm both questions, the key is added to the file
+@file{~/.lsh/host-acls}. If run in quiet mode, @samp{lsh -q
 --sloppy-host-authentication}, @command{lsh} connects to any host, no
-questions asked.
+questions asked. @comment XXX Doesn't remember the key in this case.
+@comment Also review how the --capture-to command line flag works.
 
 @item --strict-host-authentication
 Disable sloppy operation (this is the default behaviour).
