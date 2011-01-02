@@ -428,7 +428,7 @@ certificates. x.509 certificates can be used for client authentication
 as well, but it is more common to use an application specific
 authentication, often using some password.
 
-                @node Kerberos, ipsec, tls, Related techniques
+@node Kerberos, ipsec, tls, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection Kerberos
 
