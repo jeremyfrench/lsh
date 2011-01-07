@@ -1078,6 +1078,8 @@ lsh_transport_lookup_verifier(struct lookup_verifier *s,
       /* Remember this key. We don't want to ask again for key re-exchange */
       spki_add_acls(self->db, STRING_LD(acl));
 
+      /* FIXME: When --host-db-update is given explicitly together
+	 with -q, *always* append the new acl to the given file? */
       if (self->config->capture_fd >= 0
 	  && interact_yes_or_no(ssh_format("Remember key and trust it in the future? (y/n) "),
 				0))
@@ -1200,8 +1202,8 @@ enum {
   /* Transport options */
   OPT_SLOPPY = 0x201,
   OPT_STRICT,
-  OPT_CAPTURE,
   OPT_HOST_DB,
+  OPT_HOST_DB_UPDATE,
 
   /* Userauth options */
   OPT_USERAUTH,
@@ -1227,7 +1229,7 @@ main_options[] =
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
     "Never, never, ever trust an unknown hostkey. (default)", 0 },
-  { "host-db-update", OPT_CAPTURE, "Filename", 0,
+  { "host-db-update", OPT_HOST_DB_UPDATE, "Filename", 0,
     "File that ACLs for new keys are appended to. "
     "The default is ~/.lsh/host-acls.", 0 },
   
@@ -1337,7 +1339,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->sloppy = 0;
       break;
 
-    case OPT_CAPTURE:
+    case OPT_HOST_DB_UPDATE:
       self->capture_file = arg;
       break;
 
