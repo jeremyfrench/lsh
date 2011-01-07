@@ -1094,7 +1094,8 @@ The options that change this behaviour are
 
 @table @option
 @item --host-db
-Specifies the location of the @acronym{ACL} file.
+Specifies the location of the @acronym{ACL} file (by default
+@file{~/.lsh/host-acls}).
 
 @item --sloppy-host-authentication
 Tell @command{lsh} not to drop the connection if the server's key can not
@@ -1103,21 +1104,14 @@ asks if it is trusted, and if it should be remembered for the future. If
 you confirm both questions, the key is added to the file
 @file{~/.lsh/host-acls}. If run in quiet mode, @samp{lsh -q
 --sloppy-host-authentication}, @command{lsh} connects to any host, no
-questions asked. @comment XXX Doesn't remember the key in this case.
-@comment Also review how the --capture-to command line flag works.
+questions asked (and without remembering the key for the future).
 
 @item --strict-host-authentication
 Disable sloppy operation (this is the default behaviour).
 
-@item --capture-to
-Use some other file than @file{~/.lsh/captured_keys}. For example,
-
-@example
-lsh --sloppy-host-authentication --capture-to ~/.lsh/host-acls
-@end example
-
-@noindent
-makes @command{lsh} behave more like the @command{ssh} program.
+@item --host-db-update
+Used together with @option{--sloppy-host-authentication}, to specify the
+file which @acronym{ACL}s for new hosts are appended to.
 
 @end table
 
@@ -1561,6 +1555,7 @@ this variable from the server process.
 Files used by the lsh client, stored in the @file{~/lsh} directory:
 
 @table @file
+@comment FIXME: Document new host-acl file
 @item captured_keys
 Keys for remote hosts, saved when running @samp{lsh
 --sloppy-host-authentication}. Or more precicely, each key is stored
