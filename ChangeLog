@@ -1,3 +1,15 @@
+2011-01-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (OPT_HOST_DB_UPDATE): Rennamed, from...
+	(OPT_CAPTURE_TO): ...old name.
+	(main_argp_parser): For '-D' option, initialize socks_port.
+
+	* src/lsh-transport.c (OPT_HOST_DB_UPDATE): Rennamed, from...
+	(OPT_CAPTURE_TO): ...old name.
+
+	* doc/lsh.texinfo (Hostauth options): Updated --host-db-update
+	(used to be ---captured-to).
+
 2010-12-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (Gateway options): New node.
