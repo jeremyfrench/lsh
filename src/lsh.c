@@ -458,9 +458,8 @@ enum {
   OPT_PUBLICKEY = 0x201,
   OPT_SLOPPY,
   OPT_STRICT,
-  OPT_CAPTURE,
-
   OPT_HOST_DB,
+  OPT_HOST_DB_UPDATE,
 
   OPT_DH,
   OPT_SRP,
@@ -575,7 +574,7 @@ main_options[] =
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
     "Never, never, ever trust an unknown hostkey. (default)", 0 },
-  { "host-db-update", OPT_CAPTURE, "Filename", 0,
+  { "host-db-update", OPT_HOST_DB_UPDATE, "Filename", 0,
     "File that ACLs for new keys are appended to. "
     "The default is ~/.lsh/host-acls.", 0 },
   { "capture-to", 0, NULL, OPTION_ALIAS | OPTION_HIDDEN, NULL, 0 },
@@ -844,15 +843,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'D':
       {
-	unsigned long socks_port;
+	unsigned long socks_port = DEFAULT_SOCKS_PORT;
 	if (arg)
 	  {
 	    if (!parse_arg_unsigned(arg, &socks_port, '\0')
 		|| socks_port > 0xffff)
 	      argp_error(state, "Invalid port number `%s' for socks.", arg);
 	  }
-	else
-	  socks_port = DEFAULT_SOCKS_PORT;
 
 	add_action(self, make_socks_server
 		   (make_address_info((self->with_remote_peers
@@ -931,7 +928,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       arglist_push(&self->transport_args, "--strict-host-authentication");
       break;
 
-    case OPT_CAPTURE:
+    case OPT_HOST_DB_UPDATE:
       arglist_push(&self->transport_args, "--host-db-update");
       arglist_push(&self->transport_args, arg);
       break;
