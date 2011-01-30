@@ -112,6 +112,7 @@ This manual explains how to use and hack @command{lsh}; it corresponds to
 * Introduction::                
 * Installation::                
 * Getting started::             
+* Server configuration::        
 * Invoking lsh::                
 * Invoking lshd::               
 * Files and environment variables::  
@@ -143,6 +144,14 @@ Getting started
 * public-key::                  Using public-keys
 * sexp::                        Examining keys and other S-exp files
 * Converting keys::             
+
+Server configuration
+
+* Configuration syntax::        
+* Common options::              
+* lshd configuration::          
+* lshd-userauth configuration::  
+* lshd-connection configuration::  
 
 Invoking @command{lsh}
 
@@ -538,7 +547,7 @@ system better than @command{./configure}, just set LDFLAGS and/or
 LD_LIBRARY_PATH to the right values instead.
 
 
-@node Getting started, Invoking lsh, Installation, Top
+@node Getting started, Server configuration, Installation, Top
 @comment  node-name,  next,  previous,  up
 @chapter Getting started
 This section tells you how to perform some common tasks using the
@@ -787,7 +796,7 @@ over a single ssh connection. It runs as the logged in user.
 
 These programs communicate with each other using unencrypted ssh
 packets. Each has its own configuration file and command line options.
-By default, configuration files are stored in the @file{/usr/local/lshd} directory,
+By default, configuration files are stored in the @file{/usr/local/etc/lshd} directory,
 this can be changed using the @option{--sysconfdir} option to configure
 or the @code{LSHD_CONFIG_DIR} environment variable at run time.
 
@@ -974,8 +983,128 @@ convert unencrypted RSA private keys in @acronym{pkcs}#1 format, and
 unencrypted DSA keys in OpenSSL's format, to the sexp format used by
 @command{lsh}.
 
+@node Server configuration, Invoking lsh, Getting started, Top
+@comment  node-name,  next,  previous,  up
+@chapter Server configuration
 
-@node Invoking lsh, Invoking lshd, Getting started, Top
+@command{lshd} is a server that accepts connections from clients
+speaking the Secure Shell protocol. It is usually started automatically
+when the systems boots, and runs with root privileges. However, it is
+also possible to start @command{lshd} manually, and with user
+privileges.
+
+The server functionality is split between three programs,
+@command{lshd}, @command{lshd-userauth}, and @command{lshd-connection},
+handling the different layers of the Secure Shell protocol 
+(@pxref{lshd basics}).
+
+Each program has its own configuration file. By default,
+the configuration files @file{lshd.conf}, @file{lshd-userauth.conf} and
+@file{lshd-connection.conf}, and key file @file{host-key}, are stored in the
+@file{/usr/local/etc/lshd} directory, this can be changed using the
+@option{--sysconfdir} option to configure or the @code{LSHD_CONFIG_DIR}
+environment variable at run time.
+
+Several of the configuration file options are common to all programs.
+
+@menu
+* Configuration syntax::        
+* Common options::              
+* lshd configuration::          
+* lshd-userauth configuration::  
+* lshd-connection configuration::  
+@end menu
+
+@node Configuration syntax, Common options, Server configuration, Server configuration
+@section Configuration file syntax
+
+The configuration file syntax is fairly conventional. Comments are
+introduced with a @code{#} character, and extend to the end of line. 
+Most settings use the syntax @code{@var{keyword} = @var{value}}, for example
+@example
+  enable-core-file = yes
+@end example
+Each setting must start on a new line; besides this, white space is not
+significant. Each keyword expect a value of a certain type, one of
+@table @asis
+@item Number
+A non-negative decimal number, e.g., @samp{17}.
+@item String
+A string, typically a file name or algorithm name. Currently, there is
+no quoting mechanism, so the value cannot include any white space, and it
+should avoid special characters that may be used for quoting in future
+versions. E.g., @samp{/etc/lshd/other-key}.
+@item Boolean
+The value should be one of @samp{yes} and @samp{no}.
+@end table
+
+For specifying services and sybsystems, the values includes a command
+line, using the syntax:
+@example
+@var{keyword} @var{name} @{ @var{command} @var{args @dots{}} @} 
+@end example
+
+The @var{name}, the @var{command} and the
+arguments are strings. There is currently no quoting mechanism here
+either. Braces are allowed in the argument list, provided that they are
+properly nested. Commands which are not absolute file names are
+interpreted relative to the directory @file{/usr/local/libexec/lshd};
+this can be changed using the @option{--libexecdir} option to configure
+or the @code{LSHD_LIBEXEC_DIR} environment variable at run time. A
+simple example:
+@example
+subsystem sftp = @{ sftp-server @}
+@end example
+A more complicated example, using nested braces,
+@example
+service ssh-connection = @{ 
+  lshd-connection --helper-fd $(helper_fd)
+  --subsystem sftp @{ sftp-server -d @}
+@}
+@end example
+(this example is a bit silly, since it would be more natural to do the
+configuration of lshd-connection in its config file, rather than as
+command line options in the configuration file of the program starting
+it).
+
+@node Common options, lshd configuration, Configuration syntax, Server configuration
+@section Common configuration options
+
+All three programs, @command{lshd}, @command{lshd-userauth}, and
+@command{lshd-connection}, take the following configuration options
+controlling the amount of logging:
+
+@table @code
+@item log-file
+Takes a filename as argument (a string). Log messages are appended to
+this file.
+@example
+log-file = /var/log/lshd.log
+@end example
+@item use-syslog
+This boolean option enables logging via the syslog facility. Currently,
+all messages are logged at the same syslog level, NOTICE.
+@item quiet
+Boolean option to disable warning messages.
+@item verbose
+Boolean option to enable verbose messages.
+@item trace
+Boolean option to enable messages tracing the internal flow of control.
+@item debug
+Boolean option to enable logging of large amounts of debug information,
+including the contents of all sent and received packets. Use with care.
+@end table
+
+@node lshd configuration, lshd-userauth configuration, Common options, Server configuration
+@section @command{lshd} configuration
+
+@node lshd-userauth configuration, lshd-connection configuration, lshd configuration, Server configuration
+@section @command{lshd-userauth} configuration
+
+@node lshd-connection configuration,  , lshd-userauth configuration, Server configuration
+@section @command{lshd-connection} configuration
+
+@node Invoking lsh, Invoking lshd, Server configuration, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lsh}
 @anchor{lsh-usage}
@@ -1258,8 +1387,7 @@ Redirect the stdout of a remote process to a given, local, file.
 Analogous to the @option{--stdout} option.
 
 @item --detach
-@comment FIXME: XXX not currently supported.
-Detach from terminal at session end.
+Detach from terminal at session end. FIXME: Not currently supported.
 
 @item --write-pid
 Applies to @option{-B}. Write PID of backgrounded process to stdout.
@@ -1355,11 +1483,6 @@ do that automatically.
 @chapter Invoking @command{lshd}
 @anchor{lshd-usage}
 
-@command{lshd} is a server that accepts connections from clients
-speaking the Secure Shell Protocol. It is usually started automatically
-when the systems boots, and runs with root privileges. However, it is
-also possible to start @command{lshd} manually, and with user
-privileges.
 
 @comment FIXME: XXX
 
@@ -1401,7 +1524,7 @@ time, just use several @option{--interface} options on the command line.
 
 @item -h
 Location of the server's private key file. By default,
-@file{/etc/lsh_host_key}.
+@file{/usr/local/etc/lshd/host-key}.
 
 @item --daemonic
 Enables daemonic mode. @command{lshd} forks into the background,
