@@ -905,6 +905,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	if (self->corefile < 0)
 	  self->corefile = 1;
 
+	/* FIXME: The default should depend on ENV_LSHD_CONFIG_DIR. */
 	if (!read_host_key((self->hostkey
 			    ? lsh_get_cstring(self->hostkey)
 			    : FILE_LSHD_HOST_KEY),
@@ -946,8 +947,6 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	self->hostkey = ssh_format("%ls", value, data);
       break;
 
-      /* FIXME: Interface and port options should be disabled, if
-	 given on the command line. */
     case OPT_INTERFACE:
       if (!self->interfaces_override_config_file)
 	{
@@ -957,7 +956,6 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	    werror("Invalid interface `%s'\n", value, data);
 	  else
 	    object_queue_add_tail(&self->interfaces, &interface->super);
-
 	}
       break;
 
