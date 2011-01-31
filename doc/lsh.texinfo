@@ -22,7 +22,7 @@
 Manual for LSH. This manual corresponds to @command{lsh} version
 @value{UPDATED-FOR}. 
 
-Copyright 2000, 2004, 2008, 2010 @value{AUTHOR}
+Copyright 2000, 2004, 2008, 2010, 2011 @value{AUTHOR}
 
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
@@ -796,7 +796,8 @@ over a single ssh connection. It runs as the logged in user.
 
 These programs communicate with each other using unencrypted ssh
 packets. Each has its own configuration file and command line options.
-By default, configuration files are stored in the @file{/usr/local/etc/lshd} directory,
+By default, configuration files are stored in the
+@file{/usr/local/etc/lshd} directory,
 this can be changed using the @option{--sysconfdir} option to configure
 or the @code{LSHD_CONFIG_DIR} environment variable at run time.
 
@@ -1098,11 +1099,126 @@ including the contents of all sent and received packets. Use with care.
 @node lshd configuration, lshd-userauth configuration, Common options, Server configuration
 @section @command{lshd} configuration
 
+The main server program, @command{lshd}, takes the following
+configuration options:
+
+@table @code
+@item interface
+Network interface to listen on. If no interface is specified, the
+default behavior is to listen on all network interfaces. The value is a
+string giving the name or ip-address of the interface, optionally
+followed by a colon and the port to listen on. FIXME: Syntax is not IPv6
+friendly. This option can be used multiple times.
+
+@example
+interface localhost
+interface example-interface:443
+@end example
+
+@item port
+Port to listen on. Applies to all interfaces which are not followed by
+an explicit port. The value is a string giving a service name or a
+numerical port number. The default, if no port is specified, is the
+standard port for the ``ssh'' service, 22.
+
+@example
+port ssh
+port 80
+port 443
+@end example
+
+@item hostkey
+A string giving the name of the server's private key file. Default is
+@file{/usr/local/etc/lshd/host-key}.
+
+@item enable-core-file
+Boolean option. By default, @command{lshd} disables core files by
+setting the corresponding resource limit to zero. If this option is
+enabled, the resource limit is not touched, inheriting the setting of
+the parent process.
+@item service
+This option takes as argument the name of the service to offer, followed
+by a command line in braces @pxref{Configuration syntax}. The default,
+if no service is specified, is
+
+@example
+service ssh-userauth = @{ --session-id $(session_id) @var{other options@dots{}} @}
+@end example
+
+where verbosity options (@option{-v}, @option{-q}, @option{--debug}, and
+@option{--trace}) affecting @command{lshd} are propagated by appending
+them to the command line where needed.
+
+@end table
+
 @node lshd-userauth configuration, lshd-connection configuration, lshd configuration, Server configuration
+
 @section @command{lshd-userauth} configuration
+
+The @command{lshd-userauth} program takes the following configuration options:
+
+@table @code
+@item allow-password
+Boolean option to allow password authentication of users. Default is no.
+@item allow-public-key
+Boolean option to allow public key authentication of users. Default is no.
+@item allow-root-login
+Boolean option, to allow authentication as the root user.
+@item service
+This option takes as argument the name of the service to offer, followed
+by a command line in braces @pxref{Configuration syntax}. The default,
+if no service is specified, is
+
+@example
+service ssh-userauth = @{ --helper-fd $(helper_fd) @var{other options@dots{}} @}
+@end example
+
+where verbosity options (@option{-v}, @option{-q}, @option{--debug}, and
+@option{--trace}) affecting @command{lshd} are propagated by appending
+them to the command line where needed.
+
+@end table
 
 @node lshd-connection configuration,  , lshd-userauth configuration, Server configuration
 @section @command{lshd-connection} configuration
+
+The @command{lshd-userauth} program takes the following configuration options:
+
+@table @code
+@item allow-tcpforward
+Configures support for TCP/IP forwarding. The value is one of the
+following strings: ``local'', ``remote'', ``yes'', or ``no''. ``local''
+means that the client can request connections to other hosts (typically
+the result of the client's @option{-L} command line option), while
+``remote'' means that the client can ask the server to listen for
+incoming connections (typically the result of the client's @option{-R}
+command line option). The values ``yes'' and ``no'' allows or disallows
+both types. The default is no.
+@item allow-session
+Boolean option. Allows the client open a ``session'' channel (used for
+running processes on the server). Default is no. Note that enabling this
+option is a prerequisite for enabling any of the the following options.
+@item allow-shell
+Boolean option. Allows the client to start an interactive shell. Default
+is no.
+@item allow-exec
+Boolean option. Allows the client to execute commands. Default is no.
+@item allow-pty
+Boolean option. Allows the client to request a pseudo tty for a session.
+Default is no.
+@item allow-x11
+Boolean option. Allows the client to request X11 forwarding for a
+session. Default is no.
+@item subsystem
+This option takes as argument the name of a subsystem to offer, followed
+by a command line in braces @pxref{Configuration syntax}. By default, no
+subsystems are enabled and any subsystem request from the client is
+denied. To enable the @code{sftp} subsystem, use
+
+@example
+subsystem sftp = @{ sftp-server @}
+@end example
+@end table
 
 @node Invoking lsh, Invoking lshd, Server configuration, Top
 @comment  node-name,  next,  previous,  up
