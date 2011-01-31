@@ -1,3 +1,13 @@
+2011-01-31  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo (Server configuration): Describe all config options.
+
+	* src/lshd-connection.c (main_argp_parser): Warn if shell, exec or
+	subsystem requests are enabled, but session channels are disabled.
+
+	* src/lshd-userauth.c (main_argp_parser): Add --helper-fd option
+	to the default lshd-connection command line.
+
 2011-01-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (OPT_HOST_DB_UPDATE): Rennamed, from...
