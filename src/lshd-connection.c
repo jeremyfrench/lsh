@@ -444,12 +444,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       if (!self->allow_tcpforward && !self->allow_session)
 	argp_error(state, "All channel types disabled.");
-      if (self->allow_session
-	  && !self->allow_shell && !self->allow_exec
-	  && object_queue_is_empty(&self->subsystem_config->services))
-	argp_error(state, "Session channel enabled, but all requests "
-		   "to start a process are disabled.");
-
+      if (self->allow_session)
+	{
+	  if (!self->allow_shell && !self->allow_exec
+	      && object_queue_is_empty(&self->subsystem_config->services))
+	    argp_error(state, "Session channel enabled, but all requests "
+		       "to start a process are disabled.");
+	}
+      else
+	{
+	  if (self->allow_shell)
+	    werror("Enabling allow-shell has no effect unless allow-session is also enabled.\n");
+	  if (self->allow_exec)
+	    werror("Enabling allow-exec has no effect unless allow-session is also enabled.\n");
+	  if (!object_queue_is_empty(&self->subsystem_config->services))
+	    werror("Enabling a subsystem has no effect unless allow-session is also enabled.\n");
+	}
       break;
     case OPT_HELPER_FD:
       {
