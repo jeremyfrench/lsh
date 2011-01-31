@@ -985,6 +985,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
 	  arglist_push (&entry->args, FILE_LSHD_CONNECTION);
 
+	  arglist_push (&entry->args, "--helper-fd");
+	  arglist_push (&entry->args, "$(helper_fd)");
+	  
 	  /* Propagate werror-related options. */
 	  if (self->super.super.verbose > 0)
 	    arglist_push (&entry->args, "-v");
