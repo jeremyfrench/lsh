@@ -1,3 +1,8 @@
+2011-02-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/Makefile.in (DISTFILES): Added srp-spec.txt, to avoid
+	requiring groff.
+
 2011-01-31  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (Server configuration): Describe all config options.
