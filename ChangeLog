@@ -1,3 +1,10 @@
+2011-02-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/x11-3-test: Export DISPLAY before running
+	exec_lsh.
+
+	* src/testsuite/functions.sh (spawn_xvfb): Use rm -f.
+
 2011-02-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Added srp-spec.txt, to avoid
