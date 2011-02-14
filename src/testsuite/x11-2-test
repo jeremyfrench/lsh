@@ -16,9 +16,9 @@ need_xvfb
 # command.
 spawn_xvfb \
   && spawn_lshd \
-  && (DISPLAY=$TEST_DISPLAY;
-      export DISPLAY;
-      LSH_FLAGS="$LSH_FLAGS --x11";
+  && (DISPLAY=$TEST_DISPLAY
+      export DISPLAY
+      LSH_FLAGS="$LSH_FLAGS --x11"
       exec_lsh "$XMODMAP" > /dev/null) \
   && if exec_lsh "$XMODMAP" > /dev/null; then false ; else true; fi \
   && test_success
