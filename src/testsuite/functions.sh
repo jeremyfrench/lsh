@@ -199,7 +199,7 @@ spawn_lshg () {
 }
 
 spawn_xvfb () {
-    rm $XAUTHORITY
+    rm -f $XAUTHORITY
     # Set up authorization the old-fashioned way; The security
     # extension used by xauth generate is not always supported.
     $XAUTH <<EOF
