@@ -11,10 +11,13 @@ fi
 need_xvfb
 
 spawn_lshd && spawn_xvfb \
-  && DISPLAY=$TEST_DISPLAY LSH_FLAGS="$LSH_FLAGS --x11" exec_lsh xauth list \
+  && (DISPLAY=$TEST_DISPLAY
+      export DISPLAY
+      LSH_FLAGS="$LSH_FLAGS --x11"
+      exec_lsh $XAUTH list) \
   | awk '{ print $3 }' > test.out1
 
-xauth list | awk '{ print $3 }' > test.out2
+$XAUTH list | awk '{ print $3 }' > test.out2
 
 if cmp test.out1 test.out2; then
     echo "Using real X11 cookie!"
