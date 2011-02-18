@@ -49,7 +49,9 @@ export LSHD_UTMP LSHD_WTMP LSHD_CONFIG_DIR
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
+: ${MINI_INETD_PIDFILE:="`pwd`/mini-inetd.$$.pid"}
 : ${INTERFACE:=localhost}
+: ${LOCALHOST:=localhost}
 
 unset DISPLAY
 
@@ -125,6 +127,10 @@ need_getpwnam_wrapper () {
     [ -f "getpwnam-wrapper.so" ] || test_skip
 }
 
+need_ipv6 () {
+    (PATH="/sbin:/usr/sbin:$PATH"; ifconfig -a) | grep inet6 >/dev/null || test_skip
+}
+
 at_exit () {
   ATEXIT="$ATEXIT ; $1"
 }
@@ -164,37 +170,37 @@ run_lsh () {
     shift
     echo "$cmd" | HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
 	--no-use-gateway --sloppy-host-authentication \
-	--host-db-update /dev/null -p $PORT "$@" localhost
+	--host-db-update /dev/null -p $PORT "$@" $LOCALHOST
 }
 
 stdin_lsh () {
     HOME="$TEST_HOME" ../lsh -nt $LSH_FLAGS \
 	--no-use-gateway --sloppy-host-authentication \
-	--host-db-update /dev/null -p $PORT "$@" localhost
+	--host-db-update /dev/null -p $PORT "$@" $LOCALHOST
 }
 
 exec_lsh () {
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS --sloppy-host-authentication \
 	--no-use-gateway \
-	--host-db-update /dev/null -z -p $PORT localhost "$@"
+	--host-db-update /dev/null -z -p $PORT $LOCALHOST "$@"
 }
 
 spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--no-use-gateway \
-	--host-db-update /dev/null -z -p $PORT "$@" --write-pid -B localhost > "$LSH_PIDFILE"
+	--host-db-update /dev/null -z -p $PORT "$@" --write-pid -B $LOCALHOST > "$LSH_PIDFILE"
 
     at_exit 'kill `cat $LSH_PIDFILE`'
 }
 
 exec_lshg () {
-    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT localhost "$@"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT $LOCALHOST "$@"
 }
 
 spawn_lshg () {
     # echo spawn_lshg "$@"
-    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B $LOCALHOST > "$LSHG_PIDFILE"
     at_exit 'kill `cat $LSHG_PIDFILE`'
 }
 
@@ -217,8 +223,8 @@ EOF
 # by the below kill.
 at_connect () {
     # sleep 1 # Allow some time for earlier processes to die
-    ./mini-inetd -- localhost:$1 /bin/sh sh -c "$3" &
-    at_exit "kill $!"
+    ./mini-inetd --background -- localhost:$1 /bin/sh sh -c "$3" > $MINI_INETD_PIDFILE
+    at_exit "kill `cat $MINI_INETD_PIDFILE`"
 }
 
 compare_output() {
