@@ -1,3 +1,7 @@
+2011-02-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.in (uninstall): Typo fix.
+
 2010-12-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* sftp_bind.c (lsftp_open_connection): Eliminate some warnings,

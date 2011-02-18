@@ -181,7 +181,7 @@ install: $(BIN_PROGRAMS) $(LIBEXEC_PROGRAMS)
 
 uninstall:
 	cd $(DESTDIR)$(bindir) && rm -f $(BIN_PROGRAMS)
-	cd $(DESTDIR)$(libexec) && rm -f $(LIBEXEC_PROGRAMS)
+	cd $(DESTDIR)$(libexecdir) && rm -f $(LIBEXEC_PROGRAMS)
 
 distdir: $(DISTFILES)
 	set -e; \
