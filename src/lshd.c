@@ -522,7 +522,8 @@ open_port (struct lshd_context *ctx, struct resource_list *resources,
 
   err = getaddrinfo(node, lsh_get_cstring(port), &hints, &list);
   if (err)
-    werror ("getaddrinfo failed: %z\n", gai_strerror(err));
+    werror ("getaddrinfo failed for interface %z, port %S: %z\n",
+	    node ? node : "ANY", port, gai_strerror(err));
   else
     {
       for (p = list; p; p = p->ai_next)
@@ -715,29 +716,73 @@ lshd_argp_children[] =
 static struct lshd_interface *
 parse_interface(size_t length, const char *arg)
 {
-  const char *sep = memchr(arg, ':', length);
+  if (length == 0)
+    return NULL;
 
-  if (sep)
+  if (arg[0] == '[')
     {
-      size_t name_length = sep - arg;
-      if (name_length + 1 == length)
+      /* Optional brackets, [<ip>]:<port>, to support IPv6 literal ip addresses. */
+      const char *end;
+      size_t name_length;
+      size_t left;
+
+      arg++; length--;
+
+      end = memchr(arg, ']', length);
+      if (!end)
 	return NULL;
+
+      name_length = end - arg;
+      
+      left = length - name_length - 1;
+
+      if (left)
+	{	  
+	  if (end[1] != ':')
+	    return NULL;
+	  {
+	    
+	    NEW(lshd_interface, self);
+
+	    self->name = ssh_format("%ls", name_length, arg);
+	    self->port = ssh_format("%ls", left - 1, end + 2);
+	    return self;
+	  }
+	}
+      else
+	{
+	  NEW(lshd_interface, self);
+	  self->name = ssh_format("%ls", name_length, arg);
+	  self->port = NULL;
+	  return self;
+	}	  
+    }
+  else
+    {
+      const char *sep = memchr(arg, ':', length);
+
+      if (sep)
+	{
+	  size_t name_length = sep - arg;
+	  if (name_length + 1 == length)
+	    return NULL;
+	  else
+	    {
+	      NEW(lshd_interface, self);
+
+	      self->name = ssh_format("%ls", name_length, arg);
+	      self->port = ssh_format("%ls", length - name_length - 1, sep + 1);
+	      return self;
+	    }
+	}
       else
 	{
 	  NEW(lshd_interface, self);
 
-	  self->name = ssh_format("%ls", name_length, arg);
-	  self->port = ssh_format("%ls", length - name_length - 1, sep + 1);
+	  self->name = ssh_format("%ls", length, arg);
+	  self->port = NULL;
 	  return self;
 	}
-    }
-  else
-    {
-      NEW(lshd_interface, self);
-
-      self->name = ssh_format("%ls", length, arg);
-      self->port = NULL;
-      return self;
     }
 }
 
