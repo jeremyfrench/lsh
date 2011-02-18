@@ -1,0 +1,16 @@
+#! /bin/sh
+
+echo lsh, ipv6 test
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+INTERFACE="127.0.0.1"
+LOCALHOST="127.0.0.1"
+
+spawn_lshd && run_lsh "exit 0" && test_success
+
+test_done

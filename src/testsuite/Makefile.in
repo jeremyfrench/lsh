@@ -36,6 +36,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	socks5-test socks4-test \
 	lshg-tcpip-local-test lshg-tcpip-remote-test \
 	lcp-test \
+	ipv4-test ipv6-test \
 	passwd-1-test passwd-2-test \
 	x11-1-test x11-2-test x11-3-test x11-4-test x11-5-test \
 	rapid7-lsh-test rapid7-lshd-test login-auth-test \
