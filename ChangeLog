@@ -1,3 +1,26 @@
+2011-02-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (TS_SH): Added ipv4-test and
+	ipv6-test.
+
+	* src/testsuite/functions.sh (need_ipv6): New function.
+	(LOCALHOST): New variable. Use it in all functions starting the
+	lsh client.
+	(at_connect): Use new --background option to mini-inetd, to
+	improve robustness.
+
+	* src/testsuite/tcpip-remote-test: Added a sleep call, to let the
+	server side setup the port forwarding before we use it.
+
+	* src/testsuite/mini-inetd.c (main): New --background option.
+
+	* src/testsuite/ipv6-test: New file.
+	* src/testsuite/ipv4-test: New file.
+
+	* src/lshd.c (open_port): More info when getaddrinfo fails.
+	(parse_interface): Allow optional brackets around ip address,
+	needed for IPv6 literal addresses.
+
 2011-02-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-3-test: Export DISPLAY before running
