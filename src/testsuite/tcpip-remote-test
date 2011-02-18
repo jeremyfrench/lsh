@@ -13,9 +13,14 @@ PROXYPORT=`expr $PORT + 2`
 
 # For some reason, tcpconnect < /dev/null doesn't work on SunOS-5.4. Hence
 # the appearantly unneeded use of cat.
+
+# The sleep is needed, because spawn_lsh returns when the
+# tcpip-forward request is sent, and the server may not have processed
+# it yet.
 at_connect $SERVERPORT 1 'echo foo' \
     && spawn_lshd \
     && spawn_lsh -R $PROXYPORT:localhost:$SERVERPORT \
+    && sleep 2 \
     && cat /dev/null | tcpconnect localhost $PROXYPORT | grep foo \
     && test_success
 
