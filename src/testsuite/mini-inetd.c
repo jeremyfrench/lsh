@@ -65,7 +65,11 @@ werror(const char *format, ...)
 static void
 usage (void)
 {
-  printf("mini-inetd [-m max-connections] [localaddr:]port program [argv0, argv1 ...]\n");
+  printf("mini-inetd [OPTIONS] [localaddr:]port program [argv0, argv1 ...]\n"
+	 "Options:\n"
+	 "  -m max-connections\n"
+	 "  --help\n"
+	 "  --background\n");
 }
 
 static void
@@ -98,6 +102,7 @@ int
 main (int argc, char **argv)
 {
   int max_connections = 0;
+  int background = 0;
   int family = AF_UNSPEC; 
   const char *local_addr;
   const char *port;
@@ -112,12 +117,13 @@ main (int argc, char **argv)
   int nfds = 0;
   int max_fd = 0;
 
-  enum { OPT_HELP = 300 };
+  enum { OPT_HELP = 300, OPT_BACKGROUND };
   static const struct option options[] =
     {
       /* Name, args, flag, val */
 
       { "help", no_argument, NULL, OPT_HELP },
+      { "background", no_argument, NULL, OPT_BACKGROUND },
       { NULL, 0, NULL, 0 }
     };  
 
@@ -129,6 +135,9 @@ main (int argc, char **argv)
       case OPT_HELP:
  	usage();
 	return EXIT_SUCCESS;
+      case OPT_BACKGROUND:
+	background = 1;
+	break;
       case 'd':
 	/* Currently a NOP for backwards compatibility. */
 	break;
@@ -242,6 +251,22 @@ main (int argc, char **argv)
   if (!nfds)
     die("No ports could be bound.\n");
 
+  if (background)
+    {
+      pid_t pid = fork();
+      switch (pid)
+	{
+	case -1:
+	  die("fork failed: %s\n", STRERROR(errno));
+	case 0:
+	  /* Child process. */
+	  break;
+	default:
+	  printf("%ld\n", (long) pid);
+	  fflush(stdout);
+	  _exit(EXIT_SUCCESS);
+	}
+    }
   for (;;)
     {
       fd_set wanted;
