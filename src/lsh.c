@@ -1256,6 +1256,9 @@ main(int argc, char **argv)
       action->action(action, &connection->super);
     }
 
+  /* FIXME: It would be desirable to delay detach until we have got te
+     server's response for any remote forwardings (-R). When fixed,
+     remove sleep call in tcpip-remote-test. */
   if (options->detach)
     {
       pid_t pid = fork();
