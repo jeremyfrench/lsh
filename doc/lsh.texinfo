@@ -1138,7 +1138,7 @@ enabled, the resource limit is not touched, inheriting the setting of
 the parent process.
 @item service
 This option takes as argument the name of the service to offer, followed
-by a command line in braces @pxref{Configuration syntax}. The default,
+by a command line in braces (@pxref{Configuration syntax}). The default,
 if no service is specified, is
 
 @example
@@ -1163,10 +1163,10 @@ Boolean option to allow password authentication of users. Default is no.
 @item allow-public-key
 Boolean option to allow public key authentication of users. Default is no.
 @item allow-root-login
-Boolean option, to allow authentication as the root user.
+Boolean option, to allow authentication as the root user. Default is no.
 @item service
 This option takes as argument the name of the service to offer, followed
-by a command line in braces @pxref{Configuration syntax}. The default,
+by a command line in braces (@pxref{Configuration syntax}). The default,
 if no service is specified, is
 
 @example
@@ -1211,7 +1211,7 @@ Boolean option. Allows the client to request X11 forwarding for a
 session. Default is no.
 @item subsystem
 This option takes as argument the name of a subsystem to offer, followed
-by a command line in braces @pxref{Configuration syntax}. By default, no
+by a command line in braces (@pxref{Configuration syntax}). By default, no
 subsystems are enabled and any subsystem request from the client is
 denied. To enable the @code{sftp} subsystem, use
 
