@@ -1,5 +1,8 @@
 2011-02-18  Niels Möller  <nisse@lysator.liu.se>
 
+	* doc/Makefile.in (DISTFILES): Deleted srp-spec.txt, reverting
+	change from 2011-02-10. It is already included, via $(TARGETS).
+
 	* src/testsuite/Makefile.in (TS_SH): Added ipv4-test and
 	ipv6-test.
 
