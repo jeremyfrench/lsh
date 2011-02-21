@@ -639,6 +639,7 @@ parse_forward_arg(const char *arg,
   
   host = sep + 1;
 
+  /* FIXME: Allow brackets. */
   sep = strchr(host, ':');
   if (!sep)
     return 0;
