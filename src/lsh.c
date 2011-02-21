@@ -496,7 +496,6 @@ main_options[] =
   { "forward-local-port", 'L', "LOCAL-PORT:TARGET-HOST:TARGET-PORT", 0,
     "Forward TCP/IP connections at a local port", 0 },
   { "forward-socks", 'D', "PORT", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
-  /* FIXME: X11 forwarding doesn't work reliably over a gateway. */
   { "forward-remote-port", 'R', "REMOTE-PORT:TARGET-HOST:TARGET-PORT", 0,
     "Forward TCP/IP connections at a remote port", 0 },
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
@@ -632,22 +631,35 @@ parse_forward_arg(const char *arg,
   
   sep = strchr(arg, ':');
   if (!sep)
-    return 0;
+    return NULL;
 
   if (!parse_arg_unsigned(arg, listen_port, ':'))
     return 0;
   
   host = sep + 1;
 
-  /* FIXME: Allow brackets. */
-  sep = strchr(host, ':');
-  if (!sep)
-    return 0;
+  if (host[0] == '[')
+    {
+      /* Optional brackets, to support IPv6 literal ip addresses. */
+      host++;
+      sep = strchr(host, ']');
+      if (!sep || sep[1] != ':')
+	return NULL;
 
-  host_length = sep - host;
+      host_length = sep - host;
+      sep ++;
+    }
+  else
+    {
+      sep = strchr(host, ':');
+      if (!sep)
+	return NULL;
+
+      host_length = sep - host;
+    }
 
   if (!parse_arg_unsigned(sep + 1, &target_port, '\0'))
-    return 0;
+    return NULL;
 
   return make_address_info(ssh_format("%ls", host_length, host),
 			   target_port);
