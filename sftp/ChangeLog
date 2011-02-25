@@ -1,3 +1,15 @@
+2011-02-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* rl.c (lsftp_rl_init): Deleted cast.
+	(lsftp_rl_completion): Use const argument.
+	(lsftp_rl_command_generator): Likewise.
+	(lsftp_rl_remotefile_generator): Likewise.
+	(lsftp_rl_no_generator): Likewise.
+	(lsftp_rl_history_fname): Deleted unused local variable username.
+
+	* rl.h: Use libreadline typedefs when declaring callback
+	functions.
+
 2011-02-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* Makefile.in (uninstall): Typo fix.

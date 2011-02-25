@@ -116,7 +116,7 @@ void lsftp_rl_init()
   rl_basic_word_break_characters =" \n\t"; /* Only whitespace break words */
 
   RL_CHAR_IS_QUOTED = char_quoted;
-  rl_attempted_completion_function = (CPPFunction *)lsftp_rl_completion;
+  rl_attempted_completion_function = lsftp_rl_completion;
 
 
   interactive = 1; /* Set the interactive flag in the main program */
@@ -202,7 +202,7 @@ int char_quoted( char* text, int index )
 
 
 
-char** lsftp_rl_completion(char* text, int start, int end)
+char** lsftp_rl_completion(const char *text, int start, int end)
 {
   char** matches=NULL;
   int s;
@@ -293,7 +293,7 @@ char** lsftp_rl_completion(char* text, int start, int end)
    to start from scratch; without any state (i.e. STATE == 0), then we
    start at the top of the list. */
 /* FIXME: type? */
-char* lsftp_rl_command_generator (char* text, int state)
+char* lsftp_rl_command_generator (const char* text, int state)
 {
   static int list_index, len;
   char* name;
@@ -327,7 +327,7 @@ char* lsftp_rl_command_generator (char* text, int state)
 /* Generator function for remote completion.  STATE lets us know whether
    to start from scratch; without any state (i.e. STATE == 0), then we
    start at the top of the list. */
-char* lsftp_rl_remotefile_generator( char* text, int state )
+char* lsftp_rl_remotefile_generator(const char *text, int state )
 {
   static int list_index;
   char* name;
@@ -454,7 +454,7 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
    no arguments => nothing matches */ 
 
 /* FIXME: Type? */ 
-char* lsftp_rl_no_generator (char* text, int state)
+char* lsftp_rl_no_generator (const char *text, int state)
 {
   if(!state) /* On the first call, return the empty string */
     return strdup("");
@@ -519,7 +519,6 @@ void lsftp_rl_lhandler(char* line)
 
 char* lsftp_rl_history_fname()
 {
-  char* username;
   char* fname;
 
   if( mgetenv( LSFTP_HISTNAME_VAR ) )           /* If the filename is given */

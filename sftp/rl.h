@@ -78,12 +78,12 @@ char* lsftp_rl_history_fname(void);
 
 void lsftp_rl_lhandler(char* line);
 
-char** lsftp_rl_completion(char* text, int start, int end);
-char* lsftp_rl_command_generator (char* text, int state);
-char* lsftp_rl_remotefile_generator (char* text, int state);
-char* lsftp_rl_no_generator (char* text, int state);
+rl_completion_func_t lsftp_rl_completion;
+rl_compentry_func_t lsftp_rl_command_generator;
+rl_compentry_func_t lsftp_rl_remotefile_generator;
+rl_compentry_func_t lsftp_rl_no_generator;
 
-int char_quoted( char* text, int index);
+rl_linebuf_func_t char_quoted;
 
 extern int interactive;
 
