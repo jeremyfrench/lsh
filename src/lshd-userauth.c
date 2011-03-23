@@ -768,20 +768,22 @@ static void
 start_service(struct lshd_user *user, const char *program, const char **argv)
 {
   /* We need place for SHELL, HOME, USER, LOGNAME, TZ, PATH,
-     LSHD_CONFIG_DIR, and a terminating NULL */
+     LSHD_CONFIG_DIR, LSHD_LIBEXEC_DIR, LSHD_CONNECTION_CONF and a
+     terminating NULL */
 
   /* FIXME: Is it really the right way to propagate lshd-specific
      environment variables, such as LSHD_CONFIG_DIR, here? If we
      support providing command line options with the service, that
      might be a cleaner alternative. */
 
-#define ENV_MAX 9
+#define ENV_MAX 10
 
   const char *env[ENV_MAX];
   const char *tz = getenv(ENV_TZ);
   const char *cname = lsh_get_cstring(user->name);  
   const char *config_dir = getenv(ENV_LSHD_CONFIG_DIR);
   const char *libexec_dir = getenv(ENV_LSHD_LIBEXEC_DIR);
+  const char *lshd_connection_conf = getenv(ENV_LSHD_CONNECTION_CONF);
   
   unsigned i;
   
@@ -800,6 +802,8 @@ start_service(struct lshd_user *user, const char *program, const char **argv)
     env[i++] = format_env_pair(ENV_LSHD_CONFIG_DIR, config_dir);
   if (libexec_dir)
     env[i++] = format_env_pair(ENV_LSHD_LIBEXEC_DIR, libexec_dir);
+  if (lshd_connection_conf)
+    env[i++] = format_env_pair(ENV_LSHD_CONNECTION_CONF, lshd_connection_conf);
   env[i++] = NULL;
 
   assert(i <= ENV_MAX);
