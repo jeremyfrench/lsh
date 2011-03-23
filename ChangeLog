@@ -1,3 +1,17 @@
+2011-03-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo: Fixed "service ssh-userauth" and "service
+	ssh-connection" examples.
+	(Invoking lshd): Reviewed and updated.
+	(Files and environment variables): Likewise.
+
+	* src/lshd.c (lshd_options): New options --add-port,
+	--add-interface and --no-syslog.
+	(lshd_argp_parser): Implement them.
+
+	* src/lshd-userauth.c (start_service): Pass on the
+	LSHD_CONNECTION_CONF environment variable.
+
 2011-02-21  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (parse_forward_arg): Support for optional brackets, to
