@@ -375,6 +375,8 @@ server_x11_setup(struct ssh_channel *channel,
   if (!port)
     return NULL;
 
+  /* FIXME: Does it make sense to check for TMPDIR? I don't think
+     there's any way to get set it in this environment. */
   tmp = getenv(ENV_TMPDIR);
   if (!tmp)
     tmp = "/tmp";
