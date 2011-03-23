@@ -671,9 +671,12 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 enum {  
   OPT_INTERFACE = 0x201,
+  OPT_ADD_INTERFACE,
+  OPT_ADD_PORT,
   OPT_DAEMONIC,
   OPT_PIDFILE,
   OPT_NO_PIDFILE,
+  OPT_NO_SYSLOG,
   OPT_CORE,
   OPT_NO_SETSID,
   OPT_SERVICE,
@@ -686,20 +689,28 @@ lshd_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "interface", OPT_INTERFACE, "INTERFACE", 0,
     "Listen on this network interface.", 0 }, 
+  { "add-interface", OPT_ADD_INTERFACE, "INTERFACE", 0,
+    "Listen on this network interface, in addition to any other interfaces "
+    "listed in the configuration file.", 0 }, 
   { "port", 'p', "PORT", 0, "Listen on this port.", 0 },
+  { "add-port", OPT_ADD_PORT, "PORT", 0,
+    "Listen on this port, in addition to any other ports "
+    "listed in the configuration file.", 0 },
   { "host-key", 'h', "FILE", 0, "Location of the server's private key.", 0},
 
   { "service", OPT_SERVICE, "NAME { COMMAND LINE }", 0,
     "Service to offer.", 0 },
   { "add-service", OPT_ADD_SERVICE, "NAME { COMMAND LINE }", 0,
-    "Service to offer. Unlike --service does not override other services "
-    "listed in the config file.", 0 },
+    "Service to offer, in addition to any other services "
+    "listed in the configuration file.", 0 },
 
   { NULL, 0, NULL, 0, "Daemonic behaviour:", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, chdir to /, and use syslog.", 0 },
   { "pid-file", OPT_PIDFILE, "FILE", 0, "Create a pid file. When running in daemonic mode, "
     "the default is " FILE_LSHD_PID ".", 0 },
   { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
+  { "no-syslog", OPT_NO_SYSLOG, NULL, 0, "Don't use syslog (by default, syslog is used "
+    "when running in daemonic mode).", 0 },
   { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
   { "no-setsid", OPT_NO_SETSID, NULL, 0, "Don't start a new session.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
@@ -822,6 +833,7 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 	  if (self->super.super.trace > 0)
 	    arglist_push (&entry->args, "--trace");
 
+	  /* FIXME: Propagate --no-syslog? */
 	  assert (entry->args.argc > 0);
 	  object_queue_add_head (&self->ctx->service_config->services,
 				 &entry->super);
@@ -829,18 +841,22 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_INTERFACE:
+      self->interfaces_override_config_file = 1;
+      /* Fall through */
+    case OPT_ADD_INTERFACE:
       {
 	struct lshd_interface *interface = parse_interface(strlen(arg), arg);
 	if (!interface)
 	  argp_error(state, "Invalid interface `%s'\n", arg);
 
 	object_queue_add_tail(&self->interfaces, &interface->super);
-	self->interfaces_override_config_file = 1;
 	break;
       }
     case 'p':
-      string_queue_add_tail(&self->ports, make_string(arg));
       self->ports_override_config_file = 1;
+      /* Fall through */
+    case OPT_ADD_PORT:
+      string_queue_add_tail(&self->ports, make_string(arg));
       break;
 
     case 'h':
@@ -870,6 +886,10 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_NO_PIDFILE:
       self->use_pid_file = 0;
+      break;
+
+    case OPT_NO_SYSLOG:
+      self->super.super.syslog = 0;
       break;
 
     case OPT_CORE:
