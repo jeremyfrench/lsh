@@ -1107,8 +1107,8 @@ configuration options:
 Network interface to listen on. If no interface is specified, the
 default behavior is to listen on all network interfaces. The value is a
 string giving the name or ip-address of the interface, optionally
-followed by a colon and the port to listen on. FIXME: Syntax is not IPv6
-friendly. This option can be used multiple times.
+followed by a colon and the port to listen on. Literal IPv6 addresses
+must be enclosed in square brackets. This option can be used multiple times.
 
 @example
 interface localhost
@@ -1142,7 +1142,7 @@ by a command line in braces (@pxref{Configuration syntax}). The default,
 if no service is specified, is
 
 @example
-service ssh-userauth = @{ --session-id $(session_id) @var{other options@dots{}} @}
+service ssh-userauth = @{ lshd-connection --session-id $(session_id) @var{other options@dots{}} @}
 @end example
 
 where verbosity options (@option{-v}, @option{-q}, @option{--debug}, and
@@ -1150,6 +1150,10 @@ where verbosity options (@option{-v}, @option{-q}, @option{--debug}, and
 them to the command line where needed.
 
 @end table
+
+Currently missing are to options control the list of supported
+algorithms, only command line options are available for that (see
+@pxref{Algorithm options}). @c FIXME
 
 @node lshd-userauth configuration, lshd-connection configuration, lshd configuration, Server configuration
 
@@ -1170,7 +1174,7 @@ by a command line in braces (@pxref{Configuration syntax}). The default,
 if no service is specified, is
 
 @example
-service ssh-userauth = @{ --helper-fd $(helper_fd) @var{other options@dots{}} @}
+service ssh-connection = @{ lshd-connection --helper-fd $(helper_fd) @var{other options@dots{}} @}
 @end example
 
 where verbosity options (@option{-v}, @option{-q}, @option{--debug}, and
@@ -1599,48 +1603,23 @@ do that automatically.
 @chapter Invoking @command{lshd}
 @anchor{lshd-usage}
 
-
-@comment FIXME: XXX
-
-There are currently no configuration files. Instead, command line options
-are used to tell @command{lshd} what to do. Many options have @option{--foo}
-and @option{--no-foo} variants. Options specifying the default behaviour
-are not listed here.
-
-Some of the options are the shared with @command{lsh}. In particular, see
-@ref{Algorithm options} and @ref{Verbosity options}.
-
-Options specific to the @command{lshd} server are:
+For complete list of options, see @code{lshd --help} and similarly for
+@command{lshd-userauth} and @command{lshd-connection}. Most of the
+options override the corresponding configuration file settings
+(@pxref{Server configuration}). The most important command line options
+for @command{lshd} are listed below.
 
 @table @option
+@item --config-file
+Specifies the configuration file to use.
 
-@item -p
-Port to listen to. The mandatory argument is a decimal port number or a
-service name. Default is "ssh", usually port 22.
+@item --use-example-config
+Use the builtin example configuration. Don't read any configuration
+file.
 
-It should also be possible to use several -p options as a convenient way
-to make lshd listen on several ports on each specified (or default)
-interface, but that is not yet implemented.
-
-Note that if you use both @option{-p} and @option{--interface}, the
-order matters.
-
-@item --interface
-Network interface to listen on. By default, @command{lshd} listens on all
-interfaces. An interface can be specified as a DNS name, a literal IPv4
-address, or a literal IPv6 address enclosed in square brackets. It can
-optionally be followed by a colon and a port number or service name. If
-no port number or service is specified, the default or the value from a
-@emph{preceding} @option{-p} is used.
-
-Some examples: @code{--interface=localhost},
-@code{--interface=1.2.3.4:443}, @code{--interface=[aaaa::bbbb]:4711}. To
-make @command{lshd} listen on several ports and interfaces at the same
-time, just use several @option{--interface} options on the command line.
-
-@item -h
-Location of the server's private key file. By default,
-@file{/usr/local/etc/lshd/host-key}.
+@item --print-example-config
+Print out a config file corresponding to the example configuration, and
+exit.
 
 @item --daemonic
 Enables daemonic mode. @command{lshd} forks into the background,
@@ -1656,7 +1635,10 @@ really tested.
 Creates a locked pid file, to make it easier to write start and stop
 scripts for @command{lshd}. The mandatory argument provides the filename.
 This option is enabled by default when operating in daemonic mode, and
-the default filename is @file{/var/run/lshd.pid}.
+the default filename is @file{/usr/local/var/run/lshd.pid}.
+
+@item --no-pid-file
+Don't create any pid file.
 
 @item --no-syslog
 Disable the use of the syslog facility. Makes sense only together with
@@ -1667,49 +1649,47 @@ By default, @command{lshd} disables core dumps, to avoid leaking sensitive
 information. This option changes that behaviour, and allows @command{lshd}
 to dump core on fatal errors.
 
-@item --no-password
-Disable the "password" user authentication mechanism. 
+@item --host-key
+Location of the server's private key file. By default,
+@file{/usr/local/etc/lshd/host-key}.
 
-@item --no-publickey
-Disable the "publickey" user authentication mechanism.
+@item --interface 
+Network interface to listen on. By default, @command{lshd} listens on
+all interfaces. An interface can be specified as a DNS name, a literal
+IPv4 address, or a literal IPv6 address enclosed in square brackets. It
+can optionally be followed by a colon and a port number or service name.
+Examples: @code{--interface=localhost}, @code{--interface=1.2.3.4:443},
+@code{--interface=[aaaa::bbbb]:4711}. To make @command{lshd} listen on
+several interfaces at the same time, just use several
+@option{--interface} options on the command line.
 
-@item --root-login
-Enable root login. By default, root can not log in using @command{lshd}.
+@item --add-interface
+Like @option{--interface}, but adds the interface without overriding the
+corresponding configuration file setting.
 
-@item --login-auth-mode
-This option is highly experimental. Bypass @option{lshd}'s user
-authentication, and allow users to spawn their login-shell without any
-authentication. Usually combined with @option{--login-shell}, to set the
-login shell to a program that performce password authentication.
+@item --port
+Port to listen to. The mandatory argument is a decimal port number or a
+service name. Default is "ssh", usually port 22. Applies to interfaces
+for which no port is explicitly specified.
 
-@item --kerberos-passwords
-Verify passwords against the kerberos database. This is implemented
-using the @command{lsh-krb-checkpw} helper program. Note that this does
-@emph{not} use the Kerberos infrastructure in the Right Way. Experimental.
+@item --add-port
+Like @option{--port}, but adds the port without overriding the
+corresponding configuration file setting.
 
-@item --password-helper
-Tells @command{lshd} to use a helper program for verifying passwords.
-This is a generalization of @option{--kerberos-passwords}, and it could
-be used for verifying passwords against any password database. See the
-source files @file{lsh-krb-checkpw.c} and @file{unix_user.c} for
-details. 
+@item --service
+The service to offer (default is the @code{ssh-userauth} service).
+Option arguments are the service name followed by a command line enclosed
+in braces.
 
-@item --login-shell
-Use the specified program as the login shell for all users, overriding
-the login shell in the passwd database.
-
-@item --no-pty-support
-Disable support for pseudo terminals.
-
-@item --no-tcp-forward
-Disable support for tcp forwarding, in both directions.
-
-@item --subsystems
-Specifies a list of subsystems and corresponding
-programs. 
-Example usage: @samp{--subsystems=sftp=/usr/sbin/sftp-server,foosystem=/usr/bin/foo}
+@item --add-service
+Like @option{--service}, but adds the service without without overriding the
+corresponding configuration file setting.
 
 @end table
+
+In addition, @command{lshd} accepts the same algorithm selection and
+verbosity options as @command{lsh}, see @ref{Algorithm options} and
+@ref{Verbosity options}.
 
 @node Files and environment variables, Concept Index, Invoking lshd, Top
 @comment  node-name,  next,  previous,  up
@@ -1743,12 +1723,29 @@ remote systems. Set by @command{lshd} when starting new processes.
 If set, it points out the location of the seed-file for the randomness
 generator. Recognized both by @command{lshd} and the client programs.
 
+@item LSHD_CONFIG_DIR
+Directory for server configuration files.
+
+@item LSHD_LIBEXEC_DIR
+Directory for server helper programs.
+
+@item LSHD_CONF
+Name of @command{lshd} configuration file.
+
+@item LSHD_CONNECTION_CONF
+Name of @command{lshd-connection} configuration file.
+
+@item LSHD_USERAUTH_CONF
+Name of @command{lshd-userauth} configuration file.
+
+@item LSHD_UTMP
+Alternative file to use for UTMP logging.
+
+@item LSHD_WTMP
+Alternative file to use for WTMP logging.
+
 @item LSHFLAGS
 If set, lsh will parse any options as had they been given on the
-command line.
-
-@item LSHGFLAGS
-If set, lshg will parse any options as had they been given on the
 command line.
 
 @item POSIXLY_CORRECT
@@ -1764,7 +1761,7 @@ This variable may be set by lshd for established sessions. If it is set
 it consists of three parts separated by whitespace, the first part
 contains the address of the connecting client. The second part
 contains the tcp port used on the connecting client and the third part
-contains the tcp port used on the server.
+contains the tcp port used on the server. Not currently implemented.
 
 @item SSH_TTY
 This variable may be set by lshd for established sessions. If it is set
@@ -1781,26 +1778,27 @@ remote process, the value of @env{TERM} is transferred from client to
 server.
 
 @item TMPDIR
-Determines where the unix socket used by @command{lshg} is located in
-the filesystem.
+Determines where the unix socket, used for the @command{lsh} gateway
+mode (@option{-G}), is located in the filesystem.
 
 @item TZ
 Time zone. Processes started by @command{lshd} inherit the value of
 this variable from the server process.
 
-@c used by xlib @item XAUTHORITY
+@item USER
+The BSD environment variable for the user's log in name. Used by
+@command{lsh} if LOGNAME is not set. Also set by @command{lshd} when
+starting new processes.
+
+@item XAUTHORITY
+For X11 forwarding, used by @command{lsh} to connect to the real X
+server, and set by @command{lshd} in the environment of the
+corresponding session.
 @end table
 
 Files used by the lsh client, stored in the @file{~/lsh} directory:
 
 @table @file
-@comment FIXME: Document new host-acl file
-@item captured_keys
-Keys for remote hosts, saved when running @samp{lsh
---sloppy-host-authentication}. Or more precicely, each key is stored
-together with an as SPKI (Simple Public Key Intrastructure) ACL:s
-(Access Control Lists).
-
 @item identity
 Your private key file. Usually created by @samp{lsh-keygen |
 lsh-writekey}. Read by @command{lsh}. Should be kept secret.
@@ -1820,19 +1818,36 @@ The seed file for the randomness generator. Should be kept secret.
 @end table
 
 Files used by @command{lshd}, some of which are read from user home
-directories:
+directories. The default system configuration directory
+@file{/usr/local/etc} can be changed using the @option{--prefix} or
+@option{--sysconfdir} option to configure or the @code{LSHD_CONFIG_DIR}
+environment variable at run time. The state directory
+@file{/usr/local/var} can be changed using the @option{--prefix} or
+@option{--localstatedir} option to configure
 
 @table @file
-@item /etc/lsh_host_key
+@item /usr/local/etc/lshd/lshd.conf
+Configuration file for @command{lshd}, relating to networking and
+transport layer (see @pxref{lshd configuration}).
+
+@item /usr/local/etc/lshd/lshd-connection.conf
+Configuration file for @command{lshd-connection} (see
+@pxref{lshd-connection configuration}).
+
+@item /usr/local/etc/lshd/lshd-userauth.conf
+Configuration file for @command{lshd-userauth} (see
+@pxref{lshd-userauth configuration}).
+
+@item /usr/local/etc/lshd/host-key
 The server's private host key.
 
-@item /etc/lsh_host_key.pub
+@item /usr/local/etc/lshd/host-key.pub
 The corresponding public key.
 
-@item /var/spool/lsh/yarrow-seed-file
+@item /usr/local/var/spool/lsh/yarrow-seed-file
 The seed-file for @command{lshd}'s randomness generator.
 
-@item ~/.lsh/authorized_keys
+@item ~/.lsh/authorized_keys_sha1
 This is a directory that keeps a ``database'' of keys authorized for
 login. With the current implementation, a key is authorized for login
 if and only if this directory contains a file with a name which is the
