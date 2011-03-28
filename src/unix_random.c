@@ -308,7 +308,8 @@ random_init(const struct lsh_string *seed_file_name)
   trace("random_init, locking seed file...\n");
   if (!seed_file_lock(seed_file_fd, 1))
     {
-      werror("Could not lock seed-file `%S'\n", seed_file_name);
+      werror("Could not lock seed-file `%S': %e\n",
+	     seed_file_name, errno);
       return 0;
     }
 
