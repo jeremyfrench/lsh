@@ -1,3 +1,8 @@
+2011-03-28  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_random.c (random_init): Display errno when locking
+	fails.
+
 2011-03-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo: Fixed "service ssh-userauth" and "service
