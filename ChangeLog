@@ -1,3 +1,8 @@
+2011-05-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/serpent-test.c: Updated for correct serpent byte
+	order.
+
 2011-03-28  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (random_init): Display errno when locking
