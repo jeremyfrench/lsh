@@ -1,5 +1,6 @@
 *.d
 *.tar.gz
+autom4te.cache
 Makefile
 argp-test
 config.cache

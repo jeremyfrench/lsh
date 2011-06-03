@@ -1,5 +1,6 @@
 *.tar.gz
 *.tar.gz.asc
+autom4te.cache
 Makefile
 config.cache
 config.log
