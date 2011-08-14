@@ -575,6 +575,8 @@ static unsigned
 open_all_ports(struct lshd_context *ctx, struct resource_list *resources,
 	       struct object_queue *interfaces, struct string_queue *ports)
 {
+  /* FIXME: Move this default behaviour to lshd_config_handler where
+     other defaults are set up. */
   if (object_queue_is_empty (interfaces))
     return open_interface(ctx, resources, NULL, ports);
   else
@@ -812,6 +814,11 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
        break;
 
     case ARGP_KEY_END:
+      /* FIXME: Why is this done here, rather than by
+	 lshd_config_handler's case CONFIG_PARSE_KEY_END? I think this
+	 processing is done after CONFIG_PARSE_KEY_END. We should
+	 propagate verbosity options from the command line only, not
+	 from the config file. */
       if (object_queue_is_empty(&self->ctx->service_config->services))
 	{
 	  struct service_entry *entry
@@ -823,7 +830,6 @@ lshd_argp_parser(int key, char *arg, struct argp_state *state)
 	  arglist_push (&entry->args, "--session-id");
 	  arglist_push (&entry->args, "$(session_id)");
 	  
-	  /* Propagate werror-related options. */
 	  if (self->super.super.verbose > 0)
 	    arglist_push (&entry->args, "-v");
 	  if (self->super.super.quiet > 0)
