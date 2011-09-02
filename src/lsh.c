@@ -557,6 +557,8 @@ main_options[] =
   { NULL, 0, NULL, 0, "Miscellaneous options:", 0 },
   { "escape-char", 'e', "Character", 0, "Escape char. `none' means disable. "
     "Default is to use `~' if we have a tty, otherwise none.", 0 },
+  /* FIXME: Add --pid-file option which writes the pid to a specified
+     file, and deletes that file when exiting. */
   { "write-pid", OPT_WRITE_PID, NULL, 0, "Make -B write the pid of the backgrounded "
     "process to stdout.", 0 },
 
@@ -1196,9 +1198,14 @@ main(int argc, char **argv)
 	}
       else
 	{
-	  if (!write_raw(fd, sizeof(stop_message), stop_message))
+	  if (!process_hello_message (fd))
 	    {
-	      werror("Failed to send stop message to gateway.\n");
+	      if (!options->start_gateway)
+		return EXIT_FAILURE;
+	    }
+	  else if (!write_raw(fd, sizeof(stop_message), stop_message))
+	    {
+	      werror("Failed to send stop message to gateway: %e.\n", errno);
 	      if (!options->start_gateway)
 		return EXIT_FAILURE;
 	    }
