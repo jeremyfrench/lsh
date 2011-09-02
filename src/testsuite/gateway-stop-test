@@ -1,0 +1,19 @@
+#! /bin/sh
+
+echo Test lsh --stop-gateway
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+spawn_lshd && spawn_lsh --start-gateway \
+  && exec_lshg echo foo | grep foo >/dev/null \
+  && ../lsh --stop-gateway -p $PORT $LOCALHOST \
+  && sleep 2 \
+  && ( if exec_lshg echo foo; then false ; else true ; fi ) \
+  && ( if kill -0 `cat "$LSH_PIDFILE"` ; then false; else true ; fi ) \
+  && rm "$LSH_PIDFILE" && test_success
+
+test_done
