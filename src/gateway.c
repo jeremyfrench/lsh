@@ -126,19 +126,14 @@ kill_gateway_connection(struct resource *s)
   CAST(gateway_connection, self, s);
   if (self->super.super.alive)
     {
-      uint32_t i;
       trace("kill_gateway_connection\n");
 
       self->super.super.alive = 0;      
 
-      /* NOTE: We don't add the gatewayed channels to super.resources,
-       * instead, we use channel_close on all active channels when the
-       * gateway is killed. That way, the channels are kept alive
-       * until the CHANNEL_CLOSE handshake is finished. */
-      
-      /* FIXME: Does this really do the right thing? The local
-	 channels can be killed right away. As for the remote
-	 channels, there are three possible states:
+      /* FIXME: I don't think we do the right thing in all cases The
+	 channels to the gateway client be killed right away. As for
+	 the channels over the shareed connection, there are three
+	 possible states:
 
 	 1. The channel is fully open. Then call channel_close to close it.
 
@@ -153,27 +148,16 @@ kill_gateway_connection(struct resource *s)
 	    and then the gateway client disappeared before replying. Then
 	    we must send a CHANNEL_OPEN_FAILURE.
 
-	 The below code attempts to do (1), but should close
-	 channel->chain, I think.
-	 
 	 Maybe the right thing is to have the kill method of gatewayed
 	 channels initiate close of the chained channel, taking these
-	 three cases into account. Not adding the channels to the
-	 resource list seems a bit strange.
+	 three cases into account.
 
 	 We need testcases, at least for case (1) which is the most
-	 common situation, and causes error messages like
-	 "gateway_write_packet: Write failed: Bad file descriptor."
+	 common situation, and which currently causes repeated warning
+	 messages like "gateway_write_packet: Write failed: Bad file
+	 descriptor."
       */
 
-#if 1
-      for (i = 0; i < self->super.used_channels; i++)
-	if (self->super.alloc_state[i] == CHANNEL_ALLOC_ACTIVE)
-	  {
-	    assert(self->super.channels[i]);
-	    channel_close(self->super.channels[i]);
-	  }
-#endif 
       KILL_RESOURCE_LIST(self->super.resources);
 
       io_close_fd(self->fd);
@@ -273,6 +257,8 @@ gateway_write_packet(struct gateway_connection *connection,
 
   if (error)
     {
+      /* FIXME: XXX Can be called repeatedly and fail with "Bad file
+	 descriptor." */
       werror("gateway_write_packet: Write failed: %e.\n", errno);
       KILL_RESOURCE(&connection->super.super);
     }
@@ -302,6 +288,8 @@ gateway_packet_handler(struct gateway_connection *connection,
     {
     case SSH_LSH_GATEWAY_STOP:
       KILL_RESOURCE(connection->port);
+      ssh_connection_pending_close(&connection->shared->super);
+
       return 1;
 
     case SSH_LSH_RANDOM_REQUEST:
