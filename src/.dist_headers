@@ -26,6 +26,7 @@ dist_headers = \
     parse.h \
     parse_config.h \
     parse_macros.h \
+    pidfile.h \
     pty-helper.h \
     queue.h \
     randomness.h \
