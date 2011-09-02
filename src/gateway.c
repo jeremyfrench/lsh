@@ -61,11 +61,7 @@
  * close handshake is associated with deallocation of channel
  * numbers, which are independent for the gateway connection and with
  * the shared connection to the remote ssh server.
- *
- * Currently, all gatewayed channels must be opened by the gateway
- * client; if the client requests tcpip och x11 forwarding, the
- * corresponding CHANNEL_OPEN requests from the server will be
- * refused. */
+ */
 
 /* The gateway socket is named "TMP/x-lsh-USER/HOST%REMOTE-USER".
  *
@@ -139,26 +135,45 @@ kill_gateway_connection(struct resource *s)
        * instead, we use channel_close on all active channels when the
        * gateway is killed. That way, the channels are kept alive
        * until the CHANNEL_CLOSE handshake is finished. */
+      
+      /* FIXME: Does this really do the right thing? The local
+	 channels can be killed right away. As for the remote
+	 channels, there are three possible states:
 
-      /* FIXME: Does this really do the right thing? The local end of
-	 the channels can be terminated immediately (e.g., the gateway
-	 may be killed due to the local client using the gateway
-	 disappearing or not responding, and then attempting a
-	 CHANNEL_CLOSE hand shake is pointless. But on the other hand,
-	 we should do a proper CHANNEL_CLOSE handshake on the remote
-	 channel.
+	 1. The channel is fully open. Then call channel_close to close it.
 
-	 Probably the right thing is to have the kill method of
-	 gatewayed channels initiate close of the chained channel.
-	 Needs care in order to handle channels in the middle of the
-	 channel open handshake properly. */
+	 2. The gateway client requested a CHANNEL_OPEN, which was
+	    forwarded to the remote server, but then the gateway
+	    client disappears before we get any reply from the server.
+	    The we must respond to CHANNEL_OPEN_CONFIRMATION with
+	    CHANNEL_CLOSE, while CHANNEL_OPEN_FAILURE can be safely
+	    ignored. do_gateway_channel_event attempts to do this.
+
+	 3. The server requested a CHANNEL_OPEN, which was forwarded,
+	    and then the gateway client disappeared before replying. Then
+	    we must send a CHANNEL_OPEN_FAILURE.
+
+	 The below code attempts to do (1), but should close
+	 channel->chain, I think.
+	 
+	 Maybe the right thing is to have the kill method of gatewayed
+	 channels initiate close of the chained channel, taking these
+	 three cases into account. Not adding the channels to the
+	 resource list seems a bit strange.
+
+	 We need testcases, at least for case (1) which is the most
+	 common situation, and causes error messages like
+	 "gateway_write_packet: Write failed: Bad file descriptor."
+      */
+
+#if 1
       for (i = 0; i < self->super.used_channels; i++)
 	if (self->super.alloc_state[i] == CHANNEL_ALLOC_ACTIVE)
 	  {
 	    assert(self->super.channels[i]);
 	    channel_close(self->super.channels[i]);
 	  }
-      
+#endif 
       KILL_RESOURCE_LIST(self->super.resources);
 
       io_close_fd(self->fd);
