@@ -1,5 +1,26 @@
 2011-09-02  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/.dist_classes: Added pidfile.c.x.
+
+	* src/daemon.c (daemon_pidfile): Deleted function. The
+	functionality moved to pidfile.c.
+
+	* src/lshd.c (main): make_pid_file_resource now also creates the
+	file, so need to call daemon_pidfile.
+	(make_pid_file_resource): Moved to src/pidfile.c
+	(class pid_file_resource): Likewise.
+	(do_kill_pid_file): Likewise.
+
+	* src/Makefile.in (lshd_SOURCES): Added pidfile.c.
+
+	* src/pidfile.h: New file.
+
+	* src/pidfile.c: New file.
+	(make_pid_file_resource): Moved function from lshd.c, and
+	incorporate the writing of the file from daemon.c:daemon_pidfile.
+	(class pid_file_resource): Moved from lshd.c.
+	(do_kill_pid_file): Likewise.
+
 	* src/testsuite/Makefile.in (TS_SH): Added gateway-stop-test.
 
 	* src/testsuite/gateway-stop-test: New file.
