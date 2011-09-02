@@ -1,3 +1,24 @@
+2011-09-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (TS_SH): Added gateway-stop-test.
+
+	* src/testsuite/gateway-stop-test: New file.
+
+	* src/testsuite/functions.sh (spawn_lsh): Check if pid-file exists
+	before trying to kill the process.
+
+	* src/lsh.c (main): Fixed --stop-gateway. Must read the hello
+	message before we write the stop message.
+
+	* src/gateway.c (kill_gateway_connection): Deleted loop to close
+	channels.
+	(gateway_packet_handler): When receiving LSH_GATEWAY_STOP message,
+	call ssh_connection_pending_close to close the shared connection
+	after all currently open channels are closed.
+
+	* src/connection.c (ssh_connection_pending_close): Check
+	channel_count, and kill connection immediately if zero.
+
 2011-05-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/serpent-test.c: Updated for correct serpent byte
