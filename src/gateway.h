@@ -50,7 +50,7 @@ make_gateway_address(const char *local_user, const char *remote_user,
        ; is needed for the handling of SSH_LSH_RANDOM_REQUEST.
        (shared object client_connection)
 
-       ; The correspondign listening port. Needed when we are asked to close.
+       ; The corresponding listening port. Needed when we are asked to close.
        (port object resource)
 
        (fd . int)
