@@ -58,57 +58,6 @@
 #define ROOT_DIR "/"
 #endif
 
-/* Creates a pid file for a daemon. For now, only O_EXCL style
-   locking. Returns 1 on success or 0 on failure. */
-int
-daemon_pidfile(const char *name)
-{
-  int fd;
-  
-  /* Try to open the file atomically. This provides sufficient locking
-   * on normal (non-NFS) file systems. */
-
-  fd = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
-
-  if (fd < 0)
-    {
-      if (errno != EEXIST)
-	{
-	  werror("Failed to open pid file '%z': %e.\n",
-		 name, errno);
-	  return 0;
-	}
-
-      /* FIXME: We could try to detect and ignore stale pid files. */
-      werror("Pid file '%z' already exists.\n", name);
-      return 0;
-    }
-  else
-    {
-      struct lsh_string *pid = ssh_format("%di", getpid());
-      uint32_t pid_length = lsh_string_length(pid);
-      int res = write(fd, lsh_string_data(pid), pid_length);
-      close(fd);
-      
-      if ( (res > 0) && ((unsigned) res == pid_length) )
-	{
-	  /* Success! */
-	  lsh_string_free(pid);
-	  return 1;
-	}
-      werror("Writing pid file '%z' failed: %e.\n", name, errno);
-
-      /* Attempt unlinking file */
-      if (unlink(name) < 0)
-	werror("Unlinking pid file '%z' failed: %e.\n",
-	       name, errno);
-      
-      lsh_string_free(pid);
-	  
-      return 0;
-    }
-}
-
 /* Determines whether or not this process was started by init(8). If
    it was, we might be getting respawned so fork(2) and exit(2) would
    be a big mistake. */
