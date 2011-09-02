@@ -183,11 +183,10 @@ ssh_connection_pending_close(struct ssh_connection *connection)
 {
   trace("ssh_connection_pending_close\n");
 
-  /* This method should be called before the last channel is cleaned
-     up, so that the cleanup code can check the flag and do the right
-     thing. */
-  assert(connection->channel_count);
   connection->pending_close = 1;
+
+  if (!connection->channel_count)
+    KILL_RESOURCE(&connection->super);
 }
 
 /* Iterates over the active channels. */
