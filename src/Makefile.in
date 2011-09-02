@@ -155,7 +155,7 @@ lsh_export_key_SOURCES = lsh-export-key.c
 
 lsh_make_seed_SOURCES = lsh-make-seed.c
 
-lshd_SOURCES = daemon.c \
+lshd_SOURCES = daemon.c pidfile.c \
 	       lshd.c \
 	       server_keyexchange.c
 
