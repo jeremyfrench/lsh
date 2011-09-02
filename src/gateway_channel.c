@@ -150,6 +150,9 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
       break;
 
     case CHANNEL_EVENT_CLOSE:
+      /* FIXME: Can we arrange so that the gateway connection is
+	 closed if pending_close on the sared connection is set, and
+	 the last channel is closed. */
       channel_close(&self->chain->super);
       break;
 
