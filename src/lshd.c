@@ -55,6 +55,7 @@
 #include "keyexchange.h"
 #include "lsh_string.h"
 #include "parse.h"
+#include "pidfile.h"
 #include "randomness.h"
 #include "server.h"
 #include "service.h"
@@ -362,38 +363,6 @@ make_lshd_context(void)
   self->keys = make_alist(0, -1);
 
   return self;
-}
-
-
-/* GABA:
-   (class
-     (name pid_file_resource)
-     (super resource)
-     (vars
-       (file string)))
-*/
-
-static void
-do_kill_pid_file(struct resource *s)
-{
-  CAST(pid_file_resource, self, s);
-  if (self->super.alive)
-    {
-      self->super.alive = 0;
-      if (unlink(lsh_get_cstring(self->file)) < 0)
-	werror("Unlinking pidfile failed: %e.\n", errno);
-    }
-}
-
-/* Consumes file name */
-static struct resource *
-make_pid_file_resource(struct lsh_string *file)
-{
-  NEW(pid_file_resource, self);
-  init_resource(&self->super, do_kill_pid_file);
-  self->file = file;
-
-  return &self->super;
 }
 
 /* GABA:
@@ -1156,18 +1125,17 @@ main(int argc, char **argv)
 
   if (config->use_pid_file)
     {
-      if (daemon_pidfile(lsh_get_cstring(config->pid_file)))
-	{
-	  remember_resource(resources, 
-			    make_pid_file_resource(config->pid_file));
-	  /* The string is owned by the resource now, so forget it. */
-	  config->pid_file = NULL;
-	}
-      else
+      struct resource *pidfile = make_pid_file_resource(config->pid_file);
+
+      if (!pidfile)
 	{
 	  werror("lshd seems to be running already.\n");
 	  return EXIT_FAILURE;
 	}
+
+      /* The string is consumed by the resource now, so forget it. */
+      config->pid_file = NULL;
+      remember_resource(resources, pidfile);
     }
 
   io_signal_handler(SIGHUP,
