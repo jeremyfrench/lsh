@@ -1,6 +1,7 @@
 2011-09-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes: Added pidfile.c.x.
+	* src/.dist_headers: Added pidfile.h.
 
 	* src/daemon.c (daemon_pidfile): Deleted function. The
 	functionality moved to pidfile.c.
