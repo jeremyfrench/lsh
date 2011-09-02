@@ -39,6 +39,7 @@ dist_classes = \
     lshd-userauth.c.x \
     lshd.c.x \
     parse_config.c.x \
+    pidfile.c.x \
     queue.h.x \
     reaper.c.x \
     reaper.h.x \
