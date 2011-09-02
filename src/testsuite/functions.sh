@@ -191,7 +191,7 @@ spawn_lsh () {
 	--no-use-gateway \
 	--host-db-update /dev/null -z -p $PORT "$@" --write-pid -B $LOCALHOST > "$LSH_PIDFILE"
 
-    at_exit 'kill `cat $LSH_PIDFILE`'
+    at_exit '[ -f "$LSH_PIDFILE" ] && kill `cat $LSH_PIDFILE`'
 }
 
 exec_lshg () {
