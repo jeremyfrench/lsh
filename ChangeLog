@@ -1,3 +1,19 @@
+2011-09-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/gateway-stop-test: Check that the pidfile is
+	deleted (indicating that the process has cleaned up and exited
+	like it should).
+
+	* src/testsuite/functions.sh (test_result): Use --pid-file option
+	to lsh. Check for existence of file before killing the process.
+
+	* src/Makefile.in (PIDFILE_SOURCES): Arrange so that both lsh and
+	lshd are linked with pidfile.o.
+
+	* src/lsh.c (main_options): New option --pid-file.
+	(main): Moved writing of pid to child process. For --pid-file, use
+	make_pid_file_resource.
+
 2011-09-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes: Added pidfile.c.x.
