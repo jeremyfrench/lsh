@@ -13,7 +13,6 @@ spawn_lshd && spawn_lsh --start-gateway \
   && ../lsh --stop-gateway -p $PORT $LOCALHOST \
   && sleep 2 \
   && ( if exec_lshg echo foo; then false ; else true ; fi ) \
-  && ( if kill -0 `cat "$LSH_PIDFILE"` ; then false; else true ; fi ) \
-  && rm "$LSH_PIDFILE" && test_success
+  && [ ! -f "$LSH_PIDFILE" ] && test_success
 
 test_done
