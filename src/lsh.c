@@ -56,6 +56,7 @@
 #include "interact.h"
 #include "gateway.h"
 #include "lsh_string.h"
+#include "pidfile.h"
 #include "reaper.h"
 #include "sexp.h"
 #include "ssh.h"
@@ -130,7 +131,8 @@
        (detach . int)
        ; Should -B write the pid to stdout?
        (write_pid . int)
-       
+       (pid_file . "const char *")
+
        ; True if the client should detach when a session closes (useful for gateways)
        (detach_end . int)
 
@@ -194,6 +196,7 @@ make_options(int *exit_code)
   self->detach = 0;
   self->detach_end = 0;
   self->write_pid = 0;
+  self->pid_file = NULL;
 
   self->start_shell = 1;
   self->x11_forward = 0;
@@ -476,6 +479,7 @@ enum {
   OPT_ASKPASS,
  
   OPT_WRITE_PID,
+  OPT_PID_FILE,
 
   OPT_USE_GATEWAY,
   OPT_START_GATEWAY,
@@ -557,10 +561,9 @@ main_options[] =
   { NULL, 0, NULL, 0, "Miscellaneous options:", 0 },
   { "escape-char", 'e', "Character", 0, "Escape char. `none' means disable. "
     "Default is to use `~' if we have a tty, otherwise none.", 0 },
-  /* FIXME: Add --pid-file option which writes the pid to a specified
-     file, and deletes that file when exiting. */
   { "write-pid", OPT_WRITE_PID, NULL, 0, "Make -B write the pid of the backgrounded "
     "process to stdout.", 0 },
+  { "pid-file", OPT_PID_FILE, "FILE", 0, "Make -B create a pid file.", 0},
 
   /* Options passed on to lsh-transport. */  
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
@@ -917,7 +920,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     CASE_FLAG(OPT_DETACH, detach_end);
     CASE_FLAG(OPT_WRITE_PID, write_pid);
-    
+
+    case OPT_PID_FILE:
+      self->pid_file = arg;
+      self->write_pid = 1;
+      break;
+
     CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
     CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
     CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
@@ -1281,26 +1289,43 @@ main(int argc, char **argv)
      remove sleep call in tcpip-remote-test. */
   if (options->detach)
     {
-      pid_t pid = fork();
-      switch (pid)
+      switch (fork())
 	{
 	case 0:
-	  /* Child. Just go on. */
 	  /* FIXME: Should we create a new process group, close our tty
 	   * and stdio, etc? */	 
+	  if (options->write_pid)
+	    {
+	      if (options->pid_file)
+		{
+		  struct resource *pidfile
+		    = make_pid_file_resource(make_string(options->pid_file));
+		  if (!pidfile)
+		    {
+		      werror("pidfile seems to exist already.\n");
+		      return EXIT_FAILURE;
+		    }
+		  remember_resource(connection->super.resources, pidfile);
+		}
+	      else
+		{
+		  struct lsh_string *msg = ssh_format("%di\n", getpid());
+		  if (!write_raw (STDOUT_FILENO, STRING_LD(msg)))
+		    {		      
+		      werror ("Writing pid to stdout failed!?: %e.\n", errno);
+		      return EXIT_FAILURE;
+		    }
+		  lsh_string_free(msg);
+		}
+	    }
 	  break;
 	case -1:
 	  /* Error */
 	  werror("fork failed when detaching: %e.\n", errno);
-	  break;
+	  return EXIT_FAILURE;
+
 	default:
 	  /* Parent */
-	  if (options->write_pid)
-	    {
-	      struct lsh_string *msg = ssh_format("%di\n", pid);
-	      if (!write_raw (STDOUT_FILENO, STRING_LD(msg)))
-		werror ("Write to stdout failed!?: %e.\n", errno);
-	    }
 	  _exit(EXIT_SUCCESS);
 	}
     }
