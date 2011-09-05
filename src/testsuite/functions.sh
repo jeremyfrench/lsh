@@ -189,7 +189,7 @@ spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--no-use-gateway \
-	--host-db-update /dev/null -z -p $PORT "$@" --write-pid -B $LOCALHOST > "$LSH_PIDFILE"
+	--host-db-update /dev/null -z -p $PORT "$@" --pid-file "$LSH_PIDFILE" -B $LOCALHOST
 
     at_exit '[ -f "$LSH_PIDFILE" ] && kill `cat $LSH_PIDFILE`'
 }
@@ -200,7 +200,7 @@ exec_lshg () {
 
 spawn_lshg () {
     # echo spawn_lshg "$@"
-    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B $LOCALHOST > "$LSHG_PIDFILE"
+    ../lsh --use-gateway --program-name lshg $LSHG_FLAGS -p $PORT "$@" --pid-file "$LSHG_PIDFILE" -B $LOCALHOST
     at_exit 'kill `cat $LSHG_PIDFILE`'
 }
 
