@@ -92,6 +92,8 @@ INTERACT_RANDOM_SOURCES = unix_random_user.c
 
 TTY_SOURCES = tty.c
 
+PIDFILE_SOURCES = pidfile.c
+
 # FIXME pkcs5.c doesn't quite belong here, it's used only on the client side.
 # And compress.c shold be needed only when we have zlib support.
 CRYPTO_SOURCES = algorithms.c \
@@ -155,7 +157,7 @@ lsh_export_key_SOURCES = lsh-export-key.c
 
 lsh_make_seed_SOURCES = lsh-make-seed.c
 
-lshd_SOURCES = daemon.c pidfile.c \
+lshd_SOURCES = daemon.c \
 	       lshd.c \
 	       server_keyexchange.c
 
@@ -196,6 +198,7 @@ COMMON_OBJS = $(COMMON_SOURCES:.c=.$(OBJEXT))
 INTERACT_OBJS = $(INTERACT_SOURCES:.c=.$(OBJEXT))
 INTERACT_RANDOM_OBJS = $(INTERACT_RANDOM_SOURCES:.c=.$(OBJEXT))
 TTY_OBJS = $(TTY_SOURCES:.c=.$(OBJEXT))
+PIDFILE_OBJS = $(PIDFILE_SOURCES:.c=.$(OBJEXT))
 CRYPTO_OBJS = $(CRYPTO_SOURCES:.c=.$(OBJEXT))
 CRYPTO_CLIENT_OBJS = $(CRYPTO_CLIENT_SOURCES:.c=.$(OBJEXT))
 TRANSPORT_OBJS = $(TRANSPORT_SOURCES:.c=.$(OBJEXT))
@@ -204,7 +207,8 @@ SERVER_OBJS = $(SERVER_SOURCES:.c=.$(OBJEXT))
 pty_helper_OBJS = $(pty_helper_SOURCES:.c=.$(OBJEXT))
 
 lsh_OBJS = $(lsh_SOURCES:.c=.$(OBJEXT)) \
-	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) $(TTY_OBJS) $(CONNECTION_OBJS)
+	   $(COMMON_OBJS) $(MINIMAL_OBJS) $(INTERACT_OBJS) \
+	   $(TTY_OBJS) $(PIDFILE_OBJS) $(CONNECTION_OBJS)
 
 lsh_transport_OBJS = $(lsh_transport_SOURCES:.c=.$(OBJEXT)) \
 		     $(COMMON_OBJS) $(SPECIAL_OBJS) \
@@ -232,7 +236,8 @@ lsh_make_seed_OBJS = $(lsh_make_seed_SOURCES:.c=.$(OBJEXT)) \
 		       $(CRYPTO_OBJS)
 
 lshd_OBJS = $(lshd_SOURCES:.c=.$(OBJEXT)) \
-	    $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) $(CRYPTO_OBJS) $(TRANSPORT_OBJS)
+	    $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) \
+	    $(CRYPTO_OBJS) $(TRANSPORT_OBJS) $(PIDFILE_OBJS) 
 
 lshd_userauth_OBJS = $(lshd_userauth_SOURCES:.c=.$(OBJEXT)) \
 		     $(COMMON_OBJS) $(SPECIAL_OBJS) $(SERVER_OBJS) $(CRYPTO_OBJS)
