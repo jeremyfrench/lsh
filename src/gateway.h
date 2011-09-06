@@ -108,8 +108,6 @@ extern struct channel_open gateway_channel_open;
 
        ;; Present only in the target channel, but relates to the
        ;; CHANNEL_OPEN message received for the originating channel.
-       ;; FIXME: Could use a new class, but it's probably not worth
-       ;; the hassle.
        (info const object channel_open_info)))
 */
 
