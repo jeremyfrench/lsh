@@ -65,10 +65,48 @@ do_kill_gateway_channel(struct resource *s)
       if (self->x11)
 	KILL_RESOURCE(&self->x11->super.super);
 
-      /* NOTE: We don't attempt to close or kill self->chain (since it
-	 may not yet be active). Instead, we leave to the connection's
-	 kill method handler to initiate close of all active
-	 channels. */
+      if (self->chain->super.super.alive)
+	{
+	  /* When the kill method is called because a gateway client
+	     disconnects, then to tear down the corrsponding channel
+	     tot he server, three are possible states we need to
+	     handle:
+
+	     1. The channel is fully open. Then call channel_close to
+	        close it.
+
+	     2. The gateway client requested a CHANNEL_OPEN, which was
+	        forwarded to the remote server, but then the gateway
+	        client disappears before we get any reply from the
+	        server. Then we can't send CHANNEL_CLOSE now. Instead,
+	        do_gateway_channel_event checks for this case and
+	        closes the channel as soon as a response to
+	        CHANNEL_OPEN_CONFIRMATION.
+
+	     3. The server requested a CHANNEL_OPEN, which was forwarded,
+	        and then the gateway client disappeared before replying. Then
+		we must send a CHANNEL_OPEN_FAILURE.
+	  */
+	  enum channel_alloc_state state =
+	    self->super.connection->alloc_state[self->super.local_channel_number];
+	  switch (state)
+	    {
+	    case CHANNEL_FREE:
+	      fatal("Internal error.\n");
+	    case CHANNEL_ALLOC_ACTIVE:
+	      channel_close(&self->chain->super);
+	      break;
+	    case CHANNEL_ALLOC_RECEIVED_OPEN:
+	      /* Case 2 above. Do nothing now. */
+	      break;
+	    case CHANNEL_ALLOC_SENT_OPEN:
+	      /* Case 3 above */
+	      assert(self->info);
+	      channel_open_deny(self->info, SSH_OPEN_CONNECT_FAILED,
+				"Refused by server");	      	      
+	      break;
+	    }
+	}
     }
 }
 
@@ -109,87 +147,89 @@ do_gateway_channel_event(struct ssh_channel *c, enum channel_event event)
 {
   CAST(gateway_channel, self, c);
 
-  switch(event)
+  if (!self->chain->super.super.alive)
     {
-    case CHANNEL_EVENT_CONFIRM:
-      if (!self->info->connection->super.alive)
-        {
-          /* The other channel has disappeared, so close. */
-          channel_close(&self->super);
-        }
-      else
-        {
-          /* This method is invoked on the target channel. Propagate
-             the target channel's send variables to the originating
-             channel's receive variables. */
-          self->chain->super.rec_window_size = self->super.send_window_size;
-          self->chain->super.rec_max_packet = self->super.send_max_packet;
+      /* The other channel has disappeared. The only event we need to
+	 handle is CONFIRM. */
+      if (event == CHANNEL_EVENT_CONFIRM)
+	channel_close(&self->super);
+    }
+  else
+    switch(event)
+      {
+      case CHANNEL_EVENT_CONFIRM:
+	/* This method is invoked on the target channel. Propagate
+	   the target channel's send variables to the originating
+	   channel's receive variables. */
+	self->chain->super.rec_window_size = self->super.send_window_size;
+	self->chain->super.rec_max_packet = self->super.send_max_packet;
 
-          self->super.receive = do_receive;
-          self->super.send_adjust = do_send_adjust;
+	self->super.receive = do_receive;
+	self->super.send_adjust = do_send_adjust;
 
-          self->chain->super.receive = do_receive;
-          self->chain->super.send_adjust = do_send_adjust;
+	self->chain->super.receive = do_receive;
+	self->chain->super.send_adjust = do_send_adjust;
 
-	  channel_open_confirm(self->info, &self->chain->super);
-        }
-      break;
-    case CHANNEL_EVENT_DENY:
-      /* This method is invoked on the target channel. We need to tear
-         down the originating channel. */
-      if (self->info->connection->super.alive)
-        {
-          /* FIXME: We should propagate the error code and message
-             over the gateway. */
-	  channel_open_deny(self->info, SSH_OPEN_RESOURCE_SHORTAGE,
-			    "Refused by server");
-        }
-      break;
-    case CHANNEL_EVENT_EOF:
-      channel_eof(&self->chain->super);
-      break;
+	channel_open_confirm(self->info, &self->chain->super);
+	self->info = NULL;
 
-    case CHANNEL_EVENT_CLOSE:
-      /* FIXME: Can we arrange so that the gateway connection is
-	 closed if pending_close on the sared connection is set, and
-	 the last channel is closed. */
-      channel_close(&self->chain->super);
-      break;
+	break;
+      case CHANNEL_EVENT_DENY:
+	/* This method is invoked on the target channel. We need to tear
+	   down the originating channel. */
 
-    case CHANNEL_EVENT_SUCCESS:
-      if (self->x11 && self->x11->pending)
-	{
-	  if (!--self->x11->pending)
-	    {
-	      CAST(client_connection, connection, self->super.connection);
-	      client_add_x11_handler(connection, &self->x11->super);
-	    }
-	}
+	/* FIXME: We should propagate the error code and message
+	   over the gateway. */
+	channel_open_deny(self->info, SSH_OPEN_CONNECT_FAILED,
+			  "Refused by server");
 
-      SSH_CONNECTION_WRITE(self->chain->super.connection,
-			   format_channel_success(self->chain->super.remote_channel_number));
-      break;
+	self->info = NULL;
+	break;
+      case CHANNEL_EVENT_EOF:
+	channel_eof(&self->chain->super);
+	break;
 
-    case CHANNEL_EVENT_FAILURE:
-      if (self->x11 && self->x11->pending)
-	{
-	  if (!--self->x11->pending)
-	    {
-	      KILL_RESOURCE(&self->x11->super.super);
-	      self->x11 = NULL;
-	    }
-	}
+      case CHANNEL_EVENT_CLOSE:
+	/* FIXME: Can we arrange so that the gateway connection is
+	   closed if pending_close on the shared connection is set,
+	   and the last channel is closed? */
+	channel_close(&self->chain->super);
+	break;
+
+      case CHANNEL_EVENT_SUCCESS:
+	if (self->x11 && self->x11->pending)
+	  {
+	    if (!--self->x11->pending)
+	      {
+		CAST(client_connection, connection, self->super.connection);
+		client_add_x11_handler(connection, &self->x11->super);
+	      }
+	  }
+
+	SSH_CONNECTION_WRITE(self->chain->super.connection,
+			     format_channel_success(self->chain->super.remote_channel_number));
+	break;
+
+      case CHANNEL_EVENT_FAILURE:
+	if (self->x11 && self->x11->pending)
+	  {
+	    if (!--self->x11->pending)
+	      {
+		KILL_RESOURCE(&self->x11->super.super);
+		self->x11 = NULL;
+	      }
+	  }
       
-      SSH_CONNECTION_WRITE(self->chain->super.connection,
-			   format_channel_failure(self->chain->super.remote_channel_number));
-      break;
+	SSH_CONNECTION_WRITE(self->chain->super.connection,
+			     format_channel_failure(self->chain->super.remote_channel_number));
+	break;
       
-    case CHANNEL_EVENT_STOP:
-    case CHANNEL_EVENT_START:
-      /* Ignore. The channel doesn't do any i/o of its own, so flow
-	 control must be handled elsewhere. */
-      break;
-    }      
+      case CHANNEL_EVENT_STOP:
+      case CHANNEL_EVENT_START:
+	/* Ignore. The channel doesn't do any i/o of its own, so flow
+	   control must be handled elsewhere. */
+	break;
+      }      
 }  
 
 DEFINE_CHANNEL_REQUEST(gateway_forward_channel_request)
