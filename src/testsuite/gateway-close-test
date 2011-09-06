@@ -1,0 +1,33 @@
+#! /bin/sh
+
+echo gateway close
+
+# The idea is that we have the channels
+#
+#   lshd == lsh == lshg
+#
+# where the "remote" process started by lshd on the left generates data.
+#
+# We then kill the lshg client at the right, and check that the lsh
+# process in the middle cleans up and closes the corrresponding
+# channel to the server.
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+LOG_FILE=test.out1
+
+spawn_lshd && spawn_lsh --start-gateway -v --log-file $LOG_FILE \
+  && spawn_lshg -E "sh -c 'for x in 1 2 3 4 5 d 7 8 9; do sleep 1; echo foo; done'" \
+  | (read dummy && kill `cat $LSHG_PIDFILE` && rm $LSHG_PIDFILE && cat >/dev/null )\
+  && sleep 5 \
+  && if grep "lsh:.* Write failed" $LOG_FILE ; then
+      test_fail
+  else
+      test_success
+  fi
+
+test_done
