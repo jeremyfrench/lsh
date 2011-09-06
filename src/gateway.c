@@ -130,34 +130,6 @@ kill_gateway_connection(struct resource *s)
 
       self->super.super.alive = 0;      
 
-      /* FIXME: I don't think we do the right thing in all cases The
-	 channels to the gateway client be killed right away. As for
-	 the channels over the shareed connection, there are three
-	 possible states:
-
-	 1. The channel is fully open. Then call channel_close to close it.
-
-	 2. The gateway client requested a CHANNEL_OPEN, which was
-	    forwarded to the remote server, but then the gateway
-	    client disappears before we get any reply from the server.
-	    The we must respond to CHANNEL_OPEN_CONFIRMATION with
-	    CHANNEL_CLOSE, while CHANNEL_OPEN_FAILURE can be safely
-	    ignored. do_gateway_channel_event attempts to do this.
-
-	 3. The server requested a CHANNEL_OPEN, which was forwarded,
-	    and then the gateway client disappeared before replying. Then
-	    we must send a CHANNEL_OPEN_FAILURE.
-
-	 Maybe the right thing is to have the kill method of gatewayed
-	 channels initiate close of the chained channel, taking these
-	 three cases into account.
-
-	 We need testcases, at least for case (1) which is the most
-	 common situation, and which currently causes repeated warning
-	 messages like "gateway_write_packet: Write failed: Bad file
-	 descriptor."
-      */
-
       KILL_RESOURCE_LIST(self->super.resources);
 
       io_close_fd(self->fd);
