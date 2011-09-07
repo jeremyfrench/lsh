@@ -1,3 +1,9 @@
+2011-09-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* config.guess: Upgraded to current version, timestamp 2011-08-20.
+	Needed to recognize osx (darwin) on x86_64.
+	* config.sub: Upgraded to current version, timestamp 2011-08-23.
+
 2011-09-06  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added gateway-close-test.
