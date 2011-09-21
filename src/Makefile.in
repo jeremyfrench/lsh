@@ -179,7 +179,7 @@ SOURCES = $(COMMON_SOURCES) $(SPECIAL_SOURCES) \
 	  $(CRYPTO_SOURCES) $(CRYPTO_CLIENT_SOURCES) \
 	  $(TRANSPORT_SOURCES) $(CONNECTION_SOURCES) \
 	  $(SERVER_SOURCES) $(INTERACT_SOURCES) $(INTERACT_RANDOM_SOURCES) \
-	  $(TTY_SOURCES) \
+	  $(TTY_SOURCES) $(PIDFILE_SOURCES) \
 	  $(lsh_SOURCES) $(lsh_transport_SOURCES) \
 	  $(lsh_keygen_SOURCES) $(lsh_decrypt_key_SOURCES) \
 	  $(lsh_decode_key_SOURCES) $(lsh_export_key_SOURCES) $(lsh_make_seed_SOURCES) \
