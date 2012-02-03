@@ -1,5 +1,8 @@
 2012-02-03  Niels Möller  <nisse@lysator.liu.se>
 
+	* index.html: Updated to xhtml, and added charset declaration.
+	Added git instructions.
+
 	* nettle.texinfo: Updated charset declaration.
 	* misc/plan.html: Likewise.
 
