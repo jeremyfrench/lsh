@@ -1,5 +1,8 @@
 2012-02-03  Niels Möller  <nisse@lysator.liu.se>
 
+	* doc/index.html: Updated to xhtml, and added charset declaration.
+	Added git instructions.
+
 	* doc/lsh.texinfo: Updated charset declaration.
 
 2011-11-24  Niels Möller  <nisse@lysator.liu.se>
