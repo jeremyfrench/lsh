@@ -861,7 +861,7 @@
 	untested and #if:ed out.
 
 	* src/crypto.h (hash_algorithm): Deleted class, just use the
-	corresponding struct nettle_hash. 
+	corresponding struct nettle_hash.
 
 2009-10-25  Niels Möller  <nisse@lysator.liu.se>
 
