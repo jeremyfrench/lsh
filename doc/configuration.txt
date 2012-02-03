@@ -224,5 +224,5 @@ implemented this way, I don't know. But I suspect it would be easier
 to integrate those features into something like scsh than into a more
 traditional shell like bash.
 
-/Niels Möller
+/Niels MÃ¶ller
 

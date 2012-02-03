@@ -1,20 +1,20 @@
-2011-11-24  Niels Möller  <nisse@lysator.liu.se>
+2011-11-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/run-tests (test_program): If EMULATOR is set in the
 	environment, and the testprogram is not a script, use EMULATOR to
 	run it. Typical use is EMULATUR=wine.
 
-2011-09-21  Niels Möller  <nisse@lysator.liu.se>
+2011-09-21  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.in (SOURCES): Added pidfile.c.
 
-2011-09-07  Niels Möller  <nisse@lysator.liu.se>
+2011-09-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* config.guess: Upgraded to current version, timestamp 2011-08-20.
 	Needed to recognize osx (darwin) on x86_64.
 	* config.sub: Upgraded to current version, timestamp 2011-08-23.
 
-2011-09-06  Niels Möller  <nisse@lysator.liu.se>
+2011-09-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added gateway-close-test.
 
@@ -26,7 +26,7 @@
 
 	* src/testsuite/gateway-close-test: New test case.
 
-2011-09-05  Niels Möller  <nisse@lysator.liu.se>
+2011-09-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/gateway-stop-test: Check that the pidfile is
 	deleted (indicating that the process has cleaned up and exited
@@ -42,7 +42,7 @@
 	(main): Moved writing of pid to child process. For --pid-file, use
 	make_pid_file_resource.
 
-2011-09-02  Niels Möller  <nisse@lysator.liu.se>
+2011-09-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes: Added pidfile.c.x.
 	* src/.dist_headers: Added pidfile.h.
@@ -85,17 +85,17 @@
 	* src/connection.c (ssh_connection_pending_close): Check
 	channel_count, and kill connection immediately if zero.
 
-2011-05-02  Niels Möller  <nisse@lysator.liu.se>
+2011-05-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/serpent-test.c: Updated for correct serpent byte
 	order.
 
-2011-03-28  Niels Möller  <nisse@lysator.liu.se>
+2011-03-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (random_init): Display errno when locking
 	fails.
 
-2011-03-23  Niels Möller  <nisse@lysator.liu.se>
+2011-03-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo: Fixed "service ssh-userauth" and "service
 	ssh-connection" examples.
@@ -109,12 +109,12 @@
 	* src/lshd-userauth.c (start_service): Pass on the
 	LSHD_CONNECTION_CONF environment variable.
 
-2011-02-21  Niels Möller  <nisse@lysator.liu.se>
+2011-02-21  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (parse_forward_arg): Support for optional brackets, to
 	support IPv6 literal addresses.
 
-2011-02-18  Niels Möller  <nisse@lysator.liu.se>
+2011-02-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Deleted srp-spec.txt, reverting
 	change from 2011-02-10. It is already included, via $(TARGETS).
@@ -140,19 +140,19 @@
 	(parse_interface): Allow optional brackets around ip address,
 	needed for IPv6 literal addresses.
 
-2011-02-14  Niels Möller  <nisse@lysator.liu.se>
+2011-02-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-3-test: Export DISPLAY before running
 	exec_lsh.
 
 	* src/testsuite/functions.sh (spawn_xvfb): Use rm -f.
 
-2011-02-10  Niels Möller  <nisse@lysator.liu.se>
+2011-02-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Added srp-spec.txt, to avoid
 	requiring groff.
 
-2011-01-31  Niels Möller  <nisse@lysator.liu.se>
+2011-01-31  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (Server configuration): Describe all config options.
 
@@ -162,7 +162,7 @@
 	* src/lshd-userauth.c (main_argp_parser): Add --helper-fd option
 	to the default lshd-connection command line.
 
-2011-01-07  Niels Möller  <nisse@lysator.liu.se>
+2011-01-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (OPT_HOST_DB_UPDATE): Rennamed, from...
 	(OPT_CAPTURE_TO): ...old name.
@@ -174,7 +174,7 @@
 	* doc/lsh.texinfo (Hostauth options): Updated --host-db-update
 	(used to be ---captured-to).
 
-2010-12-14  Niels Möller  <nisse@lysator.liu.se>
+2010-12-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (Gateway options): New node.
 	(Invoking lshg): Deleted node.
@@ -182,24 +182,24 @@
 	* src/lsh.c (main_options): Moved gateway options to a new group,
 	and updated the description of -G. Fixed --stop-gateway option.
 
-2010-12-09  Niels Möller  <nisse@lysator.liu.se>
+2010-12-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (lshd basics): Rewrote node.
 	(srp): Deleted node, and other references to SRP.
 
-2010-11-17  Niels Möller  <nisse@lysator.liu.se>
+2010-11-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Copy list of files in $pfx into result
 	package.
 
-2010-11-16  Niels Möller  <nisse@lysator.liu.se>
+2010-11-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Improved crude gmp check to look for
 	mpz_getlimbn.
 	(cfgargs): Tweaked order for --with-include-path and
 	--with-lib-path, to put $pfx before /usr/local.
 
-2010-11-15  Niels Möller  <nisse@lysator.liu.se>
+2010-11-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (dotask): Display the correct status value when
 	the step is skipped.
@@ -231,7 +231,7 @@
 	* src/server.c (service_config_option): Avoid using the
 	non-standard strnlen function; plain strlen is good enough here.
 
-2010-11-14  Niels Möller  <nisse@lysator.liu.se>
+2010-11-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (mini-inetd): Fixed typo with EXEEXT.
 
@@ -239,7 +239,7 @@
 	for attempt to enable features which were disabled at compile
 	time.
 
-2010-11-13  Niels Möller  <nisse@lysator.liu.se>
+2010-11-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/config/lshd-connection.conf: Use new config file
 	options to enable all features.
@@ -287,7 +287,7 @@
 
 	* src/server.h (class service_config): New attribute libexec_dir.
 
-2010-11-12  Niels Möller  <nisse@lysator.liu.se>
+2010-11-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (main_options): Fixed double ':' in header.
 	(class lshd_userauth_config): Deleted werror_config attribute;
@@ -303,7 +303,7 @@
 
 	* src/lshd.c (lshd_config_handler): Added missing break.
 
-2010-11-10  Niels Möller  <nisse@lysator.liu.se>
+2010-11-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (parse_arg_unsigned): New argument with expected
 	terminator.
@@ -350,7 +350,7 @@
 	* src/queue.h (class addr_queue): Deleted unused class.
 	* src/queue.c: Deleted all addr_queue related functions.
 
-2010-11-09  Niels Möller  <nisse@lysator.liu.se>
+2010-11-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-connection.c (oop_read_service): Use verbose, not
 	werror, for message on EOF.
@@ -366,7 +366,7 @@
 
 	* src/testsuite/lsh-encrypted-key-test: Reenabled test.
 
-2010-11-08  Niels Möller  <nisse@lysator.liu.se>
+2010-11-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (at_connect): Don't use -m flag to
 	mini-inetd.
@@ -374,7 +374,7 @@
 	* src/atoms.in: Deleted ssh-userauth and ssh-connection (no longer
 	hardcoded).
 
-2010-11-07  Niels Möller  <nisse@lysator.liu.se>
+2010-11-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (LSHD_CONNECTION): Deleted variable.
 	(LSHD_PTY_HELPER): Deleted variable.
@@ -391,7 +391,7 @@
 	(ENV_LSHD_PTY_HELPER): Likewise.
 	(ENV_LSHD_USERAUTH): Likewise.
 
-2010-11-03  Niels Möller  <nisse@lysator.liu.se>
+2010-11-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added lshd-example-config-test.
 
@@ -450,7 +450,7 @@
 	* src/server_config.c (list_append): Fixed broken indirection.
 	(server_config_parse_example): Fixed CONFIG_TYPE_LIST case.
 
-2010-11-01  Niels Möller  <nisse@lysator.liu.se>
+2010-11-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lshd-example-config-test: New test case.
 
@@ -473,7 +473,7 @@
 	* src/testsuite/functions.sh (LSHD_USERAUTH): Partly reverted
 	previous change. Define, but don't export.
 
-2010-10-29  Niels Möller  <nisse@lysator.liu.se>
+2010-10-29  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (LSHD_LIBEXEC_DIR): Define and
 	export.
@@ -521,7 +521,7 @@
 
 	* src/io.c (oop_io_connect): Use errno if getsockopt fails.
 
-2010-10-28  Niels Möller  <nisse@lysator.liu.se>
+2010-10-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (at_connect): Use our own mini-inetd.
 	* src/testsuite/rapid7-lsh-test: Likewise.
@@ -536,7 +536,7 @@
 	mini-inetd, hopefully working better with IPv6 than the version in
 	tcputils.
 
-2010-10-26  Niels Möller  <nisse@lysator.liu.se>
+2010-10-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/werror.c (werror_format): Made static.
 
@@ -586,24 +586,24 @@
 	* src/client_x11.c (x11_connect_error): Use STRERROR to display
 	socket error code.
 
-2010-08-24  Niels Möller  <nisse@lysator.liu.se>
+2010-08-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/scm/guile-compat.scm: Use the rdelim module, for the
 	read-line. Needed at least for guile-1.8.7.
 
 	* doc/fixff.pl: Use regexp m modifier rather than the arcane $*.
 
-2010-07-23  Niels Möller  <nisse@lysator.liu.se>
+2010-07-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (lookup_user): Set user->shell before use.
 	(handle_userauth): More verbose output.
 
-2010-07-20  Niels Möller  <nisse@lysator.liu.se>
+2010-07-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/crypto.c (make_des3_cbc_instance): Updated to Nettle's new
 	DES interface.
 
-2010-06-04  Niels Möller  <nisse@lysator.liu.se>
+2010-06-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added passwd-1-test and
 	passwd-2-test.
@@ -670,7 +670,7 @@
 	* src/atoms.in: Added ssh-dsa, ssh-dsa-sha256@lysator.liu.se,
 	and dsa-sha256.
 
-2010-06-03  Niels Möller  <nisse@lysator.liu.se>
+2010-06-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-keygen.c: Added support for dsa-sha256 keys.
 	(main_options): Improved descriptions.
@@ -678,25 +678,25 @@
 	(dsa_sha256_generate_key): New function.
 	(enum config_algorithm): New enum.
 
-2010-06-02  Niels Möller  <nisse@lysator.liu.se>
+2010-06-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/getpwnam-wrapper.c (getpwnam): Use
 	GETWPWNAM_WRAPPER_DIR to locate configuration directory.
 
 	* src/testsuite/setup-env: Create a password for testing.
 
-2010-06-01  Niels Möller  <nisse@lysator.liu.se>
+2010-06-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac (LOCAL_NETTLE_DEP): When building with the bundled
 	nettle library, setup a dependency when linking.
 	* src/Makefile.in (LOCAL_NETTLE_DEP): Use it here.
 
-2010-05-25  Niels Möller  <nisse@lysator.liu.se>
+2010-05-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-keygen.c (dsa_generate_key): Updated call to
 	dsa_generate_keypair to explicitly specify a 160 bit q.
 
-2010-03-30  Niels Möller  <nisse@lysator.liu.se>
+2010-03-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/dsa.c (do_dsa_verify): Updated for Nettle's dsa_sha1_verify
 	rename.
@@ -709,7 +709,7 @@
 	(do_receive): Use it.
 	(do_server_session_event): Use it, replacing old code to send EOF.
 
-2010-03-24  Niels Möller  <nisse@lysator.liu.se>
+2010-03-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (start_userauth): Check return value from
 	the SIGN method.
@@ -717,12 +717,12 @@
 
 	* src/rsa.c (do_rsa_sign): Check return value from rsa_sha1_sign.
 
-2010-03-23  Niels Möller  <nisse@lysator.liu.se>
+2010-03-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client_x11.c (do_client_channel_x11_receive): Fixed broken,
 	too short(!), allocation for X11 connection failure message.
 
-2010-03-04  Niels Möller  <nisse@lysator.liu.se>
+2010-03-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (spawn_xvfb): Explicitly setup the
 	xauthority file using xauth add, don't rely on xauth generate and
@@ -747,7 +747,7 @@
 	* src/server.h (service_config): Make this into a class rather
 	than a struct, for safer casting in service_argp_parser.
 
-2010-02-23  Niels Möller  <nisse@lysator.liu.se>
+2010-02-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (lshd_context): Added service_config, deleted
 	commented-out attributes.
@@ -768,10 +768,10 @@
 	* src/server.h (service_config): New class.
 
 	* src/server.c (init_service_config): New function.
-	(service_argp, service_argp_parser): New parser för --service {
+	(service_argp, service_argp_parser): New parser fÃ¶r --service {
 	... } argument.
 
-2010-02-20  Niels Möller  <nisse@lysator.liu.se>
+2010-02-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (make_lsh_transport_config): Use
 	init_transport_context.
@@ -782,7 +782,7 @@
 
 	* src/transport.c (init_transport_context): New function.
 
-2010-02-15  Niels Möller  <nisse@lysator.liu.se>
+2010-02-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (make_lshd_port): Check that IPV6_V6ONLY is defined
 	before trying to setsockopt it.
@@ -790,12 +790,12 @@
 	* src/testsuite/Makefile.in (OTHER_SOURCES): Added
 	getpwnam-wrapper.c.
 
-2010-02-11  Niels Möller  <nisse@lysator.liu.se>
+2010-02-11  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (main_options): Renamed options to start
 	with --allow or --deny.
 
-2010-02-08  Niels Möller  <nisse@lysator.liu.se>
+2010-02-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: When looking for a shared libc, look for the
 	symlink /libc.so.* rather than the glibc-specific name libc-*.so.
@@ -804,7 +804,7 @@
 	corresonding variables to allow-password, allow-publickey and
 	allow-root-login.
 
-2010-02-05  Niels Möller  <nisse@lysator.liu.se>
+2010-02-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/config/lshd-userauth.conf: Added enable-publickey
 	option.
@@ -819,7 +819,7 @@
 	(handle_publickey, handle_password): Take the configuration as
 	argument, and return 0 if the method is not enabled.
 
-2010-02-04  Niels Möller  <nisse@lysator.liu.se>
+2010-02-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_config.c (parser_parse_option): Require new line at
 	end of option-value pair, and warn for spurious tokens before the
@@ -840,7 +840,7 @@
 
 	* src/config.make.in (CCPIC): New variable.
 
-2010-02-02  Niels Möller  <nisse@lysator.liu.se>
+2010-02-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in: Added rules for building
 	getpwnam-wrapper.so. Needs to be configured.
@@ -851,7 +851,7 @@
 	* src/client.c (kill_client_connection): Use trace rather than
 	werror.
 
-2010-01-12  Niels Möller  <nisse@lysator.liu.se>
+2010-01-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (handle_password): New function, currently
 	untested and #if:ed out.
@@ -859,22 +859,22 @@
 	* src/crypto.h (hash_algorithm): Deleted class, just use the
 	corresponding struct nettle_hash. 
 
-2009-10-25  Niels Möller  <nisse@lysator.liu.se>
+2009-10-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Updated URL for liboop, it's now
 	http://liboop.ofb.net.
 
-2009-10-21  Niels Möller  <nisse@lysator.liu.se>
+2009-10-21  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (make_lshd_port): Set the IPPROTO_IPV6ONLY socket
 	option when listening on an IPv6 socket.
 
-2009-10-07  Niels Möller  <nisse@lysator.liu.se>
+2009-10-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (lookup_user): Added support for shadow
 	passwords.
 
-2009-09-22  Niels Möller  <nisse@lysator.liu.se>
+2009-09-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-6-test (ALGORITHMS): Updated list to include
 	aes128 in cbc and ctr modes.
@@ -895,12 +895,12 @@
 	some aliases for "aes256-cbc" and "aes256-ctr", including the old
 	"rijndael" alias.
 
-2009-09-05  Niels Möller  <nisse@lysator.liu.se>
+2009-09-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_config.c (server_config_parse_example): Don't use
 	options where the example is NULL.
 
-2009-09-01  Niels Möller  <nisse@lysator.liu.se>
+2009-09-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (XAUTHORITY): Put xauthority file in
 	$TEST_HOME.
@@ -915,26 +915,26 @@
 	* configure.ac: Test for $with_system_argp != no, rather than =
 	yes.
 
-2009-08-31  Niels Möller  <nisse@lysator.liu.se>
+2009-08-31  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Distribute TODO file.
 
 	* Makefile.in (install uninstall): Recurse into sftp directory.
 
-2009-08-24  Niels Möller  <nisse@lysator.liu.se>
+2009-08-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* .bootstrap, Makefile.in, configure.ac: Reenable building of sftp.
 
-2009-05-30  Niels Möller  <nisse@lysator.liu.se>
+2009-05-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (.texinfo.info): Don't use a temporary output file
 	$@T, trust makeinfo to not remove output file on errors.
 
-2009-05-04  Niels Möller  <nisse@lysator.liu.se>
+2009-05-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* texinfo.tex: Upgrade to version 2009-03-22.17.
 
-2009-02-24  Niels Möller  <nisse@lysator.liu.se>
+2009-02-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_pty.c (pty_open_slave): Work around Solaris problem
 	with bogus definition of TIOCSCTTY.
@@ -942,7 +942,7 @@
 	* src/lshd-pty-helper.c (die, werror, process_request): Improved
 	error messages.
 
-2009-02-23  Niels Möller  <nisse@lysator.liu.se>
+2009-02-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-4-test: Explicitly start /bin/sh at the remote
 	end. Avoid recursive use of here-documents. Use $XAUTH, $XMODMAP
@@ -952,7 +952,7 @@
 	(do_client_channel_x11_receive): Send "access denied" message back
 	when a connection is refused.
 
-2009-02-16  Niels Möller  <nisse@lysator.liu.se>
+2009-02-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-2-test: Use lsh, not lshg, for this test. Also
 	export DISPLAY.
@@ -969,7 +969,7 @@
 	variables.
 	(need_xvfb, spawn_xvfb): Use $XVFB.
 
-2009-02-12  Niels Möller  <nisse@lysator.liu.se>
+2009-02-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-2-test: Use lshg, and also check that the
 	X-forwarding is removed properly.
@@ -980,7 +980,7 @@
 	* src/werror.c (werror_vformat): Don't output any punctuation for
 	%e. Changed all callers to use it like "...: %e.\n".
 
-2009-02-11  Niels Möller  <nisse@lysator.liu.se>
+2009-02-11  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (pty_send_message): Clear the control area, to
 	work around overly strict length validation in CMSG_NXTHDR.
@@ -988,7 +988,7 @@
 	(pty_send_message, pty_recv_message): Also clear the entire msghdr
 	struct.
 
-2008-12-02  Niels Möller  <nisse@lysator.liu.se>
+2008-12-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* contrib/lshd.debian.init: Updated file names for host key. Use
 	SIGHUP when stopping daemon.
@@ -996,12 +996,12 @@
 	* src/lshd.c (lshd_config_options): Use FILE_LSHD_HOST_KEY.
 	(open_interface): Fixed handling of default (NULL) interface.
 
-2008-11-27  Niels Möller  <nisse@lysator.liu.se>
+2008-11-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/x11-1-test: Set $DISPLAY and $LSH_FLAGS at
 	top-level, not just locally for exec_lsh function.
 
-2008-11-26  Niels Möller  <nisse@lysator.liu.se>
+2008-11-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (CMSG_LEN): Fallback definition now includes
 	int alignment at the end of the header.
@@ -1011,19 +1011,19 @@
 	* src/server_x11.c (open_x11_socket): Try to create directory
 	/tmp/.X11-unix.
 
-2008-11-22  Niels Möller  <nisse@lysator.liu.se>
+2008-11-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-make-seed.c (main): Reverted part of change from
 	2008-11-01. Don't explicitly set the seeded flag in the yarrow
 	ctx, as that results in calls to aes_encrypt before
 	aes_set_encrypt_key.
 
-2008-11-12  Niels Möller  <nisse@lysator.liu.se>
+2008-11-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (XAUTHORITY): Use a separate export
 	statement for XAUTHORITY.
 
-2008-11-10  Niels Möller  <nisse@lysator.liu.se>
+2008-11-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_x11.c (create_xauth): Added fallback when libXau is
 	unavailable. Avoid using the Xauth type in the argument list. Use
@@ -1035,11 +1035,11 @@
 
 	* configure.ac: Use AC_CHECK_LIB to check for libXau.
 
-2008-11-09  Niels Möller  <nisse@lysator.liu.se>
+2008-11-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh: Explicitly export DISPLAY.
 
-2008-11-07  Niels Möller  <nisse@lysator.liu.se>
+2008-11-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Try a different workaround for libXau on
 	Solaris-5.8.
@@ -1053,7 +1053,7 @@
 	* configure.ac: Fixed check for credentials passing to work on
 	FreeBSD.
 
-2008-11-06  Niels Möller  <nisse@lysator.liu.se>
+2008-11-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Moved checks for -lnsl and -lsocket earlier.
 	Updated GMP URL.
@@ -1061,20 +1061,20 @@
 	* configure.ac: Fixed spurious # in include section i test for
 	utmp members.
 
-2008-11-05  Niels Möller  <nisse@lysator.liu.se>
+2008-11-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Check for XauGetAuthByAddr in both libXau and
 	libX11.
 	(XAUTH_PROGRAM): Deleted check and configure option.
 
-2008-11-04  Niels Möller  <nisse@lysator.liu.se>
+2008-11-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_pty.h: Include <sys/termios.h>.
 
 	* src/pty-helper.c: Added support for FreeBSD style credentials
 	passing, with SCM_CREDS and struct cmsgcred.
 
-2008-11-01  Niels Möller  <nisse@lysator.liu.se>
+2008-11-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (update_seed_file): Mix in current seed file
 	before overwriting it.
@@ -1089,12 +1089,12 @@
 	* src/crypto.c: Updated (nettle_crypt_func *) casts, for
 	nettle-2.0.
 
-2008-10-30  Niels Möller  <nisse@lysator.liu.se>
+2008-10-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (main_argp_parser): Support user@host notation.
 	(main_argp_parser): Count self->start_gateway as an action.
 
-2008-10-22  Niels Möller  <nisse@lysator.liu.se>
+2008-10-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport.c (transport_send_kexinit): Use make_kexinit
 	function.
@@ -1115,7 +1115,7 @@
 	* src/dh_exchange.c (dh_hash_update): Deleted free argument.
 	Updated all callers.
 
-2008-09-26  Niels Möller  <nisse@lysator.liu.se>
+2008-09-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.in (COMMON_SOURCES): Moved queue.c here, from
 	CONNECTION_SOURCES.
@@ -1143,7 +1143,7 @@
 	* src/channel.c (channel_open_new_v): Removed function, merged
 	into channel_open_new_type.
 
-2008-09-03  Niels Möller  <nisse@lysator.liu.se>
+2008-09-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport.c (transport_process_packet): Parse SSH_DISCONNECT
 	message and display the description and reason code.
@@ -1155,7 +1155,7 @@
 	* src/io.c (lsh_popen_write): Close the pipe to the spawned
 	process after the data is written.
 
-2008-09-02  Niels Möller  <nisse@lysator.liu.se>
+2008-09-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_lookup_verifier):
 	Reintroduced call to werror_quiet_p. --sloppy --quiet means that
@@ -1164,7 +1164,7 @@
 
 	* src/atoms.in: Commented out or deleted unused symbols.
 
-2008-09-01  Niels Möller  <nisse@lysator.liu.se>
+2008-09-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh: --capture-to option renamed to
 	--host-db-update.
@@ -1193,7 +1193,7 @@
 	lsh_popen_read.
 	(lsh_popen_write): New function.
 
-2008-08-28  Niels Möller  <nisse@lysator.liu.se>
+2008-08-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (random_add): Don't associate any entropy with
 	input of type RANDOM_SOURCE_SECRET.
@@ -1236,13 +1236,13 @@
 
 	* src/daemon.c (PID_DIR, PID_SUFFIX): Deleted unused macros.
 
-2008-08-26  Niels Möller  <nisse@lysator.liu.se>
+2008-08-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (tags): New target.
 
 	* doc/Makefile.in (tags): New do nothing target.
 
-2008-08-20  Niels Möller  <nisse@lysator.liu.se>
+2008-08-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport.c (transport_connection_kill): Cancel
 	oop_timer_retry.
@@ -1266,7 +1266,7 @@
 	(CLIENT_VERSION_LINE): Likewise.
 	Updated all users.
 
-2008-08-19  Niels Möller  <nisse@lysator.liu.se>
+2008-08-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (class lshd_port): Inherit io_listen_port.
 	(kill_port): Deleted function.
@@ -1297,18 +1297,18 @@
 	(class io_connect_state): Inherit io_fd_resource.
 	(class io_listen_port): Likewise.
 
-2008-08-11  Niels Möller  <nisse@lysator.liu.se>
+2008-08-11  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/spki.c (spki_pkcs5_encrypt): Handle the case of no IV.
 
-2008-08-04  Niels Möller  <nisse@lysator.liu.se>
+2008-08-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-writekey.c: Deleted program.
 
 	* src/client_x11.c (x11_connect_error): Fixed call to
 	channel_open_deny.
 
-2008-07-27  Niels Möller  <nisse@lysator.liu.se>
+2008-07-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	Merged lsh-writekey into lsh-keygen. Old lsh-keygen behavior is
 	enabled with --write-raw, old lsh-writekey behaviour is enabled by
@@ -1357,7 +1357,7 @@
 	(main): Adapted to new randomness interface. Aded code to split
 	key into private and public parts, stored in different files.
 
-2008-07-07  Niels Möller  <nisse@lysator.liu.se>
+2008-07-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	Reorganized client actions.
 
@@ -1422,7 +1422,7 @@
 	* src/server_tcpforward.c (OPEN_FORWARDED_TCPIP): Deleted unused
 	macro.
 
-2008-07-06  Niels Möller  <nisse@lysator.liu.se>
+2008-07-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	Simplified interface to the randomness generator.
 
@@ -1549,7 +1549,7 @@
 	* src/randomness.h: Deleted randomness class. New interface using
 	plain functions random_generate and random_add.
 
-2008-06-17  Niels Möller  <nisse@lysator.liu.se>
+2008-06-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes (dist_classes): Deleted channel.c.x,
 	combinators.c.x, gateway_channel.c.x, io_commands.c.x. Added
@@ -1558,7 +1558,7 @@
 	* src/.dist_headers (dist_headers): Deleted io_commands.h and
 	suspend.h.
 
-2008-06-16  Niels Möller  <nisse@lysator.liu.se>
+2008-06-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (TS_SH): Added lshg-tcpip-remote-test.
 
@@ -1571,11 +1571,11 @@
 	* src/gateway.c (make_gateway_connection): Add handler for
 	GLOBAL_REQUEST tcpip-forward.
 
-2008-06-15  Niels Möller  <nisse@lysator.liu.se>
+2008-06-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/gateway_tcpforward.c: New file.
 
-2008-06-14  Niels Möller  <nisse@lysator.liu.se>
+2008-06-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.in (lsh_SOURCES): Added gateway_x11.c.
 
@@ -1606,7 +1606,7 @@
 
 	* src/gateway_x11.c: New file.
 
-2008-06-09  Niels Möller  <nisse@lysator.liu.se>
+2008-06-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/xalloc.c (lsh_object_check_subtype): Removed support for
 	LSH_ALLOC_STACK.
@@ -1698,7 +1698,7 @@
 	(class global_request): The handler method now takes a struct
 	request_info as argument, and no continuation or exception_handler.
 
-2008-05-30  Niels Möller  <nisse@lysator.liu.se>
+2008-05-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (maybe_x11): Pass zero single_connection argument to
 	make_x11_action.
@@ -1718,7 +1718,7 @@
 	* src/client.h (class client_x11_handler): New class, replacing
 	similar class in client_x11.c.
 
-2008-05-28  Niels Möller  <nisse@lysator.liu.se>
+2008-05-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_gateway_channel_event): Pass on
 	CHANNEL_SUCCESS and CHANNEL_FAILURE to the other channel.
@@ -1808,7 +1808,7 @@
 	* src/channel.c (channel_open_deny): Fixed assertion.
 	(channel_open_confirm): Added assertion.
 
-2008-05-26  Niels Möller  <nisse@lysator.liu.se>
+2008-05-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/combinators.c: Deleted file.
 
@@ -1909,7 +1909,7 @@
 	rec_window_size to a smaller value corresponding to the initial
 	X11 packet wth authentication data.
 
-2008-05-23  Niels Möller  <nisse@lysator.liu.se>
+2008-05-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io_commands.c (make_listen_value): Added missing break.
 
@@ -2014,7 +2014,7 @@
 	* src/alist.h (class alist): Deleted size attribute.
 	* src/alist.c: Deleted code to update size.
 
-2008-05-20  Niels Möller  <nisse@lysator.liu.se>
+2008-05-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Deleted check for cfmakeraw.
 
@@ -2041,7 +2041,7 @@
 	Pass on --askpass option to lsh-transport.
 	(main): Call unix_interact_init.
 
-2008-05-19  Niels Möller  <nisse@lysator.liu.se>
+2008-05-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-connection.c (make_lshd_connection): Install
 	window-change handler.
@@ -2161,7 +2161,7 @@
 	(parse_pkcs5_payload): Likewise.
 	(spki_pkcs5_decrypt): Likewise. Deleted interact argument.
 
-2008-05-17  Niels Möller  <nisse@lysator.liu.se>
+2008-05-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client_session.c (oop_read_stdin): Implemented handling of
 	escape character.
@@ -2179,7 +2179,7 @@
 	(escape_dispatch): Use const argument.
 	(client_escape_process): New function, replacing old code.
 
-2008-05-15  Niels Möller  <nisse@lysator.liu.se>
+2008-05-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/channel.h: Deleted old if:ed out code.
 	* src/gc.c, src/gc.h: Likewise.
@@ -2189,7 +2189,7 @@
 	* src/server_config.c: Likewise.
 	* src/werror.c: Likewise.
 
-2008-05-14  Niels Möller  <nisse@lysator.liu.se>
+2008-05-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/channel.h (CHANNEL_RECEIVE): Deleted macro, updated the only
 	call in channel.c.
@@ -2265,7 +2265,7 @@
 	* src/channel.c (channel_send_request): Check if we have sent
 	channel_close. Return success/failure.
 
-2008-05-12  Niels Möller  <nisse@lysator.liu.se>
+2008-05-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io_commands.c (make_listen_value): Moved function here, from
 	io.c. Also made static, changed interface to take a sockaddr as
@@ -2364,7 +2364,7 @@
 	(class ssh_channel): Made pending_requests a simple counter, not a
 	queue of objects.
 
-2008-05-04  Niels Möller  <nisse@lysator.liu.se>
+2008-05-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (handle_random_reply): New function.
 	(client_random_request): New function.
@@ -2397,7 +2397,7 @@
 	* src/gateway_channel.c (gateway_channel_open): Updated for new
 	type of the shared attribute.
 
-2008-05-03  Niels Möller  <nisse@lysator.liu.se>
+2008-05-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_forward.c (forward_packet_handler): Refuse to
 	forward "local" messages, with message numbers from
@@ -2473,7 +2473,7 @@
 	of SSH_MSG_CHANNEL_OPEN.
 	(make_gateway_connection): Set open_fallback to gateway_channel_open.
 
-2008-05-01  Niels Möller  <nisse@lysator.liu.se>
+2008-05-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_tcpforward.c (channel_open_direct_tcpip): Use DEFINE_CHANNEL_OPEN.
 
@@ -2482,7 +2482,7 @@
 
 	* src/client_tcpforward.c (channel_open_forwarded_tcpip): Use DEFINE_CHANNEL_OPEN.
 
-2008-04-28  Niels Möller  <nisse@lysator.liu.se>
+2008-04-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/channel_forward.c (init_channel_forward): Use
 	do_channel_forward_event if the given event handler is NULL.
@@ -2504,7 +2504,7 @@
 	* src/connection.h (class ssh_connection): Removed attribute
 	x11_display.
 
-2008-04-24  Niels Möller  <nisse@lysator.liu.se>
+2008-04-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_service_packet_handler): New
 	function, implementing SSH_LSH_RANDOM_REQUEST.
@@ -2518,7 +2518,7 @@
 
 	* src/format.c (ssh_vformat_length): Cleaned up handling of %r.
 
-2008-04-23  Niels Möller  <nisse@lysator.liu.se>
+2008-04-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (make_lsh_transport_connection): Updated for
 	init_transport_forward change.
@@ -2537,7 +2537,7 @@
 	* src/ssh.h (SSH_LSH_RANDOM_REQUEST, SSH_LSH_RANDOM_REPLY): New
 	local message types.
 
-2008-03-03  Niels Möller  <nisse@lysator.liu.se>
+2008-03-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (env_parse): Can't free the allocated copy of the
 	environment value, as the argument parser stores pointers into it.
@@ -2550,12 +2550,12 @@
 
 	* src/environ.h.in (ENV_LSHFLAGS): New constant.
 
-2008-02-24  Niels Möller  <nisse@lysator.liu.se>
+2008-02-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/Makefile.in (DISTFILES): Removed srp-spec.txt; already
 	included in $(TARGETS).
 
-2008-02-06  Niels Möller  <nisse@lysator.liu.se>
+2008-02-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (read_host_acls): Message when host-acls
 	cannot be opened is displayed only in verbose mode. Fixed message
@@ -2564,7 +2564,7 @@
 	* src/werror.c (werror_vformat): For %e, don't display the numeric
 	errno value.
 
-2008-01-08  Niels Möller  <nisse@lysator.liu.se>
+2008-01-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_packet_handler): Handle
 	SSH_MSG_USERAUTH_BANNER.
@@ -2572,7 +2572,7 @@
 
 	* src/spki.c (spki_lookup_key): New function.
 
-2008-01-07  Niels Möller  <nisse@lysator.liu.se>
+2008-01-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/gateway.c (oop_write_gateway): New function.
 	(gateway_start_write, gateway_stop_write): New functions.
@@ -2590,12 +2590,12 @@
 	gateways when the transport write buffer is getting full, is
 	implemented in service_start_write.
 
-2007-09-19  Niels Möller  <nisse@lysator.liu.se>
+2007-09-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (prgrp-timeout): Added rule
 	for building prgrp-timeout executable.
 
-2007-09-13  Niels Möller  <nisse@lysator.liu.se>
+2007-09-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Updated for moved argp, nettle and spki
 	directories.
@@ -2603,7 +2603,7 @@
 	* src/testsuite/functions.sh: Avoid using type -p, since it's not
 	portable.
 
-2007-09-12  Niels Möller  <nisse@lysator.liu.se>
+2007-09-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-10-test: Fixed typo in check for local tty.
 
@@ -2614,11 +2614,11 @@
 
 	* doc/Makefile.in (DISTFILES): Added srp-spec.txt.
 
-2007-09-10  Niels Möller  <nisse@lysator.liu.se>
+2007-09-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-10-test: Skip test if we have no tty locally.
 
-2007-09-09  Niels Möller  <nisse@lysator.liu.se>
+2007-09-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/spki.c (spki_pkcs5_encrypt): Updated use of
 	crypt_string_pad.
@@ -2632,7 +2632,7 @@
 	(crypt_string_unpad): Deleted argument free. Now always consumes
 	input string.
 
-2007-09-07  Niels Möller  <nisse@lysator.liu.se>
+2007-09-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/atoms.c (get_atom_length, get_atom_name): Changed argument
 	type to enum lsh_atom.
@@ -2669,7 +2669,7 @@
 	* src/connection.c (ssh_connection_foreach): New function.
 	* src/connection.h: Prototypes for the above.
 
-2007-05-29  Niels Möller  <nisse@lysator.liu.se>
+2007-05-29  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_gateway_channel_event): When opening
 	the target channel fails, we should deallocate the originating
@@ -2677,14 +2677,14 @@
 
 	* src/Makefile.in (lshd-pty-helper): Added rules for this program.
 
-2007-05-14  Niels Möller  <niels@s3.kth.se>
+2007-05-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/Makefile.in (TEST_OBJS): Added compress.o.
 	(TEST_LIBS): Link with -lhogweed.
 
 	* src/Makefile.in: Link programs with -lhogweed.
 
-2007-05-10  Niels Möller  <nisse@lysator.liu.se>
+2007-05-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Makefile.in (install uninstall): Typo fix.
 	(SUBDIRS): Added misc directory.
@@ -2695,7 +2695,7 @@
 	* contrib/Makefile.in: Set VPATH. Fixed distclean rule.
 	* misc/Makefile.in (tags): Likewise.
 
-2007-05-09  Niels Möller  <nisse@lysator.liu.se>
+2007-05-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/config.make.in (LIBS): Add @LIB_ARGP.
 
@@ -2718,7 +2718,7 @@
 	* contrib/Makefile.in: New file.
 	* contrib/Makefile.am: Deleted.
 
-2007-05-08  Niels Möller  <nisse@lysator.liu.se>
+2007-05-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (clean, distclean): New targets.
 
@@ -2735,18 +2735,18 @@
 	* configure.ac: Add -largp to LIBS, if we're using the bundled
 	argp library. Use AC_PROG_INSTALL and AC_PROG_MKDIR_P.
 
-2007-05-04  Niels Möller  <niels@s3.kth.se>
+2007-05-04  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Commented out --without-zlib handling. For now,
 	it's always disabled.
 
 	* Makefile.am: Deleted obsolete file.
 
-2007-05-04  Niels Möller  <nisse@lysator.liu.se>
+2007-05-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* INSTALL, install-sh, texinfo.tex: New files, copied from automake-1.10.
 
-2007-05-03  Niels Möller  <nisse@lysator.liu.se>
+2007-05-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* aclocal.m4: Renamed, used to be acinclude.m4.
 
@@ -2793,7 +2793,7 @@
 
 	* .bootstrap: Updated for directory reorganization.
 
-2007-05-02  Niels Möller  <nisse@lysator.liu.se>
+2007-05-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-decode-key.c (argp_program_version): Use PACKAGE_STRING.
 	* src/lsh-decrypt-key.c: Likewise.
@@ -2806,9 +2806,9 @@
 	* src/lshd-userauth.c: Likewise.
 
 	* src/lcp: Support filenames containing white space. Fix from
-	Ludovic Courtès.
+	Ludovic CourtÃ¨s.
 
-2007-04-26  Niels Möller  <nisse@lysator.liu.se>
+2007-04-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in (distdir): New target.
 
@@ -2825,11 +2825,11 @@
 	nettle_builddir and spki_builddir.
 	(SUBDIRS): List testsuite.
 
-2007-04-23  Niels Möller  <nisse@lysator.liu.se>
+2007-04-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.in: New manually written Makefile.in.
 
-2007-04-07  Niels Möller  <nisse@lysator.liu.se>
+2007-04-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh_string.c (lsh_string_ntop): Use HAVE_INET_NTOP, not
 	WITH_IPV6. Fixes problem with --disable-ipv6, reported by Sonny
@@ -2837,13 +2837,13 @@
 
 	* configure.ac: Check for inet_ntop.
 
-2007-04-04  Niels Möller  <nisse@lysator.liu.se>
+2007-04-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version number to 2.9.1-exp.
 
 	* Released lsh-2.9-exp
 
-2007-03-27  Niels Möller  <nisse@lysator.liu.se>
+2007-03-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_gateway_channel_event): For
 	CHANNEL_EVENT_DENY, use the right channel number when propagating
@@ -2873,17 +2873,17 @@
 	* src/testsuite/lsh-12-test: New test, which executes two commands
 	in parallel.
 
-2007-03-05  Niels Möller  <nisse@lysator.liu.se>
+2007-03-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: By default, don't use the system's argp.
 
-2007-03-01  Niels Möller  <nisse@lysator.liu.se>
+2007-03-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Changed version "number" to 2.9-exp.
 
 	* src/Makefile.am (EXTRA_DIST): Added lshg.
 
-2007-02-28  Niels Möller  <nisse@lysator.liu.se>
+2007-02-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c: Implemented password authentication, both
 	"password" and "keyboard-interactive".
@@ -2918,12 +2918,12 @@
 	* src/environ.h.in: Helper programs are in SBINDIR and BINDIR, not
 	LIBEXECDIR.
 
-2007-02-26  Niels Möller  <nisse@lysator.liu.se>
+2007-02-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshg: New shell script.
 	* src/Makefile.am (bin_SCRIPTS): Added lshg.
 
-2007-02-13  Niels Möller  <nisse@lysator.liu.se>
+2007-02-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/werror.c (werror_vformat): For %e, use the passed in number,
 	not errno.
@@ -2938,7 +2938,7 @@
 	* src/lshd-pty-helper.c (process_request): Record errno before
 	calling other functions.
 
-2007-02-08  Niels Möller  <nisse@lysator.liu.se>
+2007-02-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (TIMEOUT_PROGRAM): Pass -n to
 	prgrp-timeout.
@@ -2961,7 +2961,7 @@
 	* src/testsuite/prgrp-timeout.c: Propagate SIGINT and SIGTERM to
 	child process.
 
-2007-02-07  Niels Möller  <nisse@lysator.liu.se>
+2007-02-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/unix_process.c (send_helper_request): Better error message
 	on EOF.
@@ -2983,7 +2983,7 @@
 	* src/testsuite/prgrp-timeout.c: New program, used to enforce
 	a timeout and process cleanup when running the tests.
 
-2007-02-06  Niels Möller  <nisse@lysator.liu.se>
+2007-02-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-11-test: Workaround for the broken /bin/sh on
 	Solaris. On Solaris, just exec ksh instead.
@@ -2997,7 +2997,7 @@
 
 	* src/lcp: Quote argument to basename.
 
-2007-02-05  Niels Möller  <nisse@lysator.liu.se>
+2007-02-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (DEBUG_PACKET_HEADER): Disabled this debug
 	output.
@@ -3014,7 +3014,7 @@
 	* configure.ac (HAVE_SOCKET_CREDENTIALS_PASSING): Check for
 	working credentials passing.
 
-2007-01-27  Niels Möller  <nisse@lysator.liu.se>
+2007-01-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport.c: (format_newkeys): Moved to keyexchange.c.
 	(transport_keyexchange_finish): Don't send the NEWKEYS message
@@ -3027,12 +3027,12 @@
 	encrypted with the wrong keys. Instead, try pushing the packet out
 	after the new keys have been installed.
 
-2007-01-26  Niels Möller  <nisse@lysator.liu.se>
+2007-01-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client_tcpforward.c (do_channel_open_forwarded_tcpip): Fixed
 	bug in verbose message.
 
-2007-01-11  Niels Möller  <nisse@lysator.liu.se>
+2007-01-11  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-userauth.c (read_packet): No need for EINTR loop around
 	lsh_string_read.
@@ -3064,13 +3064,13 @@
 
 	* src/ssh_read.c (ssh_read_some, init_ssh_read_state): New functions.
 
-2007-01-09  Niels Möller  <nisse@lysator.liu.se>
+2007-01-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/ssh_read.c, src/ssh_read.h: Deleted obsolete files.
 
 	* src/write_packet.c: Deleted obsolete file.
 
-2007-01-05  Niels Möller  <nisse@lysator.liu.se>
+2007-01-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (transport_read_packet): Debug output in
 	the case that the packet header is invalid.
@@ -3081,11 +3081,11 @@
 	* src/lshd-pty-helper.c (main): Fixed copy-paste error in error
 	message.
 
-2006-12-08  Niels Möller  <nisse@lysator.liu.se>
+2006-12-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (CMSG_SPACE): Fixed typo.
 
-2006-12-06  Niels Möller  <nisse@lysator.liu.se>
+2006-12-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (CMSG_LEN, CMSG_SPACE): If <sys/socket.h> fails
 	to define these macros, define them here.
@@ -3095,11 +3095,11 @@
 
 	* src/lshd-connection.c: Include <sys/uio>, for writev.
 
-2006-12-06  Niels Möller  <niels@s3.kth.se>
+2006-12-06  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_user.c: Deleted obsolete file.
 
-2006-12-05  Niels Möller  <nisse@lysator.liu.se>
+2006-12-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-pty-helper.c: Attempted to make the utmp/wtmp handling
 	more portable.
@@ -3110,19 +3110,19 @@
 	* contrib/solpkg.sh.in (datarootdir): New directory variable (for
 	autoconf-2.61).
 
-2006-12-04  Niels Möller  <nisse@lysator.liu.se>
+2006-12-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* .bootstrap: Commented out linking of install-sh, texinfo.tex,
 	INSTALL and COPYING into the nettle subdirectory.
 
-2006-05-26  Niels Möller  <niels@s3.kth.se>
+2006-05-26  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lshd_read.c: Deleted unused file.
 
 	* src/lshd-userauth.c (spawn_helper): Use SOCK_DGRAM for Solaris
 	style ucred passing, otherwise SOCK_STREAM.
 
-2006-05-26  Niels Möller  <nisse@lysator.liu.se>
+2006-05-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh: Don't use set -e, since it made the
 	cleanup code unreliable. FIXME: Check if any tests depended on this.
@@ -3142,14 +3142,14 @@
 
 	* configure.ac: Check for ucred.h.
 
-2006-05-25  Niels Möller  <niels@s3.kth.se>
+2006-05-25  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/lsh-10-test: Check that the client gets a tty.
 
 	* src/lshd-userauth.c (spawn_helper): Use SOCK_DGRAM for the
 	pty-helper socketpair.
 
-2006-05-25  Niels Möller  <nisse@lysator.liu.se>
+2006-05-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/setup-env: Pass -v flag to lsh-make-seed.
 
@@ -3162,7 +3162,7 @@
 
 	* src/lshd-userauth.c (start_service): Fixed ENV_MAX handling.
 
-2006-05-23  Niels Möller  <nisse@lysator.liu.se>
+2006-05-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (_XPG4_2): Define before including system
 	headers. Needed for CMSG_SPACE and friends on Solaris.
@@ -3186,7 +3186,7 @@
 	* src/arglist.c (arglist_push_optarg): Use malloc + strcpy instead
 	of asprintf, for better portability.
 
-2006-05-23  Niels Möller  <niels@s3.kth.se>
+2006-05-23  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/io.c (io_readable_p): New function, replacing the static
 	function readable_p in service_read.c and transport_read.c.
@@ -3202,7 +3202,7 @@
 	(HAVE_IOCTL_FIONREAD): New check, if ioctl FIONREAD exists, and
 	takes an int argument.
 
-2006-05-19  Niels Möller  <nisse@lysator.liu.se>
+2006-05-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/jpoll.c, src/jpoll.h: Deleted files.
 	* src/Makefile.am (EXTRA_DIST): Deleted jpoll.h and jpoll.c.
@@ -3223,7 +3223,7 @@
 
 	* src/lshd-pty-helper.c (main): Declare argc and argv UNUSED.
 
-2006-05-19  Niels Möller  <niels@s3.kth.se>
+2006-05-19  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Deleted canonicalize_file_name check, reverting
 	earlier change.
@@ -3247,12 +3247,12 @@
 
 	* src/lsh-transport.c: Include sys/stat.h.
 
-2006-05-19  Niels Möller  <nisse@lysator.liu.se>
+2006-05-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (EXTRA_DIST): Added configuration
 	files.
 
-2006-05-18  Niels Möller  <nisse@lysator.liu.se>
+2006-05-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pty-helper.c (pty_send_message, pty_recv_message): Make
 	linux style ucred handling conditional on SCM_CREDENTIALS being
@@ -3283,7 +3283,7 @@
 	ATOM_SERPENT_CBC_LOCAL.
 	(all_crypto_algorithms): Likewise.
 
-2006-05-16  Niels Möller  <nisse@lysator.liu.se>
+2006-05-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/server-config-test.c: New file (merged manually
 	from experimental branch).
@@ -3296,12 +3296,12 @@
 
 	* Merged experimental branch. Start of branch changes below.
 
-2006-05-11  Niels Möller  <nisse@lysator.liu.se>
+2006-05-11  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-encrypted-key-test: Disabled test for now.
 	* src/testsuite/login-auth-test: Likewise.
 
-2006-05-09  Niels Möller  <nisse@lysator.liu.se>
+2006-05-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (TS_PROGS): Added server-config-test.
 
@@ -3311,14 +3311,14 @@
 	* src/channel.c (handle_open_confirm): Impose limit on
 	send_max_packet.
 
-2006-05-08  Niels Möller  <nisse@lysator.liu.se>
+2006-05-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Set version to lsh-2x1.
 
 	* src/channel_forward.c: Use CAST_SUBTYPE, not CAST, to allow for
 	subclassing.
 
-2006-02-28  Niels Möller  <niels@s3.kth.se>
+2006-02-28  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/setup-env: Create empty utmp and wtmp files.
 
@@ -3356,7 +3356,7 @@
 	(choose_address, io_resolv_address, address_info2sockaddr): #if:ed
 	out.
 
-2006-02-27  Niels Möller  <niels@s3.kth.se>
+2006-02-27  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/format.c (ssh_format): Fixed bug for the case DEBUG_ALLOC &&
 	!__GNUC__.
@@ -3501,7 +3501,7 @@
 	* src/pty-helper.h: New file.
 	* src/pty-helper.c: New file.
 
-2006-02-23  Niels Möller  <niels@s3.kth.se>
+2006-02-23  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/lshg-1-test: Use --start-gateway. Don't use
 	need_lshg.
@@ -3761,7 +3761,7 @@
 	* src/environ.h.in: Likewise.
 	* src/transport_forward.h: Likewise.
 
-2006-02-14  Niels Möller  <niels@s3.kth.se>
+2006-02-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/parse-config-test.c (test_main): Pass dummy file
 	name to config_parse_string.
@@ -3857,7 +3857,7 @@
 	(init_channel_write_state): Let fd < 0 mean that no buffer should
 	be allocated yet.
 
-2006-02-13  Niels Möller  <niels@s3.kth.se>
+2006-02-13  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh (LSHD_CONFIG_DIR): Set and export.
 	(INTERFACE): Deleted variable.
@@ -4055,7 +4055,7 @@
 
 	* configure.ac: For gcc-4.x, add -Wno-pointer-sign to CFLAGS.
 
-2005-10-10  Niels Möller  <niels@s3.kth.se>
+2005-10-10  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/.dist_classes (dist_classes): Removed a bunch of obsolete
 	class files.
@@ -4063,7 +4063,7 @@
 	* src/client_userauth.c: Deleted file.
 	* src/client_userauth.h: Deleted file.
 
-2005-10-10  Niels Möller  <nisse@lysator.liu.se>
+2005-10-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (client_argp_parser): Enable socks forwarding.
 
@@ -4071,7 +4071,7 @@
 
 	* src/socks.c: Adapted to new i/o and channel_forward interfaces.
 
-2005-10-09  Niels Möller  <nisse@lysator.liu.se>
+2005-10-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c: Deleted obsoleted functionality.
 	(class io_listen_callback): Deleted class.
@@ -4106,7 +4106,7 @@
 
 	* src/string_buffer.c, src/string_buffer.h: Deleted files.
 
-2005-10-09  Niels Möller  <niels@s3.kth.se>
+2005-10-09  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/gateway_commands.c: Don't include connection_commands.h.
 	* src/lsh.c: Likewise.
@@ -4163,7 +4163,7 @@
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed channel_commands.c.
 
-2005-10-07  Niels Möller  <nisse@lysator.liu.se>
+2005-10-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/tcpforward.h (remote_port): Removed class. Replaced by new
 	version in client_tcpforward.c.
@@ -4232,7 +4232,7 @@
 	* src/channel.c (do_channel_open_continue): Generate a
 	CHANNEL_EVENT_CONFIRM.
 
-2005-10-06  Niels Möller  <nisse@lysator.liu.se>
+2005-10-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io_commands.c (listen_tcp_command): Use io_make_sockaddr.
 
@@ -4247,7 +4247,7 @@
 	(main_argp_parser): When handling ARGP_KEY_END, read host key, and
 	set up kexinit according to the algorithm options.
 
-2005-09-22  Niels Möller  <nisse@lysator.liu.se>
+2005-09-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Added client_tcpforward.c
 	and server_tcpforward.c. Removed tcpforward_commands.c.
@@ -4281,7 +4281,7 @@
 	open_direct_tcpip_command and tcpforward_direct_tcpip. The latter
 	used to be called forward_local_port.
 
-2005-09-21  Niels Möller  <nisse@lysator.liu.se>
+2005-09-21  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/command.h (class command_2): Changed invoke to be a plain
 	function pointer, not a method.
@@ -4348,7 +4348,7 @@
 
 	* src/channel_io.c (channel_io_read): Call channel_io_stop_read on eof.
 
-2005-09-20  Niels Möller  <nisse@lysator.liu.se>
+2005-09-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (open_session_command): New command.
 	(class session_open_command): Deleted class.
@@ -4369,7 +4369,7 @@
 	src/read_line.h, src/read_packet.c, src/read_packet.h,
 	src/write_buffer.c, src/write_buffer.h: Deleted obsolete files.
 
-2005-09-20  Niels Möller  <niels@s3.kth.se>
+2005-09-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/server_session.c: Don't include read_data.h.
 	* src/lsh.h (struct abstract_write): Deleted declaration.
@@ -4437,7 +4437,7 @@
 	(class ssh_channel): Attributes open_continuation and e replaced
 	by channel_open_context. Method eof replaced by new method event.
 
-2005-09-20  Niels Möller  <nisse@lysator.liu.se>
+2005-09-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Compile io_commands.c.
 
@@ -4470,7 +4470,7 @@
 
 	* src/client_escape.c (class escape_handler): Commented out class.
 
-2005-09-19  Niels Möller  <niels@s3.kth.se>
+2005-09-19  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed read_data.c
 	read_file.c read_line.c.
@@ -4529,13 +4529,13 @@
 	by default.
 	(DEFINE_EXCEPTION_HANDLER): New macro.
 
-2005-09-19  Niels Möller  <nisse@lysator.liu.se>
+2005-09-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Readded channel_forward.c.
 
 	* src/channel_forward.c: Rewrote to use channel_io.c.
 
-2005-09-18  Niels Möller  <nisse@lysator.liu.se>
+2005-09-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (oop_write_stdin, do_receive, do_eof): Call
 	channel_write_state_close on EOF and error.
@@ -4561,7 +4561,7 @@
 
 	* src/channel_io.h (enum channel_io_status): New enum.
 
-2005-09-17  Niels Möller  <nisse@lysator.liu.se>
+2005-09-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/channel_io.c (channel_io_write): Call
 	channel_adjust_rec_window.
@@ -4588,7 +4588,7 @@
 	* src/transport_forward.c (transport_forward_close): Use io_close_fd.
 	(transport_forward_setup): Use io_register_fd.
 
-2005-09-16  Niels Möller  <niels@s3.kth.se>
+2005-09-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/channel.c (receive_data_common): New function, with
 	processing and checks common for handle_channel_data and
@@ -4642,7 +4642,7 @@
 	(channel_maybe_close): Ignore channel->sinks counter, when
 	CHANNEL_NO_WAIT_FOR_EOF is set.
 
-2005-09-16  Niels Möller  <nisse@lysator.liu.se>
+2005-09-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Added connection.c again.
 
@@ -4671,7 +4671,7 @@
 	this file, and renamed the class ssh_connection. Deleted old
 	version of this class.
 
-2005-09-15  Niels Möller  <niels@s3.kth.se>
+2005-09-15  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_random.c (do_device_source): Use the read system call
 	directly, not the read_raw function.
@@ -4696,7 +4696,7 @@
 	EXC_FINISH, EXC_FINISH_CHANNEL, EXC_FINISH_READ, EXC_FINISH_IO,
 	EXC_FINISH_PENDING): Deleted unused exception types.
 
-2005-09-15  Niels Möller  <nisse@lysator.liu.se>
+2005-09-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/channel.c (alloc_channel): Use lsh_space_realloc.
 	(send_global_request_responses): Deleted q argument. Updated callers.
@@ -4836,7 +4836,7 @@
 
 	* src/channel_io.h, src/channel_io.c: New files.
 
-2005-09-14  Niels Möller  <nisse@lysator.liu.se>
+2005-09-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_write.c (make_transport_write_state): Initialize
 	ingore and threshold.
@@ -4869,7 +4869,7 @@
 
 	* src/lsh_string.c (lsh_string_read): Loop on EINTR.
 
-2005-09-13  Niels Möller  <nisse@lysator.liu.se>
+2005-09-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/service_read.c (service_read_packet): Check if
 	self->packet_length is zero first. Fixes bug when reading small
@@ -4884,11 +4884,11 @@
 	(werror_vformat): Don't write program name. New specifier %T.
 	(packet_types): Include this generated array here, used for %T.
 
-2005-09-08  Niels Möller  <nisse@lysator.liu.se>
+2005-09-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c: Pass on --host-db option to lsh-transport.
 
-2005-09-07  Niels Möller  <niels@s3.kth.se>
+2005-09-07  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh (run_lsh): For the time being, don't
 	use -z (it's not implemented at the server side).
@@ -4919,7 +4919,7 @@
 	* src/testsuite/functions.sh: Fixed typo in definition of
 	LSH_TRANSPORT and friends.
 
-2005-09-07  Niels Möller  <nisse@lysator.liu.se>
+2005-09-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh.c (oop_read_service): Adapted to channel_packet_handler
 	changes.
@@ -4931,7 +4931,7 @@
 	(handle_global_request, etc) changed to take a struct
 	simple_buffer * as argument, and made static.
 
-2005-09-06  Niels Möller  <nisse@lysator.liu.se>
+2005-09-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd-connection.c (blocking_writev): New function.
 	(write_packet): Use blocking_writev, instead of the ssh_write
@@ -4994,7 +4994,7 @@
 	(client_options): Ifed out unimplemented flags.
 	(client_argp_parser): Likewise.
 
-2005-08-31  Niels Möller  <nisse@lysator.liu.se>
+2005-08-31  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (read_host_acls): Use GET_FILE_ENV.
 	* src/lshd-userauth.c (main): Likewise.
@@ -5007,11 +5007,11 @@
 	(FILE_LSHD_CONNECTION, FILE_LSHD_USERAUTH, FILE_LSH_TRANSPORT):
 	New filenames.
 
-2005-08-31  Niels Möller  <niels@s3.kth.se>
+2005-08-31  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/io.c (lsh_copy_file): Deleted unused function.
 
-2005-08-16  Niels Möller  <nisse@lysator.liu.se>
+2005-08-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.h: Deleted file.
 
@@ -5044,7 +5044,7 @@
 	of cleartext messages needed by lshd and lsh-transport.
 	* src/transport_forward.h: New file.
 
-2005-04-30  Niels Möller  <nisse@lysator.liu.se>
+2005-04-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/abstract_crypto.c, src/abstract_crypto.h,
 	src/publickey_crypto.c, src/publickey_crypto.h: Deleted files.
@@ -5085,7 +5085,7 @@
 	start reading.
 	(lsh_transport_lookup_verifier): Fixed handling of capture_fd.
 
-2005-04-29  Niels Möller  <niels@s3.kth.se>
+2005-04-29  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-transport.c (lsh_transport_packet_handler): Fixed
 	handling of SERVICE_ACCEPT. Handle USERAUTH_SUCCESS and
@@ -5094,7 +5094,7 @@
 	(read_user_key): New function, based on lsh.c:read_user_keys.
 	(main_argp_parser): Call read_user_key.
 
-2005-04-28  Niels Möller  <niels@s3.kth.se>
+2005-04-28  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-transport.c (enum lsh_transport_state): New type.
 	(class lsh_transport_connection): New attribute state.
@@ -5103,7 +5103,7 @@
 	(lsh_transport_packet_handler): Handle SSH_MSG_SERVICE_ACCEPT.
 	(main_options): New options --userauth and --no-userauth.
 
-2005-04-27  Niels Möller  <nisse@lysator.liu.se>
+2005-04-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-transport.c (lsh_transport_lookup_verifier)
 	(make_lsh_transport_lookup_verifier): Host db handling, mostly
@@ -5141,7 +5141,7 @@
 	* src/client_keyexchange.c: Rewritten, to work with the new
 	transport layer.
 
-2005-04-26  Niels Möller  <niels@s3.kth.se>
+2005-04-26  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lshd-connection.c: Use service_read_state interface.
 	(make_connection): Set stdin into non-blocking mode, and use
@@ -5150,7 +5150,7 @@
 	* src/io.c (io_set_blocking): Reintroduced function. Used by
 	lshd-connection.
 
-2005-04-26  Niels Möller  <nisse@lysator.liu.se>
+2005-04-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (oop_read_service, lshd_service_start_read)
 	(lshd_service_stop_read): New functions, using the
@@ -5182,7 +5182,7 @@
 	* src/service_read.c: New file. Reads the service protocol using
 	an interface similar to transport_read.
 
-2005-04-24  Niels Möller  <nisse@lysator.liu.se>
+2005-04-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (class transport_read_state): New attribute
 	read_status. Deleted output_buffer.
@@ -5205,7 +5205,7 @@
 	retry_length and retry_seqno. Changed packet_handler method to
 	return an int.
 
-2005-04-23  Niels Möller  <nisse@lysator.liu.se>
+2005-04-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport.h (class transport_write_state): Moved declaration
 	here.
@@ -5250,14 +5250,14 @@
 	* src/publickey_crypto.h (class dh_params): Should be a class, not
 	a struct.
 
-2005-04-22  Niels Möller  <nisse@lysator.liu.se>
+2005-04-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (kill_lshd_connection): Use transport_kill.
 	(lshd_event_handler): Enable service when receiving a
 	TRANSPORT_EVENT_KEYEXCHANGE_COMPLETE event. Return 0 for all
 	events.
 
-2005-04-20  Niels Möller  <nisse@lysator.liu.se>
+2005-04-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_read.c (make_transport_read_state): More thorough
 	initialization.
@@ -5275,7 +5275,7 @@
 
 	* src/ssh.h (SSH_FIRST_KEYEXCHANGE_GENERIC): New constant.
 
-2005-04-20  Niels Möller  <niels@s3.kth.se>
+2005-04-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/transport.c (packet_types): Table of packet type names.
 	(transport_kexinit_handler): The KEYEXCHANGE_INIT method takes a
@@ -5300,7 +5300,7 @@
 	* src/lshd.c (make_configuration): Use
 	make_server_dh_group14_sha1.
 
-2005-04-19  Niels Möller  <nisse@lysator.liu.se>
+2005-04-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/transport_write.c (transport_write_packet): Assert that
 	packet is non-empty.
@@ -5352,14 +5352,14 @@
 	* src/server_keyexchange.c: Rewrote diffie-hellman key exchange.
 	Deleted SRP support.
 
-2005-04-18  Niels Möller  <nisse@lysator.liu.se>
+2005-04-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (lshd_SOURCES, lsh_transport_SOURCES): Added
 	transport.c and transport_write.c.
 
 	* src/lsh_string.h (lsh_string_move): Fixed typo in declaration.
 
-2005-04-18  Niels Möller  <niels@s3.kth.se>
+2005-04-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/transport_read.c: Rewritten to not use ssh_read.
 
@@ -5372,13 +5372,13 @@
 
 	* src/transport_write.c: New file.
 
-2005-04-17  Niels Möller  <nisse@lysator.liu.se>
+2005-04-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh_string.c (lsh_string_move): New function.
 
 	* src/ssh.h (SSH_MAX_LINE): New constant.
 
-2005-04-16  Niels Möller  <nisse@lysator.liu.se>
+2005-04-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (bin_PROGRAMS): Added lsh-transport.
 	(lsh_transport_SOURCES): New variable.
@@ -5435,7 +5435,7 @@
 	* src/service_read.c (service_process_header): Updated for
 	io_error rename.
 
-2005-04-15  Niels Möller  <niels@s3.kth.se>
+2005-04-15  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-transport.c: New file.
 
@@ -5449,7 +5449,7 @@
 	* src/exception.c (make_protocol_exception): Don't refer to
 	SSH_DISCONNECT_RESERVED.
 
-2005-04-14  Niels Möller  <nisse@lysator.liu.se>
+2005-04-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Deleted obsolete files
 	server_authorization.c server_keyexchange.c, server_password.c
@@ -5508,7 +5508,7 @@
 
 	* configure.ac: Warn if UNIX98 pty:s are unavailable.
 
-2005-02-19  Niels Möller  <nisse@lysator.liu.se>
+2005-02-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (shell_request_handler): Added trace output.
 
@@ -5523,13 +5523,13 @@
 	(make_connection): Make "session" a recognized channel type, and
 	"shell" a recognized channel request type.
 
-2005-02-18  Niels Möller  <nisse@lysator.liu.se>
+2005-02-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/channel.c (make_channel_table): Initialize self->resources.
 	(handle_channel_open): More debug output.
 	(channel_packet_handler): New function.
 
-2005-02-17  Niels Möller  <niels@s3.kth.se>
+2005-02-17  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lshd-connection.c: Implemented reading and writing of
 	packets for the ssh-connection service.
@@ -5556,7 +5556,7 @@
 	* src/Makefile.am (liblsh_a_SOURCES): Moved ssh_read.c and
 	ssh_write.c here.
 
-2005-02-16  Niels Möller  <niels@s3.kth.se>
+2005-02-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/handshake.c (init_connection_service): Moved function here,
 	from channel.h. It doesn't really belong here, though.
@@ -5567,7 +5567,7 @@
 	* src/channel.h, src/channel.c: Purged dependence on
 	ssh_connection. Updated all users.
 
-2005-02-15  Niels Möller  <nisse@lysator.liu.se>
+2005-02-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (sbin_PROGRAMS): Added lshd-connection.
 
@@ -5579,7 +5579,7 @@
 	* src/lshd.c (lshd_service_request_handler): Pass --session-id
 	option to child process.
 
-2005-02-15  Niels Möller  <niels@s3.kth.se>
+2005-02-15  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lshd-userauth.c (start_service): New function.
 	(service_error): New function.
@@ -5603,7 +5603,7 @@
 	* src/lshd.c (lshd_service_handler): Don't free the packet.
 	(lshd_service_request_handler): Send a SERVICE_ACCEPT reply.
 
-2005-02-14  Niels Möller  <nisse@lysator.liu.se>
+2005-02-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (connection_write_data): Use ssh_write_data. Proper
 	error handling still missing.
@@ -5621,7 +5621,7 @@
 
 	* src/lshd.h, src/lshd_read.c, src/lshd_keyexchange.c: New file.
 
-2005-02-14  Niels Möller  <niels@s3.kth.se>
+2005-02-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am (lshd_SOURCES): Added ssh_write.c.
 
@@ -5631,12 +5631,12 @@
 	casting the node to struct object_queue_node.
 	(FOR_STRING_QUEUE): New macro.
 
-2005-02-13  Niels Möller  <nisse@lysator.liu.se>
+2005-02-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (lshd_service_request_handler): New handler. Almost
 	implemented handling of service requests.
 
-2005-02-12  Niels Möller  <nisse@lysator.liu.se>
+2005-02-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/ssh_read.c (oop_ssh_read_packet): When a packet is finished,
 	register a callback for reading the next header. Replaced use of
@@ -5685,7 +5685,7 @@
 	* src/keyexchange.c.
 	* src/kexinit.h (kexinit_state): New struct.
 
-2005-02-03  Niels Möller  <nisse@lysator.liu.se>
+2005-02-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (lshd_read_state): New class. Moved definition super
 	class ssh_read_state to ssh_read.h and ssh_read.c.
@@ -5697,7 +5697,7 @@
 
 	* src/ssh_read.c, src/ssh_read.h: New files.
 
-2005-02-03  Niels Möller  <niels@s3.kth.se>
+2005-02-03  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/resource.c (resource_list_is_empty): New function.
 
@@ -5706,23 +5706,23 @@
 
 	* src/exception.h (PROTOCOL_ERROR): Use a static exception object.
 
-2005-02-02  Niels Möller  <nisse@lysator.liu.se>
+2005-02-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Added oop-line-file.c.
 
 	* src/oop-line.h: Line reading interface, based on liboop.
 	* src/oop-line-file.c: Implementation of the interface.
 
-2006-05-16  Niels Möller  <nisse@lysator.liu.se>
+2006-05-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 	* Merged experimental branch. Below changes are from the mainline.
 
-2006-05-09  Niels Möller  <nisse@lysator.liu.se>
+2006-05-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version number to 2.0.4.
 
 	* Released lsh-2.0.3.
 
-2006-05-08  Niels Möller  <nisse@lysator.liu.se>
+2006-05-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/ssh-conv.1: Changed to ordinary line breaks in example
 	ssh-conv output.
@@ -5733,19 +5733,19 @@
 	* Man pages: Applied patch from Stefan Pfetzing, addressing long
 	lines and non-ascii characters.
 
-2006-05-04  Niels Möller  <niels@s3.kth.se>
+2006-05-04  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/daemon-fd-test: Reverted previous change. Use a
 	single-digit fd.
 
-2006-05-03  Niels Möller  <niels@s3.kth.se>
+2006-05-03  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/daemon-fd-test: Avoid using exec with no arg, for
 	better portability.
 
 	* src/daemon.c (daemon_started_by_inetd): Deleted debug message.
 
-2006-05-01  Niels Möller  <nisse@lysator.liu.se>
+2006-05-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lshg-cat-test: Fixed message for compare_output.
 
@@ -5758,7 +5758,7 @@
 
 	* src/lshd.c (main): Fixed handling of stderr, with --no-syslog.
 
-2006-04-29  Niels Möller  <nisse@lysator.liu.se>
+2006-04-29  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Check for function getdtablesize.
 
@@ -5785,17 +5785,17 @@
 	(daemon_init): New argument with the daemon mode. Split handling
 	of fd:s to the new functions daemon_dup_null and daemon_close_fds.
 
-2006-04-28  Niels Möller  <niels@s3.kth.se>
+2006-04-28  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/daemon-1-test: New test. Test that lshd doesn't
 	leak any fd:s to child processes.
 
-2006-02-09  Niels Möller  <nisse@lysator.liu.se>
+2006-02-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/index.html: Updated sshtools link, after prodding from
 	Jerrad Pierce.
 
-2006-01-27  Niels Möller  <nisse@lysator.liu.se>
+2006-01-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.3.
 
@@ -5803,7 +5803,7 @@
 
 	* NEWS: Entry for 2.0.2.
 
-2006-01-23  Niels Möller  <niels@s3.kth.se>
+2006-01-23  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/xauth.c (x11_forward): Commented out unused class.
 
@@ -5819,11 +5819,11 @@
 	* src/io.c (lsh_pushd_fd): Likewise.
 	(lsh_pushd): Likewise. Also fixed EINTR logic.
 
-2005-11-28  Niels Möller  <nisse@lysator.liu.se>
+2005-11-28  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lcp-test: Skip test if /bin/bash doesn't exist.
 
-2005-11-26  Niels Möller  <nisse@lysator.liu.se>
+2005-11-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-6-test (ALGORITHMS): Try both aes-cbc and
 	aes-ctr.
@@ -5845,7 +5845,7 @@
 
 	* src/atoms.in: Added symbols for counter mode ciphers.
 
-2005-11-25  Niels Möller  <nisse@lysator.liu.se>
+2005-11-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/run-tests (find_program): If argument contains a slash
 	(most likely because VPATH expansion in make), return the filename
@@ -5858,17 +5858,17 @@
 	Deleted the checks for the sizes of short, int and long. Use
 	-Wno-pointer-sign when compiling with gcc-4.x.
 
-2005-11-25  Niels Möller  <niels@s3.kth.se>
+2005-11-25  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* misc/run-tests: New -v option, propagated to test programs.
 
 	* src/ssh-conv: Fixed syntax error in awk program.
 
-2005-11-23  Niels Möller  <niels@s3.kth.se>
+2005-11-23  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/xalloc.h (number_of_strings): Deleted declaration.
 
-2005-11-20  Niels Möller  <nisse@lysator.liu.se>
+2005-11-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/ssh-conv: In the awk script, check for ssh-dsa and ssh-rsa
 	only when state == 0.
@@ -5876,7 +5876,7 @@
 	* misc/run-tests: Added --debug option. If used, the teardown-env
 	script is not run.
 
-2005-11-07  Niels Möller  <nisse@lysator.liu.se>
+2005-11-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* .bootstrap: Link config.sub and config.guess to the nettle and
 	spki subdirectories.
@@ -5887,44 +5887,44 @@
 
 	* config.guess, config.sub: Moved files from src/nettle.
 
-2005-10-16  Niels Möller  <nisse@lysator.liu.se>
+2005-10-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_GCC_ATTRIBUTES): Put the declaration and
 	definition of the test function in the declarations argument of
 	AC_TRY_COMPILE. It used to end up inside main.
 
-2005-10-15  Niels Möller  <nisse@lysator.liu.se>
+2005-10-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (GMP_TRY_ASSEMBLE): New macro.
 
-2005-10-05  Niels Möller  <nisse@lysator.liu.se>
+2005-10-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo: Use @documentencoding ISO-8859-1.
 
-2005-09-23  Niels Möller  <nisse@lysator.liu.se>
+2005-09-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_FUNC_ALLOCA): Moved inclucion of malloc.h and
 	check of HAVE_MALLOC_H inside #ifndef __GNUC__. On FreeBSD 4.9,
 	malloc.h exists but generates obsoleteness warnings when used.
 
-2005-09-07  Niels Möller  <niels@s3.kth.se>
+2005-09-07  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* doc/lsh.texinfo (sexp): Updated documentation on sexp-conv
 	--hash.
 
-2005-09-06  Niels Möller  <niels@s3.kth.se>
+2005-09-06  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/parse_config.c (parse_groups): Made group name optional.
 
 	* src/lsh-decode-key.c (lsh_decode_key): Removed redundant
 	"lsh-decode-key:" prefix from messages.
 
-2005-07-02  Niels Möller  <nisse@lysator.liu.se>
+2005-07-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (init_client_options): Use gc_global for the
 	resource list. Needed for consistent gc if the connection fails.
 
-2005-03-16  Niels Möller  <nisse@lysator.liu.se>
+2005-03-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.2.
 
@@ -5937,7 +5937,7 @@
 	diffie-hellman-group2-sha1.
 	* src/lshd.c (main_argp_parser): Likewise.
 
-2005-03-14  Niels Möller  <nisse@lysator.liu.se>
+2005-03-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-7-test: Set $HOME when invoking lsh, to
 	prevent it from picking up files in the real $HOME/.lsh directory.
@@ -5949,11 +5949,11 @@
 	* src/charset.c (ucs4_is_control): Don't treat '\n' as a dangerous
 	control character. Reported by Georg Sauthoff.
 
-2005-02-12  Niels Möller  <nisse@lysator.liu.se>
+2005-02-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/keyexchange.c (parse_kexinit): Bugfix (DOS).
 
-2005-02-01  Niels Möller  <nisse@lysator.liu.se>
+2005-02-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/exception.h (HANDLER_CONTEXT): Don't use FUNCTION_NAME.
 	* src/lsh_string.h (lsh_string_alloc): Likewise.
@@ -5962,16 +5962,16 @@
 	of gcc has been obsoleted, so don't bother testing for it. (This
 	makes trace messages less useful).
 
-2004-12-22  Niels Möller  <niels@s3.kth.se>
+2004-12-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-make-seed.c (get_system): Fixed handling of error from
 	read, bug #1477.
 
-2004-12-08  Niels Möller  <nisse@lysator.liu.se>
+2004-12-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.1.
 
-2004-12-07  Niels Möller  <nisse@lysator.liu.se>
+2004-12-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Released lsh-2.0.
 
@@ -5987,22 +5987,22 @@
 	(Action options): Added --subsystem option.
 	(Invoking lshd): Added --subsystems option.
 
-2004-12-06  Niels Möller  <nisse@lysator.liu.se>
+2004-12-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.
 
-2004-12-05  Niels Möller  <nisse@lysator.liu.se>
+2004-12-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lshg.c (do_exc_lshg_handler): Exit only for EXC_IO_CONNECT
 	errors.
 
-2004-12-05  Niels Möller  <nisse@lysator.liu.se>
+2004-12-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/tcpip-remote-test: Don't run tcpconnect with
 	/dev/null as standard input; for some reason, that doesn't work on
 	SunOS-5.4.
 
-2004-11-30  Niels Möller  <nisse@lysator.liu.se>
+2004-11-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (test_done): New function, used when
 	exiting the testscripts. This is instead of using trap, which
@@ -6040,17 +6040,17 @@
 	* src/testsuite/write-key-2-test: Likewise.
 	* src/testsuite/x11-1-test: Likewise.
 
-2004-11-26  Niels Möller  <nisse@lysator.liu.se>
+2004-11-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c (io_bind_local): NUL-terminate AF_UNIX socket name.
 
-2004-11-25  Niels Möller  <nisse@lysator.liu.se>
+2004-11-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Don't insist on using GNU make. If we're not
 	using GNU make, disable dependency tracking, since it wont' work
 	with nettle.
 
-2004-11-23  Niels Möller  <nisse@lysator.liu.se>
+2004-11-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): New configure flag
 	--disable-dependency-tracking. New substitution DEP_INCLUDE.
@@ -6063,7 +6063,7 @@
 	(gateway_init): Likewise.
 	(gateway_accept): Pass a NULL-resource to gateway_make_connection.
 
-2004-11-22  Niels Möller  <nisse@lysator.liu.se>
+2004-11-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (init_client_options): Init the resources list.
 	(make_client_session): Use IO_STDERR. Add the session resources to
@@ -6161,7 +6161,7 @@
 
 	* doc/lsh-writekey.1: New manpage.
 
-2004-11-19  Niels Möller  <nisse@lysator.liu.se>
+2004-11-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c (io_final): Assert that nfiles == 0.
 	(do_buffered_read): Added trace output on EOF.
@@ -6194,7 +6194,7 @@
 
 	* doc/lsh-upgrade-key.1: New man page.
 
-2004-11-18  Niels Möller  <nisse@lysator.liu.se>
+2004-11-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Use [!...] instead of
 	[^...] for inverted character classes in case.
@@ -6215,7 +6215,7 @@
 	* misc/xenofarm.sh (oopcfgargs): Disable all add-on liboop
 	adapters.
 
-2004-11-18  Niels Möller  <niels@s3.kth.se>
+2004-11-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* README: Updated examples, and the lists of needed tools and
 	libraries.
@@ -6223,13 +6223,13 @@
 	* misc/xenofarm.sh (oopcfgargs): Build liboop with
 	--disable-shared.
 
-2004-11-17  Niels Möller  <nisse@lysator.liu.se>
+2004-11-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (do_trivia_source): Check HAVE_GETRUSAGE.
 
 	* src/lsh-writekey.c (main_argp_parser): Fixed C99-ism.
 
-2004-11-16  Niels Möller  <nisse@lysator.liu.se>
+2004-11-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/getopt.h: Deleted __ from argument names in prototypes,
 	i.e. "argc", not "__argc". Needed for mingw compilation.
@@ -6241,7 +6241,7 @@
 
 	* src/environ.h.in (USER_NAME_FROM_ENV): Check $USER first.
 
-2004-11-14  Niels Möller  <nisse@lysator.liu.se>
+2004-11-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c (handle_nonblock_error): Ignore errno ENOTTY. FreeBSD 5
 	returns this error code when we try to set /dev/null in
@@ -6270,7 +6270,7 @@
 
 	* src/testsuite/lcp-test: Test cases for lcp.
 
-2004-11-13  Niels Möller  <nisse@lysator.liu.se>
+2004-11-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lcp: Reviewed, and fixed some bugs. Looks at $LCP_RSH,
 	instead of $LCP_SSH.
@@ -6281,11 +6281,11 @@
 	* misc/xenofarm.sh (status): There's no config.h in the liboop
 	directory, so don't try to copy it.
 
-2004-11-12  Niels Möller  <nisse@lysator.liu.se>
+2004-11-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (--make-program): New command line option.
 
-2004-11-09  Niels Möller  <niels@s3.kth.se>
+2004-11-09  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-krb-checkpw.c (main): Noted that the current code seems
 	to work only with Heimdal, not MIT kerberos.
@@ -6293,13 +6293,13 @@
 	* configure.ac: Check for krb5_verify_user_lrealm, and disable
 	kerberos support if not found.
 
-2004-11-09  Niels Möller  <nisse@lysator.liu.se>
+2004-11-09  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo: Set UPDATED-FOR to 2.0.
 
 	* misc/xenofarm.sh: Fixed typos in the oop-related tasks.
 
-2004-11-07  Niels Möller  <nisse@lysator.liu.se>
+2004-11-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (Action options): Documented -D (socks
 	forwarding).
@@ -6307,22 +6307,22 @@
 	* misc/xenofarm.sh: If a liboop dist is included in the build
 	package, install it in $pfx before trying to build lsh.
 
-2004-10-26  Niels Möller  <nisse@lysator.liu.se>
+2004-10-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Need extra quoting in
 	case pattern.
 
-2004-10-20  Niels Möller  <niels@s3.kth.se>
+2004-10-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Disable dependency
 	tracking for gcc-2.
 
-2004-10-20  Niels Möller  <nisse@lysator.liu.se>
+2004-10-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* .bootstrap: Link install-sh, texinfo.tex, COPYING and INSTALL
 	into the nettle subdir.
 
-2004-10-19  Niels Möller  <nisse@lysator.liu.se>
+2004-10-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): New macro.
 	(LSH_MAKE_CONDITIONAL): New macro.
@@ -6330,7 +6330,7 @@
 	* .bootstrap: In the nettle subdir, link acinclude.m4 as
 	aclocal.m4, not acinclude.m4.
 
-2004-10-08  Niels Möller  <niels@s3.kth.se>
+2004-10-08  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/client_userauth.c (do_userauth_info_request): Enforce limits
 	on the length of name and instruction. Prepend the name and an
@@ -6344,7 +6344,7 @@
 	* src/interact.c (make_interact_dialog): Initialize
 	self->instruction to NULL.
 
-2004-10-07  Niels Möller  <niels@s3.kth.se>
+2004-10-07  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-writekey.c (main_argp_parser): When --server is given,
 	don't use encryption by default.
@@ -6371,11 +6371,11 @@
 	* src/testsuite/write-key-1-test: Likewise.
 	* src/testsuite/write-key-2-test: Likewise.
 
-2004-10-06  Niels Möller  <nisse@lysator.liu.se>
+2004-10-06  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (EXTRA_DIST): Added UTF-8-test.txt.
 
-2004-10-05  Niels Möller  <nisse@lysator.liu.se>
+2004-10-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (GPERF_FLAGS): Added -k21, to distinguish
 	diffie-hellman-group1-sha1 and diffie-hellman-group2-sha1.
@@ -6405,7 +6405,7 @@
 
 	* src/testsuite/functions.sh: Added -q to LSHD_FLAGS again.
 
-2004-10-02  Niels Möller  <nisse@lysator.liu.se>
+2004-10-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/daemon.c (daemon_started_by_inetd): More debug output.
 
@@ -6468,30 +6468,30 @@
 	* src/werror.c (werror_vformat): Improved utf8 handling. Always
 	convert with utf8_replace, and add utf8_paranoid in paranoia mode.
 
-2004-09-22  Niels Möller  <niels@s3.kth.se>
+2004-09-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_CCPIC): Don't use -fpic on cygwin.
 
-2004-08-31  Niels Möller  <nisse@lysator.liu.se>
+2004-08-31  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_CCPIC): New macro.
 
-2004-07-16  Niels Möller  <nisse@lysator.liu.se>
+2004-07-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (do_background_process): Fixed C99-ism.
 
-2004-06-22  Niels Möller  <niels@s3.kth.se>
+2004-06-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/parse.c (parse_utf8): Use unsigned variables.
 
 	* src/testsuite/inetd-test: New test case, not yet enabled.
 
-2004-06-17  Niels Möller  <nisse@lysator.liu.se>
+2004-06-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/parse.c (parse_utf8): Check that the buffer doesn't end in
 	the middle of an utf8 sequence.
 
-2004-06-15  Niels Möller  <niels@s3.kth.se>
+2004-06-15  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/version.h (SOFTWARE_SLOGAN): New macro; string appended to
 	the software version in the initial handshake.
@@ -6519,13 +6519,13 @@
 
 	* src/atoms.in: Added diffie-hellman-group14-sha1.
 
-2004-06-12  Niels Möller  <nisse@lysator.liu.se>
+2004-06-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 1.5.6.
 
 	* Released lsh-1.5.5.
 
-2004-06-10  Niels Möller  <nisse@lysator.liu.se>
+2004-06-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/keyexchange.c (parse_kexinit): Deleted unused argument
 	peer_flags.
@@ -6544,7 +6544,7 @@
 	libspki. Also deleted pkcs5-related atoms that aren't used.
 	Deleted rijndael-cbc@lysator.liu.se.
 
-2004-06-09  Niels Möller  <niels@s3.kth.se>
+2004-06-09  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh: Removed -q from LSHD_FLAGS.
 
@@ -6596,7 +6596,7 @@
 	* src/proxy_x11forward.c (do_proxy_open_x11): Deleted code
 	handling PEER_X11_OPEN_KLUDGE.
 
-2004-06-08  Niels Möller  <nisse@lysator.liu.se>
+2004-06-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (client_prepend_action): New function.
 
@@ -6650,7 +6650,7 @@
 
 	* src/atoms.in: Deleted ssh-dss-kludge@lysator.liu.se.
 
-2004-06-08  Niels Möller  <niels@s3.kth.se>
+2004-06-08  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/client.c (client_options): Deleted --cvs-workaround option.
 	(client_argp_parser): Deleted handling of --cvs-workaround.
@@ -6681,22 +6681,22 @@
 	(make_lsh_fd): New argument TYPE. Updated callers.
 	(close_fd): Don't close fd:s that are of type IO_STDIO.
 
-2004-04-07  Niels Möller  <nisse@lysator.liu.se>
+2004-04-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/server_pty.c (pty_open_slave): More verbose messages on failure.
 
 	* src/write_packet.c (do_write_packet): Deleted debug output that
 	may contain passwords.
 
-2004-03-20  Niels Möller  <nisse@lysator.liu.se>
+2004-03-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_AUX_DIR([.]).
 
-2004-03-18  Niels Möller  <niels@s3.kth.se>
+2004-03-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* misc/run-tests (test_program): Strip .exe suffix from name.
 
-2004-03-17  Niels Möller  <nisse@lysator.liu.se>
+2004-03-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (TS_SH): Run the socks4 and socks5
 	tests. This is pointless, and hopefully harmless, on machines that
@@ -6715,20 +6715,20 @@
 	* misc/tsocks-forcelocal.patch: Also patch the tsocks script to
 	look for the library in $libdir.
 
-2004-03-15  Niels Möller  <nisse@lysator.liu.se>
+2004-03-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/socks5-config: Added forcelocal keyword.
 
-2004-03-01  Niels Möller  <nisse@lysator.liu.se>
+2004-03-01  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (need_tsocks): New function.
 
-2004-03-01  Niels Möller  <niels@s3.kth.se>
+2004-03-01  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_FUNC_ALLOCA): Check for malloc.h, and include
 	it if it exists. Needed for alloca on windows.
 
-2004-02-29  Niels Möller  <nisse@lysator.liu.se>
+2004-02-29  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/socks5-config: tsocks configuration file for
 	socks5 test case.
@@ -6752,7 +6752,7 @@
 	* src/socks.c (do_read_socks): Fixed bugs in parsing of client's
 	first message.
 
-2004-02-27  Niels Möller  <nisse@lysator.liu.se>
+2004-02-27  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client.c (client_argp_parser): New command line option -D,
 	--forward-socks.
@@ -6778,7 +6778,7 @@
 
 	* src/channel_forward.c (channel_forward_start_io_read): New function.
 
-2004-02-26  Niels Möller  <nisse@lysator.liu.se>
+2004-02-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh_string.c (lsh_string_ntop): Use const void * for the
 	input.
@@ -6796,12 +6796,12 @@
 	* src/dummy.c (cbc_encrypt, cbc_decrypt): Use nettle_crypt_func
 	for typing.
 
-2004-02-25  Niels Möller  <nisse@lysator.liu.se>
+2004-02-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (cfgwarn, makewarn, ckprgwarn): Renamed
 	variables log, warn and fail.
 
-2004-02-24  Niels Möller  <nisse@lysator.liu.se>
+2004-02-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (dotask): Fixed handling of $var.
 	(cfgwarn, makewarn, ckprgwarn): Use $task when constructing
@@ -6818,13 +6818,13 @@
 	* misc/xenofarm.sh (cfgargs): Add the flags we want to use to cfgargs.
 	(dotask): New optional argument with the name of the status variable.
 
-2004-02-20  Niels Möller  <nisse@lysator.liu.se>
+2004-02-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/process_atoms: Fixes to make it work with Solaris /bin/sh.
 	Replaced uses of echo -n with printf(1), and ${#foo} with `expr
 	$foo : '.*'`.
 
-2004-02-20  Niels Möller  <niels@s3.kth.se>
+2004-02-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/scm/Makefile.am (EXTRA_DIST): Deleted make-char-classes.
 
@@ -6834,22 +6834,22 @@
 	bash to run process_atoms script.
 	(packet_types.h): Don't use bash to run the invert-defs script.
 
-2004-02-19  Niels Möller  <niels@s3.kth.se>
+2004-02-19  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/scm/guile-compat.scm: Deleted most of the contents.
 
 	* src/scm/make-char-classes.scm: Deleted obsolete file.
 
-2004-02-18  Niels Möller  <niels@s3.kth.se>
+2004-02-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am (prime_table.h, sexp_table.h, digit_table.h):
 	Deleted rules for building obsolete files.
 
-2004-02-18  Pontus Sköld  <pont@soua.net>
+2004-02-18  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/process_atoms: Converted script from bash to /bin/sh.
 
-2004-02-17  Niels Möller  <nisse@lysator.liu.se>
+2004-02-17  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/unix_user.c (do_lookup_user) [!HAVE_SHADOW_H]: Enable shadow
 	database code only if shadow.h can be included.
@@ -6862,12 +6862,12 @@
 	* configure.ac: Check for ut_exit.__e_termination and
 	ut_exit.ut_termination in struct utmp and struct utmpx.
 
-2004-02-16  Niels Möller  <niels@s3.kth.se>
+2004-02-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Added gss-related configure checks (patch from
 	Simon Josefsson).
 
-2004-02-15  Niels Möller  <nisse@lysator.liu.se>
+2004-02-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (AM_CPPFLAGS): Need -I.., in order to
 	include nettle-types.h.
@@ -6884,21 +6884,21 @@
 
 	* configure.ac: Bumped version to 1.5.5.
 
-2004-02-13  Niels Möller  <niels@s3.kth.se>
+2004-02-13  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/ssh.h: Added GSSAPI constants (patch from Simon Josefsson).
 	* src/atoms.in: New symbol "gssapi".
 
-2004-02-12  Niels Möller  <nisse@lysator.liu.se>
+2004-02-12  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c (address_info2sockaddr) [!HAVE_GETADDRINFO]: Updated
 	code to work with new string abstraction.
 
-2004-02-12  Niels Möller  <niels@s3.kth.se>
+2004-02-12  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: No space between "-I" and include directories.
 
-2004-02-08  Niels Möller  <nisse@lysator.liu.se>
+2004-02-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Released lsh-1.5.4.
 
@@ -6946,14 +6946,14 @@
 	(init_connection_service): Use connection_wakeup, not
 	connection_after_keyexchange.
 
-2004-02-07  Niels Möller  <nisse@lysator.liu.se>
+2004-02-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* install-sh: Removed from CVS repository. Let automake supply it.
 
 	* acinclude.m4 (LSH_FUNC_ALLOCA): Include <alloca.h>, if
 	available, also when compiling with gcc.
 
-2004-01-08  Niels Möller  <nisse@lysator.liu.se>
+2004-01-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/rsync/rsync.h: Don't include inttypes.h, just let
 	<nettle/md5.h> define uint8_t and other types.
@@ -6966,27 +6966,27 @@
 	* src/testsuite/Makefile.am (AM_CPPFLAGS): Added -I../nettle.
 	* src/rsync/Makefile.am (AM_CPPFLAGS): Added -I../nettle.
 
-2004-01-08  Niels Möller  <niels@s3.kth.se>
+2004-01-08  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/tcpforward.c (do_channel_open_direct_tcpip): Log
 	direct-tcpip request.
 	(do_tcpip_forward_request): Log forward-tcpip request.
 
-2004-01-08  Niels Möller  <nisse@harpo.hack.org>
+2004-01-08  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* configure.ac: No space between "-L" and library directories.
 
-2004-01-07  Niels Möller  <nisse@harpo.hack.org>
+2004-01-07  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* acinclude.m4 (AX_CREATE_STDINT_H): Copied macro definition from
 	http://ac-archive.sourceforge.net/guidod/ax_create_stdint_h.html.
 
-2003-11-18  Niels Möller  <niels@s3.kth.se>
+2003-11-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_process.c (utmp_book_keeping) [UTMPX_UT_SYSLEN]: Use
 	lsh_string_length.
 
-2003-11-17  Niels Möller  <nisse@harpo.hack.org>
+2003-11-17  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/read_packet.c (class read_packet): New attribute
 	mac_computed.
@@ -6998,7 +6998,7 @@
 	* src/ssh.h (SSH_MAX_BLOCK_SIZE, SSH_MAX_MAC_SIZE): New constants,
 	with the implementations's maximum block size and mac size.
 
-2003-11-16  Niels Möller  <nisse@harpo.hack.org>
+2003-11-16  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/lsh-writekey.c (main_argp_parser): Move declaration to
 	support C90.
@@ -7152,7 +7152,7 @@
 	* src/write_packet.c: Likewise.
 	* src/xauth.c: Likewise.
 
-2003-11-11  Niels Möller  <nisse@harpo.hack.org>
+2003-11-11  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Deleted unpad.c.
 
@@ -7168,7 +7168,7 @@
 	* src/compress.h (make_packet_deflate, make_packet_inflate):
 	Deleted macros.
 
-2003-11-10  Niels Möller  <nisse@harpo.hack.org>
+2003-11-10  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/connection.c (connection_send_kex): New function, replacing
 	macro C_WRITE_NOW. Updated all callers.
@@ -7176,12 +7176,12 @@
 	* src/read_file.h: Deleted file. Moved declarations to...
 	* src/abstract_io.h: ... here. Deleted all inclusions of read_file.h.
 
-2003-11-09  Niels Möller  <nisse@harpo.hack.org>
+2003-11-09  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/debug.h: Deleted file. Moved declarations to...
 	* src/connection.h: ... here. Deleted all inclusions of debug.h.
 
-2003-11-08  Niels Möller  <nisse@harpo.hack.org>
+2003-11-08  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed pad.c, encrypt.c.
 	Added write_packet.c.
@@ -7197,7 +7197,7 @@
 
 	* src/connection.c (connection_init_io): Use make_write_packet.
 
-2003-10-30  Niels Möller  <nisse@harpo.hack.org>
+2003-10-30  Niels MÃ¶ller  <nisse@harpo.hack.org>
 
 	* src/connection.h (C_WRITE): Deleted macro. Updated all callers
 	to use connection_send directly.
@@ -7214,7 +7214,7 @@
 	* src/read_line.c (do_read_line): Likewise.
 	* src/read_packet.c (do_read_packet): Likewise.
 
-2003-10-23  Niels Möller  <niels@s3.kth.se>
+2003-10-23  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/server_userauth.c: Rewrote comment about userauth
 	serialization.
@@ -7234,7 +7234,7 @@
 	* src/dsa.c (generic_dsa_verify): Deleted function.
 	(generic_dsa_sign): Likewise.
 
-2003-10-22  Niels Möller  <niels@s3.kth.se>
+2003-10-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/client_x11.c (client_x11_auth_info): Deleted commented out
 	class.
@@ -7285,7 +7285,7 @@
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed abstract_compress.
 
-2003-10-10  Niels Möller  <niels@s3.kth.se>
+2003-10-10  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_user.c (do_read_file_fail): Return the created
 	exception.
@@ -7293,13 +7293,13 @@
 	* src/lshd.c (main_argp_parser): Use getenv(ENV_LOGNAME), not
 	getenv("LOGNAME").
 
-2003-10-05  Niels Möller  <nisse@cuckoo.hack.org>
+2003-10-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (read_user_keys): Display error message for missing
 	identity file only in verbose mode. Suggested by Thomas
 	Krennwallner.
 
-2003-09-27  Niels Möller  <nisse@cuckoo.hack.org>
+2003-09-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/gateway_channel.c (do_channel_open_forward): Moved creation
 	of ORIGIN channel object from here...
@@ -7309,7 +7309,7 @@
 	* src/channel.c (channel_open_handler): Bugfix for the case that
 	alloc_channel fails.
 
-2003-09-26  Niels Möller  <nisse@cuckoo.hack.org>
+2003-09-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/channel.c (login_service_command): Deleted redundant command.
 
@@ -7345,27 +7345,27 @@
 	(make_unix_user_self): New function.
 	(unix_current_user): Deleted function.
 
-2003-09-25  Niels Möller  <niels@s3.kth.se>
+2003-09-25  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/io.c (do_connect_list_callback): Fixed error message. errno
 	is not valid here.
 
-2003-09-25  Pontus Sköld  <pont@soua.net>
+2003-09-25  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/channel.c (login_service_command): Use
 	init_connection_service instead of init_login_service.
 	(init_login_service): Removed redundant function.
 
-2003-09-22  Niels Möller  <nisse@cuckoo.hack.org>
+2003-09-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* README: Updated the instructions for building from CVS. List
 	tcputils as a program needed for the testsuite.
 
-2003-09-20  Niels Möller  <nisse@cuckoo.hack.org>
+2003-09-20  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/mkdiff: Copied mkdiff script from the old lsh_1_2_BRANCH.
 
-2003-09-19  Niels Möller  <nisse@cuckoo.hack.org>
+2003-09-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.5.3.
 
@@ -7374,7 +7374,7 @@
 
 	* src/io.c (close_fd): Added FIXME: on the fd->fd == -1 hack.
 
-2003-09-19  Niels Möller  <niels@s3.kth.se>
+2003-09-19  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Bumped version to 1.5.3.
 
@@ -7392,17 +7392,17 @@
 	* src/testsuite/lshd-random-input-test: New test case that
 	connects to lshd and sends some random data.
 
-2003-09-18  Niels Möller  <nisse@cuckoo.hack.org>
+2003-09-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/read_line.c (do_read_line): Fixed buffer overrun bug,
 	initially reported by Bennett Todd. Fixed also in stable branch.
 
-2003-09-18  Niels Möller  <nisse@lysator.liu.se>
+2003-09-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* distribution-key.gpg: Updated key, new signatures and new expire
 	date.
 
-2003-09-16  Pontus Sköld  <pont@soua.net>
+2003-09-16  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh-writekey.c (main): Check that the given key isn't empty.
 
@@ -7420,7 +7420,7 @@
 
 	* src/testsuite/Makefile.am (TS_SH): Use new lshd-no-auth-test.
 
-2003-09-15  Pontus Sköld  <pont@soua.net>
+2003-09-15  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/Makefile.am (TS_SH): Use new test for login-auth
 	mode.
@@ -7472,22 +7472,22 @@
 	(login_service_command): Command to setup a connection for login
 	service.
 
-2003-08-17  Niels Möller  <nisse@cuckoo.hack.org>
+2003-08-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/scm/gaba.scm (out): Ignore #f entries.
 	(process-class): New keyword condition, for preprocessor
 	conditionals.
 
-2003-06-28  Niels Möller  <nisse@cuckoo.hack.org>
+2003-06-28  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/zlib.c (do_zlib): Changed messages from verbose to debug, to
 	reduce clutter.
 
-2003-06-12  Niels Möller  <nisse@cuckoo.hack.org>
+2003-06-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.5.2
 
-2003-06-10  Niels Möller  <niels@s3.kth.se>
+2003-06-10  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh.c (read_known_hosts): Fixed error message when host-acls
 	doesn't exist.
@@ -7495,17 +7495,17 @@
 	* src/testsuite/lsh-decrypt-key-test (fname, keyname): Store files
 	in $TEST_HOME.
 
-2003-06-06  Niels Möller  <nisse@cuckoo.hack.org>
+2003-06-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/Makefile.am (EXTRA_DIST): Added lsh-upgrade-key.
 
-2003-06-06  Pontus Sköld  <pont@soua.net>
+2003-06-06  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh-upgrade-key: New script to upgrade keys.
 
 	* src/Makefile.am (bin_SCRIPTS): Added lsh-upgrade-key.
 
-2003-06-05  Niels Möller  <nisse@lysator.liu.se>
+2003-06-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-encrypted-key-test: The lsh-authorize script
 	is located in the source directory.
@@ -7521,12 +7521,12 @@
 	* src/client.c (client_argp_parser): Fixed --askpass option. The
 	argp parser should never use optarg.
 
-2003-06-05  Niels Möller  <niels@s3.kth.se>
+2003-06-05  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_interact.c (unix_read_password): Prompt for password
 	only if we have a tty, and the quiet flag is unset.
 
-2003-06-05  Pontus Sköld  <pont@soua.net>
+2003-06-05  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh-decrypt-key.c: New file to provide new utility
 	lsh-decrypt-key.
@@ -7539,14 +7539,14 @@
 
 	* src/testsuite/Makefile.am (TS_SH): Use new lsh-decrypt-key-test.
 
-2003-06-05  Niels Möller  <nisse@lysator.liu.se>
+2003-06-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c (io_resolv_address): In the code using getaddrinfo,
 	zero the sockaddr_in first using memset, to ensure that
 	sockaddr_in.sin_zero really is zero, on the systems (e.g. AIX)
 	that need that.
 
-2003-06-04  Niels Möller  <niels@s3.kth.se>
+2003-06-04  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/lsh-encrypted-key-test: Use printf instead of echo
 	in the askpass helper program. There should be no trailing newline
@@ -7560,7 +7560,7 @@
 	* src/spki.c (spki_pkcs5_decrypt): The label string was leaked.
 	Fixed.
 
-2003-06-04  Niels Möller  <nisse@cuckoo.hack.org>
+2003-06-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c (spki_pkcs5_encrypt): The method identifier is
 	"Xpkcs5v2", not "xpkcs5v2".
@@ -7568,20 +7568,20 @@
 	(parse_pkcs5, parse_pkcs5_payload): New helper functions for
 	spki_pkcs5_decrypt.
 
-2003-06-03  Pontus Sköld  <pont@soua.net>
+2003-06-03  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/Makefile.am (TS_SH): Added lsh-encrypted-key-test.
 
 	* src/testsuite/lsh-encrypted-key-test: Test for encrypted
 	(password protected) key functionality in lsh.
 
-2003-06-01  Niels Möller  <nisse@cuckoo.hack.org>
+2003-06-01  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_listen_callback): To get enough space, PEER must be
 	a sockaddr_in (if the IPv6 type sockaddr_storage isn't available).
 	(fd2info): Likewise.
 
-2003-05-24  Niels Möller  <nisse@cuckoo.hack.org>
+2003-05-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-make-seed.c: Fixed nesting of WITH_ZLIB #if:s. Also
 	disable the zlib code.
@@ -7592,17 +7592,17 @@
 	* src/server_x11.c (server_x11_setup): Don't use non-constant
 	initializer. Sun cc doesn't support it.
 
-2003-05-22  Niels Möller  <niels@s3.kth.se>
+2003-05-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/Makefile.am: Don't use -O0 in AM_CFLAGS, as it
 	breaks the AIX build.
 
-2003-05-21  Niels Möller  <niels@s3.kth.se>
+2003-05-21  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/reaper.c (do_reaper_callback): Check if WCOREDUMP is defined
 	before using it.
 
-2003-05-20  Niels Möller  <niels@s3.kth.se>
+2003-05-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_interact.c (unix_read_password): Fixed argv bug for the
 	askpass program.
@@ -7621,14 +7621,14 @@
 	* configure.ac: If seteuid is not available, but setresuid is,
 	let config.h #define seteuid in terms of setresuid.
 
-2003-05-19  Niels Möller  <nisse@cuckoo.hack.org>
+2003-05-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (do_read_file): Set the process gid, and reset
 	the supplimentary groups list, before opening the file.
 
 	* configure.ac: Check for seteuid and setresuid.
 
-2003-05-16  Niels Möller  <niels@s3.kth.se>
+2003-05-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Check for struct utmp.ut_exit.e_termination and
 	struct utmpx.ut_exit.e_termination.
@@ -7636,31 +7636,31 @@
 	* src/unix_process.c (do_utmp_cleanup): Fix for HPUX, which uses
 	non-standard names for the fields of struct utmpx's ut_exit.
 
-2003-05-14  Niels Möller  <niels@s3.kth.se>
+2003-05-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/io.c (io_resolv_address): More fixes for the non getaddrinfo
 	code.
 
-2003-05-14  Niels Möller  <nisse@cuckoo.hack.org>
+2003-05-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_interact.c (unix_interact): New attribute password_fd.
 	(unix_read_password): Read password from password_fd, unless it's
 	-1.
 	(make_unix_interact): Initialize password_fd to -1.
 
-2003-05-13  Niels Möller  <nisse@cuckoo.hack.org>
+2003-05-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (io_resolv_address): Fixes for the non getaddrinfo
 	code.
 
-2003-05-13  Niels Möller  <niels@s3.kth.se>
+2003-05-13  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_FUNC_STRSIGNAL): Use a dummy STRSIGNAL if none
 	of strsignal, sys_siglist or _sys_siglist exists.
 
 	* src/io.c (lsh_popen_read): Use STRSIGNAL macro.
 
-2003-05-12  Niels Möller  <nisse@cuckoo.hack.org>
+2003-05-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.h (FOR_BLOCKS): Deleted unused macro.
 
@@ -7680,7 +7680,7 @@
 	* configure.ac: Updated AC_CONFIG_SRCDIR, as lsh_types.h no longer
 	exists.
 
-2003-05-12  Niels Möller  <niels@s3.kth.se>
+2003-05-12  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Don't AC_REPLACE_FUNCS(memxor), just use the
 	memxor function in nettle.
@@ -7704,12 +7704,12 @@
 	(LSH_FUNC_STRERROR, LSH_FUNC_STRSIGNAL): New macros.
 	* configure.ac: Use them.
 
-2003-05-12  Pontus Sköld  <pont@soua.net>
+2003-05-12  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh-upgrade: Upgrade any authorized public keys and
 	re-authorize them.
 
-2003-04-23  Niels Möller  <niels@s3.kth.se>
+2003-04-23  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am (gcov-list): Don't include files with full code
 	coverage in the list.
@@ -7717,7 +7717,7 @@
 	* src/testsuite/Makefile.am (TS_SH): Added
 	tcpip-local-in-use-test.
 
-2003-04-22  Niels Möller  <niels@s3.kth.se>
+2003-04-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/tcpforward_commands.c (forward_local_port): Use prog1 to
 	delay bind call until the connection is established.
@@ -7757,7 +7757,7 @@
 	* src/lsh.c (do_lsh_lookup): Deleted old code handling the
 	ssh-rsa-pkcs1@lysator.liu.se algorithm id.
 
-2003-04-22  Niels Möller  <nisse@cuckoo.hack.org>
+2003-04-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (lsh_verifier_command): Deleted command.
 	(make_lsh_login): New function, replacing lsh_login_command.
@@ -7765,7 +7765,7 @@
 	(make_lsh_connect): Take a login command as a parameter.
 	(main): Updated calls to make_lsh_connect and make_lsh_login.
 
-2003-04-21  Niels Möller  <nisse@cuckoo.hack.org>
+2003-04-21  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (make_lsh_connect): Take actions as a parameter.
 	(options2service): Deleted command.
@@ -7785,7 +7785,7 @@
 
 	* src/io.c (make_address_info_c): Deleted function.
 
-2003-04-20  Niels Möller  <niels@s3.kth.se>
+2003-04-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/spki.c (make_ssh_hostkey_tag): Use a plain NUL-terminated
 	string to identify the host.
@@ -7825,7 +7825,7 @@
 
 	* src/testsuite/functions.sh (spawn_lshd): Reduced sleep.
 
-2003-04-16  Niels Möller  <niels@s3.kth.se>
+2003-04-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lshd.c (main): No need to check for make_lshd_options
 	returnning NULL.
@@ -7872,7 +7872,7 @@
 
 	* src/io.c (io_listen_list): New function.
 
-2003-04-15  Niels Möller  <niels@s3.kth.se>
+2003-04-15  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh (spawn_lshd): Use -HUP, not -9, for
 	killing lshd.
@@ -7906,7 +7906,7 @@
 
 	* src/.gdbinit: New file.
 
-2003-04-14  Niels Möller  <nisse@cuckoo.hack.org>
+2003-04-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (io_resolv_address): Changed interface, to avoid local
 	conversion of service names to port numbers. This way, all that's
@@ -7916,7 +7916,7 @@
 	NUL-terminated strings.
 	(main_argp_parser): Updated for new io_resolv_address interface.
 
-2003-04-14  Niels Möller  <niels@s3.kth.se>
+2003-04-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh: Use INTERFACE=localhost, as we now
 	support non-numerical interface names.
@@ -7933,7 +7933,7 @@
 	* doc/lsh.texinfo (Invoking lshd): Document the use of multiple
 	--interface options.
 
-2003-04-13  Niels Möller  <nisse@cuckoo.hack.org>
+2003-04-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (EXTRA_PROGRAMS): Added testutils, as
 	a kludge to get automake to track dependencies for testutils.o.
@@ -7948,7 +7948,7 @@
 	* src/client_session.c (make_client_session_channel): Added place
 	holder for send break escape handler (#if:ed out for now)
 
-2003-04-11  Niels Möller  <niels@s3.kth.se>
+2003-04-11  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/client_pty.c (do_kill_client_tty_resource): Call
 	set_error_raw.
@@ -7978,7 +7978,7 @@
 	* src/Makefile.am (MAINTAINERCLEANFILES, class-map): Updated to
 	use dist_classes, not dist_x_files.
 
-2003-03-24  Pontus Sköld  <pont@soua.net>
+2003-03-24  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* contrib/solpkg.sh.in: Added my script to create Solaris
 	packages.
@@ -7987,19 +7987,19 @@
 
 	* configure.ac: Added hooks for Solaris package script.
 
-2003-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (handle_nonblock_error): New function, ignoring ENODEV
 	errors. Needed for freebsd, where setting the non-block flag on
 	/dev/null fails.
 	(io_set_nonblocking, io_set_blocking): Use handle_nonblock_error.
 
-2003-03-13  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (io_set_nonblocking, io_set_blocking)
 	(io_set_close_on_exec): Fixed error messages.
 
-2003-03-05  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Bumped version to 1.5.2.
 
@@ -8008,7 +8008,7 @@
 
 	* configure.ac (DOTDOT_LIBARGP): New substitution
 
-2003-03-04  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/xenofarm.sh (make): Don't use -k flag, it seems to mask
 	errors.
@@ -8016,40 +8016,40 @@
 	* src/Makefile.am (environ.h): Avoid requiring GNU make for this
 	rule.
 
-2003-03-02  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_random.c: Include <sys/time.h> before <sys/resource.h>.
 
 	* src/io.c: Include <sys/wait.h>, not <wait.h>.
 
-2003-03-01  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-01  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-upgrade: Note that we need to upgrade private keys too.
 
-2003-02-28  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-28  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.5.1.
 
 	* src/spki.c (spki_pkcs5_decrypt): Typo fix, it's
 	"password-encrypted", not "password_encrypted".
 
-2003-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/rapid7-lsh-test: ln -sf is not portable, so delete
 	the symlink "current" explicitly using rm.
 
-2003-02-27  Niels Möller  <niels@s3.kth.se>
+2003-02-27  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/rapid7-lsh-test: Skip test if tcputils is missing.
 	* src/testsuite/rapid7-lshd-test: Likewise.
 
-2003-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/rapid7-lshd-test: Use $srdir for locating the test
 	pdu:s.
 	* src/testsuite/rapid7-lsh-test: Likewise.
 
-2003-02-26  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/rapid7-lsh-test: Bugfixes, and some adaption to
 	the lsh testsuite framework.
@@ -8057,21 +8057,21 @@
 
 	* src/testsuite/functions.sh (werror, die): New functions.
 
-2003-02-26  Pontus Sköld  <pont@soua.net>
+2003-02-26  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh-krb-checkpw.c: Include config.h if available.
 
-2003-02-25  Niels Möller  <niels@s3.kth.se>
+2003-02-25  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/Makefile.am (AM_CPPFLAGS): Use $(srcdir)/..
 
 	* src/testsuite/.dist_rapid7: Typo fix.
 
-2003-02-25  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-25  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/rsync/Makefile.am (AM_CPPFLAGS): Use $(srcdir)/..
 
-2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (TS_SH): Added rapid-7-lsh-test and
 	rapid-7-lshd-test.
@@ -8105,7 +8105,7 @@
 
 	* .bootstrap: Link acinclude.m4 to argp and sftp subdirectories.
 
-2003-02-19  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/nettle/acinclude.m4, src/spki/acinclude.m4: Deleted files,
 	let .bootstrap make links to the top-level acinclude.m4 instead.
@@ -8132,7 +8132,7 @@
 	* .bootstrap: New link from src/nettle/examples and
 	src/sftp/testsuite to run-tests.
 
-2003-02-18  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/Makefile.am (bootstrap): Bootstrap the spki dirctory too.
 	(EXTRA_DIST): dist_x_files and cvs_headers renamed to dist_classes
@@ -8159,28 +8159,28 @@
 	* Makefile.am.in: Removed all these files. Use plain Makefile.am
 	instead.
 
-2003-02-18  Niels Möller  <niels@s3.kth.se>
+2003-02-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Added check for inet_ntop in -lnsl.
 	Check for -lnsl before checking for -lsocket, to avoid strange
 	confusion with Solaris' library dependencies.
 
-2003-02-17  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/xenofarm.sh: Fixed make --version test.
 
-2003-02-17  Niels Möller  <niels@s3.kth.se>
+2003-02-17  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Make sure PATH is exported.
 	Redirect stderr output from make --version.
 
-2003-02-17  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/testutils.c: Use uint32_t and friends, not UINT32.
 
 	* misc/xenofarm.sh (cfgwarn): Fixed sed expression.
 
-2003-02-16  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/.dist_classes: Deleted read_base64.c.x.
 	* src/.dist_headers: Deleted digits.h
@@ -8201,7 +8201,7 @@
 	gmp and liboop.
 	Use AH_BOTTOM to define NORETURN, PRINTF_STYLE and UNUSED.
 
-2003-02-15  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-15  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.h (lsh_fd): Deleted old hanged_up attribute.
 	* src/gateway_commands.c (gateway_setup_command): Deleted old
@@ -8214,22 +8214,22 @@
 	* src/io_commands.h: Deleted old prototypes make_listen_local and
 	make_connect_local.
 
-2003-02-14  Niels Möller  <niels@s3.kth.se>
+2003-02-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in (bin_SCRIPTS): Added lsh-upgrade.
 
-2003-02-12  Niels Möller  <niels@s3.kth.se>
+2003-02-12  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_user.c (do_spawn): Added FIXME on error reporting.
 
 	* misc/xenofarm.sh (cfgwarn): Delete warning about using an
 	absolute path for srcdir.
 
-2003-02-11  Niels Möller  <niels@s3.kth.se>
+2003-02-11  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Compile with make -k.
 
-2003-02-10  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-10  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/.dist_classes: Deleted lsh_proxy.c.x and sexp-conv.c.x.
 
@@ -8248,7 +8248,7 @@
 
 	* misc/xenofarm.sh: Collect config.h files from subdirectories.
 
-2003-02-09  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (TS_PROGS): Added sockaddr2info-test.
 
@@ -8259,14 +8259,14 @@
 	* src/io.c (sockaddr2info): Use inet_ntop for formatting AF_INET6
 	addresses.
 
-2003-02-07  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-07  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (do_lsh_lookup): The public key should be wrapped in a
 	subject expression in the generated acl:s.
 
 	* src/io.c (sockaddr2info): #ifed out broken IPv6 code.
 
-2003-02-06  Niels Möller  <niels@s3.kth.se>
+2003-02-06  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in (DISTCLEANFILES): Delete environ.h.
 
@@ -8275,7 +8275,7 @@
 	* misc/xenofarm.sh: Try to add /usr/local/bin and /usr/ccs/bin to
 	PATH, if needed.
 
-2003-02-05  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/keyexchange.c (KEXINIT_MAX_ALGORITMS_SUN): New constant.
 	(parse_kexinit): Added argument peer_flag. Use larger list limit
@@ -8286,18 +8286,18 @@
 
 	* src/connection.h: New constant PEER_KEXINIT_LANGUAGE_KLUDGE.
 
-2003-02-04  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Moved argp-related entries from this file to src/argp/ChangeLog.
 
-2003-01-27  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/rsa_keygen.c, src/rsa.c: Updated for nettle rsa renaming.
 
 	* configure.ac: Fixed syntax error when testing $x_includes and
 	$x_libraries.
 
-2003-01-24  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: --with-lib-path should add to LDFLAGS, not replace
 	it.
@@ -8306,18 +8306,18 @@
 	--with-lib-path to configure. On some systems /usr/local/lib and
 	/usr/local/include are not searched by default.
 
-2003-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c (spki_add_acl): Use spki_acl_process.
 	(spki_authorize): Adapted to changed spki_acl_by_subject_first and
 	spki_acl_by_subject_next.
 
-2003-01-21  Niels Möller  <niels@s3.kth.se>
+2003-01-21  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Don't run make distcheck, as it leaves some
 	write-protected directories in the tree.
 
-2003-01-20  Niels Möller  <niels@s3.kth.se>
+2003-01-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Dont cd into src before running make check and
 	make distcheck.
@@ -8326,7 +8326,7 @@
 
 	* misc/xenofarm.sh (timeecho): Fixed typo.
 
-2003-01-19  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/xenofarm.sh (timeecho): Set LC_ALL=C before calling date.
 
@@ -8334,13 +8334,13 @@
 	in the testcases that depend on tcputils: tcpip-local-test,
 	tcpip-remote-test, lshg-tcpip-test and ssh1-fallback-test.
 
-2003-01-17  Niels Möller  <niels@s3.kth.se>
+2003-01-17  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in: Added explicit dependencies for objects
 	depending on environ.h. Must figure out some better way to do
 	that.
 
-2003-01-16  Niels Möller  <niels@s3.kth.se>
+2003-01-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in (EXTRA_DIST): Added environ.h.in.
 	(generated_sources): Don't list environ.h here, as it's system
@@ -8350,19 +8350,19 @@
 	four arguments.
 	(dotask): Don't create $task.pass, they're not used anymore.
 
-2003-01-15  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-15  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/xenofarm.sh: Updated to use new format for reporting the
 	result.
 
-2003-01-14  Niels Möller  <nisse@lysator.liu.se>
+2003-01-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes: sexp.h.x has disappeared.
 
 	* misc/bootstrap.sh: Bootstrap spki subdir. Removed redundant
 	automake calls.
 
-2003-01-14  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/xenofarm.sh: New file.
 	Added build instructions, following the lyskom-server example.
@@ -8370,7 +8370,7 @@
 	* src/.dist_classes: hmac.c.x, md5.c.x and sha.c.x have
 	disappeared.
 
-2003-01-14  Niels Möller  <nisse@lysator.liu.se>
+2003-01-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac (AC_PATH_X): Check not only $no_x, also check if
 	$x_includes and $x_libraries are empty before adding new flags.
@@ -8383,24 +8383,24 @@
 	* src/scm/guile-compat.scm (nth): Deleted function. Needed for
 	scsh, not just guile.
 
-2003-01-14  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/.dist_classes: sexp.c.x and spki.c.x have disappeared.
 	* src/.dist_headers: dsa.h has disappeared.
 
-2003-01-13  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/.dist_headers, src/.dist_classes: Check into cvs, to make it
 	easier for xenofarm to build a distribution directly from cvs.
 
-2003-01-13  Niels Möller  <nisse@lysator.liu.se>
+2003-01-13  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/scm/compiler.scm (let-and): Fixed syntax error in
 	syntax-rules.
 
 	* misc/bootstrap.sh: Use plain automake -a, no extra arguments.
 
-2003-01-12  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c: Use macros in environ.h, when defining
 	environment veriables.
@@ -8433,13 +8433,13 @@
 	* configure.ac: Don't try AC_DEFINE:ing PREFIX and SBINDIR. Those
 	substitutions are now performed at make-time.
 
-2003-01-10  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-10  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (read_known_hosts): Display upgrade message only if
 	the --host-db option wasn't used.
 	Changed user messages to say "host-acls" instead of "known_hosts".
 
-2003-01-10  Niels Möller  <niels@s3.kth.se>
+2003-01-10  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-upgrade: New shell script.
 
@@ -8467,7 +8467,7 @@
 
 	* src/Makefile.am.in (LDADD): Add libspki.a.
 
-2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (read_known_hosts): Display a message if an old
 	known_hosts file is used.
@@ -8493,22 +8493,22 @@
 	* doc/lsh.texinfo (Files and environment variables): Document
 	SEXP_CONV.
 
-2003-01-08  Niels Möller  <niels@s3.kth.se>
+2003-01-08  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in (environ.h): New rule for creating environ.h
 	from environ.h.in.
 
-2003-01-02  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/Makefile.am.in (SUBDIRS): Compile in spki subdir.
 
 	* configure.ac: Configure subdir src/spki.
 
-2003-01-02  Niels Möller  <niels@s3.kth.se>
+2003-01-02  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/io.c (lsh_popen): New function.
 
-2003-01-02  Pontus Sköld  <pont@soua.net>
+2003-01-02  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* configure.ac: Check for alarm.
 
@@ -8517,12 +8517,12 @@
 
 	* src/lsh-krb-checkpw.c (main): Dito.
 
-2002-12-11  Niels Möller  <niels@s3.kth.se>
+2002-12-11  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh-writekey.c (process_private): If no encryption, dup the
 	input string.
 
-2002-12-04  Niels Möller  <nisse@cuckoo.hack.org>
+2002-12-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c (do_dsa_sign): Use %0s, not %z, when formatting
 	s-expressions.
@@ -8535,7 +8535,7 @@
 	* src/lsh.c (do_lsh_lookup): Likewise.
 	* src/dsa_keygen.c (dsa_generate_key): Likewise.
 
-2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/key-1.private, src/testsuite/key-2.private:
 	Updated keys.
@@ -8584,12 +8584,12 @@
 	moved there. It should be possible to get lshg to work without
 	either nettle or gmp, currently it won't.
 
-2002-11-13  Niels Möller  <niels@s3.kth.se>
+2002-11-13  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/spki.c (do_spki_authorize): Need braces around
 	FOR_OBJECT_QUEUE loop.
 
-2002-11-11  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/Makefile.am.in (noinst_PROGRAMS): Don't build prime_table.
 
@@ -8608,7 +8608,7 @@
 	* src/Makefile.am.in: Don't build digit_table.h.
 	(liblsh_a_SOURCES): Removed digits.c.
 
-2002-11-10  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-10  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (do_lsh_default_handler): Deleted handling of obsolete
 	exception types EXC_SEXP_SYNTAX and EXC_SPKI_TYPE.
@@ -8713,7 +8713,7 @@
 	* src/testsuite/Makefile.am (check): Set LD_LIBRARY_PATH when
 	running tests.
 
-2002-11-07  Niels Möller  <niels@s3.kth.se>
+2002-11-07  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Don't use quotes with AM_CONFIG_HEADER, it seems
 	to confuse automake.
@@ -8721,7 +8721,7 @@
 
 	* src/testsuite/functions.sh: Tolerate unset failing.
 
-2002-11-04  Pontus Sköld  <pont@soua.net>
+2002-11-04  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/functions.sh: Unset LSHGFLAGS and LSHFLAGS.
 
@@ -8733,7 +8733,7 @@
 
 	* doc/Makefile.am.in: Removed inclusion of ctags.mk.
 
-2002-11-03  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* misc/Makefile.am.in: Don't include ctags.mk.
 
@@ -8759,7 +8759,7 @@
 	* src/dsa_keygen.c (dsa_generate_key): Rewrote to use nettle's
 	dsa_generate_keypair function.
 
-2002-11-02  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c (dsa_hash): Deleted function.
 	(generic_dsa_verify): Rewrote to use nettle's dsa_verify.
@@ -8782,7 +8782,7 @@
 	* src/abstract_crypto.h (SIGN_SPKI, VERIFY_SPKI): Deleted methods
 	used only by the testsuite.
 
-2002-11-01  Pontus Sköld  <pont@soua.net>
+2002-11-01  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/Makefile.am (TS_SH): New test lsh-9-test.
 
@@ -8801,7 +8801,7 @@
 	* src/lsh.c (main_argp_parser): Honour inhibit_actions.
 	(main): Use envp_parse.
 
-2002-10-23  Pontus Sköld  <pont@soua.net>
+2002-10-23  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/client_x11.c (parse_display): Handle special case
 	DISPLAY=unix:x.y for local delivery.
@@ -8813,7 +8813,7 @@
 	(make_detach_callback): Use new function stead of
 	do_detach_cb_first.
 
-2002-10-22  Pontus Sköld  <pont@soua.net>
+2002-10-22  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/client.c: Include io.h.
 	(detach_callback): New class to handle detachment and
@@ -8836,13 +8836,13 @@
 
 	* src/client.h: New variable in client_options: detach_end.
 
-2002-10-03  Niels Möller  <nisse@cuckoo.hack.org>
+2002-10-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Use AC_SEARCH_LIBS instead of AC_CHECK_LIB when
 	looking for libnsl, so we don't pick it up unless it really is
 	needed.
 
-2002-10-02  Pontus Sköld  <Pontus.Skold@dis.uu.se>
+2002-10-02  Pontus SkÃ¶ld  <Pontus.Skold@dis.uu.se>
 
 	* src/lshd.c: Include <sys/resource.h> if it exists.
 	(main): setrlimit to raise max number of open files
@@ -8850,17 +8850,17 @@
 
 	* configure.ac: Check for <sys/resource.h> and setrlimit.
 
-2002-10-02  Pontus Sköld  <Pontus.Skold@dis.uu.se>
+2002-10-02  Pontus SkÃ¶ld  <Pontus.Skold@dis.uu.se>
 
 	* configure.ac: Don't AC_PATH_PROG for bash, m4 and groff if
 	given. Made them precious.
 
-2002-10-01  Niels Möller  <niels@s3.kth.se>
+2002-10-01  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/testsuite/run-tests (test_program): Use basename (fix copied
 	from src/nettle/examples/).
 
-2002-09-12  Niels Möller  <nisse@cuckoo.hack.org>
+2002-09-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.5.0.
 
@@ -8875,24 +8875,24 @@
 	* configure.ac: Deleted the ipv6 test that tried to create an ipv6
 	socket.
 
-2002-09-03  Pontus Sköld  <pont@soua.net>
+2002-09-03  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/server_x11.c (XAUTH_PROGRAM): Use predefined value if
 	available and built in default if not.
 
 	* configure.ac: Search for xauth.
 
-2002-09-02  Pontus Sköld  <pont@soua.net>
+2002-09-02  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/lsh-8-test: New test. Check whatever unencrypted
 	sessions work.
 
-2002-08-30  Pontus Sköld  <pont@soua.net>
+2002-08-30  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/functions.sh: Defaults need to be quoted if they
 	contain spaces.
 
-2002-08-29  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-29  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/x11-1-test: Renamed, was lshd-x11-1-test.
 
@@ -8907,14 +8907,14 @@
 	* src/lsh.c (main_options, main_argp_parser): Handle X11 options
 	only if WITH_X11_FORWARD is defined.
 
-2002-08-28  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-28  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* doc/lsh.texinfo (Top): Use @ififo around the @top directive, to
 	get rid of the empty menu item inthe html output.
 
 	* configure.ac: Bumped version to 1.5.
 
-2002-08-28  Niels Möller  <niels@s3.kth.se>
+2002-08-28  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* doc/index.html: New file.
 
@@ -8937,12 +8937,12 @@
 
 	* src/server_x11.c (SUN_LEN): #define SUN_LEN if needed.
 
-2002-08-27  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_x11.c (new_x11_channel): We don't have any ip-address
 	of the client, so send <"unix-domain", 0> as the peer address.
 
-2002-08-27  Niels Möller  <niels@s3.kth.se>
+2002-08-27  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/server_pty.c (pty_open_slave): Removed call to setsid(),
 	moved to...
@@ -8973,12 +8973,12 @@
 	* src/server_x11.c (do_xauth_exit): Fixed format strings for error
 	messages.
 
-2002-08-27  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_x11.c (server_x11_setup): Bugfix, really call
 	server_x11_listen.
 
-2002-08-26  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_x11.c (OPEN_FORWARDED_X11): Added forward
 	declaration.
@@ -9016,7 +9016,7 @@
 	(fatal): Compile time flag to display pid and hang, instead of
 	aborting. Useful for debugging.
 
-2002-08-25  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-25  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_x11.c (new_x11_channel): New function.
 	(open_forwarded_x11): New command.
@@ -9042,7 +9042,7 @@
 	* src/lsh_proxy.c (lsh_proxy_listen): Replaced listen_callback
 	with new bind and listen commands.
 
-2002-08-24  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io_commands.c (do_listen): Deleted function.
 	(listen_with_callback): Deleted command.
@@ -9069,7 +9069,7 @@
 	(io_bind_local): New function replacing io_listen_local. Updated
 	callers.
 
-2002-08-11  Niels Möller  <nisse@cuckoo.hack.org>
+2002-08-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (do_read_file): Use seteuid, not setuid.
 
@@ -9089,17 +9089,17 @@
 	(lsh_pushd): Renamed safe_pushd, and use lsh_pushd_fd. Also added
 	arguments result and secret. Updated all callers.
 
-2002-07-18  Niels Möller  <niels@s3.kth.se>
+2002-07-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Use -ggdb3 for gcc, except for gcc-2.96.
 
-2002-07-05  Niels Möller  <nisse@cuckoo.hack.org>
+2002-07-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lshd.c: Disabled incomplete x11 forwarding for now.
 	* src/server_session.c: Likewise.
 	* src/server_x11.c: Likewise.
 
-2002-07-03  Pontus Sköld  <pont@soua.net>
+2002-07-03  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lshg.c: Include <unistd.h> to get execvp declaration, define
 	LSH_FILENAME if not defined.
@@ -9119,7 +9119,7 @@
 	* src/io_commands.c (connect_local_command): Check if the
 	connection was successfull and raise an exception otherwise.
 
-2002-07-02  Niels Möller  <nisse@cuckoo.hack.org>
+2002-07-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (do_spawn): Allow err[1] and out[1] to be the
 	same fd.
@@ -9137,7 +9137,7 @@
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Added server_x11.c.
 
-2002-06-28  Niels Möller  <niels@s3.kth.se>
+2002-06-28  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lshd.c (main_options): New options, --tcpip-forward,
 	--no-tcpip-forward (earlier there was no option for disabling
@@ -9149,7 +9149,7 @@
 
 	* src/server_session.c (do_x11_req): Fixed error message.
 
-2002-06-27  Niels Möller  <niels@s3.kth.se>
+2002-06-27  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/lsh_proxy.c (main) [WITH_X11_FORWARD]: Fixed type warning.
 
@@ -9175,18 +9175,18 @@
 	* src/command.c (make_catch_report_apply): Likewise.
 
 
-2002-06-27  Pontus Sköld  <pont@soua.net>
+2002-06-27  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/testsuite/string-test.c (test_main): Added extra bubble
 	babble check for a typo Richard Kettlewell discovered.
 
-2002-06-26  Pontus Sköld  <pont@soua.net>
+2002-06-26  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/format.c (lsh_string_bubblebabble): Fixed stupid typo making
 	w occur in bubble babble fingerprint where it should be z. Also
 	fixed the size of the cons array.
 
-2002-06-26  Niels Möller  <niels@s3.kth.se>
+2002-06-26  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/unix_user.c (do_lookup_user): Don't treat accounts with a
 	single "*" in the paswd-field as disabled.
@@ -9222,14 +9222,14 @@
 	* src/lsh.c (read_user_keys): Support aes for encrypted private
 	keys.
 
-2002-06-26  Niels Möller  <nisse@cuckoo.hack.org>
+2002-06-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-make-seed.c (get_dev_random): Bugfix: Actually try both
 	/dev/random and /dev/urandom.
 
 	* doc/lsh.texinfo (lshd basics): Changed invokation of lsh-keygen.
 
-2002-06-25  Niels Möller  <niels@s3.kth.se>
+2002-06-25  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* src/server_x11.c, src/server_x11.h: New files.
 	(make_xauth_exit_callback): New function.
@@ -9238,19 +9238,19 @@
 	* src/server_session.c (server_session): New attribute x11.
 	(do_x11_req): New function.
 
-2002-06-23  Pontus Sköld  <pont@soua.net>
+2002-06-23  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* configure.ac: Cosmetic changes of message shown when libwrap
 	detection fails.
 
-2002-06-18  Niels Möller  <nisse@cuckoo.hack.org>
+2002-06-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (spawn_process): Call io_set_type, if stdin
 	is a pty.
 	(do_eof): Removed the pty ^D hack,a s it's now taken care of by
 	close_fd_write.
 
-2002-06-17  Niels Möller  <nisse@cuckoo.hack.org>
+2002-06-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (io_set_type): New function.
 	(close_fd_nicely): Call close_fd_write, for handling the
@@ -9259,12 +9259,12 @@
 
 	* src/io.h (lsh_fd): New attribute TYPE.
 
-2002-06-05  Niels Möller  <nisse@cuckoo.hack.org>
+2002-06-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Bumped version to 1.4.1. New option
 	--enable-initgroups-workaround, copied from the 1.2 branch.
 
-2002-06-04  Niels Möller  <nisse@cuckoo.hack.org>
+2002-06-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.4.
 
@@ -9273,7 +9273,7 @@
 	* src/testsuite/conv-2-test, src/testsuite/conv-3-test: Updated
 	testcases.
 
-2002-05-30  Pontus Sköld  <pont@soua.net>
+2002-05-30  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/server_session.c (init_spawn_info): Require more entries
 	available for environment variables. Set SSH_TTY if appropiate as
@@ -9306,14 +9306,14 @@
 
 	* src/connection.c (make_ssh_connection): dito.
 
-2002-05-24  Pontus Sköld  <pont@soua.net>
+2002-05-24  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/io.c (io_final): Set stdin, stdout and stderr to blocking mode.
 
 	* src/io_commands.c (do_tcp_wrapper): Send a copy of self->msg to
 	A_WRITE instead of the string itself.
 
-2002-05-15  Pontus Sköld  <pont@soua.net>
+2002-05-15  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* configure.ac: Added things neccessarry for tcp wrappers to work.
 
@@ -9329,13 +9329,13 @@
 	* src/io_commands.h (make_tcp_wrapper): Definition of new
 	function.
 
-2002-05-14  Pontus Sköld  <pont@soua.net>
+2002-05-14  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/algorithms.c (list_algorithms): Added missing newline after
 	the list of algorithms.
 	(list_hostkey_algorithms): dito.
 
-2002-05-13  Pontus Sköld  <pont@soua.net>
+2002-05-13  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh.c (make_options): Don't fail totally if we can't create
 	a randomness source.
@@ -9351,18 +9351,18 @@
 	(main_argp_parser): Do argp_failure unless we have a valid
 	randomness object.
 
-2002-05-06  Niels Möller  <nisse@cuckoo.hack.org>
+2002-05-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* README: Document requirement of autoconf-2.52 and
 	automake-1.6.1.
 
 	* configure.ac: Require autoconf-2.52.
 
-2002-05-06  Niels Möller  <niels@s3.kth.se>
+2002-05-06  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac (CFLAGS): Don't enable -Waggregate-return.
 
-2002-05-06  Niels Möller  <nisse@cuckoo.hack.org>
+2002-05-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/gateway_channel.c (do_gateway_channel_open): Undid previous
 	change. Let channel.c:check_rec_max_packet adjust the
@@ -9379,11 +9379,11 @@
 	* src/read_data.c (do_read_data_query): Undid previous change. Now
 	look at only send_window_size and send_max_packet.
 
-2002-05-05  Niels Möller  <nisse@lysator.liu.se>
+2002-05-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Pass no options to AM_INIT_AUTOMAKE.
 
-2002-05-05  Niels Möller  <nisse@cuckoo.hack.org>
+2002-05-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Update for automake-1.6.
 
@@ -9397,7 +9397,7 @@
 	* doc/lsh.texinfo (Algorithm options): Updated description of the
 	default cipher. We now use AES, not triple-DES.
 
-2002-05-02  Niels Möller  <nisse@cuckoo.hack.org>
+2002-05-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/gateway_channel.c (do_gateway_channel_open): Limit
 	rec_max_packet to SSH_MAX_PACKET.
@@ -9413,12 +9413,12 @@
 	send_max_packet - SSH_MAX_PACKET_FUZZ, as to not exceed the
 	receivers maximum packet size.
 
-2002-04-04  Pontus Sköld  <pont@soua.net>
+2002-04-04  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/lsh.c (do_lsh_lookup): Cosmetic changes of unauthenticated
 	key fingerprint text.
 
-2002-04-03  Pontus Sköld  <pont@soua.net>
+2002-04-03  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* src/format.c (lsh_string_bubblebabble_c): New function to define
 	the che bubble babble checksum series, used by
@@ -9452,7 +9452,7 @@
 	* src/client.c (client_options): Bugfix: OPT_SUBSYSTEM shouldn't
 	be inside char quotes.
 
-2002-03-27  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (lsh_oop_stop_callback): Use the OOP_HALT constant.
 
@@ -9462,17 +9462,17 @@
 	* src/client.c: Removed the short alias, -C, for the --subsystem
 	option.
 
-2002-03-26  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-authorize: Don't use &>-redirects, as /bin/sh doesn't
 	understand that. Noticed by Timshell Knoll.
 
-2002-03-25  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-25  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-execuv.c: Deleted utmp stuff, this is not the right
 	place for that.
 
-2002-03-26  Pontus Sköld  <pont@soua.net>
+2002-03-26  Pontus SkÃ¶ld  <pont@soua.net>
 
 	* configure.in: If with_scheme is absolute, don't AC_PATH_PROG for
 	it but just use it directly.
@@ -9482,11 +9482,11 @@
 	(client_argp_parser): Turn of pty-request if there is a subsystem
 	request.
 
-2002-03-22  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sexp-conv.c (main): Add newline at end of --raw-hash output.
 
-2002-03-20  Pontus Sköld  <pont@r3>
+2002-03-20  Pontus SkÃ¶ld  <pont@r3>
 
 	* src/testsuite/lsh-1-test: Run "exec 0" instead of "exec" in case
 	the last command in the user's startup files ended with nonzero
@@ -9500,12 +9500,12 @@
 
 	* src/testsuite/ssh1-fallback-test: Likewise.
 
-2002-03-20  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-20  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/run-tests (test_program): Added missing single
 	quote.
 
-2002-03-20  Niels Möller  <nisse@lysator.liu.se>
+2002-03-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (at_connect): Put -- between the
 	options and the arguments, as that is the correct place according
@@ -9514,12 +9514,12 @@
 	* src/testsuite/lsh-7-test: Rewrote !command-expressions as an if
 	expression, to work with /bin/sh.
 
-2002-03-20  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-20  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (address_info2sockaddr): Zero-terminate the
 	default_preferences list.
 
-2002-03-20  Niels Möller  <nisse@lysator.liu.se>
+2002-03-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client_session.c (make_client_session_channel): Clear the
 	CHANNEL_CLOSE_AT_EOF flag.
@@ -9534,40 +9534,40 @@
 	argument list to mini-inetd, appearantly Solaris' getopt
 	doesn't handle that.
 
-2002-03-19  Niels Möller  <nisse@lysator.liu.se>
+2002-03-19  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/io.c (address_info2sockaddr): Prefer AF_INET addresses over
 	AF_INET6 (as it seems common that localhost has an ipv6 address
 	that doesn't work). Even better would be to try all addresses, but
 	that has to wait for later.
 
-2002-03-19  Pontus Sköld  <pont@docs.uu.se>
+2002-03-19  Pontus SkÃ¶ld  <pont@docs.uu.se>
 
 	* src/sftp/testsuite/*-test: grep -q is XPG4, which not all
 	greps (notably Solaris /bin/grep) are.
 
 	* src/sftp/testsuite/run-tests: Replaced bashims.
 
-2002-03-19  Pontus Sköld  <pont@it.uu.se>
+2002-03-19  Pontus SkÃ¶ld  <pont@it.uu.se>
 
 	* src/testsuite/seed-test: Fixed bashism.
 
-2002-03-19  Pontus Sköld  <pont@it.uu.se>
+2002-03-19  Pontus SkÃ¶ld  <pont@it.uu.se>
 
 	* src/testsuite/run-tests: Replaced bashims.
 
-2002-03-19  Pontus Sköld  <pont@it.uu.se>
+2002-03-19  Pontus SkÃ¶ld  <pont@it.uu.se>
 
 	* src/unix_process.c: Added GETUTXID and UPDWTMPX.
 	(do_utmp_cleanup): Write cleared entry to wtmp{,x} with
 	updwtmp{,x} if logwtmp is not available.
 	(utmp_book_keeping): Likewise.
 
-2002-03-18  Niels Möller  <nisse@lysator.liu.se>
+2002-03-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-pam-checkpw.c: Include stdlib.h.
 
-2002-03-18  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/conv-3-test: New test program.
 
@@ -9623,7 +9623,7 @@
 
 	* src/unix_process.c: Unified utmp/utmpx code.
 
-2002-03-18  Pontus Sköld  <pont@it.uu.se>
+2002-03-18  Pontus SkÃ¶ld  <pont@it.uu.se>
 
 	* src/unix_process.c: Make certain WTMP_FILE and WTMPX_FILE are
 	defined.
@@ -9640,17 +9640,17 @@
 	entries.
 	Bugfix: gettimeofday takes two arguments, pass 0 as second (timezone).
 
-2002-03-18  Pontus Sköld <pont@it.uu.se>
+2002-03-18  Pontus SkÃ¶ld <pont@it.uu.se>
 
 	* configure.in: Check for utmpx symmetrically to utmp. Check for
 	more members of struct utmp. Check for members of struct utmpx.
 
-2002-03-18  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-keygen.c (main): Updated to use the rewritten
 	rsa_generate_key.
 
-2002-03-17  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/rsa_keygen.c (rsa_generate_key): Rewrote to use nettle's RSA
 	key generation. Deleted the argument E.
@@ -9688,7 +9688,7 @@
 	system, and shouldn't break anything). Make a working copy to
 	modify. Do some logging.
 
-2002-03-16  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (exec_shell): Bugfix, fixed test for login-mode.
 
@@ -9743,7 +9743,7 @@
 
 	* src/unix_process.c: Added some trace calls.
 
-2002-03-15  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-15  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/userauth.h (struct spawn_info): Struct with information for
 	the new USER_SPAWN method.
@@ -9766,7 +9766,7 @@
 
 	* configure.in: Check for more utmp related functions.
 
-2002-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_process.c: New file, to replace the process stuff in
 	unix_user.c
@@ -9775,7 +9775,7 @@
 
 	* configure.in: Added check for libpam if PAM is enabled.
 
-2002-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/resource.h (REMEMBER_RESOURCE): Deleted method, use an
 	ordinary fucntion remember_resource instead. Updated all callers.
@@ -9836,7 +9836,7 @@
 
 	* src/Makefile.am.in (EXTRA_PROGRAMS): Added lsh-pam-checkpw.
 
-2002-03-13  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/keyexchange.c (send_kexinit): Renamed from
 	initiate_keyexchange. Updated callers. Disable the key re-exchange
@@ -9902,7 +9902,7 @@
 	(connection_send_kex_start): New function.
 	(connection_send_kex_end): New function.
 
-2002-03-11  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/testutils.h: Include werror.h.
 
@@ -9911,7 +9911,7 @@
 	* src/parse_config.c: Work in progress. Added linenumber handling
 	and comments.
 
-2002-03-05  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	Cleaned up the bug compatibility tests.
 	* src/handshake.c (compat_peer_flags): New function.
@@ -9938,12 +9938,12 @@
 	deleted m4 files.
 	* src/testsuite/Makefile.am: Deleted m4 files and rules.
 
-2002-03-04  Niels Möller  <nisse@cuckoo.hack.org>
+2002-03-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/parse_config.c, src/parse_config.h: New files. A lexer and a
 	recursive-descent parser for config files.
 
-2002-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/config_parse.y: New file, for parsing config files.
 
@@ -9964,7 +9964,7 @@
 	* src/channel.c (init_connection_service): Cancel the connection's
 	timeout timer.
 
-2002-02-22  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client.c (init_client_options): Initialize port to NULL, in
 	order to get the fallback from "ssh" -> 22 to work. FIXED in 1.2
@@ -9972,7 +9972,7 @@
 	(client_argp_parser): Fixed port error message not to try printing
 	NULL. FIXED in 1.2 branch.
 
-2002-02-21  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-21  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (make_pty): Simple bugfix, pty->master was
 	lost too early.
@@ -9983,7 +9983,7 @@
 	EINVAL.
 	(do_alloc_pty): Bugfix, record the new pty properly.
 
-2002-02-19  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (spawn_process): Let the child process open
 	the slave side of the pty.
@@ -10011,7 +10011,7 @@
 	* src/crypto.c (make_aes_cbc_instance): Use aes_set_encrypt_key
 	and aes_set_decrypt_key. aes_set_key is obsolete.
 
-2002-02-07  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-07  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/.bootstrap: Added -a flag to automake invocation.
 
@@ -10068,9 +10068,9 @@
 	(sftp_read_packet): Call clearerr after checking for error and
 	eof.
 
-2002-02-06  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
-	Checked in Pontus Sköld's lsftp client.
+	Checked in Pontus SkÃ¶ld's lsftp client.
 	* src/sftp/Makefile.am (lsftp_SOURCES): New make variable.
 	* src/sftp/commands.c: New file.
 	* src/sftp/commands.h: New file.
@@ -10089,13 +10089,13 @@
 	* src/sftp/str_utils.c: New file.
 	* src/sftp/str_utils.h: New file.
 
-2002-02-01  Niels Möller  <nisse@cuckoo.hack.org>
+2002-02-01  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/sftp-test-client.c: Deleted old code.
 	(sftp_client_get_status): New function, for parsing -02 draft
 	status messages. Use it everywhere.
 
-	Applied Pontus Sköld's patch to comply with the -02 draft.
+	Applied Pontus SkÃ¶ld's patch to comply with the -02 draft.
 	* src/sftp/sftp-server.c (sftp_send_status): Added human-readable
 	message and language tag.
 	(sftp_process_mkdir): Get file attributes from the message, and
@@ -10108,7 +10108,7 @@
 	* src/sftp/sftp.h (SSH_FXP_READLINK, SSH_FXP_SYMLINK): New message
 	types.
 
-2002-01-31  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-31  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-pam-checkpw.c: Cosmetic changes.
 
@@ -10118,11 +10118,11 @@
 	--disable-pam, check for security/pam_appl.h, substitution of
 	PAM_PROGRAM.
 
-2002-01-31  Niels Möller  <nisse@lysator.liu.se>
+2002-01-31  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lsh-writekey.c (open_public_file): Fixed error message.
 
-2002-01-24  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sexp.c (sexp_format): Add a newline at the end of
 	expressions in transport syntax.
@@ -10141,7 +10141,7 @@
 
 	* src/gc.c (gc): Print a verbose message at the start of gc.
 
-2002-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_interact.c (do_make_raw): Added FIXME: about tty TIME
 	and VMIN settings.
@@ -10149,7 +10149,7 @@
 	* src/scm/gaba.scm (make-class): Added FIXME:-comment about
 	offsetof.
 
-2002-01-21  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-21  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/xalloc.h (NEW_VAR_OBJECT, CLONE_VAR_OBJECT,
 	CLONED_VAR_OBJECT): New macros.
@@ -10162,7 +10162,7 @@
 	* src/list.c (lsh_list_alloc): Moved function here, from xalloc.c.
 	Now uses lsh_var_alloc.
 
-2002-01-20  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-20  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.c (hash_update, hash_digest, hash_copy, make_hash):
 	New functions using struct nettle_hash.
@@ -10180,12 +10180,12 @@
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Removed md5.c and sha.c.
 
-2002-01-17  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/md5.c, src/sha.c: Deleted files. The wrapper code was moved
 	to crypto.c, and now uses struct nettle_hash.
 
-2002-01-16  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/pkcs5-test.c (main): Use crypto_hmac_sha1_algorithm.
 
@@ -10198,7 +10198,7 @@
 
 	* src/hmac.c, src/Makefile.am.in: Deleted file hmac.c.
 
-2002-01-14  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/rsa.c (make_rsa_signer): Take advantage of rsa_public_key
 	and rsa_private_key being independent structs now. General cleanup
@@ -10234,12 +10234,12 @@
 	* src/algorithms.c (all_signature_algorithms): Deleted support for
 	rsa-md5.
 
-2002-01-13  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in (lsh_cv_c_attribute): Consider __FUNCTION__ broken
 	in gcc-3.
 
-2002-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+2002-01-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c (dsa_hash): Don't call sha1_final.
 	* src/dsa_keygen.c (hash): Likewise.
@@ -10259,22 +10259,22 @@
 	* src/rsync/generate.c, src/rsync/receive.c, src/rsync/send.c:
 	Removed calls of md5_final.
 
-2001-12-16  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.3.6.
 
-2001-12-16  Niels Möller  <nisse@lysator.liu.se>
+2001-12-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/lock_file.c: Include sys/types.h and sys/stat.h, needed on
 	Solaris.
 
-2001-12-14  Niels Möller  <nisse@lysator.liu.se>
+2001-12-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/dsa_keygen.c (dsa_generate_key): Fixed declaration and code
 	mixup.
 	* src/rsa_keygen.c (rsa_generate_key): Likewise.
 
-2001-12-14  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (CLEANFILES, DISTCLEANFILES): Added
 	fiels generated by the test, in order to make make distcheck
@@ -10290,7 +10290,7 @@
 	* doc/lsh.texinfo (lsh-make-seed): New section.
 	(Files and environment variables): Wrote a file list.
 
-2001-12-12  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* doc/lsh.texinfo (Files and environment variables): Documented
 	environment variables.
@@ -10343,12 +10343,12 @@
 	* src/werror.c (werror_progress): Fixed test of verbose and quite
 	flags.
 
-2001-12-08  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-08  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-pam-checkpw.c: New helper program for verifying
-	passwords against PAM. Written by Pontus Sköld.
+	passwords against PAM. Written by Pontus SkÃ¶ld.
 
-2001-12-07  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-07  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c: Added comments on how to fix use of setuid.
 
@@ -10357,7 +10357,7 @@
 	* src/lsh-execuv.c: New file. Helper program for securely exec:ing
 	user programs.
 
-2001-12-05  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/werror.c (werror_progress): New function.
 
@@ -10389,22 +10389,22 @@
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Added lock_file.c.
 
-2001-12-02  Niels Möller  <nisse@cuckoo.hack.org>
+2001-12-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lock_file.c, src/lock_file.c: New files. Locking mechanism
 	for the seed file.
 
-2001-11-23  Niels Möller  <nisse@ehand.com>
+2001-11-23  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_process_readdir): Clear errno
 	before calling readdir.
 
-2001-11-22  Niels Möller  <nisse@ehand.com>
+2001-11-22  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_attrib_from_stat): Bugfix, use |,
-	not ||. Noticed by Pontus Sköld.
+	not ||. Noticed by Pontus SkÃ¶ld.
 
-2001-11-20  Niels Möller  <nisse@ehand.com>
+2001-11-20  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/zlib.c (make_zlib_instance): Check return valus from
 	inflateInit and deflateInit.
@@ -10412,12 +10412,12 @@
 	* src/lsh-make-seed.c (update_zlib): New function.
 	(get_dev_mem): Implemented reading of /dev/mem.
 
-2001-11-14  Niels Möller  <nisse@cuckoo.hack.org>
+2001-11-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-make-seed.c (get_dev_random): Implement reading of
 	/dev/random.
 
-2001-11-14  Niels Möller  <nisse@ehand.com>
+2001-11-14  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/Makefile.am.in (bin_PROGRAMS): Added lsh-make-seed.
 
@@ -10426,21 +10426,21 @@
 
 	* src/testsuite/seed-test: New file, testing lsh-make-seed.
 
-2001-11-06  Niels Möller  <nisse@cuckoo.hack.org>
+2001-11-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Bumped version to 1.3.6.
 
-2001-11-02  Niels Möller  <nisse@ehand.com>
+2001-11-02  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/server_session.c (do_eof): Use close_fd_write instead of
 	close_fd_nicely.
 
-2001-10-30  Niels Möller  <nisse@lysator.liu.se>
+2001-10-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/client_session.c (make_client_session_channel): Added
 	fixme-comment.
 
-2001-10-30  Niels Möller  <nisse@ehand.com>
+2001-10-30  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/channel_forward.c (do_channel_forward_eof): Don't call
 	shutdown(), use close_fd_write instead.
@@ -10451,25 +10451,25 @@
 
 	* src/rsa.c: Comment fixes.
 
-2001-10-29  Niels Möller  <nisse@ehand.com>
+2001-10-29  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/testsuite/Makefile.am (TS_MORE_SH): Added lshg-1-test.
 
 	* src/server_session.c (do_eof): Signal EOF on the process' stdin.
 
-2001-10-26  Niels Möller  <nisse@ehand.com>
+2001-10-26  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_process_read): Use the same type
 	for done as for length, UINT32.
 
 	* src/xauth.c (xauth_lookup): Bugfix for ipv6 addresses.
 
-2001-10-25  Niels Möller  <nisse@ehand.com>
+2001-10-25  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/buffer.c (READ_UINT64): Use off_t instead of UINT64,
 	which isn't defined.
 
-2001-10-24  Niels Möller  <nisse@ehand.com>
+2001-10-24  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/read_packet.c (do_read_packet): If we get EOF on a packet
 	boundary, raise EXC_FINISH_READ, not EXC_PROTOCOL.
@@ -10479,25 +10479,25 @@
 
 	* configure.in (BASH): Unset BASH if it has the value "/bin/sh".
 
-2001-10-23  Niels Möller  <nisse@cuckoo.hack.org>
+2001-10-23  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/lshg-1-test: New test program.
 
 	* src/client.c (make_subsystem_request): New function, contributed
-	by Pontus Sköld.
+	by Pontus SkÃ¶ld.
 	(client_options): New option --subsystem.
 	(client_subsystem_session): New function.
 	(client_command_session): Don't ask for a pty by default.
 	(client_maybe_pty): New argument default_pty.
 	(client_argp_parser): Handle subsystem option.
 
-2001-10-22  Niels Möller  <nisse@cuckoo.hack.org>
+2001-10-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Makefile.am.in (MAINTAINERCLEANFILES): Don't use += for
 	assigning this variable.
 	* src/Makefile.am.in (MAINTAINERCLEANFILES): Likewise.
 
-2001-10-15  Niels Möller  <nisse@ehand.com>
+2001-10-15  Niels MÃ¶ller  <nisse@ehand.com>
 
 	Released lsh-1.3.5.
 
@@ -10540,7 +10540,7 @@
 	replacing the code in twofish.c.
 	(make_des3_cbc_instance): Initialize the iv properly.
 
-2001-10-14  Niels Möller  <nisse@cuckoo.hack.org>
+2001-10-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.c (crypto_aes256_cbc_algorithm): Renamed, was
 	aes256_cbc_algorithm.
@@ -10552,7 +10552,7 @@
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted des.c.
 
-2001-10-05  Niels Möller  <nisse@ehand.com>
+2001-10-05  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/arcfour.c, src/rijndael.c: Deleted files. Code moved to
 	crypto.c.
@@ -10568,7 +10568,7 @@
 	* src/crypto.h, src/crypto.c: Deleted aes128_cbc_algorithm and
 	aes192_cbc_algorithm.
 
-2001-10-05  Niels Möller  <nisse@cuckoo.hack.org>
+2001-10-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.c: New file, with glue to Nettle.
 
@@ -10578,7 +10578,7 @@
 	* src/Makefile.am.in (liblsh_a_SOURCES): Added crypto.c. Deleted
 	arcfour.c and rijndael.c.
 
-2001-10-03  Niels Möller  <nisse@ehand.com>
+2001-10-03  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted sexp_commands.c
 	and spki_commands.c.
@@ -10650,7 +10650,7 @@
 	write_raw, without using any commands or io_run.
 	* src/lsh-decode-key.c: Likewise.
 
-2001-10-03  Niels Möller  <nisse@cuckoo.hack.org>
+2001-10-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-export-key.c: No longer needs to include
 	sexp_commands.h.
@@ -10671,7 +10671,7 @@
 	USER_READ_FILE, now takes an abstract_write that will receive the
 	file contents, not command_continuation.
 
-2001-10-02  Niels Möller  <nisse@cuckoo.hack.org>
+2001-10-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c (spki_hash_sexp): New function.
 
@@ -10682,7 +10682,7 @@
 
 	* src/lsh-decode-key.c (do_decode_key): Free CONTENTS properly.
 
-2001-10-02  Niels Möller  <nisse@ehand.com>
+2001-10-02  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/lsh-export-key.c (main): Rewrote to use io_read_file_raw and
 	write_raw, without using any commands or io_run.
@@ -10694,7 +10694,7 @@
 	* src/gc.c (gc_final): Check that root_set is non-null before
 	calling KILL_RESOURCE_LIST.
 
-2001-09-30  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-30  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_write_prepare): Deleted function.
 	(do_consuming_read): Deleted old code to deal with fd->hanged_up.
@@ -10703,7 +10703,7 @@
 
 	* src/io.h (FD_PREPARE): Deleted method.
 
-2001-09-28  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-28  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (do_eof): Use close_fd_nicely instead of
 	write_buffer_close.
@@ -10725,7 +10725,7 @@
 	* src/tcpforward_commands.c (install_forwarded_tcpip_handler):
 	Static command deleted, not used anywhere.
 
-2001-09-28  Niels Möller  <nisse@ehand.com>
+2001-09-28  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/tty.c (tty_setwinsize): Rows and columns were mixed up.
 	Fixed.
@@ -10738,7 +10738,7 @@
 	stdin for manipulating the pty.
 	(do_alloc_pty): Check that we haven't started a process already.
 
-2001-09-27  Niels Möller  <nisse@ehand.com>
+2001-09-27  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/server_session.h (window_change_request_handler): Declare
 	object.
@@ -10762,7 +10762,7 @@
 	* src/spki.c: Likewise.
 	* src/srp_exchange.c (make_srp_entry): Likewise.
 
-2001-09-27  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/resource.c (make_resource_list): Renamed functions, was
 	empty_resource_list. Updated all callers.
@@ -10787,7 +10787,7 @@
 	(make_channel_request_exception_handler): Deleted connection
 	argument.
 
-2001-09-26  Niels Möller  <nisse@ehand.com>
+2001-09-26  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/server_session.c (shell_request_handler,
 	exec_request_handler): Defined as static objects using
@@ -10809,7 +10809,7 @@
 
 	* src/sftp/xmalloc.c: Include string.h.
 
-2001-09-25  Niels Möller  <nisse@ehand.com>
+2001-09-25  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/gc.c (gc_register): Set gc_scheduled flag before creating
 	the gc callout.
@@ -10840,7 +10840,7 @@
 	resources in the root set. Deallocation and checks for leaks is
 	still done only when DEBUG_ALLOC is defined.
 
-2001-09-24  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/xalloc.c (lsh_object_check): Better message on type error.
 	(lsh_object_check_subtype): Likewise.
@@ -10851,7 +10851,7 @@
 	* src/command.c (gaba_apply): Assert that a value has been
 	returned.
 
-2001-09-24  Niels Möller  <nisse@ehand.com>
+2001-09-24  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/scm/gaba.scm (process-expr): Handle empty parameter list.
 
@@ -10903,13 +10903,13 @@
 	(close_fd): Call lsh_oop_cancel_read_fd and
 	lsh_oop_cancel_write_fd before clearing the alive flag.
 
-2001-09-23  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-23  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c: Added trace messages to liboop-related functions.
 
 	* src/write_buffer.c: Include io.h.
 
-2001-09-21  Niels Möller  <nisse@ehand.com>
+2001-09-21  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* configure.in: Check for liboop.
 
@@ -10937,12 +10937,12 @@
 	(do_client_io): Likewise.
 	* src/server_session.c (do_send_adjust): Likewise.
 
-2001-09-19  Niels Möller  <nisse@ehand.com>
+2001-09-19  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/server_keyexchange.c (do_init_server_dh): Fixed bug in the
 	PEER_SSH_DSS_KLUDGE workaround. FIX copied from 1.2 branch.
 
-2001-09-18  Niels Möller  <nisse@ehand.com>
+2001-09-18  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c (lsh_oop_cancel_signal): New function.
 	(do_write_callback): Call FD_PREPARE.
@@ -10950,7 +10950,7 @@
 	(close_fd_nicely): Likewise.
 	(close_fd_read): Likewise.
 
-2001-09-18  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (lsh_oop_glue): New class.
 	(make_lsh_oop_glue): New function.
@@ -10959,33 +10959,33 @@
 	(lsh_oop_fd_callback): New function.
 	(lsh_oop_register_fd): New function.
 
-2001-09-17  Niels Möller  <nisse@ehand.com>
+2001-09-17  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c: Started experimental conversion to use liboop.
 
-2001-09-16  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* doc/lsh.texinfo: Moved table of contents first.
 
 	* src/dsa.c (do_dsa_sign): Display any unexpected algorithm atom
 	before crashing.
 
-2001-09-13  Niels Möller  <nisse@ehand.com>
+2001-09-13  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c (address_info2sockaddr): Fixed debug invocation. FIX
 	copied from 1.2 branch.
 
-2001-09-12  Niels Möller  <nisse@ehand.com>
+2001-09-12  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/werror.c (werror_vformat): Don't crash if %a gets a zero
 	argument. FIXED in 1.2 branch.
 
-2001-09-09  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/des.c (make_des_instance): Use the des_fix_parity function
 	in nettle.
 
-2001-09-05  Niels Möller  <nisse@ehand.com>
+2001-09-05  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/crypto.h: Deleted last traces of idea support.
 	* src/atoms.in: Likewise.
@@ -10997,11 +10997,11 @@
 
 	* configure.in: Bumped version to 1.3.5.
 
-2001-09-04  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.3.4.
 
-2001-09-04  Niels Möller  <nisse@ehand.com>
+2001-09-04  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* doc/lsh.texinfo: Updated for 1.3.4. In particular, added doc on
 	X forwarding, -x, -B, and --log-file options, and encrypted
@@ -11011,7 +11011,7 @@
 	* src/client.c (client_command_session): Ask for a pty also for
 	(supposedly non-interactive) exec sessions.
 
-2001-09-03  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/xauth.c (xauth_process): New function, using XauReadAuth.
 	(xauth_lookup): Use xauth_process instead of XauGetAuthByAddr.
@@ -11024,7 +11024,7 @@
 	* src/xauth.c (xauth_lookup): Deleted address_length argument. Bug
 	fixes.
 
-2001-09-03  Niels Möller  <nisse@ehand.com>
+2001-09-03  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/xauth.c: Rewrote to use libXau.
 
@@ -11051,7 +11051,7 @@
 	* src/suspend.h: Declare suspend_callback as extern. Noticed by
 	Jean-Pierre.
 
-2001-09-03  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client_x11.c: Added comment about observed X11 packets (that
 	seem contrary to the documentation in RFC 1013.
@@ -11073,7 +11073,7 @@
 	* src/client.c (client_maybe_x11): Write a message if DISPLAY not
 	set or it's value doesn't make sense.
 
-2001-09-02  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client.c (make_client_session): Added escape sequences q, v
 	and d, for controlling the verbosity flags.
@@ -11093,7 +11093,7 @@
 	* src/client.h (client_options): Moved RANDOM attribute here, from
 	lsh_options.
 
-2001-09-01  Niels Möller  <nisse@cuckoo.hack.org>
+2001-09-01  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client.c: Moved -x option to lsh.c.
 
@@ -11125,11 +11125,11 @@
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Added client_x11.c.
 
-2001-08-31  Niels Möller  <nisse@ehand.com>
+2001-08-31  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/client.c (client_argp_parser): Implemented -X flag.
 
-2001-08-30  Niels Möller  <nisse@cuckoo.hack.org>
+2001-08-30  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/xauth.c: New file.
 
@@ -11139,15 +11139,15 @@
 	* src/channel_forward.c (init_channel_forward): New function,
 	extracted from make_channel_forward.
 
-2001-08-30  Niels Möller  <nisse@ehand.com>
+2001-08-30  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* configure.in: Bumped version to 1.3.4.
 
-2001-08-29  Niels Möller  <nisse@cuckoo.hack.org>
+2001-08-29  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.3.3.
 
-2001-08-29  Niels Möller  <nisse@ehand.com>
+2001-08-29  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/testsuite: Fixed scripts to work outside of $srcdir.
 
@@ -11157,12 +11157,12 @@
 	an alias for rijndael.
 	(lookup_crypto): Recognize aes256-cbc, aes-cbc and aes.
 
-2001-08-23  Niels Möller  <nisse@ehand.com>
+2001-08-23  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/connection.c (do_exc_connection_handler): Display exception
-	message. Suggested by Jonas Bofjäll. XXX: Fix in 1.2 branch.
+	message. Suggested by Jonas BofjÃ¤ll. XXX: Fix in 1.2 branch.
 
-2001-08-28  Niels Möller  <nisse@cuckoo.hack.org>
+2001-08-28  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/testsuite/run-tests: Use srcdir when starting scripts.
 
@@ -11178,7 +11178,7 @@
 	* src/parse.c (parse_uint16): New function.
 	(parse_string16): New function.
 
-2001-08-27  Niels Möller  <nisse@cuckoo.hack.org>
+2001-08-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/testsuite/Makefile.am (EXTRA_DIST): Use EXTRA_DIST, not
 	DISTFILES. cd to $srcdir when running the tests.
@@ -11213,7 +11213,7 @@
 
 	* configure.in: Configure the src/sftp subdirectory.
 
-2001-08-26  Niels Möller  <nisse@cuckoo.hack.org>
+2001-08-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/export-1-test: Don't use $srcdir for finding
 	lsh-export-key.
@@ -11232,7 +11232,7 @@
 	(do_spawn_subsystem): New function.
 	(make_subsystem_handler): New function.
 
-2001-08-21  Niels Möller  <nisse@ehand.com>
+2001-08-21  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/client_userauth.c (make_client_publickey_auth): Initialize
 	TYPE attribute properly.
@@ -11263,7 +11263,7 @@
 	* src/client_userauth.c (format_userauth_none): New function.
 	(make_client_none_auth): New function.
 
-2001-08-12  Niels Möller  <nisse@cuckoo.hack.org>
+2001-08-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client.c (do_exit): New callback function.
 	(make_client_session): Bind the sequence <escape> . to exit.
@@ -11275,11 +11275,11 @@
 	doesn't return NULL. XXX: Fix in 1.2 branch.
 	(options2info): Use self->gateway. XXX: Fix in 1.2 branch.
 
-2001-07-30  Niels Möller  <nisse@cuckoo.hack.org>
+2001-07-30  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/export-1-test: Fixed invocation of compare_output.
 
-2001-07-06  Niels Möller  <nisse@cuckoo.hack.org>
+2001-07-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io_commands.c (io_write_file_command): Bugfix.
 
@@ -11323,14 +11323,14 @@
 	* src/client.c (client_options2remote): Likewise.
 	(client_options2actions) Likewise.
 
-2001-07-05  Niels Möller  <nisse@cuckoo.hack.org>
+2001-07-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (TS_SH): Added export-1-test.
 
 	* src/lsh-export-key.c (ssh2_print_command): Inherit command_2.
 	Don't use command_simple.
 
-2001-07-04  Niels Möller  <nisse@cuckoo.hack.org>
+2001-07-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/command.c (collect_state_1): Deleted class.
 	(collect_state_1): Deleted class.
@@ -11389,7 +11389,7 @@
 
 	* src/combinators.c (command_Cp): Bugfix, changed argument order.
 
-2001-07-03  Niels Möller  <nisse@ehand.com>
+2001-07-03  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/testsuite/runtests (srcdir): By default, use `pwd`, not ".".
 
@@ -11430,7 +11430,7 @@
 
 	* configure.in: Bumped version to 1.3.3.
 
-2001-07-02  Niels Möller  <nisse@cuckoo.hack.org>
+2001-07-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/combinators.c (command_I): Redefined using DEFINE_COMMAND.
 	Updated users as the type was changed in the process.
@@ -11464,7 +11464,7 @@
 	COMMAND_SIMPLE_CALL.
 	(do_command_unimplemented): Deleted function.
 
-2001-06-27  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* acinclude.m4: Added template for socklen_t definition.
 
@@ -11488,14 +11488,14 @@
 	connection's exception handler deal with EXC_PROTOCOL (fixed
 	somewhat differently in the 1.2.x branch).
 
-2001-06-26  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Deleted IDEA support.
 
 	* src/process_atoms (atom2define): Changed invocation of tr to be
 	compatible with the Solaris 8 tr.
 
-2001-06-26  Niels Möller  <nisse@ehand.com>
+2001-06-26  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/client_escape.c (NEWLINE): New macro.
 	(do_escape_handler): Reset state to GOT_NONE appropriately.
@@ -11504,7 +11504,7 @@
 	label.
 	(make_client_session): Bind ^Z to suspend.
 
-2001-06-24  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/xalloc.h (CHECK_TYPE) [DEBUG_ALLOC]: Added parentheses.
 	* src/xalloc.h (CHECK_SUBTYPE) [DEBUG_ALLOC]: Likewise.
@@ -11517,11 +11517,11 @@
 	* src/client.c (make_client_session): Check if stdin is a tty,
 	when deciding on the default for escape char handling.
 
-2001-06-20  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-20  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client_escape.c (do_escape_handler): Fixed the EOF case.
 
-2001-06-19  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/client_session.c (client_read_stdin): New function, for
 	installing the escape-char handler on stdin.
@@ -11544,7 +11544,7 @@
 
 	* configure.in: Bumped version to 1.3.2.
 
-2001-06-17  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/rsync/rsync.h: Include <inttypes.h>, not <stdint.h>.
 
@@ -11564,7 +11564,7 @@
 
 	* src/twofish.c: Adapted to nettle.
 
-2001-06-15  Niels Möller  <nisse@ehand.com>
+2001-06-15  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/blowfish.c: nettle updates.
 	* src/serpent.c: Likewise.
@@ -11573,7 +11573,7 @@
 
 	* misc/bootstrap.sh: Invoke the nettle .bootstrap script.
 
-2001-06-13  Niels Möller  <nisse@ehand.com>
+2001-06-13  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* misc/bootstrap.sh: Bootstrap the nettle subdirectory.
 
@@ -11582,7 +11582,7 @@
 	* configure.in (CPPFLAGS): Add -LSH and -I$srcdir/src, needed by
 	src/rsync/.
 
-2001-06-12  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c, src/dsa_keygen.c, src/md5.c, src/rijndael.c,
 	src/sha.c: Adapted to the nettle API.
@@ -11591,23 +11591,23 @@
 	* src/Makefile.am.in: Likewise.
 	* src/testsuite/Makefile.am: Likewise.
 
-2001-06-09  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_consuming_read): In the EOF case, call
 	close_fd_read after A_WRITE.
 
-2001-06-07  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-07  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_kill_io_backend): Let close_fd do it's work.
 
-2001-06-06  Niels Möller  <nisse@cuckoo.hack.org>
+2001-06-06  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (close_fd): Really close the fd, and invoke any close
 	callback.
 	(io_iter): Simplified handling of closed files. Simply unlink
 	them, close_fd has to do the rest of the work.
 
-2001-05-29  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-29  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* acinclude.m4: AC_CHECK_MEMBER: Deleted definition (a similar
 	macro is included in autoconf-2.50).
@@ -11621,12 +11621,12 @@
 	* src/unix_user.c: Update for autoconf-2.50, changed HAVE_UT_NAME
 	to HAVE_STRUCT_UTMP_NAME, and similarly for other defines.
 
-2001-05-23  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-23  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Some cleanup, and update for autoconf-2.50. Some
 	more work needed.
 
-2001-05-17  Niels Möller  <nisse@ehand.com>
+2001-05-17  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* configure.in: Set SRP_PROGRAM.
 
@@ -11640,13 +11640,13 @@
 	* src/unix_user.c: Fixed dummy definition of struct utmp (spotted
 	by Tomi Ollila).
 
-2001-05-16  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Bumped version to 1.3.1.
 
 	* Released 1.3.0.
 
-2001-05-15  Niels Möller  <nisse@ehand.com>
+2001-05-15  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/scm/gaba.scm: Some more cleanup.
 
@@ -11670,32 +11670,32 @@
 	(do-struct-free-function): Deleted.
 	(do-class): Deleted.
 
-2001-05-15  Niels Möller  <nisse@ehand.com>
+2001-05-15  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/scm/gaba.scm: Rewrote the functions for generating C code.
 
-2001-05-15  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-15  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Updated version number to 1.3.0.
 
-2001-05-14  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/gc.c (gc) [!DEBUG_ALLOC]: Don't use number_of_strings.
 
-2001-05-11  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/functions.sh (PIDFILE): New variable, with
 	absolute path to the pid-file. FIXED in 1.2 branch.
 	(spawn_lshd): $PIDFILE. FIXED in 1.2 branch.
 
-2001-05-03  Niels Möller  <nisse@ehand.com>
+2001-05-03  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/lshd.c (main): Start the background randomness poll *after*
 	forking into the background. FIXED in 1.2 branch.
 
 	* src/testsuite/functions.sh (spawn_lshd): Use --daemon flag.
 
-2001-05-02  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* sexp_streamed_parser.c: Deleted file.
 
@@ -11713,7 +11713,7 @@
 
 	* src/userauth.h (lsh_user): Use const char ** for argv.
 
-2001-05-01  Niels Möller  <nisse@cuckoo.hack.org>
+2001-05-01  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/unix_interact.c (unix_read_password): Use const prompt
 	string.
@@ -11748,7 +11748,7 @@
 	* src/sexp.c: Constification, use const struct lsh_string for all
 	sexp-related strings.
 
-2001-04-26  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-26  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/scm/gaba.scm: Added const type modifier.
 
@@ -11786,7 +11786,7 @@
 	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted
 	sexp_streamed_parser.c.
 
-2001-04-25  Niels Möller  <nisse@ehand.com>
+2001-04-25  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/keyexchange.c (do_handle_newkeys): Added verbose message
 	when receiving NEWKEYS.
@@ -11797,7 +11797,7 @@
 	compatibility with "SSH-1.99-2.0.13 (non-commercial)". XXX Fix in
 	1.2 branch?
 
-2001-04-17  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (TS_MORE_SH): Added tests
 	lshg-cat-test, lshg-cat-2-test and ssh1-fallback-test.
@@ -11831,7 +11831,7 @@
 	* src/client_session.c (make_client_session_channel): Register
 	stdio files as resources.
 
-2001-04-12  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-12  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lshd.c (main_argp_parser): Bugfix: Use the supplied
 	interface! Fixed in 1.2 branch.
@@ -11853,7 +11853,7 @@
 	(do_exc_finish_read_handler): Close fd immediately on
 	EXC_FINISH_IO. Fixed in 1.2 branch.
 
-2001-04-11  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/userauth.h (lsh_process): New class.
 	(lsh_user): The fork_method now returns the child as an
@@ -11887,11 +11887,11 @@
 
 	* src/client_escape.c: New file.
 
-2001-04-10  Niels Möller  <nisse@ehand.com>
+2001-04-10  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/client.c (make_client_session): Use set_error_nonblocking.
 
-2001-04-09  Niels Möller  <nisse@ehand.com>
+2001-04-09  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/werror.c (set_error_nonblocking): New function.
 	(set_error_stream): Deleted WITH_POLL argument.
@@ -11901,7 +11901,7 @@
 	* ANNOUNCE: Changed "COPYRIGHT" to "LICENSE", by rms' request.
 	Fixed in 1.2 branch.
 
-2001-04-08  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-08  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (main_argp_parser): Deleted old -L handling (moved to
 	client.c).
@@ -11990,7 +11990,7 @@
 	(io_listen_local): Likewise.
 	(io_connect_local): Likewise.
 
-2001-04-05  Niels Möller  <nisse@ehand.com>
+2001-04-05  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/testsuite/functions.sh (run_lsh): Quote the command better.
 
@@ -12014,7 +12014,7 @@
 	* src/Makefile.am.in (atoms_gperf.c): Massage gperf output to
 	reduce the number of compilation warnings.
 
-2001-04-05  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-05  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/gc.c (gc_final): Check for leaked strings, and write any
 	clues.
@@ -12031,7 +12031,7 @@
 	the correct order.
 	(werror_vformat): Likewise.
 
-2001-04-04  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (CFLAGS): Reintroduced -O0, to make
 	compilation faster.
@@ -12090,20 +12090,20 @@
 	* src/sftp/client.c, src/sftp/client.h, src/sftp/werror.c,
 	src/sftp/werror.h:  New files.
 
-2001-04-03  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/testsuite/put-1-test: Check that the new file exists.
 	Use $TESTHOME for referring to the local file.
 
 	* src/sftp/sftp-test-client.c (do_put): Fixes and simplifications.
 
-2001-04-03  Niels Möller  <nisse@ehand.com>
+2001-04-03  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/sftp-test-client.c (do_open): New function.
 	(do_close): New function.
 	(do_get): Use do_open and do_close.
 
-2001-04-02  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Bumped version to 1.2.
 
@@ -12112,14 +12112,14 @@
 	* src/Makefile.am.in (noinst_SCRIPTS): Added the experimental lcp
 	script.
 
-2001-04-02  Niels Möller  <nisse@ehand.com>
+2001-04-02  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_process_read): Fixed size passed to
 	pread.
 	(debug): Added a prototype saying that it takes printf-style
 	arguments.
 
-2001-04-02  Niels Möller  <nisse@lysator.liu.se>
+2001-04-02  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/sftp/sftp-server.c (sftp_process_realpath): Fixed invocation
 	of pathconf().
@@ -12132,7 +12132,7 @@
 	* src/sftp/testsuite/run-tests: Use /bin/bash, as we use
 	bash-specific parameter expansion.
 
-2001-04-01  Niels Möller  <nisse@cuckoo.hack.org>
+2001-04-01  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/Makefile.am (sftp_server_SOURCES,
 	sftp_test_client_SOURCES): Added xmalloc.c.
@@ -12209,13 +12209,13 @@
 
 	* src/sftp/configure.in: Added to cvs.
 
-2001-03-31  Niels Möller  <nisse@cuckoo.hack.org>
+2001-03-31  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/acconfig.h: Added HAVE_GCC_ATTRIBUTE.
 
 	* src/sftp/.bootstrap: New file.
 
-2001-03-30  Niels Möller  <nisse@ehand.com>
+2001-03-30  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/sftp/sftp-test-client.c (do_ls): Print the long name.
 
@@ -12233,17 +12233,17 @@
 	* src/sftp/Makefile.am: Use AUTOMAKE_OPTIONS = foreign, added
 	sftp-test-client.
 
-2001-03-28  Niels Möller  <nisse@ehand.com>
+2001-03-28  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/lcp (split spec): New function for splitting arguments.
 	Checked in first working version.
 
-2001-03-27  Niels Möller  <nisse@ehand.com>
+2001-03-27  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* doc/srp-spec.nroff: Bumped version number, updated dates, and
 	added a section Further questions.
 
-2001-03-26  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-26  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.9.
 
@@ -12258,7 +12258,7 @@
 	* src/testsuite/keygen-1-test: Use NIST security level 2 (640
 	bits), for speed.
 
-2001-03-25  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-25  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/functions.sh (spawn_lshd): Use kill -9 to stop
 	lshd; otherwise lshd catching SIGTERM leads to timing problems.
@@ -12332,23 +12332,23 @@
 
 	* acconfig.h (WITH_GCOV): New symbol.
 
-2001-03-24  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-24  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/lsh_proxy.c (main): Use listen_callback instead of
 	simple_listen.
 
-2001-03-22  Niels Möller  <nisse@ehand.com>
+2001-03-22  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/alist.c (alist_add): #if:ed out unused function.
 
-2001-03-21  Niels Möller  <nisse@ehand.com>
+2001-03-21  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/client_password.c: Deleted.
 
 	* src/lshd.c (install_terminate_handler): Catch SIGTERM and
 	arrange for exit(0) to be called on termination.
 
-2001-03-20  Niels Möller  <nisse@ehand.com>
+2001-03-20  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/lshg.c: Include client.h (used to include client.c. Argh!).
 
@@ -12369,7 +12369,7 @@
 	* src/Makefile.am.in (class-map): Let the shell find the awk
 	program.
 
-2001-03-19  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-19  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/scm/gaba.scm (class-annotate): New function.
 
@@ -12381,7 +12381,7 @@
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Removed blocking_write.c.
 
-2001-03-16  Niels Möller  <nisse@ehand.com>
+2001-03-16  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* ANNOUNCE: Updated, preparing for lsh-1.2.
 
@@ -12397,12 +12397,12 @@
 	* src/resource.c (do_remember_resource): Bugfix: Use
 	KILL_RESOURCE, not KILL.
 
-2001-03-15  Niels Möller  <nisse@ehand.com>
+2001-03-15  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* doc/srp-spec.nroff: Fixed definition of m2, pointed out by Tom
 	Holroyd.
 
-2001-03-14  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-14  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (class-map): Added rule for generating
 	class-map.
@@ -12410,7 +12410,7 @@
 	* src/make-class-map: New awk script for describing the class
 	hierarchy. Almost working.
 
-2001-03-14  Niels Möller  <nisse@ehand.com>
+2001-03-14  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/tcpforward.h (remote_port): Deleted c attribute.
 
@@ -12482,13 +12482,13 @@
 
 	* src/alist.h: Deleted ALIST_KEYS.
 
-2001-03-13  Niels Möller  <nisse@ehand.com>
+2001-03-13  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/dsa_keygen.h, src/packet_ignore.c, src/packet_ignore.h,
 	src/password.c, src/password.h, src/proxy_channel.h,
 	src/session.c, src/session.h:Removed obsolete files.
 
-2001-03-12  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-12  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version to 1.1.8.
 
@@ -12528,11 +12528,11 @@
 	guile-compat.scm. scsh already provides string-upcase, and the
 	definition here trigs a bug in string->list in scsh-0.5.2.
 
-2001-03-12  Niels Möller  <nisse@ehand.com>
+2001-03-12  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c (io_iter): Handle POLLERR.
 
-2001-03-07  Niels Möller  <nisse@cuckoo.localdomain>
+2001-03-07  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* doc/TODO: scsh-0.5.2 is truly free software! Removed paragraph
 	describing the scsh situation.
@@ -12549,24 +12549,24 @@
 	(char-set=?): Removed function, scsh-0.5.2 provides a similar
 	function named char-set=.
 
-2001-02-28  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-28  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/client.c (init_client_options): Initialize stderr_fork = 1.
 	(client_options): New option --no-cvs-workaround.
 	(client_argp_parser): Handle --no-cvs-workaround.
 
-2001-02-25  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-25  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* Refer to a function foo as "foo", not "foo()", in messages and
 	comments. (GNU coding standard).
 
-2001-02-22  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-22  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/randomness.c (do_arcfour_random): Spelling fix.
 
 	* Released lsh-1.1.7.
 
-2001-02-22  Niels Möller  <nisse@ehand.com>
+2001-02-22  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c (close_fd_read): New function.
 	(do_buffered_read): Call close_fd_read on EOF. This stops reading
@@ -12574,12 +12574,12 @@
 	callback.
 	(do_consuming_read): Likewise.
 
-2001-02-21  Niels Möller  <nisse@ehand.com>
+2001-02-21  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c (do_consuming_read): Added an assert do check that
 	want_read is true. Check fd->hanged_up first.
 
-2001-02-21  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-21  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/srp_exchange.c (srp_format_proofs): First argument to
 	MAKE_MAC must not have side effects.
@@ -12598,11 +12598,11 @@
 	* src/command.h (COMMAND_CALL): Generate a compile error if the
 	first argument is not an lvalue.
 
-2001-02-20  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-20  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* doc/HACKING: Added section CAVEAT.
 
-2001-02-20  Niels Möller  <nisse@ehand.com>
+2001-02-20  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/io.c, src/io.h, src/reaper.c, src/unix_interact.c: Added
 	volatile modifier to all uses of sig_atomic_t.
@@ -12610,12 +12610,12 @@
 	* src/client_userauth.c (do_userauth_success): Use verbose, not
 	werror, for success message.
 
-2001-02-19  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-19  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/Makefile.am (TS_MORE_PROGS): Added
 	lshg-tcpip-local-test.
 
-2001-02-18  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-18  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/tcpip-local-test: Don't pass -r to tcpconnect.
 	grep the output from tcpconnect.
@@ -12642,11 +12642,11 @@
 
 	* configure.in: Bumped version to 1.1.7.
 
-2001-02-13  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-13  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
-	* src/sftp/sftp-test-client.c: Added more code from Pontus Sköld.
+	* src/sftp/sftp-test-client.c: Added more code from Pontus SkÃ¶ld.
 
-2001-02-13  Niels Möller  <nisse@ehand.com>
+2001-02-13  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/channel.c (do_exc_finish_channel_handler): Check
 	channel_count to determine if there are channels left. The code
@@ -12661,7 +12661,7 @@
 	* src/bignum.c (bignum_random): Added a comment about biased
 	numbers.
 
-2001-02-11  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-11  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/sftp/sftp-server.c: Updated copyright notice to mention
 	Markus Friedl.
@@ -12672,7 +12672,7 @@
 	* src/sftp/sftp-test-client.c: Added dummy functions do_ls,
 	do_get, do_put and do_stat, and call them from main.
 
-	* src/sftp/sftp-server.c: Merged code from Pontus Sköld.
+	* src/sftp/sftp-server.c: Merged code from Pontus SkÃ¶ld.
 	(sftp_put_longname_mode): New function.
 	(sftp_put_longname): New function.
 	(sftp_put_filename): New function.
@@ -12697,29 +12697,29 @@
 	to allow redefining existing macros.
 	* configure.in: Quote the second argument to AC_SEARCH_LIBGMP.
 
-2001-02-08  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-08  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/keyexchange.c (do_kexinit_filter): Don't crash if there are
 	no appropriate hostkeys.
 
-2001-02-08  Niels Möller  <nisse@ehand.com>
+2001-02-08  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/dsa.c (generic_dsa_sign): Commented out debug statement that
 	leaks information about the secret key.
 
-2001-02-07  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-07  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/algorithms.c (filter_algorithms): Document that the
 	functions may return NULL, and never returns an empty list.
 
-2001-02-04  Niels Möller  <nisse@lysator.liu.se>
+2001-02-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Released lsh-1.1.6.
 
 	* src/ssh-conv (SSH_CONV): Got rid of the bash:isms "if !" and
 	"&>".
 
-2001-02-04  Niels Möller  <nisse@cuckoo.localdomain>
+2001-02-04  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* doc/lsh.texinfo (Action options): Edited the description of the
 	-g, not calling it "gateway mode", as the word "gateway" is
@@ -12766,7 +12766,7 @@
 
 	* src/testsuite/conv-1-test: Renamed conv-test.
 
-2001-01-31  Niels Möller  <nisse@ehand.com>
+2001-01-31  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/server_publickey.c (do_authenticate): Include algorithm atom
 	in "Unknown publickey algorithm"-message.
@@ -12789,7 +12789,7 @@
 	* src/io.c (io_iter): Changed POLLHUP handling some more. Now
 	POLLHUP && !POLLIN is treated as EOF.
 
-2001-01-31  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-31  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/lsh-cat-test: Use compare_output.
 
@@ -12835,7 +12835,7 @@
 	read() if fd->hanged_up is set.
 	(init_file): Initialize hanged_up.
 
-2001-01-30  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-30  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/io.c (io_iter): Improved handling of POLLHUP. Set the
 	fd->hanged_up flag before calling FD_READ().
@@ -12848,13 +12848,13 @@
 	channel_close.
 	(channel_eof_handler): Moved the channel close decision here.
 
-2001-01-29  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-29  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/ssh-conv: Support ssh-rsa keys.
 
 	* src/lsh-decode-key.c (do_decode_key): Support ssh-rsa keys.
 
-2001-01-24  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-24  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/spki_commands.c (parse_private_key): Generate keypairs with
 	algorithms ATOM_SSH_RSA, ATOM_SPKI_SIGN_RSA and ATOM_SPKI_SIGN_DSS.
@@ -12894,12 +12894,12 @@
 
 	* acconfig.h: Added SBINDIR.
 
-2001-01-23  Niels Möller  <nisse@ehand.com>
+2001-01-23  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* src/tcpforward.c (do_tcpip_eof): Call shutdown(socket, SHUT_WR),
 	to signal to the local peer that there's no more data.
 
-2001-01-18  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-18  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/lshd.c (KERBEROS_HELPER): Added /sbin/ between PREFIX and the
 	program name. Note that PREFIX seems to get a bogus value "NONE"
@@ -12907,14 +12907,14 @@
 
 	* src/sftp: New directory. Not compiled or used by default.
 
-2001-01-17  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-17  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/lsh_types.h: Improved formatting.
 
 	* src/channel.c (alloc_channel): Use UINT32, not int, for
 	new_size.
 
-2001-01-15  Niels Möller  <nisse@ehand.com>
+2001-01-15  Niels MÃ¶ller  <nisse@ehand.com>
 
 	* misc/bootstrap.sh: Fixed comment.
 
@@ -12924,17 +12924,17 @@
 	* Added Markus Friedl's sftp-server.c to contrib, for some random
 	hacking.
 
-2001-01-10  Niels Möller  <nisse@lysator.liu.se>
+2001-01-10  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/pkcs5-test.c: Include stdlib.h instead of getopt.h.
 
-2001-01-10  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-10  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.5.
 
 	* configure.in: Bumped version to 1.1.5.
 
-2001-01-09  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-09  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/rsync/send.c: Deleted old code.
 
@@ -12973,22 +12973,22 @@
 	(rsync_receive) STATE_LITERAL: Update avail_in and next_in after
 	calling rsync_update.
 
-2001-01-02  Niels Möller  <nisse@cuckoo.localdomain>
+2001-01-02  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/unix_random.c (random_sources): Fixed bug in initialization
 	of the HAS_ALTERNATIVE fields. Noted by jps.
 
-2000-12-28  Niels Möller  <nisse@cuckoo.localdomain>
+2000-12-28  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c: Don't include unistd.h.
 	(main_argp_parser): Fixed bogus references to optarg (reported by
 	jps).
 
-2000-12-23  Niels Möller  <nisse@cuckoo.localdomain>
+2000-12-23  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.4.
 
-2000-12-23  Niels Möller  <nisse@cuckoo.localdomain>
+2000-12-23  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (EXTRA_DIST): Removed references to the
 	getopt files getopt.c, getopt.h and getopt1.c.
@@ -12996,11 +12996,11 @@
 	* configure.in: Removed getopt-related tests (previously just
 	commented out).
 
-2000-12-23  Niels Möller  <nisse@lysator.liu.se>
+2000-12-23  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/getopt.c, src/getopt1.c, src/getopt.h: Removed.
 
-2000-12-22  Niels Möller  <nisse@lysator.liu.se>
+2000-12-22  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (LDADD): Link with libargp.
 	($(srcdir)/%.c): Fix $(srcdir)-handling.
@@ -13010,7 +13010,7 @@
 
 	* Makefile.am.in (bootstrap): New target.
 
-2000-12-11  Niels Möller  <nisse@cuckoo.localdomain>
+2000-12-11  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c (do_options2identities): Pass two alists to
 	make_spki_read_userkeys (reported by jps).
@@ -13022,20 +13022,20 @@
 	* src/abstract_crypto.c (crypt_string_unpad): Adjust length
 	properly (reported by jps).
 
-2000-12-09  Niels Möller  <nisse@cuckoo.localdomain>
+2000-12-09  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (LDADD, lshg_LDADD): Use @LIBARGP@
 
 	* misc/bootstrap.sh: Use set -e. Bootstrap in the src/argp
 	subdirectory.
 
-2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
+2000-11-27  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Use AC_LIB_ARGP.
 
 	* acinclude.m4 (AC_LIB_ARGP): New test.
 
-2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
+2000-11-27  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.3.
 
@@ -13082,7 +13082,7 @@
 	* src/unix_random.c: Likewise.
 	* src/zlib.c: Likewise.
 
-2000-11-26  Niels Möller  <nisse@cuckoo.localdomain>
+2000-11-26  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/parse.c (parse_rest, parse_rest_copy): Renamed parse_rest to
 	parse_rest_copy. New function parse_rest.
@@ -13182,7 +13182,7 @@
 
 	* configure.in: Bumped version to 1.1.3.
 
-2000-11-20  Niels Möller  <nisse@cuckoo.localdomain>
+2000-11-20  Niels MÃ¶ller  <nisse@cuckoo.localdomain>
 
 	* src/algorithms.h, src/client.h, src/client_keyexchange.c,
 	src/client_userauth.c, src/connection.c, src/format.h,

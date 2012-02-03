@@ -4,7 +4,7 @@
 
 /* lsftp, an implementation of the sftp protocol
  *
- * Copyright (C) 2001, Pontus Sköld
+ * Copyright (C) 2001, Pontus SkÃ¶ld
  * Portions of this code originately from the readline manual
  *
  * This program is free software; you can redistribute it and/or
@@ -373,7 +373,7 @@ int
 com_about(const char *arg UNUSED, const char *command UNUSED)
 {
   printf("%s\n", PACKAGE_STRING);
-  printf("Copyright (C) 2001, Pontus Sköld and various contributors\n\n");
+  printf("Copyright (C) 2001, Pontus SkÃ¶ld and various contributors\n\n");
 
   printf("This program is free software, you may distribute it under the\n");
   printf("terms of the GNU Genereal Public License. \n\n");

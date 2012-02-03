@@ -4,7 +4,7 @@
 
 /* lsftp, an implementation of the sftp protocol
  *
- * Copyright (C) 2001, Pontus Sköld
+ * Copyright (C) 2001, Pontus SkÃ¶ld
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as

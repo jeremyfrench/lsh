@@ -55,7 +55,7 @@
  *    fixed return value to comply with C99
  *    fixed handling of snprintf(NULL, ...)
  *
- * Niels Möller <nisse@lysator.liu.se> 2004-03-05
+ * Niels MÃ¶ller <nisse@lysator.liu.se> 2004-03-05
  *    fixed calls to isdigit to use unsigned char.
  *    fixed calls to va_arg; short arguments are always passed as int.
  *

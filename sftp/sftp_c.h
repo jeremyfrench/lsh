@@ -2,13 +2,13 @@
  * sftp_c.h
  *
  * Portions of code taken from the sftp test client from
- * the sftp server of lsh by Niels Möller and myself.
+ * the sftp server of lsh by Niels MÃ¶ller and myself.
  *
  */
 
 /* lsftp, an implementation of the sftp protocol
  *
- * Copyright (C) 2001 Pontus Sköld
+ * Copyright (C) 2001 Pontus SkÃ¶ld
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as

@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2001 Markus Friedl, Niels Möller, Pontus Sköld
+ * Copyright (C) 2001 Markus Friedl, Niels MÃ¶ller, Pontus SkÃ¶ld
  *
  * Also includes parts from GNU fileutils, Copyright by Free Software
  * Foundation, Inc.

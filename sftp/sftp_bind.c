@@ -2,13 +2,13 @@
  * sftp_bind.c - bindings for sftp.c
  *
  * Portions of code taken from the sftp test client from 
- * the sftp server of lsh by Niels Möller and myself.
+ * the sftp server of lsh by Niels MÃ¶ller and myself.
  *
  */
 
 /* lsftp, an implementation of the sftp protocol
  *
- * Copyright (C) 2001 Pontus Sköld
+ * Copyright (C) 2001 Pontus SkÃ¶ld
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -2234,7 +2234,7 @@ lsftp_handle_realpath(struct sftp_callback *s,
   return s->retval;
 } 
 
-/* FIXME: We could use a general change_attrib function. */
+/* FIXME: We could use a general change_attrib function.Â */
 int
 lsftp_do_chown(const char *file, uint32_t uid, uint32_t gid, const char *command)
 {

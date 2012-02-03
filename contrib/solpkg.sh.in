@@ -118,7 +118,7 @@ fi
 if [ "x$COPYRIGHT" = xyes ]; then
   cat - >copyright <<EOF
 LSH - a GNU implementation of the Secure Shell protocols
-written by Niels Möller. Solaris packaging by Pontus Sköld.
+written by Niels MÃ¶ller. Solaris packaging by Pontus SkÃ¶ld.
 
 COPYRIGHT
 

@@ -5,7 +5,7 @@
 .lt 7.2i
 .nr LL 7.2i
 .nr LT 7.2i
-.ds LF Niels Möller
+.ds LF Niels MÃ¶ller
 .ds RF FORMFEED[Page %]
 .ds CF
 .ds LH INTERNET-DRAFT
@@ -14,7 +14,7 @@
 .hy 0
 .ad l
 .in 0
-INTERNET-DRAFT                                              Niels Möller
+INTERNET-DRAFT                                              Niels MÃ¶ller
 draft-nisse-secsh-srp-01.txt                               27 March 2001
 Expires in September 2001
 
@@ -408,10 +408,10 @@ though.
 Author's Address
 
 .nf
-Niels Möller
+Niels MÃ¶ller
 LSH author
-Slätbaksvägen 48
-120 51 Årsta
+SlÃ¤tbaksvÃ¤gen 48
+120 51 Ã…rsta
 Sweden
 
 EMail: nisse@lysator.liu.se

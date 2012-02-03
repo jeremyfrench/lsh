@@ -1,7 +1,7 @@
 This patch, relative to gcc-2.95.3, improves gcov support by properly
 locking the output files that are written at process exit.
 
-/Niels Möller <nisse@lysator.liu.se>
+/Niels MÃ¶ller <nisse@lysator.liu.se>
 
 --- libgcc2.c.orig	Fri Jun 11 05:11:43 1999
 +++ libgcc2.c	Thu Mar 22 20:48:39 2001

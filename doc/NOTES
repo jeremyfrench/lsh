@@ -319,15 +319,15 @@ The other functions can be found at
 
 
 3605942 idag 07:59 /32 rader/ assar
-Kommentar till text 3578895 av Niels Möller ()
+Kommentar till text 3578895 av Niels MÃ¶ller ()
 Mottagare: C - (den) portabla(?) assemblern <7482>
-Ärende: const
+Ã„rende: const
 ------------------------------------------------------------
-tyvärr räcker inte det där eftersom det finns kompilatorer som är
-(eller har varit i ett tidigare liv) gcc men inte förstår
-__attribute__ för det.
+tyvÃ¤rr rÃ¤cker inte det dÃ¤r eftersom det finns kompilatorer som Ã¤r
+(eller har varit i ett tidigare liv) gcc men inte fÃ¶rstÃ¥r
+__attribute__ fÃ¶r det.
 
-så dår får man göra:
+sÃ¥ dÃ¥r fÃ¥r man gÃ¶ra:
 
 dnl
 dnl Test for __attribute__

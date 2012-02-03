@@ -6,7 +6,7 @@
 # from the "upstream" source. A proper debian package would use
 # somewhat different conventions.
 #
-# Written by Niels Möller
+# Written by Niels MÃ¶ller
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/local/sbin/lshd

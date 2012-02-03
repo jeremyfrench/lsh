@@ -1,4 +1,4 @@
-2010-12-14  Niels Möller  <nisse@lysator.liu.se>
+2010-12-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* tag.c (spki_string_alloc): Renamed and updated callers, from...
 	(spki_string_new): ... old name.
@@ -17,7 +17,7 @@
 	(list_format): Use const input.
 	(spki_tag_format): Likewise. Also use const for some local pointers.
 
-2010-10-26  Niels Möller  <nisse@turmalin.hack.org>
+2010-10-26  Niels MÃ¶ller  <nisse@turmalin.hack.org>
 
 	* tools/spki-delegate.c (parse_options): Deleted -?, and fixed
 	handling of bad options.
@@ -27,7 +27,7 @@
 	options. Deleted -?, and fixed handling of bad options.
 	* tools/spki-make-signature.c (parse_options): Likewise.
 
-2010-06-07  Niels Möller  <nisse@lysator.liu.se>
+2010-06-07  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* verify.c (spki_verify_rsa): Stricter check for end of expression
 	for key and signature.
@@ -60,7 +60,7 @@
 	hash.
 	(struct spki_principal): Deleted flags field.
 
-2010-06-04  Niels Möller  <nisse@lysator.liu.se>
+2010-06-04  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* spki-types.in: Added sha256 and dsa-sha256.
 
@@ -68,36 +68,36 @@
 	(spki_verify_dsa_sha256): New function.
 	(spki_verify): Recognize dsa-sha256 keys.
 
-2010-03-30  Niels Möller  <nisse@lysator.liu.se>
+2010-03-30  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* verify.c (spki_verify_dsa): Updated for Nettle's dsa_sha1_verify
 	rename.
 
-2010-03-24  Niels Möller  <nisse@lysator.liu.se>
+2010-03-24  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* tools/sign.c (spki_sign_digest): Check return value from
 	rsa_md5_sign_digest and rsa_sha1_sign_digest.
 
-2008-08-26  Niels Möller  <nisse@lysator.liu.se>
+2008-08-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Makefile.in (tags-here): Put TAGS file in the source directory.
 	* testsuite/Makefile.in (tags): Likewise.
 	* tools/Makefile.in (tags): Likewise.
 
-2007-09-18  Niels Möller  <nisse@lysator.liu.se>
+2007-09-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* tools/Makefile.in: Added dummy check target.
 
-2007-09-11  Niels Möller  <nisse@lysator.liu.se>
+2007-09-11  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* tools/Makefile.in: Fixed linking with getopt.
 
-2007-05-14  Niels Möller  <niels@s3.kth.se>
+2007-05-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.in (TEST_OBJS): Link with -lhogweed.
 	* tools/Makefile.in (PROGRAM_LIBS): Likewise.
 
-2007-05-08  Niels Möller  <nisse@lysator.liu.se>
+2007-05-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* tools/Makefile.in (clean): Fixed deletion of object files.
 
@@ -107,30 +107,30 @@
 
 	* Makefile.in (distclean-here): Remove dependency files *.d.
 
-2007-05-03  Niels Möller  <nisse@lysator.liu.se>
+2007-05-03  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* COPYING.LIB: New file.
 
 	* Makefile.in: Use -Inettle_builddir and -Lnettle_builddir.
 	(DISTFILES): Added config.sub.
 
-2007-04-26  Niels Möller  <nisse@lysator.liu.se>
+2007-04-26  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Makefile.in (DISTFILES): Removed texinfo.tex (copy and paste
 	error).
 
-2007-04-05  Niels Möller  <nisse@lysator.liu.se>
+2007-04-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Makefile.in: Use symlinks nettle and nettle_builddir in the
 	build directory to locate nettle files.
 
 	* Moved in CVS tree. Converted to plain autoconf.
 	
-2005-11-25  Niels Möller  <nisse@lysator.liu.se>
+2005-11-25  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use -Wno-pointer-sign when compiling with gcc-4.x.
 
-2004-11-18  Niels Möller  <nisse@lysator.liu.se>
+2004-11-18  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* testsuite/Makefile.am (CLEANFILES): Delete test.canonical.
 
@@ -138,34 +138,34 @@
 	instead. 
 	* testsuite/reduce-test: Likewise.
 
-2004-11-16  Niels Möller  <nisse@lysator.liu.se>
+2004-11-16  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Deleted getopt.c, getopt.h and getopt1.c from the CVS tree. Link
 	them from shared copies in lsh/misc instead.
 
-2004-03-20  Niels Möller  <nisse@lysator.liu.se>
+2004-03-20  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_AUX_DIR([.]).
 
-2004-03-01  Niels Möller  <niels@s3.kth.se>
+2004-03-01  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* configure.ac: Check for gmtime_r.
 
 	* certificate.c (spki_date_from_time_t): Use gmtime, if gmtime_r
 	isn't available.
 
-2004-02-15  Niels Möller  <nisse@lysator.liu.se>
+2004-02-15  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* configure.ac: No spaces after -I and -L flags.
 
-2004-01-31  Niels Möller  <nisse@lysator.liu.se>
+2004-01-31  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* tag.c: Comment fixes.
 	(spki_tag_compile): In the SPKI_TAG_LIST case, check for
 	spki_tag_compile_list returning NULL.
 	(spki_tag_list_alloc): Minor reorganization of failure case.
 
-2004-01-08  Niels Möller  <nisse@lysator.liu.se>
+2004-01-08  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* Makefile.am (AM_CPPFLAGS): Added -I../nettle. Needed to find the
 	nettle-types.h include file when building outside of the source
@@ -173,7 +173,7 @@
 	* testsuite/Makefile.am (AM_CPPFLAGS): Added -I../../nettle.
 	* tools/Makefile.am (AM_CPPFLAGS): Likewise.
 
-2003-05-18  Niels Möller  <nisse@cuckoo.hack.org>
+2003-05-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Changed include file ordering, to follow the same conventions as
 	lsh and nettle: .c-files include config.h first, then system
@@ -182,18 +182,18 @@
 
 	* configure.ac: Use LSH_FUNC_ALLOCA.
 
-2003-04-11  Niels Möller  <nisse@cuckoo.hack.org>
+2003-04-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (distclean-local, CLEANFILES): Delete
 	files and directories used by the tests.
 
-2003-04-08  Niels Möller  <niels@s3.kth.se>
+2003-04-08  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/delegate-test: Use $srcdir when referring to the test
 	keys. 
 	* testsuite/make-signature-test: Likewise.
 
-2003-03-11  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (TS_SH): Added reduce-test.
 
@@ -223,16 +223,16 @@
 
 	* testsuite/Makefile.am (EXTRA_DIST): Added the setup-env script.
 
-2003-03-10  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-10  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* index.css: Stylesheet for index.html.
 
-2003-03-10  Niels Möller  <niels@s3.kth.se>
+2003-03-10  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/delegate-test (check_sexp): Use full path to
 	sexp-conv. 
 
-2003-03-10  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-10  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (EXTRA_DIST): Added key-1.pub, key2 and
 	key2.pub. 
@@ -280,7 +280,7 @@
 
 	* testsuite/Makefile.am (EXTRA_DIST): Added key-1.
 
-2003-03-09  Niels Möller  <nisse@cuckoo.hack.org>
+2003-03-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tools/Makefile.am (noinst_PROGRAMS): Added spki-delegate.
 	(EXTRA_DIST): Added sign.h.
@@ -303,7 +303,7 @@
 
 	* names.c (spki_type_names): Use const for spki_type_names.
 
-2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-24  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (EXTRA_DIST): Use dist_cdsa, and include
 	.dist_cdsa. 
@@ -315,26 +315,26 @@
 
 	* configure.ac: Use LSH_GCC_ATTRIBUTES.
 
-2003-02-19  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
  	* acinclude.m4: Deleted file from cvs, use a link to lsh's
 	acinclude.m4 instead.
 
-2003-02-17  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tools/Makefile.am (EXTRA_DIST): Added getopt.c and getopt1.c. 
 
-2003-02-16  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tools/Makefile.am (LDADD): Added getopt.o and getopt1.o
 	(EXTRA_DIST): Added getopt.h.
 
-2003-02-13  Niels Möller  <niels@s3.kth.se>
+2003-02-13  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* README: Wrote down an SPKI overview and some ideas on how to
 	organize the information in the file system.
 
-2003-02-12  Niels Möller  <niels@s3.kth.se>
+2003-02-12  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/check-signature-test (test_valid, test_invalid):
 	Optionally take three arguments, where the second is the data
@@ -356,7 +356,7 @@
 
 	* tools/Makefile.am (spki_make_signature_SOURCES): Added io.h.
 
-2003-02-11  Niels Möller  <nisse@cuckoo.hack.org>
+2003-02-11  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Makefile.am (libspki_a_SOURCES): Added names.c.
 	Removed $(srcdir) prefix from targets.
@@ -388,11 +388,11 @@
 
 	* names.c: New file, including spki-type-names.h.
 
-2003-02-06  Niels Möller  <niels@s3.kth.se>
+2003-02-06  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (DISTCLEANFILES): Delete test.in.
 
-2003-02-05  Niels Möller  <nisse@lysator.liu.se>
+2003-02-05  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* testsuite/check-signature-test: Made function definitions
 	sh-compatible.  
@@ -403,7 +403,7 @@
 	* acinclude.m4, configure.ac: Copied handling of --with-lib-path,
 	--with-include-path, and -R flags, from Nettle.
 
-2003-01-30  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-30  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (TS_SH): Added check-signature-test.
 
@@ -413,14 +413,14 @@
 	truncated hashes, fixed the base64 code to be valid, with no
 	leftover bits.
 
-2003-01-29  Niels Möller  <niels@s3.kth.se>
+2003-01-29  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* verify.c (spki_verify): Don't call spki_parse_type for the
 	signature. 
 
 	* testsuite/check-signature-test: Write input to test.in.
 
-2003-01-29  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-29  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac (AC_OUTPUT): Generate tools/Makefile.
 
@@ -434,14 +434,14 @@
 	* verify.c (spki_verify): Take a struct spki_hash_value as
 	argument. 
 
-2003-01-28  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-28  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* parse.h (struct spki_hash_value): New struct.
 
 	* parse.c (spki_parse_hash): New function.
 	(spki_parse_principal): Use it.
 
-2003-01-27  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* spki-types.in: New keywords rsa-pkcs1-md5, rsa-pkcs1-sha1,
 	dsa-sha1. 
@@ -454,11 +454,11 @@
 
 	* verify.c (spki_verify): New file, new function.
 
-2003-01-23  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-23  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* parse.c (spki_parse_string): Made non-static.
 
-2003-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/testutils.c (read_acl): Use spki_acl_process.
 
@@ -505,27 +505,27 @@
 	(struct spki_acl_db): Renamed attribute first_acl to acl. Now
 	points at a spki_5_tuple_list.
 
-2003-01-20  Niels Möller  <niels@s3.kth.se>
+2003-01-20  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* Makefile.am (EXTRA_DIST): Distribute process-types.
 
-2003-01-16  Niels Möller  <niels@s3.kth.se>
+2003-01-16  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* Makefile.am (libspki_a_SOURCES): Added header files, to get them
 	included in the dist.
 
-2003-01-14  Niels Möller  <niels@s3.kth.se>
+2003-01-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (EXTRA_DIST): Fixed file list. Also
 	include *.in and *.out from the cdsa-cases subdirectory.
 	(EXTRA_DIST): Added an explicit list of the files in cdsa-cases.
 	Really ugly.
 
-2003-01-14  Niels Möller  <nisse@lysator.liu.se>
+2003-01-14  Niels MÃ¶ller  <nisse@lysator.liu.se>
 
 	* .bootstrap: Must invoke autoheader before automake.
 
-2003-01-10  Niels Möller  <niels@s3.kth.se>
+2003-01-10  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* parse.c (spki_parse_principal): Deleted the final calls to
 	spki_parse_end.
@@ -534,7 +534,7 @@
 	* certificate.c (spki_tag_free): New function.
 	(spki_5_tuple_free_chain): ...Use it.
 
-2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-09  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* certificate.c (spki_acl_parse): Use spki_check_type.
 	(spki_process_sequence_no_signatures): Likewise.
@@ -542,7 +542,7 @@
 	* parse.c (spki_check_type): New function. Now used in most places
 	that check the type of an expression and then enters it.
 
-2003-01-08  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-08  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/lookup-acl-test.c (test_main): Added some tests for
 	spki_acl_by_subject_first and spki_acl_by_subject_next.
@@ -571,12 +571,12 @@
 	* reduce.c (spki_5_tuple_by_subject): Moved function to
 	certificate.c. 
 
-2003-01-02  Niels Möller  <nisse@cuckoo.hack.org>
+2003-01-02  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tag.c (spki_tag_compile): For the unsupported tag type "range",
 	return NULL instead of abort().
 
-2002-12-04  Niels Möller  <niels@s3.kth.se>
+2002-12-04  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/cdsa-reduce-test.c (read_file): Check return value of
 	fopen. 
@@ -584,7 +584,7 @@
 	* tag.c (list_intersect): Must call spki_tag_dup on the tags, when
 	copying the tail fo the list.
 
-2002-12-04  Niels Möller  <nisse@cuckoo.hack.org>
+2002-12-04  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tag.c (atom_prefix): Fixed assertion.
 	(spki_tag_intersect): The ordering of a and b (with a having the
@@ -616,14 +616,14 @@
 	implemented yet. Don't ASSERT that the resulting 5-tuple list is
 	non-empty, some test cases result in empty lists.
 
-2002-12-03  Niels Möller  <nisse@cuckoo.hack.org>
+2002-12-03  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/cdsa-reduce-test.c: New test program, using cdsa tests.
 
 	* testsuite/cdsa-cases: New directory with test cases snarfed from
 	cdsa. 
 
-2002-11-27  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-27  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/lookup-acl-test.c (test_main): Updated for new acl
 	syntax. 
@@ -668,17 +668,17 @@
 	(spki_parse_cert): Deleted initialization, the caller should
 	initialize the 5-tuple. Fixed syntax check of subject expressions. 
 
-2002-11-27  Niels Möller  <niels@s3.kth.se>
+2002-11-27  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* index.html: New file.
 
-2002-11-22  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tag.c (enum spki_tag_type): Reordered types, ordered from more
 	inclusive to less inclusive.
 	(spki_tag_intersect): New function.
 
-2002-11-22  Niels Möller  <niels@s3.kth.se>
+2002-11-22  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/tag-test.c (test_main): Enabled more tests, for
 	set/set inclusions.
@@ -726,7 +726,7 @@
 	Also reordered functions, putting operations on strings and lists
 	first. 
 
-2002-11-22  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-22  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/tag-test.c (test_main): Added more tests.
 
@@ -744,7 +744,7 @@
 	(spki_tag_includes): For SPKI_TAG_ANY, advance past the (*)
 	expression.
 
-2002-11-21  Niels Möller  <niels@s3.kth.se>
+2002-11-21  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/testutils.h: Include tag.h.
 
@@ -752,14 +752,14 @@
 
 	* testsuite/tag-test.c: Test cases for operations on tags.
 
-2002-11-21  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-21  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* tag.c (tag_magic): Deleted function.
 	(spki_tag_classify): New function.
 	(spki_tag_intersect): Started work on intersections, far from
 	finished. 
 
-2002-11-20  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-20  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* certificate.c (spki_process_sequence_no_signatures): Process
 	public-key expressions.
@@ -767,7 +767,7 @@
 	* parse.c (spki_parse_prevexpr): Renamed and made non-static (was
 	spki_last_expression). 
 
-2002-11-19  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-19  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* Makefile.am (libspki_a_SOURCES): Added tag.c.
 
@@ -784,7 +784,7 @@
 	* testsuite/testutils.c (read_acl): New function.
 	* testsuite/read-acl-test.c (test_main): Use it.
 
-2002-11-18  Niels Möller  <niels@s3.kth.se>
+2002-11-18  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/testutils.h: Don't include spki-types.h.
 
@@ -829,7 +829,7 @@
 	* certificate.h (SPKI_MALLOC, SPKI_FREE, SPKI_NEW): New macros,
 	moved from certificate.c.
 
-2002-11-18  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-18  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (TS_PROGS): Added date-test.
 
@@ -858,7 +858,7 @@
 	* certificate.c (spki_date_from_time_t): New function.
 	(spki_date_cmp_time_t): New function.
 
-2002-11-17  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-17  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Removed RCS id line.
 
@@ -895,7 +895,7 @@
 	(parse_tag, parse_acl_entry): Rewrite to use spki_parse_principal.
 	(spki_cert_parse_body): Likewise.
 	
-2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-16  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/principal-test.c: Use testutils.h
 	* testsuite/read-acl-test.c: Likewise.
@@ -926,7 +926,7 @@
 
 	* configure.ac: Check for GMP, and fail if it's not present.
 
-2002-11-15  Niels Möller  <niels@s3.kth.se>
+2002-11-15  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (AM_LDFLAGS): Need -L../../nettle.
 	(TS_PROGS): Added read-acl-test.
@@ -960,7 +960,7 @@
 
 	* spki-types.in: Added "comment" and "valid".
 
-2002-11-14  Niels Möller  <niels@s3.kth.se>
+2002-11-14  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* spki-types.in: Added types public-key, md5 and sha1.
 
@@ -978,12 +978,12 @@
 	(spki-types.h, spki-type-names.h, spki-gperf.h): Create files in
 	the source tree. 
 
-2002-11-14  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-14  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* certificate.h (struct spki_5_tuple): Renamed (was spki_acl), and
 	added issuer field.
 
-2002-11-13  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* certificate.c: Include automatically generated files.
 	(spki_intern): New function.
@@ -999,7 +999,7 @@
 
 	* process-types: New file, similar to lsh's process_atoms.
 
-2002-11-13  Niels Möller  <niels@s3.kth.se>
+2002-11-13  Niels MÃ¶ller  <niels@s3.kth.se>
 
 	* certificate.c (spki_acl_parse): New function (not done yet).
 
@@ -1011,7 +1011,7 @@
 
 	* .bootstrap: Run autoheader before autoconf.
 
-2002-11-13  Niels Möller  <nisse@cuckoo.hack.org>
+2002-11-13  Niels MÃ¶ller  <nisse@cuckoo.hack.org>
 
 	* testsuite/subject-test.c: First test case.
 

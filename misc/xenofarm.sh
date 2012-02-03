@@ -6,7 +6,7 @@
 
 # Loosely based on the xenofarm.sh script in lyskom-server.
 
-# Copyright 2002, 2003 Niels Möller, Lysator Academic Computer Association 
+# Copyright 2002, 2003 Niels MÃ¶ller, Lysator Academic Computer Association 
 # 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as

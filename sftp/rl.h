@@ -5,7 +5,7 @@
 
 /* lsftp, an implementation of the sftp protocol
  *
- * Copyright (C) 2001, Pontus Sköld
+ * Copyright (C) 2001, Pontus SkÃ¶ld
  * Portions of this code originately from the readline manual
  *
  * This program is free software; you can redistribute it and/or

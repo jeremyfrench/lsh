@@ -26,7 +26,7 @@ using some secret shared between the host and a particular user.
 (important, but not urgent) This is too sloppy. Implementations should
 be required to respect unicode character equivalence. Say I have an
 account on a system that allows non-ascii characters in user names.
-Assume I'm known to the system under the name "möller", which has at
+Assume I'm known to the system under the name "mÃ¶ller", which has at
 least two different but equivalent representations in unicode (and
 therefore also in utf-8).
 

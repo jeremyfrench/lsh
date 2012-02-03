@@ -4,7 +4,7 @@
 
 /* lsftp, an implementation of the sftp protocol
  *
- * Copyright (C) 2001 Pontus Sköld
+ * Copyright (C) 2001 Pontus SkÃ¶ld
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -34,7 +34,7 @@
 
 void lsftp_welcome()
 {
-  printf( "Welcome to %s by Pontus Sköld, Niels Möller and various.\n", PACKAGE_STRING );
+  printf( "Welcome to %s by Pontus SkÃ¶ld, Niels MÃ¶ller and various.\n", PACKAGE_STRING );
   printf( "This program is free software, for more information\n" );
   printf( "please see the file COPYING or type about, you may\n" );
   printf( "also use help or ? to get help.\n\n");
@@ -89,7 +89,7 @@ void help_option()
 void version_option()
 {
   printf("%s\n", PACKAGE_STRING);
-  printf("Copyright (C) Pontus Sköld, Niels Möller and various contributors\n\n");
+  printf("Copyright (C) Pontus SkÃ¶ld, Niels MÃ¶ller and various contributors\n\n");
 
   printf("This program is free software, you may distribute it under the\n");
   printf("terms of the GNU Genereal Public License. \n\n");

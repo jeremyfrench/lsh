@@ -4,7 +4,7 @@
 
 /* libspki
  *
- * Copyright (C) 2003 Niels Möller
+ * Copyright (C) 2003 Niels MÃ¶ller
  *  
  * The nettle library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copied from gnupg-1.0.4, and hacked somewhat by Niels Möller
+# Copied from gnupg-1.0.4, and hacked somewhat by Niels MÃ¶ller
 
 if [ $# != 1 ] ; then
     echo "usage: mkdiff package-name" >&2

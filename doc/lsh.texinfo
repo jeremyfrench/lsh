@@ -15,9 +15,9 @@
 @set UPDATED-FOR 3.0
 
 @c Latin-1 doesn't work with tex output.
-@c Also look out for é characters.
+@c Also look out for Ã© characters.
 
-@set AUTHOR Niels Möller
+@set AUTHOR Niels MÃ¶ller
 @ifinfo
 Manual for LSH. This manual corresponds to @command{lsh} version
 @value{UPDATED-FOR}. 
@@ -271,9 +271,9 @@ example by manipulating the @acronym{DNS}-system.
 to trust the endpoint machines. It seems really difficult to uphold any
 security if the local machine is compromised. This is important to keep
 in mind in the ``visitor''-scenario, where you visit a friend or perhaps an
-Internet café and want to connect to some of the machines at home or at
+Internet cafÃ© and want to connect to some of the machines at home or at
 work. If the enemy has been able to compromize your friend's or the
-café's equipment, you may well be in trouble.
+cafÃ©'s equipment, you may well be in trouble.
 
 Protection from denial-of-service attacks is also a very difficult
 problem, and @command{lsh} makes no attempt to protect you from that.
@@ -376,7 +376,7 @@ man-in-the-middle attacks.
 @comment  node-name,  next,  previous,  up
 @subsection @code{ssh-1.x}
 
-The first of the Secure shell programs was Tatu Ylönen's @command{ssh}.
+The first of the Secure shell programs was Tatu YlÃ¶nen's @command{ssh}.
 The latest of the version 1 series is @code{ssh-1.33} which speaks
 version 1.5 of the protocol. The ``free'' version of @code{ssh-1.33}
 does not allow commercial use without additional licensing, which makes
@@ -389,7 +389,7 @@ back, for security reasons.
 
 There also exists free implementations of @code{ssh-1}, for both Unix
 and Windows. @command{ossh} and later OpenSSH are derived from an earlier
-free version av Tatu Ylönen's @command{ssh}, and are free software.
+free version av Tatu YlÃ¶nen's @command{ssh}, and are free software.
 
 @node ssh2, tls, ssh1, Related techniques
 @comment  node-name,  next,  previous,  up
