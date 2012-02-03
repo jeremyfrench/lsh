@@ -1,8 +1,6 @@
 ;; scsh.scm
 ;;
 ;; Extra definitions needed when using scsh.
-;;
-;; $Id$
 
 ;; lsh, an implementation of the ssh protocol
 ;;

@@ -1,6 +1,4 @@
 /*
- * @(#) $Id$
- *
  * sftp_c.h
  *
  * Portions of code taken from the sftp test client from

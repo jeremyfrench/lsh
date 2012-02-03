@@ -1,5 +1,5 @@
 [attr]binary -text -crlf -diff -ident
-* text ident
+* text -ident
 *.pdu binary
 /src/testsuite/UTF-8-test.txt binary
 LICENSE eol=crlf

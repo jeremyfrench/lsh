@@ -2,7 +2,6 @@
  *
  * Simple diagnostics routines.
  *
- * $id$
  */
 
 #if HAVE_CONFIG_H

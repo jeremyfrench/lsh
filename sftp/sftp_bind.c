@@ -1,6 +1,4 @@
 /*
- * @(#) $Id$
- *
  * sftp_bind.c - bindings for sftp.c
  *
  * Portions of code taken from the sftp test client from 

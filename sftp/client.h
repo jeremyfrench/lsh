@@ -2,7 +2,6 @@
  *
  * Utility functions for the client side of the protocol.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

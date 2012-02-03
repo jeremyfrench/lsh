@@ -2,7 +2,6 @@
  *
  * Simple diagnostics routines.
  *
- * $id$
  */
 
 #ifndef SFTP_WERROR_H_INCLUDED

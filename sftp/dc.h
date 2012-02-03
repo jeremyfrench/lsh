@@ -1,6 +1,4 @@
 /*
- * @(#) $Id$
- *
  * dc.h - dircache functions
  *
  */

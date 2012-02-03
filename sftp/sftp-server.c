@@ -1,7 +1,5 @@
 /* sftp-server.c
  *
- * $Id$
- *
  * The server side of the sftp subsystem. */
 
 /* lsh, an implementation of the ssh protocol

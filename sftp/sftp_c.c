@@ -1,6 +1,4 @@
 /*
- * @(#) $Id$
- *
  * sftp_c.c - sftp client protocol functions.
  *
  * Portions of code taken from the sftp test client from 
