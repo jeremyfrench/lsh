@@ -1,3 +1,7 @@
+2012-02-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo: Updated charset declaration.
+
 2011-11-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/run-tests (test_program): If EMULATOR is set in the
