@@ -1,3 +1,8 @@
+2012-06-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/transport.c (transport_process_packet): Disconnect on
+	reception of an SSH_MSG_UNIMPLEMENTED message.
+
 2012-02-03  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/index.html: Updated to xhtml, and added charset declaration.

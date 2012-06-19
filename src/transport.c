@@ -292,6 +292,12 @@ transport_process_packet(struct transport_connection *connection,
     {
       /* Do nothing */
     }
+  else if (msg == SSH_MSG_UNIMPLEMENTED)
+    {
+      werror("Received an \"unimplemented\" reply. Disconnecting.\n");
+
+      transport_close(connection, 0); 
+    }
   else if (msg == SSH_MSG_DISCONNECT)
     {
       struct simple_buffer buffer;
@@ -318,7 +324,7 @@ transport_process_packet(struct transport_connection *connection,
     }
   else if (msg == SSH_MSG_DEBUG)
     {
-      /* Ignore it. Perhaps it's best to pass it on to the
+      /* Ignore it. FIXME: Perhaps it's best to pass it on to the
 	 application? */
     }
 
