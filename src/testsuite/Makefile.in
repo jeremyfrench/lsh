@@ -46,7 +46,8 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 TS_C = $(TS_SOURCES:.c=$(EXEEXT))
 TS_ALL = $(TS_C) $(TS_SH)
 
-TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) mini-inetd$(EXEEXT) $(PASSWD_PRELOAD)
+TARGETS = $(TS_C) prgrp-timeout$(EXEEXT) $(PASSWD_PRELOAD) \
+	  mini-inetd$(EXEEXT) tcpconnect$(EXEEXT)
 
 TEST_OBJS = testutils.$(OBJEXT) \
 	    ../algorithms.$(OBJEXT) \

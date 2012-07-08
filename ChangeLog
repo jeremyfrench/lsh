@@ -1,3 +1,10 @@
+2012-07-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.in (TARGETS): Added tcpconnnect.
+
+	* src/testsuite/tcpconnect.c: New file. Reimplemented the program
+	with the same name in tcputils.
+
 2012-06-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/transport.c (transport_process_packet): Disconnect on
