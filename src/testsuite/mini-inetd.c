@@ -63,13 +63,19 @@ werror(const char *format, ...)
 }
 
 static void
-usage (void)
+usage (FILE *f)
 {
-  printf("mini-inetd [OPTIONS] [localaddr:]port program [argv0, argv1 ...]\n"
-	 "Options:\n"
-	 "  -m max-connections\n"
-	 "  --help\n"
-	 "  --background\n");
+  fprintf(f,
+	  /* FIXME: ':' is a bad separator for literal IPv6 addresses.
+	     Support [] around the address? */
+	  "mini-inetd [OPTIONS] [localaddr:]port program [argv0, argv1 ...]\n"
+	  "Options:\n"
+	  "  -m max-connections\n"
+	  "  --help\n"
+	  "  --background\n"
+	  "  -4     Only use IPv4.\n"
+	  "  -6     Only use IPv6.\n"
+	  "  --help Display this help.\n");
 }
 
 static void
@@ -133,7 +139,7 @@ main (int argc, char **argv)
       case '?':
 	return EXIT_FAILURE;
       case OPT_HELP:
- 	usage();
+ 	usage(stdout);
 	return EXIT_SUCCESS;
       case OPT_BACKGROUND:
 	background = 1;
@@ -164,7 +170,7 @@ main (int argc, char **argv)
   
   if (argc < 2)
     {
-      usage();
+      usage(stderr);
       return EXIT_FAILURE;
     }
   sep = strrchr(argv[0], ':');

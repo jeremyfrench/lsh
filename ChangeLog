@@ -1,5 +1,8 @@
 2012-07-10  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/mini-inetd.c (usage): Take a FILE * as argument.
+	Called with stdout in response to --help, and stderr otherwise.
+
 	* src/testsuite/prgrp-timeout.c: Added missing include of
 	config.h.
 
