@@ -68,7 +68,7 @@ PS2PDFFLAGS=-dCompatibilityLevel=1.3 -dMAxSubsetPct=100 -dSubsetFonts=true -dEmb
 	cd $(srcdir) && ps2pdf $(PS2PDFFLAGS) `basename "$<" .texinfo`.ps
 
 .nroff.txt:
-	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
+	$(GROFF) -ms -Tutf8 $< | perl $(srcdir)/fixff.pl >$@T
 	test -s $@T && mv -f $@T $@
 
 # Autoconf rules

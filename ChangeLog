@@ -1,3 +1,7 @@
+2012-07-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/Makefile.in (.nroff.txt): Pass -Tutf8 to groff.
+
 2012-07-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/mini-inetd.c (usage): Take a FILE * as argument.
