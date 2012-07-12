@@ -26,6 +26,7 @@
        (crypto_algorithms object int_list)
        (mac_algorithms object int_list)
        (compression_algorithms object int_list)
+       (kex_algorithms object int_list)
        (hostkey_algorithms object int_list)))
 */
 
@@ -45,6 +46,9 @@ struct int_list *
 default_hostkey_algorithms(void);
 
 struct int_list *
+default_kex_algorithms(void);
+
+struct int_list *
 filter_algorithms(struct alist *algorithms,
 		  const struct int_list *candidates);
 
@@ -61,6 +65,9 @@ lookup_compression(struct alist *algorithms, const char *name,
 int
 lookup_hostkey_algorithm(const char *name);
 
+int
+lookup_kex_algorithm(const char *name);
+
 void
 list_crypto_algorithms(const struct argp_state *state,
 		       struct alist *algorithms);
@@ -73,6 +80,9 @@ list_compression_algorithms(const struct argp_state *state,
 
 void
 list_hostkey_algorithms(const struct argp_state *state);
+
+void
+list_kex_algorithms(const struct argp_state *state);
 
 void init_algorithms_options(struct algorithms_options *self,
 			     struct alist *algorithms);

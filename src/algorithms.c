@@ -137,6 +137,13 @@ default_hostkey_algorithms(void)
   return make_int_list(2, ATOM_SSH_RSA, ATOM_SSH_DSS, -1);
 }
 
+struct int_list *
+default_kex_algorithms(void)
+{
+  return make_int_list(2, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
+		       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1);
+}
+
 static struct int_list *
 prefer_compression_algorithms(struct alist *algorithms)
 {
@@ -302,6 +309,19 @@ lookup_hostkey_algorithm(const char *name)
     return 0;
 }
 
+int
+lookup_kex_algorithm(const char *name)
+{
+  if (strcasecmp_list(name, "diffie-hellman-group1-sha1",
+		       "dh-group1-sha1", "dh-group1", NULL))
+    return ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
+  else if (strcasecmp_list(name, "diffie-hellman-group14-sha1",
+			    "dh-group14-sha1", "dh-group14", NULL))
+    return ATOM_DIFFIE_HELLMAN_GROUP14_SHA1;
+  else
+    return 0;
+}
+
 /* Return an int list containing the elements of CANDIDATES
  * that have associated values in ALGORITHMS.
  * Returns a non-empty list or NULL. */
@@ -432,9 +452,16 @@ list_hostkey_algorithms(const struct argp_state *state)
   fprintf(state->out_stream, "%s", "Supported hostkey algorithms: ssh-dss, spki, none\n");
 }
 
+void
+list_kex_algorithms(const struct argp_state *state)
+{
+  fprintf(state->out_stream, "%s", "Supported key exchange algorithms: dh-group1.sha1, dh-group14-sha1\n");
+}
+
 
 #define OPT_LIST_ALGORITHMS 0x100
 #define OPT_HOSTKEY_ALGORITHMS 0x101
+#define OPT_KEX_ALGORITHM 0x102
 
 static const struct argp_option
 algorithms_options[] =
@@ -445,7 +472,8 @@ algorithms_options[] =
   { "compression", 'z', "ALGORITHM",
     OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
   { "mac", 'm', "ALGORITHM", 0, "", 0 },
-  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHMS, "ALGORITHM", 0, "", 0 }, 
+  { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHMS, "ALGORITHM", 0, "", 0 },
+  { "kex-algorithm", OPT_KEX_ALGORITHM, "ALGORITHM", 0, "", 0 },
   { "list-algorithms", OPT_LIST_ALGORITHMS, NULL, 0,
     "List supported algorithms.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }  
@@ -461,6 +489,7 @@ init_algorithms_options(struct algorithms_options *self,
   self->mac_algorithms = NULL;
   self->compression_algorithms = NULL;
   self->hostkey_algorithms = NULL;
+  self->kex_algorithms = NULL;
 }
 
 struct algorithms_options *
@@ -490,6 +519,8 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 	self->compression_algorithms = default_compression_algorithms(self->algorithms);
       if (!self->hostkey_algorithms)
 	self->hostkey_algorithms = default_hostkey_algorithms();
+      if (!self->kex_algorithms)
+	self->kex_algorithms = default_kex_algorithms();
       break;
     case 'c':
       {
@@ -547,7 +578,19 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 	    argp_error(state, "Unknown hostkey algorithm '%s'.", arg);
 	  }	
 	break;
+      }
 	
+    case OPT_KEX_ALGORITHM:
+      {
+	int algorithm = lookup_kex_algorithm(arg);
+	if (algorithm)
+	  self->kex_algorithms = make_int_list(1, algorithm, -1);
+	else
+	  {
+	    list_kex_algorithms(state);
+	    argp_error(state, "Unknown hostkey algorithm '%s'.", arg);
+	  }	
+	break;
       }
       
     case OPT_LIST_ALGORITHMS:
@@ -555,6 +598,7 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       list_compression_algorithms(state, self->algorithms);
       list_mac_algorithms(state, self->algorithms);
       list_hostkey_algorithms(state);
+      list_kex_algorithms(state);
       
       if (! (state->flags & ARGP_NO_EXIT))
 	exit (0);

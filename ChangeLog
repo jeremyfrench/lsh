@@ -1,5 +1,15 @@
 2012-07-12  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/algorithms.h (class algorithms_options): New attribute
+	kex_algorithms.
+	* src/algorithms.c (default_kex_algorithms): New function.
+	(lookup_kex_algorithm): New function.
+	(list_kex_algorithms): New function.
+	(algorithms_options): Added --kex-algorithm.
+	(init_algorithms_options): Initialize kex_algorithms.
+	(algorithms_argp_parser): Handle --kex-algorithm, and default
+	value. Use list_kex_algorithms for --list-algorithms.
+
 	* doc/Makefile.in (.nroff.txt): Pass -Tutf8 to groff.
 
 2012-07-10  Niels Möller  <nisse@lysator.liu.se>
