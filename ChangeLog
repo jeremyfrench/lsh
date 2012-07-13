@@ -1,5 +1,7 @@
 2012-07-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* nettle: Deleted the nettle subdirectory.
+
 	Always use the installed nettle library, don't look for it in the
 	build tree.
 	* .bootstrap: Deleted all references to the nettle subdirectory.
