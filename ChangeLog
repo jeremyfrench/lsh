@@ -1,5 +1,8 @@
 2012-07-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/tcpconnect.c (main): Ignore SIGPIPE. Fixes to
+	diagnostic printouts.
+
 	* src/lsh.c (main_argp_parser): Pass on --hostkey-algorithm and
 	new option --kex-algorithm to lsh-transport.
 

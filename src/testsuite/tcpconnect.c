@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <signal.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -182,6 +184,9 @@ main (int argc, char **argv)
       if (connect (fd, p->ai_addr, p->ai_addrlen) >= 0)
 	break;
 
+      if (verbose)
+	fprintf(stderr, "Connect failed: %s\n", strerror(errno));
+
       close (fd);
       fd = -1;
     }
@@ -228,6 +233,8 @@ main (int argc, char **argv)
     werror("fcntl F_GETFL failed: %s\n", strerror(errno));
   else if (fcntl(fd, F_SETFL, flags | 1 | O_NONBLOCK) < 0)
     werror("fcntl F_SETFL failed: %s\n", strerror(errno));
+
+  signal(SIGPIPE, SIG_IGN);
 
   buf_size = buf_pos = 0;  
   seen_stdin_eof = seen_remote_eof = 0;
@@ -362,7 +369,7 @@ main (int argc, char **argv)
   close (fd);
 
   if (verbose)
-    fprintf(stderr, "[Connection closed]");
+    fprintf(stderr, "[Connection closed]\n");
 
   return EXIT_SUCCESS;
 }
