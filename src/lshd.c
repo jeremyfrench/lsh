@@ -972,7 +972,7 @@ lshd_config_handler(int key, uint32_t value, const uint8_t *data,
 	  }
 	  
 	ctx->super.kexinit
-	  = make_kexinit_info(make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
+	  = make_kexinit_info(self->algorithms->kex_algorithms,
 			      hostkey_algorithms,
 			      self->algorithms->crypto_algorithms,
 			      self->algorithms->mac_algorithms,

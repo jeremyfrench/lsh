@@ -5,6 +5,7 @@
 
 	* src/lsh-transport.c (main_argp_parser): Configure key exchange
 	algorithms via algorithm_options.
+	* src/lshd.c (lshd_config_handler): Likewise.
 
 2012-07-12  Niels Möller  <nisse@lysator.liu.se>
 
