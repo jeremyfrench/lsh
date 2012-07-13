@@ -1,5 +1,17 @@
 2012-07-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/functions.sh (need_tcputils): Deleted function.
+	* src/testsuite/lshd-random-input-test: Use ./tcpconnect, rather
+	than the possibly installed version from tcputils. Don't use
+	need_tcputils.
+	* src/testsuite/lshg-tcpip-local-test: Likewise.
+	* src/testsuite/lshg-tcpip-remote-test: Likewise.
+	* src/testsuite/rapid7-lshd-test: Likewise.
+	* src/testsuite/socks4-test: Likewise.
+	* src/testsuite/socks5-test: Likewise.
+	* src/testsuite/tcpip-local-test: Likewise.
+	* src/testsuite/tcpip-remote-test: Likewise.
+
 	* src/testsuite/tcpconnect.c (main): Ignore SIGPIPE. Fixes to
 	diagnostic printouts.
 

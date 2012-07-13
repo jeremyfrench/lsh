@@ -115,10 +115,6 @@ need_xvfb () {
     [ -n "$XVFB" ] || test_skip
 }
 
-need_tcputils () {
-    type tcpconnect >/dev/null 2>&1 || test_skip
-}
-
 need_tsocks () {
     type tsocks >/dev/null 2>&1 || test_skip
 }

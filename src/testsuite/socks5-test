@@ -6,7 +6,6 @@ fi
 
 . $srcdir/functions.sh
 
-need_tcputils
 need_tsocks
 
 SERVERPORT=`expr $PORT + 1`
@@ -20,7 +19,7 @@ export TSOCKS_CONF_FILE
 at_connect $SERVERPORT 1 'grep bar && echo foo' \
     && spawn_lshd \
     && spawn_lsh -D$SOCKSPORT \
-    && echo bar | tsocks tcpconnect localhost $SERVERPORT | grep foo \
+    && echo bar | tsocks ./tcpconnect localhost $SERVERPORT | grep foo \
     && test_success
 
 test_done
