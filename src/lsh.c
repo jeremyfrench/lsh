@@ -468,6 +468,7 @@ enum {
   OPT_SRP,
 
   OPT_HOSTKEY_ALGORITHM,
+  OPT_KEX_ALGORITHM,
 
   OPT_STDIN,
   OPT_STDOUT,
@@ -600,7 +601,9 @@ main_options[] =
   { "mac", 'm', "ALGORITHM", 0, "Select MAC algorithm", 0 },
   { "hostkey-algorithm", OPT_HOSTKEY_ALGORITHM, "ALGORITHM", 0,
     "Select host authentication algorithm.", 0 },
-
+  { "kex-algorithm", OPT_KEX_ALGORITHM, "ALGORITHM", 0,
+    "Select key exchange algorithm.", 0 },
+  /* FIXME: Pass on --list-algorithms. */
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -973,6 +976,16 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	arglist_push_optarg(&self->transport_args, "-z", arg);
       break;
 
+    case OPT_HOSTKEY_ALGORITHM:
+      arglist_push(&self->transport_args, "--hostkey-algorithm");
+      arglist_push(&self->transport_args, arg);
+      break;
+
+    case OPT_KEX_ALGORITHM:
+      arglist_push(&self->transport_args, "--kex-algorithm");
+      arglist_push(&self->transport_args, arg);
+      break;
+      
 #if 0
     CASE_FLAG(OPT_DH, with_dh_keyexchange);
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
