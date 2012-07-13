@@ -1,3 +1,8 @@
+2012-07-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-transport.c (main_argp_parser): Configure key exchange
+	algorithms via algorithm_options.
+
 2012-07-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/algorithms.h (class algorithms_options): New attribute

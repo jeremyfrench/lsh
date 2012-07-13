@@ -105,8 +105,6 @@ make_lsh_transport_lookup_verifier(struct lsh_transport_config *config);
        (algorithms object algorithms_options)
        (werror_config object werror_config)
 
-       (kex_algorithms object int_list)
-
        (sloppy . int)
        (capture_file . "const char *")
        (capture_fd . int)
@@ -157,9 +155,6 @@ make_lsh_transport_config(void)
   ALIST_SET(self->super.algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 	    &make_client_dh_exchange(make_dh_group1(&nettle_sha1),
 				     &self->host_db->super)->super);
-  self->kex_algorithms =
-    make_int_list(2, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-		  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1);
   
   self->sloppy = 0;
   self->capture_file = NULL;
@@ -1282,7 +1277,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	argp_failure(state, EXIT_FAILURE, errno, "Failed to open log file");
 
       self->super.kexinit
-	= make_kexinit_info(self->kex_algorithms,
+	= make_kexinit_info(self->algorithms->kex_algorithms,
 			    self->algorithms->hostkey_algorithms,
 			    self->algorithms->crypto_algorithms,
 			    self->algorithms->mac_algorithms,
