@@ -36,10 +36,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-if test "x$am_cv_prog_cc_stdc" = xno ; then
-  AC_ERROR([the C compiler doesn't handle ANSI-C])
-fi
-
 LSH_DEPENDENCY_TRACKING
 
 if test x$enable_dependency_tracking = xyes ; then

@@ -1,3 +1,7 @@
+2012-07-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Deleted left over check of $am_cv_prog_cc_stdc.
+
 2010-12-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* tag.c (spki_string_alloc): Renamed and updated callers, from...
