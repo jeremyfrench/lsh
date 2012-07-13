@@ -145,10 +145,6 @@ AC_ARG_WITH(system-argp,
   AC_HELP_STRING([--with-system-argp], [Use the argp parser in libc]),,
   [with_system_argp=no])
 
-AC_ARG_WITH(system-nettle,
-  AC_HELP_STRING([--with-system-nettle], [Use the installed nettle library]),,
-  [with_system_nettle=no])
-
 AC_ARG_WITH(system-libspki,
   AC_HELP_STRING([--with-system-libspki], [Use the installed spki library]),,
   [with_system_libspki=no])
@@ -416,9 +412,19 @@ AC_SEARCH_LIBS(gethostbyname, nsl)
 AC_SEARCH_LIBS(inet_ntop, nsl)
 AC_CHECK_LIB(socket, setsockopt)
 
+# FIXME: Don't add any of gmp, nettle or hogweed to LIBS, since not
+# all programs need them. But maybe need them in LIBS temporarily, for
+# LSH_RPATH_FIX to work.
+
 AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
     [AC_MSG_ERROR(
     [GNU MP not found, or not 3.1 or up, see http://gmplib.org/.])])
+
+LSH_RPATH_FIX
+
+AC_CHECK_LIB(hogweed, nettle_dsa_sha1_sign, [true],
+    [AC_MSG_ERROR(
+    [Nettle library not found; needs version 2.2 or later. See http://www.lysator.liu.se/~nisse/nettle/.])], [-lnettle -lgmp])
 
 LSH_RPATH_FIX
 
@@ -618,20 +624,6 @@ if test x$with_system_argp = xno ; then
   BUILD_SUBDIRS="$BUILD_SUBDIRS argp"
   LIB_ARGP="-largp"
 fi
-
-LOCAL_NETTLE_DEP=''
-
-if test x$with_system_nettle = xno ; then
-  AC_CONFIG_COMMANDS([nettle-symlinks],
-  [nettle_srcdir="`cd "$srcdir/nettle" && pwd`"
-  for d in spki src ; do
-    (mkdir $d 2>/dev/null; cd $d && rm -f nettle nettle_builddir && ln -s ../nettle nettle_builddir && ln -s $nettle_srcdir nettle)
-  done])
-  BUILD_SUBDIRS="$BUILD_SUBDIRS nettle"
-  LOCAL_NETTLE_DEP="nettle_builddir/libnettle.a nettle_builddir/libhogweed.a"
-fi
-
-AC_SUBST(LOCAL_NETTLE_DEP)
 
 if test x$with_system_libspki = xno ; then
   AC_CONFIG_COMMANDS([libspki-symlinks],
@@ -1165,8 +1157,7 @@ if test x$enable_ipv6 = xyes ; then
   AC_DEFINE(WITH_IPV6)
 fi
 
-# Unconditionally configure nettle; otherwise make dist won't work
-AC_CONFIG_SUBDIRS(argp nettle spki sftp)
+AC_CONFIG_SUBDIRS(argp spki sftp)
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then

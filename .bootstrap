@@ -1,10 +1,10 @@
 #! /bin/sh
 
 # Build all automatically generated files that are not present in the
-# CVS repository.
+# repository.
 
 # This script is for use in the source directory, before you run
-# configure. To get started from a fresh CVS checkout, you also need
+# configure. To get started from a fresh checkout, you also need
 # to run configure and make bootstrap from your build directory.
 
 set -e
@@ -27,36 +27,32 @@ relative_symlink() {
 }
 
 relative_symlink misc/run-tests \
-    argp/testsuite nettle/testsuite nettle/examples \
-    spki/testsuite sftp/testsuite src/testsuite
+    argp/testsuite spki/testsuite sftp/testsuite src/testsuite
 
 relative_symlink aclocal.m4 \
-    argp nettle spki sftp
+    argp spki sftp
 
 relative_symlink misc/vsnprintf.c \
     argp sftp
     
-relative_symlink misc/getopt.c \
-    src/testsuite nettle/examples nettle/tools spki/tools
-relative_symlink misc/getopt1.c \
-    src/testsuite nettle/examples nettle/tools spki/tools
-relative_symlink misc/getopt.h \
-    src/testsuite nettle/examples nettle/tools spki/tools
+relative_symlink misc/getopt.c src/testsuite spki/tools
+relative_symlink misc/getopt1.c src/testsuite spki/tools
+relative_symlink misc/getopt.h src/testsuite spki/tools
 
-relative_symlink config.guess nettle spki
-relative_symlink config.sub nettle spki
+relative_symlink config.guess spki
+relative_symlink config.sub spki
 
-relative_symlink install-sh argp nettle spki sftp
-relative_symlink texinfo.tex nettle
+relative_symlink install-sh argp spki sftp
+relative_symlink texinfo.tex
 
-relative_symlink INSTALL nettle spki
+relative_symlink INSTALL spki
 
 if [ "$1" = "links" ] ; then
     # Skip the time consuming autoconf stuff
     exit 0;
 fi
 
-for subdir in argp nettle spki sftp; do
+for subdir in argp spki sftp; do
     (cd $subdir && ./.bootstrap)
 done
 

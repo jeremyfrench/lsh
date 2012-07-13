@@ -1,5 +1,17 @@
 2012-07-13  Niels Möller  <nisse@lysator.liu.se>
 
+	Always use the installed nettle library, don't look for it in the
+	build tree.
+	* .bootstrap: Deleted all references to the nettle subdirectory.
+	* configure.ac: Deleted --with-system-nettle option, and all setup
+	for using a bundled nettle library. Use a regular AC_CHECK_LIB to
+	check for libhogweed (nettle's public key library).
+	* src/Makefile.in (LOCAL_NETTLE_DEP): Deleted variable, and all
+	uses.
+	(PRE_CPPFLAGS): Deleted nettle_builddir.
+	(PRE_LDFLAGS): Likewise.
+	* Makefile.in (SUBDIRS): Deleted nettle.
+
 	* src/testsuite/functions.sh (need_tcputils): Deleted function.
 	* src/testsuite/lshd-random-input-test: Use ./tcpconnect, rather
 	than the possibly installed version from tcputils. Don't use

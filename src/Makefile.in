@@ -18,8 +18,6 @@ MKDIR_P = @MKDIR_P@
 
 AUTOHEADER = autoheader
 
-LOCAL_NETTLE_DEP = @LOCAL_NETTLE_DEP@
-
 SUBDIRS = testsuite
 
 include config.make
@@ -29,8 +27,8 @@ include $(srcdir)/.dist_headers
 
 # The *_builddir directories, if they exist at all, are symlinks
 # created by the configure script.
-PRE_CPPFLAGS = -I. -Iargp_builddir -Inettle_builddir -Ispki_builddir
-PRE_LDFLAGS = -Largp_builddir -Lnettle_builddir -Lspki_builddir
+PRE_CPPFLAGS = -I. -Iargp_builddir -Ispki_builddir
+PRE_LDFLAGS = -Largp_builddir -Lspki_builddir
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
@@ -304,28 +302,28 @@ packet_types.h: ssh.h invert-defs
 lsh$(EXEEXT): $(lsh_OBJS)
 	$(LINK) $(lsh_OBJS) $(LIBS) -o $@
 
-lsh-transport$(EXEEXT): $(lsh_transport_OBJS) $(LOCAL_NETTLE_DEP)
+lsh-transport$(EXEEXT): $(lsh_transport_OBJS)
 	$(LINK) $(lsh_transport_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lsh-keygen$(EXEEXT): $(lsh_keygen_OBJS) $(LOCAL_NETTLE_DEP)
+lsh-keygen$(EXEEXT): $(lsh_keygen_OBJS)
 	$(LINK) $(lsh_keygen_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lsh-decrypt-key$(EXEEXT): $(lsh_decrypt_key_OBJS) $(LOCAL_NETTLE_DEP)
+lsh-decrypt-key$(EXEEXT): $(lsh_decrypt_key_OBJS)
 	$(LINK) $(lsh_decrypt_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lsh-decode-key$(EXEEXT): $(lsh_decode_key_OBJS) $(LOCAL_NETTLE_DEP)
+lsh-decode-key$(EXEEXT): $(lsh_decode_key_OBJS)
 	$(LINK) $(lsh_decode_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lsh-export-key$(EXEEXT): $(lsh_export_key_OBJS) $(LOCAL_NETTLE_DEP)
+lsh-export-key$(EXEEXT): $(lsh_export_key_OBJS)
 	$(LINK) $(lsh_export_key_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lsh-make-seed$(EXEEXT): $(lsh_make_seed_OBJS) $(LOCAL_NETTLE_DEP)
+lsh-make-seed$(EXEEXT): $(lsh_make_seed_OBJS)
 	$(LINK) $(lsh_make_seed_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lshd$(EXEEXT): $(lshd_OBJS) $(LOCAL_NETTLE_DEP)
+lshd$(EXEEXT): $(lshd_OBJS)
 	$(LINK) $(lshd_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
-lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS) $(LOCAL_NETTLE_DEP)
+lshd-userauth$(EXEEXT): $(lshd_userauth_OBJS)
 	$(LINK) $(lshd_userauth_OBJS) -lspki -lhogweed -lnettle $(LIBS) -o $@
 
 lshd-connection$(EXEEXT): $(lshd_connection_OBJS)

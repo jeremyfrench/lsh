@@ -13,7 +13,7 @@ AUTOCONF = autoconf
 # The directories that make all should recurse into
 BUILD_SUBDIRS = @BUILD_SUBDIRS@ src sftp doc
 
-SUBDIRS = argp nettle spki src sftp doc contrib misc
+SUBDIRS = argp spki src sftp doc contrib misc
 
 all check:
 	set -e; for d in $(BUILD_SUBDIRS); do \
