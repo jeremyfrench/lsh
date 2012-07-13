@@ -1,5 +1,9 @@
 2012-07-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* Fixed copyright headers on many files, used to say "The nettle
+	library is free software". Now refers to the "libspki library"
+	instead.
+
 	* configure.ac: Deleted left over check of $am_cv_prog_cc_stdc.
 
 2010-12-14  Niels Möller  <nisse@lysator.liu.se>
