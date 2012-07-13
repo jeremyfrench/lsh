@@ -7,8 +7,8 @@ top_srcdir = @top_srcdir@
 
 include ../config.make
 
-PRE_CPPFLAGS = -I.. -I$(top_srcdir) -I../nettle_builddir
-PRE_LDFLAGS = -L.. -L../nettle_builddir
+PRE_CPPFLAGS = -I.. -I$(top_srcdir)
+PRE_LDFLAGS = -L..
 
 TS_SOURCES = principal-test.c date-test.c tag-test.c read-acl-test.c \
 	     lookup-acl-test.c read-cert-test.c cdsa-reduce-test.c
@@ -52,8 +52,7 @@ test-rules:
 include $(srcdir)/.test-rules.make
 
 check: $(TS_ALL)
-	LD_LIBRARY_PATH=../nettle_builddir/.lib srcdir=$(srcdir) \
-		$(srcdir)/run-tests $(TS_ALL)
+	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_ALL)
 
 Makefile: $(srcdir)/Makefile.in ../config.status
 	cd .. && $(SHELL) ./config.status testsuite/$@

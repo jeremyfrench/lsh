@@ -27,8 +27,8 @@
 
 struct sexp_iterator;
 
-#include "nettle/realloc.h"
-#include "nettle/buffer.h"
+#include <nettle/realloc.h>
+#include <nettle/buffer.h>
 
 struct spki_tag;
 

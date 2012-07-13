@@ -6,7 +6,7 @@
 #include "parse.h"
 #include "tag.h"
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include <stdio.h>
 #include <stdlib.h>

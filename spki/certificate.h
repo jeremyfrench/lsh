@@ -24,10 +24,10 @@
 #define LIBSPKI_CERTIFICATE_H_INCLUDED
 
 
-#include "nettle/md5.h"
-#include "nettle/sha.h"
-#include "nettle/realloc.h"
-#include "nettle/buffer.h"
+#include <nettle/md5.h>
+#include <nettle/sha.h>
+#include <nettle/realloc.h>
+#include <nettle/buffer.h>
 
 /* This should be the only file ever including spki-types.h
  * directly. */

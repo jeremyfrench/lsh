@@ -73,10 +73,11 @@ AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
 # Add -R flags needed to run programs linked with gmp
 LSH_RPATH_FIX
 
-if test -d nettle_buildir; then
-  CPPFLAGS="$CCPFLAGS -Inettle_builddir"
-  LD_FLAGS="$LDFLAGS -Lnettle_builddir"
-fi
+AC_CHECK_LIB(nettle, nettle_sha1_digest,,
+    [AC_MSG_ERROR(
+    [Nettle library not found. See http://www.lysator.liu.se/~nisse/nettle/.])])
+
+LSH_RPATH_FIX
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then

@@ -26,7 +26,7 @@
 
 #include "parse.h"
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 enum spki_type
 spki_transport_iterator_first(struct spki_iterator *i,

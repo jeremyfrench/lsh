@@ -14,8 +14,7 @@ MKDIR_P = @MKDIR_P@
 
 SUBDIRS = tools testsuite
 
-PRE_CPPFLAGS = -I. -I$(srcdir) -Inettle_builddir
-PRE_LDFLAGS = -Lnettle_builddir
+PRE_CPPFLAGS = -I. -I$(srcdir)
 
 include config.make
 

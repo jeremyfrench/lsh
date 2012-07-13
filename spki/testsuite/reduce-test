@@ -1,9 +1,9 @@
 #! /bin/sh
 
-# Test case from Oscar Cánovas Reverte
+# Test case from Oscar CÃ¡novas Reverte
 
 conv () {
-    ../../nettle/tools/sexp-conv -s transport
+    sexp-conv -s transport
 }
 
 die () {
@@ -14,7 +14,7 @@ die () {
 check_sexp () {
     file="$1"
     shift
-    ../../nettle/tools/sexp-conv -s canonical > test.canonical || die "sexp-conv failed"
+    sexp-conv -s canonical > test.canonical || die "sexp-conv failed"
     cmp "$file" test.canonical || die "$@"
 }
 
