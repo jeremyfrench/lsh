@@ -1,3 +1,7 @@
+2012-07-14  Niels Möller  <nisse@lysator.liu.se>
+
+	Copyright headers: Updated FSF address.
+
 2012-07-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* nettle: Deleted the nettle subdirectory.
