@@ -16,3 +16,5 @@
 /stamp-h
 /stamp-h.in
 /stamp-h1
+/install-sh
+/vsnprintf.c

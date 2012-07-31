@@ -12,3 +12,6 @@
 /configure
 /stamp-h
 /stamp-h.in
+/aclocal.m4
+/install-sh
+/vsnprintf.c

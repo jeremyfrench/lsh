@@ -33,3 +33,7 @@
 /twofish-test
 /utf8-test
 /yarrow-seed-file
+/getopt.h
+/getopt.c
+/getopt1.c
+/run-tests
