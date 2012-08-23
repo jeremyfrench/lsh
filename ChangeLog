@@ -1,3 +1,7 @@
+2012-08-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/algorithms.c (list_kex_algorithms): Typo fix in message.
+
 2012-07-14  Niels Möller  <nisse@lysator.liu.se>
 
 	Copyright headers: Updated FSF address.

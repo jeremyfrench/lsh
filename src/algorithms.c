@@ -455,7 +455,8 @@ list_hostkey_algorithms(const struct argp_state *state)
 void
 list_kex_algorithms(const struct argp_state *state)
 {
-  fprintf(state->out_stream, "%s", "Supported key exchange algorithms: dh-group1.sha1, dh-group14-sha1\n");
+  fprintf(state->out_stream, "%s",
+	  "Supported key exchange algorithms: dh-group1-sha1, dh-group14-sha1\n");
 }
 
 
