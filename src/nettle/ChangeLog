@@ -1,3 +1,7 @@
+2013-03-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Added missing AC_LANG_SOURCE.
+
 2006-04-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* examples/rsa-decrypt.c: Don't include "getopt.h", since it's not used.
@@ -23,7 +27,7 @@
 
 	* nettle.texinfo (Public-key algorithms): Say that the public key
 	operations are undocumented, not unsupported. Reported by Jeronimo
-	Pellegrini. 
+	Pellegrini.
 
 2006-04-08  Niels Möller  <nisse@lysator.liu.se>
 
