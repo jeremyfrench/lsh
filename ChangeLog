@@ -1,3 +1,8 @@
+2013-03-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/scm/guile-compat.scm: Use the rdelim module, for the
+	read-line function.
+
 2007-09-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client_x11.c (do_client_channel_x11_receive): Fixed parser
@@ -9,13 +14,13 @@
 	* configure.ac: Bumped version number to 2.0.4.
 
 	* Released lsh-2.0.2.
-	
+
 2006-05-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/ssh-conv.1: Changed to ordinary line breaks in example
 	ssh-conv output.
 
-	* src/connection.c (do_connection_flow_controlled) 
+	* src/connection.c (do_connection_flow_controlled)
 	(connection_send_kex): Trace output for hard_limit changes.
 
 	* Man pages: Applied patch from Stefan Pfetzing, addressing long
