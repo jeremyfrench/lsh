@@ -410,7 +410,15 @@ utmp_book_keeping(struct lsh_string *name,
 #endif
 
 #if UTMPX_UT_TV
-  gettimeofday(&entry.ut_tv, NULL); /* Ignore the timezone */
+  {
+    /* On 64-bit, glibc may use a private 32-bit variant of struct
+       timeval, for binary compatibility. So we can't always pass
+       &pty->entry directly to gettimeofday. */
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    entry.ut_tv.tv_sec = tv.tv_sec;
+    entry.ut_tv.tv_usec = tv.tv_usec;
+  }
 #else
 # if UTMPX_UT_TIME
   time(&entry.ut_time);

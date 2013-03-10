@@ -1,5 +1,9 @@
 2013-03-09  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/unix_process.c (utmp_book_keeping): Don't pass utmp's ut_tv
+	directly to gettimeofday, since for binary  compatibility, utmp may
+	use a different type.
+
 	* src/scm/guile-compat.scm: Use the rdelim module, for the
 	read-line function.
 
