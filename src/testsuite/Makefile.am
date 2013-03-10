@@ -29,13 +29,15 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
-noinst_PROGRAMS = $(TS_PROGS)
+noinst_PROGRAMS = $(TS_PROGS) mini-inetd tcpconnect
 
 # Workaround to get automake to keep dependencies for testutils.o
 EXTRA_PROGRAMS = testutils
 
 LDADD = testutils.o ../liblsh.a ../spki/libspki.a ../nettle/libnettle.a \
 	$(DOTDOT_LIBARGP)
+mini_inetd_LDADD = 
+tcpconnect_LDADD = 
 
 include .dist_rapid7
 
