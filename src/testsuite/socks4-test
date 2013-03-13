@@ -6,7 +6,6 @@ fi
 
 . $srcdir/functions.sh
 
-need_tcputils
 need_tsocks
 
 SERVERPORT=`expr $PORT + 1`

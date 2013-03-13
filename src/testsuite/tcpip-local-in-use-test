@@ -6,8 +6,6 @@ fi
 
 . $srcdir/functions.sh
 
-need_tcputils
-
 SERVERPORT=`expr $PORT + 1`
 PROXYPORT=`expr $PORT + 2`
 

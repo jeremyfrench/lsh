@@ -6,15 +6,13 @@ fi
 
 . $srcdir/functions.sh
 
-need_tcputils
-
 SERVERPORT=`expr $PORT + 1`
 PROXYPORT=`expr $PORT + 2`
 
 at_connect $SERVERPORT 1 'grep bar && echo foo' \
     && spawn_lshd \
     && spawn_lsh -L $PROXYPORT:localhost:$SERVERPORT \
-    && echo bar | tcpconnect localhost $PROXYPORT | grep foo \
+    && echo bar | ./tcpconnect localhost $PROXYPORT | grep foo \
     && test_success
 
 test_done

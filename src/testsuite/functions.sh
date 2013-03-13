@@ -1,8 +1,5 @@
 # Helper functions for the test scripts.
 
-# Any error count as failure.
-set -e
-
 # echo srcdir = $srcdir
 
 : ${TEST_HOME:=`pwd`/home}
@@ -20,6 +17,7 @@ export LSH_YARROW_SEED_FILE SEXP_CONV
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
 : ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
 : ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
+: ${MINI_INETD_PIDFILE:="`pwd`/mini-inetd.$$.pid"}
 : ${INTERFACE:=localhost}
 
 # Ignore any options the tester might have put in the environment.
@@ -31,7 +29,7 @@ unset LSHGFLAGS || :
 unset LSHFLAGS || :
 
 PORT=11147
-ATEXIT='set +e'
+ATEXIT='true '
 
 # We start with EXIT_FAILURE, and changing it to EXIT_SUCCESS only if
 # test_success is invoked.
@@ -71,16 +69,8 @@ check_x11_support () {
     ../lsh --help | grep 'x11-forward' >/dev/null || test_skip
 }
 
-need_tcputils () {
-    if type tcpconnect >/dev/null 2>&1 ; then : ; else
-	test_skip
-    fi
-}
-
 need_tsocks () {
-    if type tsocks >/dev/null 2>&1 ; then : ; else
-	test_skip
-    fi
+    type tsocks >/dev/null 2>&1 || test_skip
 }
 
 at_exit () {
@@ -155,8 +145,8 @@ spawn_lshg () {
 # at_connect local-port max-connections shell-command
 at_connect () {
     # sleep 1 # Allow some time for earlier processes to die
-    mini-inetd -m $2 -- localhost:$1 /bin/sh sh -c "$3" &
-    at_exit "kill $!"
+    ./mini-inetd --background -- localhost:$1 /bin/sh sh -c "$3" > $MINI_INETD_PIDFILE
+    at_exit "kill `cat $MINI_INETD_PIDFILE`"
 }
 
 compare_output() {

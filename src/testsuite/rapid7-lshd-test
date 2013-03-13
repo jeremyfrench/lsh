@@ -6,8 +6,6 @@ fi
 
 . $srcdir/functions.sh
 
-need_tcputils
-
 PORT=5555
 
 werror "Testing lshd"
@@ -16,7 +14,7 @@ spawn_lshd
 
 for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
     werror "Testing $f"
-    tcpconnect $INTERFACE $PORT < "$f" > /dev/null \
+    ./tcpconnect $INTERFACE $PORT < "$f" > /dev/null \
 	|| die "Connect failed"
 
     kill -0 `cat $PIDFILE` || die "Server died"

@@ -6,11 +6,9 @@ fi
 
 . $srcdir/functions.sh
 
-need_tcputils
-
 PORT=5556
 
-mini-inetd -- $PORT /bin/sh /bin/sh -c 'cat current' & 
+./mini-inetd -- $PORT /bin/sh /bin/sh -c 'cat current' & 
 pid=$!
 
 at_exit "kill $pid; rm -f current" 0
