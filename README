@@ -52,7 +52,7 @@ of the lsh testsuite:
  * tsocks (plus the supplied patch misc/tsocks-forcelocal.patch). It
    can be downloaded from http://tsocks.sourceforge.net/.
 
-If you have checked out lsh from CVS, things are a little more
+If you have checked out lsh from git, things are a little more
 complicated. Run the ./.bootstrap script, which will run aclocal,
 autoconf, autoheader and automake for you. This creates the configure
 script and several Makefile.in. Now run ./configure, to create
