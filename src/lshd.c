@@ -758,6 +758,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->allow_root = 1;
       break;
 
+    case OPT_NO_ROOT_LOGIN:
+      self->allow_root = 0;
+      break;
+
     case OPT_KERBEROS_PASSWD:
       self->pw_helper = PATH_KERBEROS_HELPER;
       break;

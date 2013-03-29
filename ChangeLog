@@ -1,6 +1,8 @@
 2013-03-29  Niels Möller  <nisse@lysator.liu.se>
 
 	From Ludovic Courtès:
+	* src/lshd.c (main_argp_parser): Correctly handle the
+	`--no-root-login' option.
 	* src/lsh-pam-checkpw.c (SERVICE_NAME): Use the more descriptive
 	name "lshd".
 
