@@ -1,3 +1,9 @@
+2013-03-29  Niels Möller  <nisse@lysator.liu.se>
+
+	From Ludovic Courtès:
+	* src/lsh-pam-checkpw.c (SERVICE_NAME): Use the more descriptive
+	name "lshd".
+
 2013-03-13  Niels Möller  <nisse@lysator.liu.se>
 
 	Mostly copied from master branch:

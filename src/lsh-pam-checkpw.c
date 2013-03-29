@@ -38,7 +38,7 @@
 #include <security/pam_appl.h>
 
 #define PWD_MAXLEN 1024
-#define SERVICE_NAME "other"
+#define SERVICE_NAME "lshd"
 #define TIMEOUT 600 
 
 static int
