@@ -5,3 +5,6 @@
 /spki-delegate
 /spki-make-signature
 /spki-reduce
+/getopt.c
+/getopt1.c
+/getopt.h

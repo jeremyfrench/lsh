@@ -1,3 +1,4 @@
+/*.d
 /*.tar.gz
 /.deps
 /Makefile
@@ -14,3 +15,8 @@
 /stamp-h
 /stamp-h.in
 /stamp-h1
+/acinclude.m4
+/depcomp
+/install-sh
+/missing
+/vsnprintf.c
