@@ -1,3 +1,4 @@
+AM_CPPFLAGS = -I$(top_srcdir)
 
 TS_PROGS = principal-test date-test tag-test read-acl-test \
 	   lookup-acl-test read-cert-test cdsa-reduce-test
@@ -9,7 +10,7 @@ TS_ALL = $(TS_PROGS) $(TS_SH)
 
 noinst_PROGRAMS = $(TS_PROGS)
 
-LDADD = testutils.o ../libspki.a -lnettle -lhogweed
+LDADD = testutils.o ../libspki.a -lhogweed -lnettle
 
 include .dist_cdsa
 
