@@ -1,3 +1,8 @@
+2013-03-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* testsuite/Makefile.am (LDADD): Added -lhogweed.
+	* tools/Makefile.am (LDADD): Likewise.
+
 2005-11-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use -Wno-pointer-sign when compiling with gcc-4.x.
@@ -7,7 +12,7 @@
 	* testsuite/Makefile.am (CLEANFILES): Delete test.canonical.
 
 	* testsuite/delegate-test: Don't use cmp -, use a temporary file
-	instead. 
+	instead.
 	* testsuite/reduce-test: Likewise.
 
 2004-11-16  Niels Möller  <nisse@lysator.liu.se>

@@ -9,7 +9,7 @@ TS_ALL = $(TS_PROGS) $(TS_SH)
 
 noinst_PROGRAMS = $(TS_PROGS)
 
-LDADD = testutils.o ../libspki.a -lnettle
+LDADD = testutils.o ../libspki.a -lnettle -lhogweed
 
 include .dist_cdsa
 

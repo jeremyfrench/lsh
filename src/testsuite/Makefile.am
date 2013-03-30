@@ -34,7 +34,7 @@ noinst_PROGRAMS = $(TS_PROGS) mini-inetd tcpconnect
 # Workaround to get automake to keep dependencies for testutils.o
 EXTRA_PROGRAMS = testutils
 
-LDADD = testutils.o ../liblsh.a ../spki/libspki.a -lnettle \
+LDADD = testutils.o ../liblsh.a ../spki/libspki.a -lnettle -lhogweed \
 	$(DOTDOT_LIBARGP)
 mini_inetd_LDADD = 
 tcpconnect_LDADD = 

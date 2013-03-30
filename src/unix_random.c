@@ -81,6 +81,7 @@ write_seed_file(struct yarrow256_ctx *ctx,
 	       int fd)
 {
   const struct exception *e;
+  uint8_t seed[YARROW256_SEED_FILE_SIZE];
   
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
@@ -88,7 +89,8 @@ write_seed_file(struct yarrow256_ctx *ctx,
       return 0;
     }
 
-  e = write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file);
+  yarrow256_random(ctx, sizeof(seed), seed);
+  e = write_raw(fd, sizeof(seed), seed);
 
   if (e)
     {
@@ -183,17 +185,19 @@ update_seed_file(struct unix_random *self)
     {
       struct lsh_string *s = read_seed_file(self->seed_file_fd);
 
-      write_seed_file(&self->yarrow, self->seed_file_fd);
-      KILL_RESOURCE(lock);
-
       /* Mix in the old seed file, it might have picked up
        * some randomness. */
       if (s)
 	{
+	  self->yarrow.sources[RANDOM_SOURCE_NEW_SEED].next = YARROW_FAST;
 	  yarrow256_update(&self->yarrow, RANDOM_SOURCE_NEW_SEED,
 			   0, STRING_LD(s));
 	  lsh_string_free(s);
+	  yarrow256_fast_reseed(&self->yarrow);
 	}
+
+      write_seed_file(&self->yarrow, self->seed_file_fd);
+      KILL_RESOURCE(lock);
     }
 }
 

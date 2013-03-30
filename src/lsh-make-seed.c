@@ -1219,6 +1219,7 @@ main(int argc, char **argv)
 
   struct yarrow256_ctx yarrow;
   struct yarrow_source sources[NSOURCES];
+  uint8_t seed[YARROW256_SEED_FILE_SIZE];
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -1371,7 +1372,8 @@ main(int argc, char **argv)
 	}
     }
   
-  e = write_raw(fd, sizeof(yarrow.seed_file), yarrow.seed_file);
+  yarrow256_random(&yarrow, sizeof(seed), seed);
+  e = write_raw(fd, sizeof(seed), seed);
 
   if (e)
     {

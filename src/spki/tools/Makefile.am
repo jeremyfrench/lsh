@@ -6,7 +6,7 @@ noinst_PROGRAMS = spki-check-signature spki-make-signature \
 # that affects all programs.
 
 LDADD = misc.o getopt.o getopt1.o \
-	../libspki.a -lnettle
+	../libspki.a -lnettle -lhogweed
 
 spki_make_signature_SOURCES = spki-make-signature.c sign.c
 spki_delegate_SOURCES = spki-delegate.c sign.c

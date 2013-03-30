@@ -113,7 +113,7 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 
 lsh_execuv_LDADD=
 
-LDADD = liblsh.a spki/libspki.a -lnettle @LIBARGP@
+LDADD = liblsh.a spki/libspki.a -lnettle -lhogweed @LIBARGP@
 
 # To avoid having to link lshg with nettle, link with dummy.o.
 

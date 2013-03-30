@@ -1,5 +1,16 @@
 2013-03-30  Niels Möller  <nisse@lysator.liu.se>
 
+	From Magnus Holmgren's debian patches. Adapt to nettle-2.0.
+	* src/lsh-make-seed.c (main): Updated to new yarrow interface,
+	sith no seed_file data inside the context.
+	* src/unix_random.c (write_seed_file): Likewise.
+	(update_seed_file): Update yarrow state before writing the new
+	seed file.
+	* src/crypto.c: Updated casts for new nettle_crypt_func no longer
+	being a pointer.
+	* src/Makefile.am (LDADD): Added -lhogweed.
+	* src/testsuite/Makefile.am (LDADD): Likewise.
+
 	* src/nettle: Deleted subdirectory.
 
 	From Magnus Holmgren's debian patches.

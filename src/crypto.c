@@ -71,7 +71,7 @@ do_crypt_arcfour(struct crypto_instance *s,
   assert(!(length % 8));
 
   lsh_string_crypt(dst, di, src, si, length,
-		   (nettle_crypt_func) arcfour_crypt, &self->ctx);
+		   (nettle_crypt_func*) arcfour_crypt, &self->ctx);
 }
 
 static struct crypto_instance *
@@ -114,7 +114,7 @@ do_aes_cbc_encrypt(struct crypto_instance *s,
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 AES_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) aes_encrypt,
+			 (nettle_crypt_func*) aes_encrypt,
 			 &self->ctx.ctx);
 }
 
@@ -128,7 +128,7 @@ do_aes_cbc_decrypt(struct crypto_instance *s,
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 AES_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) aes_decrypt,
+			 (nettle_crypt_func*) aes_decrypt,
 			 &self->ctx.ctx);
 }
 
@@ -185,7 +185,7 @@ do_aes_ctr_crypt(struct crypto_instance *s,
 
   lsh_string_ctr_crypt(dst, di, src, si, length,
 		       AES_BLOCK_SIZE, self->ctx.ctr,
-		       (nettle_crypt_func) aes_encrypt,
+		       (nettle_crypt_func*) aes_encrypt,
 		       &self->ctx.ctx);
 }
 
@@ -227,7 +227,7 @@ do_des3_encrypt(struct crypto_instance *s,
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 DES3_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) des3_encrypt,
+			 (nettle_crypt_func*) des3_encrypt,
 			 &self->ctx.ctx);
 }
 
@@ -241,7 +241,7 @@ do_des3_decrypt(struct crypto_instance *s,
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 DES3_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) des3_decrypt,
+			 (nettle_crypt_func*) des3_decrypt,
 			 &self->ctx.ctx);
 }
 
@@ -303,7 +303,7 @@ do_cast128_encrypt(struct crypto_instance *s,
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 CAST128_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) cast128_encrypt,
+			 (nettle_crypt_func*) cast128_encrypt,
 			 &self->ctx.ctx);
 }
 
@@ -317,7 +317,7 @@ do_cast128_decrypt(struct crypto_instance *s,
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 CAST128_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) cast128_decrypt,
+			 (nettle_crypt_func*) cast128_decrypt,
 			 &self->ctx.ctx);
 }
 
@@ -363,7 +363,7 @@ do_twofish_encrypt(struct crypto_instance *s,
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 TWOFISH_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) twofish_encrypt,
+			 (nettle_crypt_func*) twofish_encrypt,
 			 &self->ctx.ctx);
 }
 
@@ -377,7 +377,7 @@ do_twofish_decrypt(struct crypto_instance *s,
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 TWOFISH_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) twofish_decrypt,
+			 (nettle_crypt_func*) twofish_decrypt,
 			 &self->ctx.ctx);
 }
 
@@ -422,7 +422,7 @@ do_blowfish_encrypt(struct crypto_instance *s,
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 BLOWFISH_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) blowfish_encrypt,
+			 (nettle_crypt_func*) blowfish_encrypt,
 			 &self->ctx.ctx);
 }
 
@@ -436,7 +436,7 @@ do_blowfish_decrypt(struct crypto_instance *s,
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 BLOWFISH_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) blowfish_decrypt,
+			 (nettle_crypt_func*) blowfish_decrypt,
 			 &self->ctx.ctx);
 }
 
@@ -488,7 +488,7 @@ do_serpent_encrypt(struct crypto_instance *s,
 
   lsh_string_cbc_encrypt(dst, di, src, si, length,
 			 SERPENT_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) serpent_encrypt,
+			 (nettle_crypt_func*) serpent_encrypt,
 			 &self->ctx.ctx);
 }
 
@@ -502,7 +502,7 @@ do_serpent_decrypt(struct crypto_instance *s,
 
   lsh_string_cbc_decrypt(dst, di, src, si, length,
 			 SERPENT_BLOCK_SIZE, self->ctx.iv,
-			 (nettle_crypt_func) serpent_decrypt,
+			 (nettle_crypt_func*) serpent_decrypt,
 			 &self->ctx.ctx);
 }
 
