@@ -1,5 +1,14 @@
 2013-03-30  Niels Möller  <nisse@lysator.liu.se>
 
+	From Magnus Holmgren's debian patches. Adapt to nettle-2.1.
+	* src/crypto.c (make_des3_cbc_instance): Adapted to new des interface.
+	* src/dsa.c (do_dsa_verify): Adapted to new DSA interface.
+	(parse_ssh_dss_public): Likewise.
+	(do_dsa_sign): Likewise.
+	(make_dsa_verifier): Likewise.
+	(make_dsa_signer): Likewise.
+	* src/lsh-keygen.c (dsa_generate_key): Likewise.
+
 	From Magnus Holmgren's debian patches. Adapt to nettle-2.0.
 	* src/lsh-make-seed.c (main): Updated to new yarrow interface,
 	sith no seed_file data inside the context.

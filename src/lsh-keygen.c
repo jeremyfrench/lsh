@@ -217,7 +217,7 @@ dsa_generate_key(struct randomness *r, unsigned level)
   if (dsa_generate_keypair(&public, &private,
 			   r, lsh_random,
 			   NULL, progress,
-			   512 + 64 * level))
+			   512 + 64 * level, DSA_SHA1_Q_BITS))
     {
       key =
 	lsh_string_format_sexp(0,

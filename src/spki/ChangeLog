@@ -1,5 +1,8 @@
 2013-03-30  Niels Möller  <nisse@lysator.liu.se>
 
+	From Magnus Holmgren's debian patches. Adapt to nettle-2.1.
+	* verify.c (spki_verify_dsa): Adapted to new DSA interface.
+
 	* testsuite/Makefile.am (LDADD): Added -lhogweed.
 	* tools/Makefile.am (LDADD): Likewise.
 

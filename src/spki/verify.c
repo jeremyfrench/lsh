@@ -75,11 +75,11 @@ spki_verify_dsa(const uint8_t *digest,
   dsa_signature_init(&rs);
 
   res = (dsa_keypair_from_sexp_alist(&dsa, NULL,
-				     RSA_KEYSIZE_LIMIT, &key->sexp)
+				     RSA_KEYSIZE_LIMIT, DSA_SHA1_Q_BITS, &key->sexp)
 	 && spki_parse_type(key)
-	 && dsa_signature_from_sexp(&rs, &signature->sexp)
+	 && dsa_signature_from_sexp(&rs, &signature->sexp, DSA_SHA1_Q_BITS)
 	 && spki_parse_type(signature)
-	 && dsa_verify_digest(&dsa, digest, &rs));
+	 && dsa_sha1_verify_digest(&dsa, digest, &rs));
 
   dsa_signature_clear(&rs);
   dsa_public_key_clear(&dsa);

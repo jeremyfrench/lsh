@@ -118,7 +118,7 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	      && (atom == ATOM_SSH_DSS)
 	      && parse_string(&buffer, &buf_length, &buf)
 	      && !(buf_length % 2)
-	      && (buf_length <= (2 * DSA_Q_OCTETS))
+	      && (buf_length <= (2 * DSA_SHA1_Q_OCTETS))
 	      && parse_eod(&buffer)))
 	  goto fail;
 
@@ -143,8 +143,8 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	if (! (sexp_iterator_first(&i, signature_length,  signature_data)
 	       && sexp_iterator_enter_list(&i)
 	       && sexp_iterator_assoc(&i, 2, names, values)
-	       && nettle_mpz_set_sexp(sv.r, DSA_Q_BITS, &values[0])
-	       && nettle_mpz_set_sexp(sv.s, DSA_Q_BITS, &values[1])) )
+	       && nettle_mpz_set_sexp(sv.r, DSA_SHA1_Q_BITS, &values[0])
+	       && nettle_mpz_set_sexp(sv.s, DSA_SHA1_Q_BITS, &values[1])) )
 	  goto fail;
 
 	break;
@@ -156,7 +156,7 @@ do_dsa_verify(struct verifier *c, int algorithm,
   sha1_init(&hash);
   sha1_update(&hash, length, msg);
   
-  res = dsa_verify(&self->key, &hash, &sv);
+  res = dsa_sha1_verify(&self->key, &hash, &sv);
  fail:
 
   dsa_signature_clear(&sv);
@@ -212,7 +212,7 @@ parse_ssh_dss_public(struct simple_buffer *buffer)
 
   if (parse_bignum(buffer, res->key.p, DSA_MAX_OCTETS)
       && (mpz_sgn(res->key.p) == 1)
-      && parse_bignum(buffer, res->key.q, DSA_Q_OCTETS)
+      && parse_bignum(buffer, res->key.q, DSA_SHA1_Q_OCTETS)
       && (mpz_sgn(res->key.q) == 1)
       && (mpz_cmp(res->key.q, res->key.p) < 0) /* q < p */ 
       && parse_bignum(buffer, res->key.g, DSA_MAX_OCTETS)
@@ -269,7 +269,7 @@ do_dsa_sign(struct signer *c,
   dsa_signature_init(&sv);
   sha1_init(&hash);
   sha1_update(&hash, msg_length, msg);
-  dsa_sign(&self->verifier->key, &self->key,
+  dsa_sha1_sign(&self->verifier->key, &self->key,
 	   self->random, lsh_random, &hash, &sv);
   
   debug("do_dsa_sign: r = %xn, s = %xn\n", sv.r, sv.s);
@@ -323,7 +323,7 @@ make_dsa_verifier(struct signature_algorithm *self UNUSED,
   NEW(dsa_verifier, res);
   init_dsa_verifier(res);
 
-  if (dsa_keypair_from_sexp_alist(&res->key, NULL, DSA_MAX_BITS, i))
+  if (dsa_keypair_from_sexp_alist(&res->key, NULL, DSA_MAX_BITS, DSA_SHA1_Q_BITS, i))
     return &res->super;
 
   KILL(res);
@@ -342,7 +342,7 @@ make_dsa_signer(struct signature_algorithm *c,
   
   dsa_private_key_init(&res->key);
 
-  if (dsa_keypair_from_sexp_alist(&verifier->key, &res->key, DSA_MAX_BITS, i))
+  if (dsa_keypair_from_sexp_alist(&verifier->key, &res->key, DSA_MAX_BITS, DSA_SHA1_Q_BITS, i))
     {
       res->random = self->random;
       res->verifier = verifier;
