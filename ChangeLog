@@ -1,5 +1,7 @@
 2013-03-30  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/nettle: Deleted subdirectory.
+
 	From Magnus Holmgren's debian patches.
 	* configure.ac, */Makefile.am: Don't use the bundled nettle
 	library. Also updated test cases using the sexp-conv program.
