@@ -6,7 +6,7 @@
 : ${LSH_YARROW_SEED_FILE:="$TEST_HOME/.lsh/yarrow-seed-file"}
 
 # For lsh-authorize
-: ${SEXP_CONV:="`pwd`/../nettle/tools/sexp-conv"}
+: ${SEXP_CONV:="sexp-conv"}
 
 export LSH_YARROW_SEED_FILE SEXP_CONV
 

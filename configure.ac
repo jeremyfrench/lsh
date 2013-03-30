@@ -778,7 +778,6 @@ if test x$enable_ipv6 = xyes ; then
 fi
 
 AC_CONFIG_SUBDIRS(src/argp)
-AC_CONFIG_SUBDIRS(src/nettle)
 AC_CONFIG_SUBDIRS(src/spki)
 AC_CONFIG_SUBDIRS(src/sftp)
 

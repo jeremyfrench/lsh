@@ -1,3 +1,9 @@
+2013-03-30  Niels Möller  <nisse@lysator.liu.se>
+
+	From Magnus Holmgren's debian patches.
+	* configure.ac, */Makefile.am: Don't use the bundled nettle
+	library. Also updated test cases using the sexp-conv program.
+
 2013-03-29  Niels Möller  <nisse@lysator.liu.se>
 
 	From Ludovic Courtès:

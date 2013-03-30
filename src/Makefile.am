@@ -1,14 +1,11 @@
 # Process this file with automake to produce Makefile.in
 
-SUBDIRS = argp rsync nettle scm sftp spki . testsuite
+SUBDIRS = argp rsync scm sftp spki . testsuite
 
 include .dist_classes
 include .dist_headers
 
 BUILT_SOURCES = environ.h
-
-# Kludge needed for finding the nettle/nettle-types.h file in the build tree
-AM_CPPFLAGS = -I./nettle
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
@@ -116,7 +113,7 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 
 lsh_execuv_LDADD=
 
-LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
+LDADD = liblsh.a spki/libspki.a -lnettle @LIBARGP@
 
 # To avoid having to link lshg with nettle, link with dummy.o.
 

@@ -3,7 +3,7 @@
 # -O0 is not recogniced on AIX
 # AM_CFLAGS = -O0
 
-AM_CPPFLAGS = -I$(srcdir)/.. -I.. -I../nettle
+AM_CPPFLAGS = -I$(srcdir)/..
 
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 	   des-test \
@@ -34,7 +34,7 @@ noinst_PROGRAMS = $(TS_PROGS) mini-inetd tcpconnect
 # Workaround to get automake to keep dependencies for testutils.o
 EXTRA_PROGRAMS = testutils
 
-LDADD = testutils.o ../liblsh.a ../spki/libspki.a ../nettle/libnettle.a \
+LDADD = testutils.o ../liblsh.a ../spki/libspki.a -lnettle \
 	$(DOTDOT_LIBARGP)
 mini_inetd_LDADD = 
 tcpconnect_LDADD = 
@@ -61,6 +61,6 @@ all:
 
 # sexp-conv may be dynamically linked
 check: $(TS_ALL)
-	LD_LIBRARY_PATH="`pwd`/../nettle/.lib" srcdir=$(srcdir) \
+	srcdir=$(srcdir) \
 		$(srcdir)/run-tests $(TS_ALL)
 
