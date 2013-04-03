@@ -117,15 +117,13 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	if (!(parse_atom(&buffer, &atom)
 	      && (atom == ATOM_SSH_DSS)
 	      && parse_string(&buffer, &buf_length, &buf)
-	      && !(buf_length % 2)
-	      && (buf_length <= (2 * DSA_SHA1_Q_OCTETS))
+	      && buf_length == 2 * DSA_SHA1_Q_OCTETS
 	      && parse_eod(&buffer)))
 	  goto fail;
 
-	buf_length /= 2;
-  
-	nettle_mpz_set_str_256_u(sv.r, buf_length, buf);
-	nettle_mpz_set_str_256_u(sv.s, buf_length, buf + buf_length);
+	nettle_mpz_set_str_256_u(sv.r, DSA_SHA1_Q_OCTETS, buf);
+	nettle_mpz_set_str_256_u(sv.s, DSA_SHA1_Q_OCTETS,
+				 buf + DSA_SHA1_Q_OCTETS);
 
 	break;
       }
@@ -214,6 +212,7 @@ parse_ssh_dss_public(struct simple_buffer *buffer)
       && (mpz_sgn(res->key.p) == 1)
       && parse_bignum(buffer, res->key.q, DSA_SHA1_Q_OCTETS)
       && (mpz_sgn(res->key.q) == 1)
+      && mpz_sizeinbase(res->key.q, 2) == DSA_SHA1_Q_BITS
       && (mpz_cmp(res->key.q, res->key.p) < 0) /* q < p */ 
       && parse_bignum(buffer, res->key.g, DSA_MAX_OCTETS)
       && (mpz_sgn(res->key.g) == 1)
@@ -235,22 +234,13 @@ parse_ssh_dss_public(struct simple_buffer *buffer)
   
 /* Creating signatures */
 
-static uint32_t
-dsa_blob_length(const struct dsa_signature *signature)
-{
-  uint32_t r_length = nettle_mpz_sizeinbase_256_u(signature->r);
-  uint32_t s_length = nettle_mpz_sizeinbase_256_u(signature->s);
-
-  return MAX(r_length, s_length);
-}
-
 static void
 dsa_blob_write(struct lsh_string *buf, uint32_t pos,
-	       const struct dsa_signature *signature,
-	       uint32_t length)
+	       const struct dsa_signature *signature)
 {
-  lsh_string_write_bignum(buf, pos, length, signature->r);
-  lsh_string_write_bignum(buf, pos + length, length, signature->s);
+  lsh_string_write_bignum(buf, pos, DSA_SHA1_Q_OCTETS, signature->r);
+  lsh_string_write_bignum(buf, pos + DSA_SHA1_Q_OCTETS, DSA_SHA1_Q_OCTETS,
+			  signature->s);
 }
 
 static struct lsh_string *
@@ -269,40 +259,40 @@ do_dsa_sign(struct signer *c,
   dsa_signature_init(&sv);
   sha1_init(&hash);
   sha1_update(&hash, msg_length, msg);
-  dsa_sha1_sign(&self->verifier->key, &self->key,
-	   self->random, lsh_random, &hash, &sv);
-  
-  debug("do_dsa_sign: r = %xn, s = %xn\n", sv.r, sv.s);
-  
-  /* Build signature */
 
-  switch (algorithm)
-    {
-    case ATOM_SSH_DSS:
+  if (dsa_sha1_sign(&self->verifier->key, &self->key,
+		    self->random, lsh_random, &hash, &sv))
+    /* Build signature */
+    switch (algorithm)
       {
-	uint32_t blob_pos;
-	uint32_t buf_length = dsa_blob_length(&sv);
+      case ATOM_SSH_DSS:
+	{
+	  uint32_t blob_pos;
 	
-	/* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
-	 * length field, which should be removed in the next version. */
-	signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &blob_pos);
-	dsa_blob_write(signature, blob_pos, &sv, buf_length);
+	  /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+	   * length field, which should be removed in the next version. */
+	  signature = ssh_format("%a%r", ATOM_SSH_DSS,
+				 2 * DSA_SHA1_Q_OCTETS, &blob_pos);
+	  dsa_blob_write(signature, blob_pos, &sv);
 
-	break;
-      }
-      /* It doesn't matter here which flavour of SPKI is used. */
-    case ATOM_SPKI_SIGN_RSA:
-    case ATOM_SPKI_SIGN_DSS:
-    case ATOM_SPKI:
-      /* Format: "((1:r20:<r>)(1:s20:<s>))". */
-      signature = lsh_string_format_sexp(0, "((r%b)(s%b))",
-					 sv.r, sv.s);
+	  break;
+	}
+	/* It doesn't matter here which flavour of SPKI is used. */
+      case ATOM_SPKI_SIGN_RSA:
+      case ATOM_SPKI_SIGN_DSS:
+      case ATOM_SPKI:
+	/* Format: "((1:r20:<r>)(1:s20:<s>))". */
+	signature = lsh_string_format_sexp(0, "((r%b)(s%b))",
+					   sv.r, sv.s);
 	
-      break;
-    default:
-      fatal("do_dsa_sign: Internal error, unexpected algorithm %a.\n",
-	    algorithm);
-    }
+	break;
+      default:
+	fatal("do_dsa_sign: Internal error, unexpected algorithm %a.\n",
+	      algorithm);
+      }
+  else
+    signature = NULL;
+
   dsa_signature_clear(&sv);
 
   return signature;

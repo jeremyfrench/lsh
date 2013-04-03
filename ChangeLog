@@ -1,3 +1,14 @@
+2013-04-03  Niels Möller  <nisse@lysator.liu.se>
+
+	From master branch:
+	* src/dsa.c (do_dsa_verify): Require dsa signature blob to be
+	exactly 40 octets.
+	(dsa_blob_length): Deleted function.
+	(dsa_blob_write): Blob always 40 octets.
+	(do_dsa_sign): Deleted call to dsa_blob_length. Check return value
+	from dsa_sha1_sign.
+	(parse_ssh_dss_public): Require q to be exactly 160 bits.
+
 2013-03-30  Niels Möller  <nisse@lysator.liu.se>
 
 	From Magnus Holmgren's debian patches. Adapt to nettle-2.1.
