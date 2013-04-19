@@ -1,5 +1,7 @@
 2013-04-19  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Bumped version number to 2.1.
+
 	* All files: Include nettle headers using <nettle/...> rather than
 	"nettle/...", and include them before lsh headers.
 
