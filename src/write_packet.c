@@ -25,7 +25,8 @@
 
 #include <assert.h>
 
-#include "nettle/macros.h"
+#include <nettle/macros.h>
+
 #include "connection.h"
 #include "format.h"
 #include "lsh_string.h"

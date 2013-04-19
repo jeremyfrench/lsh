@@ -26,8 +26,9 @@
 #ifndef LSH_PARSE_H_INCLUDED
 #define LSH_PARSE_H_INCLUDED
 
+#include <nettle/bignum.h>
+
 #include "atoms.h"
-#include "nettle/bignum.h"
 
 /* Simple buffer
  * NOTE: All instances are allocated on the stack.

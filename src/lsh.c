@@ -38,7 +38,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
+
 /* For struct spki_iterator */
 #include "spki/parse.h"
 

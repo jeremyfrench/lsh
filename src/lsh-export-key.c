@@ -46,8 +46,8 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 /* #include <string.h> */
 #include <unistd.h>
 
-#include "nettle/base64.h"
-#include "nettle/sexp.h"
+#include <nettle/base64.h>
+#include <nettle/sexp.h>
 
 #include "algorithms.h"
 #include "alist.h"

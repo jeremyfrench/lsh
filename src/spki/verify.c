@@ -24,9 +24,9 @@
 # include "config.h"
 #endif
 
-#include "nettle/bignum.h"
-#include "nettle/dsa.h"
-#include "nettle/rsa.h"
+#include <nettle/bignum.h>
+#include <nettle/dsa.h>
+#include <nettle/rsa.h>
 
 #include "certificate.h"
 #include "parse.h"

@@ -28,8 +28,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nettle/bignum.h"
-#include "nettle/macros.h"
+#include <nettle/bignum.h>
+#include <nettle/macros.h>
 
 #include "parse.h"
 

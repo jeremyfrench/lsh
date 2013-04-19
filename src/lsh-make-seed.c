@@ -79,7 +79,7 @@
 # endif
 #endif /* WITH_ZLIB */
 
-#include "nettle/yarrow.h"
+#include <nettle/yarrow.h>
 
 #include "environ.h"
 #include "format.h"

@@ -39,7 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include "algorithms.h"
 #include "crypto.h"

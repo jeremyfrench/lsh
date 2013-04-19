@@ -27,7 +27,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include "parse.h"
 #include "tag.h"

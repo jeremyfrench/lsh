@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nettle/memxor.h"
+#include <nettle/memxor.h>
 
 #include "crypto.h"
 

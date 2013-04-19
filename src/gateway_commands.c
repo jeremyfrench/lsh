@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nettle/macros.h"
+#include <nettle/macros.h>
 
 #include "gateway_commands.h"
 

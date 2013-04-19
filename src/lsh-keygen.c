@@ -39,8 +39,8 @@
 #include <unistd.h>
 #endif
 
-#include "nettle/dsa.h"
-#include "nettle/rsa.h"
+#include <nettle/dsa.h>
+#include <nettle/rsa.h>
 
 #include "crypto.h"
 #include "environ.h"

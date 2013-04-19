@@ -26,9 +26,9 @@
 #include "lsh.h"
 
 /* Can we avoid this dependency? */
-#include "nettle/bignum.h"
-#include "nettle/base64.h"
-#include "nettle/nettle-meta.h"
+#include <nettle/bignum.h>
+#include <nettle/base64.h>
+#include <nettle/nettle-meta.h>
 
 /* The memory allocation model (for strings) is as follows:
  *

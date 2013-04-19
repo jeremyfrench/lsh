@@ -1,3 +1,8 @@
+2013-04-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* All files: Include nettle headers using <nettle/...> rather than
+	"nettle/...", and include them before lsh headers.
+
 2013-04-19  Magnus Holmgren <holmgren@debian.org>
 
 	* src/lsh.c (do_lsh_default_handler): Call exit for

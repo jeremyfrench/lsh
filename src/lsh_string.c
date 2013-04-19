@@ -36,13 +36,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include "nettle/buffer.h"
-#include "nettle/cbc.h"
-#include "nettle/ctr.h"
-#include "nettle/hmac.h"
-#include "nettle/macros.h"
-#include "nettle/memxor.h"
-#include "nettle/sexp.h"
+#include <nettle/buffer.h>
+#include <nettle/cbc.h>
+#include <nettle/ctr.h>
+#include <nettle/hmac.h>
+#include <nettle/macros.h>
+#include <nettle/memxor.h>
+#include <nettle/sexp.h>
 
 #include "lsh_string.h"
 

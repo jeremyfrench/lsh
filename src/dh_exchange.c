@@ -27,7 +27,7 @@
 
 #include <assert.h>
 
-#include "nettle/bignum.h"
+#include <nettle/bignum.h>
 
 #include "publickey_crypto.h"
 

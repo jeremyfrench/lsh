@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include "format.h"
 #include "io.h"

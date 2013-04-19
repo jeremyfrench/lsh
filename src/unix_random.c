@@ -40,7 +40,7 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 
-#include "nettle/yarrow.h"
+#include <nettle/yarrow.h>
 
 #include "randomness.h"
 

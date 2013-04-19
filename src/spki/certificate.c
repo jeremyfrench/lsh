@@ -28,9 +28,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "nettle/md5.h"
-#include "nettle/sha.h"
-#include "nettle/sexp.h"
+#include <nettle/md5.h>
+#include <nettle/sha.h>
+#include <nettle/sexp.h>
 
 #include "certificate.h"
 #include "parse.h"

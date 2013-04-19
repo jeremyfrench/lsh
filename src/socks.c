@@ -33,7 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "nettle/macros.h"
+#include <nettle/macros.h>
+
 #include "channel_forward.h"
 #include "command.h"
 #include "connection_commands.h"

@@ -28,17 +28,17 @@
 
 #include <stdlib.h>
 
-#include "lsh.h"
+#include <nettle/base64.h>
+#include <nettle/bignum.h>
+#include <nettle/buffer.h>
+#include <nettle/cbc.h>
+#include <nettle/ctr.h>
+#include <nettle/hmac.h>
+#include <nettle/memxor.h>
+#include <nettle/nettle-meta.h>
+#include <nettle/sexp.h>
 
-#include "nettle/base64.h"
-#include "nettle/bignum.h"
-#include "nettle/buffer.h"
-#include "nettle/cbc.h"
-#include "nettle/ctr.h"
-#include "nettle/hmac.h"
-#include "nettle/memxor.h"
-#include "nettle/nettle-meta.h"
-#include "nettle/sexp.h"
+#include "lsh.h"
 
 /* Referenced by ssh_format.c */
 unsigned

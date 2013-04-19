@@ -51,7 +51,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include "lsh-decrypt-key.c.x"
 

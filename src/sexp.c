@@ -29,8 +29,8 @@
 
 #include <assert.h>
 
-#include "nettle/buffer.h"
-#include "nettle/sexp.h"
+#include <nettle/buffer.h>
+#include <nettle/sexp.h>
 
 #include "sexp.h"
 

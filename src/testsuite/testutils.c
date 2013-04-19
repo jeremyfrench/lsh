@@ -7,8 +7,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "nettle/knuth-lfib.h"
-#include "nettle/sexp.h"
+#include <nettle/knuth-lfib.h>
+#include <nettle/sexp.h>
 
 #include "spki/certificate.h"
 #include "spki/parse.h"

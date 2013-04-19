@@ -29,9 +29,9 @@
 
 #include <assert.h>
 
-#include "nettle/bignum.h"
-#include "nettle/macros.h"
-#include "nettle/sexp.h"
+#include <nettle/bignum.h>
+#include <nettle/macros.h>
+#include <nettle/sexp.h>
 
 #include "srp.h"
 

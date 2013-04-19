@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nettle/bignum.h"
+#include <nettle/bignum.h>
 
 #include "format.h"
 

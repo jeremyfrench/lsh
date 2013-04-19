@@ -23,7 +23,7 @@
 #ifndef LIBSPKI_PARSE_H_INCLUDED
 #define LIBSPKI_PARSE_H_INCLUDED
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include "certificate.h"
 

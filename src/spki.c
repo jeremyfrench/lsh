@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nettle/sexp.h"
+#include <nettle/sexp.h>
 
 #include "spki/parse.h"
 #include "spki/tag.h"

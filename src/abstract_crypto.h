@@ -26,9 +26,9 @@
 #ifndef LSH_ABSTRACT_CRYPTO_H_INCLUDED
 #define LSH_ABSTRACT_CRYPTO_H_INCLUDED
 
-#include "list.h"
+#include <nettle/nettle-meta.h>
 
-#include "nettle/nettle-meta.h"
+#include "list.h"
 
 /* Forward declaration, real declaration in nettle/sexp.h. */
 struct sexp_iterator;
