@@ -959,6 +959,8 @@ do_lsh_default_handler(struct exception_handler *s,
       *self->status = EXIT_FAILURE;
       
       werror("%z, (errno = %i)\n", e->msg, exc->error);
+      if (e->type == EXC_IO_CONNECT)
+	exit(*self->status);
     }
   else
     switch(e->type)

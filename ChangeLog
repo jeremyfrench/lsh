@@ -1,5 +1,8 @@
 2013-04-19  Magnus Holmgren <holmgren@debian.org>
 
+	* src/lsh.c (do_lsh_default_handler): Call exit for
+	EXC_IO_CONNECT, to terminate properly on connection failure.
+
 	* src/io.c (io_bind_sockaddr): Set the IPV6_V6ONLY socket option
 	on AF_INET6 sockets.
 
