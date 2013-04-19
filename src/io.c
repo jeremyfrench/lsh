@@ -1690,6 +1690,13 @@ io_bind_sockaddr(struct sockaddr *local,
   {
     int yes = 1;
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof yes);
+#if WITH_IPV6 && defined (IPV6_V6ONLY)
+    if (local->sa_family == AF_INET6)
+      {
+        if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes)) < 0)
+          werror("setsockopt IPV6_V6ONLY failed: %e.\n", errno);
+      }
+#endif
   }
 
   if (bind(s, local, length) < 0)

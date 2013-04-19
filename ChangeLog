@@ -1,5 +1,8 @@
 2013-04-19  Magnus Holmgren <holmgren@debian.org>
 
+	* src/io.c (io_bind_sockaddr): Set the IPV6_V6ONLY socket option
+	on AF_INET6 sockets.
+
 	* src/unix_random.c (random_init): Show the intended error message
 	when no seed file exists, instead of one about a locking error.
 
