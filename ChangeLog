@@ -1,3 +1,8 @@
+2013-04-19  Magnus Holmgren <holmgren@debian.org>
+
+	* src/unix_random.c (random_init): Show the intended error message
+	when no seed file exists, instead of one about a locking error.
+
 2013-04-03  Niels Möller  <nisse@lysator.liu.se>
 
 	From master branch:

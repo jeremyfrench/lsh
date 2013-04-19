@@ -357,6 +357,15 @@ random_init(struct lsh_string *seed_file_name)
 
     yarrow256_init(&self->yarrow, RANDOM_NSOURCES, self->sources);
     
+    if (access(lsh_get_cstring(seed_file_name), F_OK) < 0)
+      {
+	werror("No seed file. Please create one by running\n");
+	werror("lsh-make-seed -o \"%S\".\n", seed_file_name);
+
+	KILL(self);
+	return NULL;
+      }
+
     verbose("Reading seed-file `%S'\n", seed_file_name);
     
     self->lock
@@ -378,8 +387,7 @@ random_init(struct lsh_string *seed_file_name)
     self->seed_file_fd = open(lsh_get_cstring(seed_file_name), O_RDWR);
     if (self->seed_file_fd < 0)
       {
-	werror("No seed file. Please create one by running\n");
-	werror("lsh-make-seed -o \"%S\".\n", seed_file_name);
+	werror("Could not open seed file \"%S\".\n", seed_file_name);
 
 	KILL_RESOURCE(lock);
 	KILL(self);
