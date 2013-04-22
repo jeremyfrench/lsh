@@ -1,5 +1,8 @@
 #include "testutils.h"
 
+/* Note: In Nettle up to version 2.1, the serpent implementation did
+   some broken byte reversal on input and output. This testcase will
+   fail with old versions of nettle. */
 int
 test_main(void)
 {
@@ -8,8 +11,8 @@ test_main(void)
 		"0011223344556677 8899AABBCCDDEEFF"),
               H("0000000000000000 0000000000000000"
 		"1111111111111111 1111111111111111"),
-	      H("687a151886b6dc16 8d2b667c3b8d5226"
-		"e63a6c8b3009859c 8ee559565befb77e"),
+	      H("c170ed586cfda8fe 084f01ef04475883"
+		"b9eb25819813023f 2938e97bdf4597c8"),
 	      H("0011223344556677 8899AABBCCDDEEFF"));
   SUCCESS();
 }
