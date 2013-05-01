@@ -1,3 +1,27 @@
+News for the 2.1 release
+
+	No longer includes the Nettle library; GNU Nettle has to be
+	installed separately. At least version 2.2 is needed.
+	Available at ftp.gnu.org.
+
+	Includes several improvements from debian maintainer Magnus
+	Holmgren:
+
+	 * Make lsh exit properly on connection failure.
+
+	 * Improved lsh error message when seed file doesn't exist.
+
+	 * Make lshd set the IPV6_V6ONLY option when binding IPv6
+	   sockets.
+
+	Use service name "lshd" in lsh-pam-checkpw (patch from Ludovic
+	Courtès).
+
+	Fixed an utmp-related build problem on GNU/Linux x86_64.
+
+	Testsuite includes new versions of tcpconnect and mini-inetd,
+	which work better with IPv6.
+
 News for the 2.0.4 release
 
 	Fixed x11 forwarding bug in the lsh client.
