@@ -14,6 +14,9 @@ News for the 2.1 release
 	 * Make lshd set the IPV6_V6ONLY option when binding IPv6
 	   sockets.
 
+	Uses a more recent version of automake, avoiding a
+	vulnerability in the automake-generated distcheck target.
+
 	Use service name "lshd" in lsh-pam-checkpw (patch from Ludovic
 	Courtès).
 
