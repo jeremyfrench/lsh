@@ -25,9 +25,9 @@ running
 
 If you want to hack lsh, you need some more tools:
 
- * autoconf (version 2.59 or later is recommended),
+ * autoconf
 
- * automake (version 1.8.2 or later),
+ * automake
 
  * bash,
 
@@ -36,7 +36,7 @@ If you want to hack lsh, you need some more tools:
  * gperf (at least version 2.7)
 
  * a scheme implementation. The currently supported schemes are guile
-   and scsh (at least version 0.6).
+   and scsh.
 
 All but scsh can be found at your local GNU mirror site. scsh,
 Olin Shiver's Scheme Shell, can be downloaded from <URL:
@@ -63,13 +63,16 @@ build the programs.
 
 NEEDED LIBRARIES
 
-GMP (version 3.1 or better) can be found at ftp.gnu.org, or some of
+GNU GMP (version 3.1 or better), available at ftp.gnu.org, or some of
 its mirrors.
+
+GNU Nettle (version 2.2 or later), also available at ftp.gnu.org.
 
 ZLIB can be found at http://www.zlib.org. Older versions zlib have a
 known security problems, so make sure you get the latest one.
 
-liboop (version 0.8 or better) can be found at www.liboop.org.
+liboop (version 0.8 or better) can be found at
+http://http://www.lysator.liu.se/liboop/.
 
 
 GETTING STARTED
