@@ -1,3 +1,8 @@
+2013-06-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* .bootstrap: Deleted obsolete references to the deleted
+	src/nettle subdirectory. Spotted by David Michael.
+
 2013-04-22  Niels Möller  <nisse@lysator.liu.se>
 
 	From master branch (2011-05-02):
