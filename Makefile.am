@@ -36,6 +36,7 @@ bootstrap:
 # Is this rule needed?
 # all-recursive check-recursive: config.h
 
-EXTRA_DIST = ANNOUNCE AUTHORS FAQ README COPYING ChangeLog ChangeLog.1 \
+EXTRA_DIST = ANNOUNCE AUTHORS FAQ README COPYING \
+	ChangeLog ChangeLog.1 ChangeLog.2 \
 	NEWS FAQ distribution-key.gpg .bootstrap
 
