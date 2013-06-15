@@ -1,3 +1,7 @@
+2013-06-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Use AC_CONFIG_HEADER, not AM_CONFIG_HEADER.
+
 2013-03-30  Niels Möller  <nisse@lysator.liu.se>
 
 	From Magnus Holmgren's debian patches. Adapt to nettle-2.1.

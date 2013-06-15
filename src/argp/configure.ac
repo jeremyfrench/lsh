@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([argp-ba.c])
 AC_CONFIG_AUX_DIR([.])
 
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADER([config.h])
 
 # GNU libc defaults to supplying the ISO C library functions only. The
 # _GNU_SOURCE define enables these extensions, in particular we want

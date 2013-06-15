@@ -1,3 +1,7 @@
+2013-06-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Use AC_CONFIG_HEADER, not AM_CONFIG_HEADER.
+
 2005-11-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use LSH_FUNC_ALLOCA.

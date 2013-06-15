@@ -9,7 +9,7 @@ AC_CONFIG_SRCDIR([certificate.c])
 AC_CONFIG_AUX_DIR([.])
 
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADER([config.h])
 
 AC_ARG_WITH(include-path,
   AC_HELP_STRING([--with-include-path], [A colon-separated list of directories to search for include files]),,

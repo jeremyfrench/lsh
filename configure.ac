@@ -6,7 +6,7 @@ AC_CONFIG_SRCDIR([src/lsh.c])
 AC_CONFIG_AUX_DIR([.])
 	
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADER([config.h])
 
 # We want an absolute path to the source-dir.
 case "$srcdir" in
