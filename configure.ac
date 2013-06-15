@@ -199,9 +199,8 @@ dnl echo RPATH_CANDIDATE_DIRS = $RPATH_CANDIDATE_DIRS
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-AM_PROG_CC_STDC
 
-if test "x$am_cv_prog_cc_stdc" = xno ; then
+if test "x$ac_cv_prog_cc_stdc" = xno ; then
   AC_MSG_ERROR([the C compiler doesn't handle ANSI-C])
 fi
 

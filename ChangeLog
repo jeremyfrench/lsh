@@ -1,6 +1,7 @@
 2013-06-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_HEADER, not AM_CONFIG_HEADER.
+	Replace use of obsolete AM_PROG_CC_STDC and am_cv_prog_cc_stdc.
 
 2013-06-04  Niels Möller  <nisse@lysator.liu.se>
 
