@@ -1,3 +1,7 @@
+2013-06-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Recognize --with-include-path.
+
 2013-06-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_HEADER, not AM_CONFIG_HEADER.
