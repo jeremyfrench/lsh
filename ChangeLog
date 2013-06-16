@@ -1,5 +1,7 @@
 2013-06-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/tcpconnect.c (main): Check HAVE_IOCTL_FIONREAD.
+
 	* configure.ac: Updated liboop URL.
 
 2012-08-23  Niels Möller  <nisse@lysator.liu.se>
