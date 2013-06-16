@@ -429,7 +429,7 @@ AC_CHECK_LIB(hogweed, nettle_dsa_sha1_sign, [true],
 LSH_RPATH_FIX
 
 AC_CHECK_LIB([oop], [oop_sys_new],,
-  [AC_MSG_ERROR([liboop is missing. Get liboop from http://liboop.ofb.net])])
+  [AC_MSG_ERROR([liboop is missing. Get liboop from http://www.lysator.liu.se/liboop/.])])
 
 LSH_RPATH_FIX
 
