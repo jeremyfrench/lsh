@@ -1,3 +1,8 @@
+2013-06-16  Niels Möller  <nisse@lysator.liu.se>
+
+	From lsh-2.0.4 branch:
+	* configure.ac: Recognize --with-include-path.
+
 2011-02-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* rl.c (lsftp_rl_init): Deleted cast.

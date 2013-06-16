@@ -26,7 +26,14 @@ AC_ARG_ENABLE(after_opts,
   AC_HELP_STRING([--enable-after-opts=OPTS],[set the default options to the SecSH client after the commandline.]),
   [after_opts="$withval"])
 
+# Needed only for the nettle/nettle-types.h header.
+AC_ARG_WITH(include-path,
+  AC_HELP_STRING([--with-include-path], [A colon-separated list of directories to search for include files]),,
+  [with_include_path=''])
 
+if test x$with_include_path != x ; then
+  CPPFLAGS="$CPPFLAGS -I`echo $with_include_path | sed 's/:/ -I/g'`"
+fi
 
 dnl Checks for programs.
 AC_PROG_CC
