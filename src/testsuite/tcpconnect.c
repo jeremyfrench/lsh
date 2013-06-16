@@ -285,9 +285,11 @@ main (int argc, char **argv)
 	{	  
 	  int nbytes, res;
 
+#ifdef FIONREAD
 	  if (ioctl (STDIN_FILENO, FIONREAD, &nbytes) < 0
 	      || nbytes <= 0
 	      || nbytes > (int) sizeof(buf_stdin))
+#endif
 	    nbytes = sizeof(buf_stdin);
 
 	  res = read(STDIN_FILENO, buf_stdin, nbytes);
