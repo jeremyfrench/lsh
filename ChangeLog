@@ -1,5 +1,7 @@
 2013-06-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Updated URLs for gmp and liboop.
+
 	* src/testsuite/tcpconnect.c (main): Make use of FIONREAD
 	conditional on it being defined.
 

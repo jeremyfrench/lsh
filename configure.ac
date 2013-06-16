@@ -364,12 +364,12 @@ LSH_TYPE_SOCKLEN_T
 
 AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
     [AC_MSG_ERROR(
-    [GNU MP not found, or not 3.1 or up, see http://www.swox.com/gmp.])])
+    [GNU MP not found, or not 3.1 or up, see http://gmplib.org])])
 
 LSH_RPATH_FIX
 
 AC_CHECK_LIB([oop], [oop_sys_new],,
-  [AC_MSG_ERROR([liboop is missing. Get liboop from http://www.liboop.org])])
+  [AC_MSG_ERROR([liboop is missing. Get liboop from http://www.lysator.liu.se/liboop])])
 
 LSH_RPATH_FIX
 
