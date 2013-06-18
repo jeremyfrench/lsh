@@ -1,6 +1,7 @@
 2013-06-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/tcpconnect.c: Include netinet/in.h.
+	(main): Set seen_remote_eof and seen_stdin_eof flags at EOF.
 
 2013-06-16  Niels Möller  <nisse@lysator.liu.se>
 
