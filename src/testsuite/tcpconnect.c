@@ -40,6 +40,9 @@
 #include <sys/ioctl.h>
 #include <netdb.h>
 
+/* For IPPROTO_TCP on FreeBSD */
+#include <netinet/in.h>
+
 #include <arpa/inet.h>
 
 #include "getopt.h"

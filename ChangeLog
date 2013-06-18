@@ -1,3 +1,8 @@
+2013-06-18  Niels Möller  <nisse@lysator.liu.se>
+
+	From lsh-2.0.4 branch:
+	* src/testsuite/tcpconnect.c: Include netinet/in.h.
+
 2013-06-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/rapid7-lsh-test: Deleted use of need_tcputils.
