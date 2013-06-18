@@ -1,6 +1,8 @@
 2013-06-18  Niels Möller  <nisse@lysator.liu.se>
 
 	From lsh-2.0.4 branch:
+	* src/testsuite/mini-inetd.c (main): Clear O_NONBLOCK flag on
+	accepted sockets.
 	* src/testsuite/tcpconnect.c: Include netinet/in.h.
 	(main): Set seen_remote_eof and seen_stdin_eof flags at EOF.
 

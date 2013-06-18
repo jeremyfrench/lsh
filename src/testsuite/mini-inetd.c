@@ -291,6 +291,7 @@ main (int argc, char **argv)
 	if (FD_ISSET(fds[i], &wanted))
 	  {
 	    int conn;
+	    int flags;
 
 	    conn = accept(fds[i], NULL, NULL);
 	    if (conn < 0)
@@ -299,6 +300,16 @@ main (int argc, char **argv)
 		  die("accept failed: %s\n", STRERROR(errno));
 		continue;
 	      }
+
+	    /* With traditional BSD behavior, the acccepted socket
+	       inherits the O_NONBLOCK flag from the listening socket.
+	       So clear it explicitly. */
+	    flags = fcntl(conn, F_GETFL);
+	    if (flags < 0)
+	      werror("fcntl F_GETFL failed: %s\n", STRERROR(errno));
+	    else if (fcntl(conn, F_SETFL, flags & ~O_NONBLOCK) < 0)
+	      werror("fcntl F_SETFL failed: %s\n", STRERROR(errno));
+
 	    start_service (conn, argv[1], argv + 2);
 
 	    if (max_connections)
