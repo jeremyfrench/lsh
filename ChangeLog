@@ -2,6 +2,7 @@
 
 	From lsh-2.0.4 branch:
 	* src/testsuite/tcpconnect.c: Include netinet/in.h.
+	(main): Set seen_remote_eof and seen_stdin_eof flags at EOF.
 
 2013-06-27  Niels Möller  <nisse@lysator.liu.se>
 

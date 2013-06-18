@@ -303,6 +303,7 @@ main (int argc, char **argv)
 	    }
 	  else if (res == 0)
 	    {
+	      seen_stdin_eof = 1;
 	      wait_stdin_eof = 0;
 	      if (!wait_remote_eof)
 		break;
@@ -345,6 +346,7 @@ main (int argc, char **argv)
 		  if (verbose && res < 0)
 		    werror("read from socket failed: %s\n", strerror(errno));
 
+		  seen_remote_eof = 1;
 		  wait_remote_eof = 0;
 		  if (!wait_stdin_eof)
 		    break;
