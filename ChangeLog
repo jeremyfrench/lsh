@@ -1,3 +1,7 @@
+2013-06-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* Released lsh-2.1.
+
 2013-06-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/mini-inetd.c (main): Clear O_NONBLOCK flag on
