@@ -1,3 +1,8 @@
+2013-06-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/rapid7-lsh-test: Deleted use of need_tcputils.
+	* src/testsuite/tcpip-local-in-use-test: Likewise.
+
 2013-06-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/tcpconnect.c (main): Check HAVE_IOCTL_FIONREAD.
