@@ -21,7 +21,7 @@ int sig_pipe[2];
 pid_t child_pid;
 
 static void
-handle_sigchld (int signo)
+handle_sigchld (int signo UNUSED)
 {
   const char x = 'x';
   int res;
