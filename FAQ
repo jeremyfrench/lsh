@@ -1,15 +1,3 @@
-× Is there anonymous CVS access to LSH?
-
-Yes. To check out the latest version, try
-
-  cvs -d :pserver:anonymous@cvs.lysator.liu.se:/cvsroot/lsh login
-  [ empty password ]
-  cvs -d :pserver:anonymous@cvs.lysator.liu.se:/cvsroot/lsh co lsh
-
-You can also try the ViewCVS interface at <URL:
-http://cvs.lysator.liu.se/viewcvs/viewcvs.cgi/lsh/?cvsroot=lsh>.
-
-
 × Out of curiosity, what's the relationship between LSH and OpenSSH?
 
 They are almost completely unrelated. LSH development started in late
