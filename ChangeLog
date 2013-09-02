@@ -1,3 +1,8 @@
+2013-09-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/gateway_channel.c (do_kill_gateway_channel): Fixed handling
+	of MSG_CHANNEL_OPEN_FAILURE.
+
 2013-06-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/prgrp-timeout.c (handle_sigchld): Declare argument

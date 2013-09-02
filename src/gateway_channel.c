@@ -69,7 +69,7 @@ do_kill_gateway_channel(struct resource *s)
 	{
 	  /* When the kill method is called because a gateway client
 	     disconnects, then to tear down the corrsponding channel
-	     tot he server, three are possible states we need to
+	     to the server, there are three possible states we need to
 	     handle:
 
 	     1. The channel is fully open. Then call channel_close to
@@ -80,7 +80,7 @@ do_kill_gateway_channel(struct resource *s)
 	        client disappears before we get any reply from the
 	        server. Then we can't send CHANNEL_CLOSE now. Instead,
 	        do_gateway_channel_event checks for this case and
-	        closes the channel as soon as a response to
+	        closes the channel as soon as a we get the response to
 	        CHANNEL_OPEN_CONFIRMATION.
 
 	     3. The server requested a CHANNEL_OPEN, which was forwarded,
@@ -100,10 +100,13 @@ do_kill_gateway_channel(struct resource *s)
 	      /* Case 2 above. Do nothing now. */
 	      break;
 	    case CHANNEL_ALLOC_SENT_OPEN:
-	      /* Case 3 above */
-	      assert(self->info);
-	      channel_open_deny(self->info, SSH_OPEN_CONNECT_FAILED,
-				"Refused by server");	      	      
+	      /* Case 3 above. Send deny message on originating
+		 channel, unless we already did that. We can also
+		 enter this case after the "normal" handling in
+		 CHANNEL_EVENT_DENY. */
+	      if (self->info)
+		channel_open_deny(self->info, SSH_OPEN_CONNECT_FAILED,
+				  "Refused by server");	      	      
 	      break;
 	    }
 	}
