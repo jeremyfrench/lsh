@@ -85,6 +85,7 @@ extern struct crypto_algorithm crypto_arcfour_algorithm;
 extern struct crypto_algorithm crypto_blowfish_cbc_algorithm;
 extern struct crypto_algorithm crypto_cast128_cbc_algorithm;
 extern struct crypto_algorithm crypto_des3_cbc_algorithm;
+extern struct crypto_algorithm crypto_des3_ctr_algorithm;
 extern struct crypto_algorithm crypto_serpent256_cbc_algorithm;
 extern struct crypto_algorithm crypto_twofish256_cbc_algorithm;
 

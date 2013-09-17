@@ -1,5 +1,19 @@
 2013-09-17  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/lsh-6-test (ALGORITHMS): Test both 3des-cbc and
+	3des-ctr.
+
+	* src/algorithms.c (all_symmetric_algorithms): Added ATOM_3DES_CTR.
+	(all_crypto_algorithms): Likewise.
+	(lookup_crypto): For parsng the -c option, make just "3des" mean
+	"3des-ctr" rather than "3des-cbc".
+
+	* src/crypto.c (des3_ctr_instance): New class.
+	(do_des3_ctr_crypt): New function.
+	(make_des3_ctr_instance): New function.
+	(crypto_des3_ctr_algorithm): New struct.
+	* src/crypto.h (crypto_des3_ctr_algorithm): Declare.
+
 	* src/dsa.c (do_dsa_sign): Fixed failure message.
 
 2013-09-02  Niels Möller  <nisse@lysator.liu.se>

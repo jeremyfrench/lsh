@@ -47,7 +47,7 @@
 struct alist *
 all_symmetric_algorithms()
 {
-  return make_alist(12
+  return make_alist(13
 #if WITH_ZLIB
 		    +1
 #endif
@@ -61,6 +61,7 @@ all_symmetric_algorithms()
                     ATOM_AES256_CTR, &crypto_aes256_ctr_algorithm,
 		    ATOM_SERPENT256_CBC, &crypto_serpent256_cbc_algorithm,
 		    ATOM_3DES_CBC, &crypto_des3_cbc_algorithm,
+		    ATOM_3DES_CTR, &crypto_des3_ctr_algorithm,
 		    ATOM_CAST128_CBC, &crypto_cast128_cbc_algorithm,
 		    ATOM_HMAC_SHA1,
 		      make_hmac_algorithm(&nettle_sha1),
@@ -105,12 +106,13 @@ default_crypto_algorithms(struct alist *algorithms)
 static struct int_list *
 all_crypto_algorithms(struct alist *algorithms)
 {
-  return filter_algorithms_l(algorithms, 10,
+  return filter_algorithms_l(algorithms, 11,
                              ATOM_AES128_CBC,
                              ATOM_AES128_CTR,
                              ATOM_AES256_CBC,
                              ATOM_AES256_CTR,
 			     ATOM_3DES_CBC,
+			     ATOM_3DES_CTR,
 			     ATOM_TWOFISH_CBC, 
 			     ATOM_CAST128_CBC,
 			     ATOM_SERPENT256_CBC,
@@ -190,8 +192,10 @@ lookup_crypto(struct alist *algorithms, const char *name, struct crypto_algorith
     atom = ATOM_TWOFISH_CBC;
   else if (strcasecmp_list(name, "blowfish-cbc", "blowfish", NULL))
     atom = ATOM_BLOWFISH_CBC;
-  else if (strcasecmp_list(name, "3des-cbc", "3des", NULL))
+  else if (strcasecmp_list(name, "3des-cbc", NULL))
     atom = ATOM_3DES_CBC;
+  else if (strcasecmp_list(name, "3des-ctr", "3des", NULL))
+    atom = ATOM_3DES_CTR;
   else if (strcasecmp_list(name, "aes128-cbc", "aes-cbc", NULL))
     atom = ATOM_AES128_CBC;
   else if (strcasecmp_list(name, "aes128-ctr", "aes-ctr", "aes", "aes128", NULL))

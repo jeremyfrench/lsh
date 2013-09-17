@@ -276,6 +276,47 @@ struct crypto_algorithm crypto_des3_cbc_algorithm =
 { STATIC_HEADER,
   DES3_BLOCK_SIZE, DES3_KEY_SIZE, DES3_BLOCK_SIZE, make_des3_cbc_instance };
 
+/* GABA:
+   (class
+     (name des3_ctr_instance)
+     (super crypto_instance)
+     (vars
+       (ctx . "struct CTR_CTX(struct des3_ctx, DES_BLOCK_SIZE)")))
+*/
+
+static void
+do_des3_ctr_crypt(struct crypto_instance *s,
+		  uint32_t length,
+		  struct lsh_string *dst, uint32_t di,
+		  const struct lsh_string *src, uint32_t si)
+{
+  CAST(des3_ctr_instance, self, s);
+
+  lsh_string_ctr_crypt(dst, di, src, si, length,
+		       DES3_BLOCK_SIZE, self->ctx.ctr,
+		       (nettle_crypt_func *) des3_encrypt,
+		       &self->ctx.ctx);
+}
+
+static struct crypto_instance *
+make_des3_ctr_instance(struct crypto_algorithm *algorithm UNUSED, int mode UNUSED,
+		       const uint8_t *key, const uint8_t *iv)
+{
+  NEW(des3_ctr_instance, self);
+
+  self->super.block_size = DES3_BLOCK_SIZE;
+
+  self->super.crypt = do_des3_ctr_crypt;
+  des3_set_key(&self->ctx.ctx, key);
+
+  CTR_SET_COUNTER(&self->ctx, iv);
+  
+  return(&self->super);
+}
+
+struct crypto_algorithm crypto_des3_ctr_algorithm =
+{ STATIC_HEADER,
+  DES3_BLOCK_SIZE, DES3_KEY_SIZE, DES3_BLOCK_SIZE, make_des3_ctr_instance};
 
 /* Cast-128 */
 /* GABA:
