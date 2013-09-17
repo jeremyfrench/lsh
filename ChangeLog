@@ -1,3 +1,7 @@
+2013-09-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/dsa.c (do_dsa_sign): Fixed failure message.
+
 2013-09-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/gateway_channel.c (do_kill_gateway_channel): Fixed handling

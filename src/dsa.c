@@ -284,7 +284,7 @@ do_dsa_sign(struct signer *c,
 	
 	break;
       default:
-	fatal("do_dsa_sha256_sign: Internal error, unexpected algorithm %a.\n",
+	fatal("do_dsa_sign: Internal error, unexpected algorithm %a.\n",
 	      algorithm);
       }
   else
