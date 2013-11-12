@@ -94,10 +94,11 @@ static struct int_list *
 default_crypto_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 4,
-			     ATOM_AES256_CBC,
+                             ATOM_SERPENT256_CBC,
+                             ATOM_TWOFISH_CBC, 
 			     ATOM_3DES_CBC,
 			     ATOM_BLOWFISH_CBC,
-			     ATOM_ARCFOUR, -1);
+			     -1);
 }
 
 /* Includes all supported algorithms, except none. In effect, the
